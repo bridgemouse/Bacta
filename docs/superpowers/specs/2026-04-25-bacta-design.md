@@ -18,6 +18,7 @@ Bacta is a personal health dashboard PWA named after the Star Wars healing fluid
 | Backend | Express + TypeScript |
 | Database | SQLite via `better-sqlite3` |
 | Styling | Tailwind CSS — dark mode only |
+| Garmin poller | Python + Playwright (persistent service) |
 | Containerization | Docker + Docker Compose |
 | Reverse proxy | Caddy (`bacta.local`) |
 | Package manager | npm |
@@ -54,9 +55,12 @@ Bacta is a personal health dashboard PWA named after the Star Wars healing fluid
 bacta/
 ├── server/
 │   ├── api/             # Express route handlers
-│   ├── pollers/         # Garmin, MacroFactor, vault-reader
 │   ├── db/              # SQLite schema + query helpers
 │   └── index.ts         # Entry point
+├── poller/
+│   ├── garmin_service.py    # Persistent Playwright polling service
+│   ├── macrofactor.py       # Stub — wire up after account exists
+│   └── vault_reader.py      # Blood work markdown parser (deferred)
 ├── client/
 │   ├── components/
 │   │   ├── Sidebar/     # Key stat tiles
@@ -95,7 +99,11 @@ bacta/
 ## Data Sources
 
 ### Garmin Connect (active)
-Direct Garmin Connect API — no community wrappers. All wrappers are blocked by Cloudflare TLS fingerprinting on `sso.garmin.com` as of March 2026.
+No official public API exists. All third-party access is unofficial. Community wrappers (`garmin-connect-mcp`, `garth`) are blocked by Cloudflare TLS fingerprinting and deprecated.
+
+**Approach: Persistent Playwright service** — headless Chromium provides a genuine TLS fingerprint that Cloudflare cannot distinguish from a real user. This is the most resilient long-term approach; the only breakage vector is Garmin changing their web UI selectors, not their auth flow.
+
+`python-garminconnect` (mobile SSO OAuth) is available as a lightweight fallback if Playwright is unavailable, but Playwright is the primary approach.
 
 Credentials: `GARMIN_EMAIL`, `GARMIN_PASSWORD` via `.env`.
 
@@ -179,16 +187,32 @@ blood_work (
 
 ---
 
-## Polling
+## Garmin Poller — Persistent Service
 
-**Schedule:** Hourly via `node-cron` in the Express process.
+The Garmin poller runs as a dedicated Docker Compose service (`garmin-poller`), not inside Express. It is a long-running Python process using Playwright (headless Chromium).
 
-**Pollers:**
-- `server/pollers/garmin.ts` — authenticates with Garmin Connect API, writes to `garmin_snapshots`
-- `server/pollers/macrofactor.ts` — stub, no-op until account exists
-- `server/pollers/vault-reader.ts` — reads blood work markdown from `/mnt/vault`, parses frontmatter, writes to `blood_work` (deferred, stub)
+```python
+# garmin_service.py — runs for the lifetime of the container
+async def main():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        session = await authenticate(browser)  # once at startup
+        while True:
+            await poll_all_metrics(session, browser)
+            await asyncio.sleep(3600)           # hourly, then back to sleep
+```
 
-**Force poll endpoint:** `POST /api/poll/force` triggers an immediate Garmin poll. Powers the manual refresh button on the dashboard.
+**Why persistent:** Chromium stays authenticated between polls. No cold-start overhead. Session refresh handled internally. If the process crashes, Docker restarts it automatically.
+
+**Resource footprint:** Headless Chromium idle ~150–200MB RAM. Acceptable on a 2GB LXC dedicated to Bacta.
+
+**Writes directly to SQLite** (`data/bacta.db`) — shared volume with Express container.
+
+**MacroFactor poller:** Stub service, no-op until account exists. Runs as a separate Python script on its own schedule when wired up.
+
+**Vault reader:** Python script, reads blood work markdown from `/mnt/vault`, writes to `blood_work` table. Deferred until Factor results arrive.
+
+**Force poll:** `POST /api/poll/force` sends a signal to the garmin-poller service to trigger an immediate poll cycle. Powers the manual refresh button.
 
 ---
 
@@ -323,20 +347,27 @@ After Bacta is running, expose `GET /api/garmin/summary` (or a dedicated interna
 ## Containerization
 
 **Docker Compose services:**
-- `bacta` — Express + React build, mounts `/data/`, `/insights/`, `/azi3/`, `/mnt/vault` (read-only NFS)
-- Claude Code CLI runs directly on the LXC host (not in Docker) to keep system prompt files and memory accessible without container complexity
 
-**Caddy** proxies `bacta.local` → Docker container port.
+| Service | Role |
+|---|---|
+| `bacta-api` | Express + React build. Reads SQLite, serves dashboard and API. |
+| `garmin-poller` | Persistent Python + Playwright service. Writes to SQLite hourly. |
+
+**Shared volume:** `data/bacta.db` mounted into both services.
+
+**Claude Code CLI** runs directly on the LXC host (not in Docker) — AZI-3 needs direct filesystem access to `/insights/`, `/azi3/`, and `/mnt/vault` without container complexity.
+
+**Caddy** proxies `bacta.local` → `bacta-api` container port.
 
 ---
 
 ## Sequencing — What Gets Built
 
 1. **Scaffold** — repo structure, Vite + React, Express, TypeScript config, SQLite setup
-2. **Garmin poller** — auth + polling, write to SQLite, force-poll endpoint
-3. **API layer** — all endpoints wired to SQLite queries
+2. **Garmin poller** — persistent Playwright service, auth, hourly poll loop, writes to SQLite
+3. **API layer** — all endpoints wired to SQLite queries, force-poll signal to garmin-poller
 4. **Dashboard UI** — sidebar + main layout, section tabs, stat tiles, manual input form, PWA manifest
-5. **AZI-3 scaffolding** — system prompt, orchestrator, memory files, cron wiring
+5. **AZI-3 scaffolding** — system prompt (full AZI-3 character brief), orchestrator, memory files, cron wiring
 6. **AZI-3 insight cards** — one section at a time, starting with recovery
 7. **MacroFactor** — after account is created
 8. **Blood work parser** — after Factor results arrive and schema is established via LLM-Wiki

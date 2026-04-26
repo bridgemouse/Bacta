@@ -28,6 +28,20 @@ describe('schema', () => {
     expect(row).toBeTruthy()
   })
 
+  it('creates macrofactor_snapshots table', () => {
+    const row = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='macrofactor_snapshots'"
+    ).get()
+    expect(row).toBeTruthy()
+  })
+
+  it('creates blood_work table', () => {
+    const row = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='blood_work'"
+    ).get()
+    expect(row).toBeTruthy()
+  })
+
   it('enforces readiness range on manual_inputs', () => {
     expect(() => {
       db.prepare(

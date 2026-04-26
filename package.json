@@ -1,8 +1,6 @@
 {
-  "name": "plan-1-data-foundation",
+  "name": "bacta",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
   "directories": {
     "doc": "docs"
   },
@@ -11,10 +9,9 @@
     "dev:client": "vite",
     "build": "tsc -p tsconfig.server.json && vite build",
     "start": "node dist/server/index.js",
-    "test": "vitest run"
+    "test": "vitest run --config vitest.config.ts"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -32,7 +29,6 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",

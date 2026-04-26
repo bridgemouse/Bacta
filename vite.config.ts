@@ -9,10 +9,5 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3001'
     }
-  },
-  test: {
-    globals: true,
-    environment: 'node',
-    include: ['../tests/server/**/*.test.ts']
   }
 })

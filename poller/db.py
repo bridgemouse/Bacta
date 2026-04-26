@@ -1,5 +1,12 @@
 import sqlite3
 
+ALLOWED_TABLES = {"garmin_snapshots", "macrofactor_snapshots", "manual_inputs", "blood_work"}
+
+
+def _validate_table(table: str) -> None:
+    if table not in ALLOWED_TABLES:
+        raise ValueError(f"Unknown table: {table!r}")
+
 
 def upsert_snapshot(
     db_path: str,
@@ -10,6 +17,7 @@ def upsert_snapshot(
     unit: str,
     source_json: str
 ) -> None:
+    _validate_table(table)
     conn = sqlite3.connect(db_path)
     try:
         conn.execute(f"""
@@ -32,6 +40,7 @@ def upsert_many_snapshots(
     metrics: list[tuple[str, float, str]],  # (metric, value, unit)
     source_json: str
 ) -> None:
+    _validate_table(table)
     conn = sqlite3.connect(db_path)
     try:
         conn.executemany(f"""

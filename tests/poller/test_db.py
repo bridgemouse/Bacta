@@ -44,3 +44,5 @@ def test_upsert_many_snapshots(db_path):
     rows = conn.execute("SELECT metric, value FROM garmin_snapshots WHERE date='2026-04-26'").fetchall()
     conn.close()
     assert len(rows) == 3
+    result = {metric: value for metric, value in rows}
+    assert result == {'steps': 9241, 'hrv': 48, 'resting_hr': 52}

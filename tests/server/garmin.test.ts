@@ -21,6 +21,9 @@ describe('Garmin API', () => {
     insert.run(today, 'recovery_score', 82, 'score')
     insert.run(today, 'stress_score', 28, 'score')
     insert.run(today, 'vo2max', 51.2, 'ml/kg/min')
+    // Seed yesterday's steps for date-range test
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    insert.run(yesterday, 'steps', 8100, 'steps')
   })
 
   it('GET /api/garmin/summary returns today key metrics', async () => {
@@ -47,12 +50,7 @@ describe('Garmin API', () => {
   })
 
   it('GET /api/garmin/:metric with date range returns multiple rows', async () => {
-    const { default: db } = await import('../../server/db/client')
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-    db.prepare(
-      'INSERT INTO garmin_snapshots (date, metric, value, unit) VALUES (?, ?, ?, ?)'
-    ).run(yesterday, 'steps', 8100, 'steps')
-
     const today = new Date().toISOString().slice(0, 10)
     const { app } = await import('../../server/index')
     const res = await request(app)
@@ -62,9 +60,9 @@ describe('Garmin API', () => {
     expect(res.body.rows).toHaveLength(2)
   })
 
-  it('GET /api/garmin/:metric returns 404 for unknown metric', async () => {
+  it('GET /api/garmin/:metric returns 400 for unknown metric', async () => {
     const { app } = await import('../../server/index')
     const res = await request(app).get('/api/garmin/unicorn')
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(400)
   })
 })

@@ -24,6 +24,10 @@ router.get('/summary', (_req, res) => {
 router.get('/:metric', (req, res) => {
   const { metric } = req.params
   const { from, to } = req.query as { from?: string; to?: string }
+
+  if (!SUMMARY_METRICS.includes(metric)) {
+    return res.status(400).json({ error: 'unknown metric' })
+  }
   const today = new Date().toISOString().slice(0, 10)
 
   if (from && to) {

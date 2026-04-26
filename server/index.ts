@@ -4,6 +4,7 @@ import path from 'path'
 import { migrate } from './db/migrate'
 import healthRouter from './api/health'
 import garminRouter from './api/garmin'
+import manualRouter from './api/manual'
 
 // Stub routers for routes not yet implemented (Tasks 5-6)
 // These will be replaced with real implementations in subsequent tasks
@@ -18,7 +19,7 @@ app.use(express.json())
 
 app.use('/api/health', healthRouter)
 app.use('/api/garmin', garminRouter)
-app.use('/api/manual', stubRouter)
+app.use('/api/manual', manualRouter)
 app.use('/api/insights', stubRouter)
 app.use('/api/bloodwork', stubRouter)
 app.use('/api/poll', stubRouter)

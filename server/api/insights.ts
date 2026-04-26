@@ -15,6 +15,10 @@ router.get('/', (_req, res) => {
 
 router.get('/:section', (req, res) => {
   const filePath = path.join(INSIGHTS_DIR, `${req.params.section}.html`)
+  // Guard against path traversal — resolved path must stay within INSIGHTS_DIR
+  if (!filePath.startsWith(INSIGHTS_DIR + path.sep)) {
+    return res.status(400).json({ error: 'invalid section' })
+  }
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' })
   res.setHeader('Content-Type', 'text/html')
   res.send(fs.readFileSync(filePath, 'utf-8'))

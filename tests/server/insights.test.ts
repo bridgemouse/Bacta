@@ -14,7 +14,9 @@ describe('Insights API', () => {
   })
 
   afterAll(() => {
-    fs.rmSync(path.join(INSIGHTS_DIR, 'recovery.html'))
+    // Only remove the test file — leave the directory (it has a .gitkeep and may be used by the server)
+    const testFile = path.join(INSIGHTS_DIR, 'recovery.html')
+    if (fs.existsSync(testFile)) fs.rmSync(testFile)
   })
 
   it('GET /api/insights lists available sections', async () => {

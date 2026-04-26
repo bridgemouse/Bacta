@@ -5,12 +5,9 @@ import { migrate } from './db/migrate'
 import healthRouter from './api/health'
 import garminRouter from './api/garmin'
 import manualRouter from './api/manual'
-
-// Stub routers for routes not yet implemented (Tasks 5-6)
-// These will be replaced with real implementations in subsequent tasks
-import { Router } from 'express'
-const stubRouter = Router()
-stubRouter.all('/{*splat}', (_req, res) => res.status(501).json({ error: 'not implemented' }))
+import insightsRouter from './api/insights'
+import bloodworkRouter from './api/bloodwork'
+import pollRouter from './api/poll'
 
 migrate()
 
@@ -20,9 +17,9 @@ app.use(express.json())
 app.use('/api/health', healthRouter)
 app.use('/api/garmin', garminRouter)
 app.use('/api/manual', manualRouter)
-app.use('/api/insights', stubRouter)
-app.use('/api/bloodwork', stubRouter)
-app.use('/api/poll', stubRouter)
+app.use('/api/insights', insightsRouter)
+app.use('/api/bloodwork', bloodworkRouter)
+app.use('/api/poll', pollRouter)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {

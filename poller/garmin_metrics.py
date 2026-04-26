@@ -4,8 +4,10 @@ BASE = 'https://connect.garmin.com/modern/proxy'
 
 
 async def _get_json(page: Page, url: str) -> dict:
-    response = await page.goto(url, wait_until='networkidle')
     try:
+        response = await page.goto(url, wait_until='networkidle')
+        if response is None:
+            return {}
         return await response.json()
     except Exception:
         return {}
@@ -45,13 +47,18 @@ async def fetch_sleep(page: Page, date_str: str) -> dict:
     url = f'{BASE}/wellness-service/wellness/dailySleepData?date={date_str}'
     data = await _get_json(page, url)
     daily = data.get('dailySleepDTO', {})
+
+    def _mins(key: str):
+        v = daily.get(key)
+        return v // 60 if v is not None else None
+
     return {
-        'sleep_duration': daily.get('sleepTimeSeconds', 0) // 60,
+        'sleep_duration': _mins('sleepTimeSeconds'),
         'sleep_score': daily.get('sleepScores', {}).get('overall', {}).get('value'),
-        'sleep_deep_minutes': daily.get('deepSleepSeconds', 0) // 60,
-        'sleep_light_minutes': daily.get('lightSleepSeconds', 0) // 60,
-        'sleep_rem_minutes': daily.get('remSleepSeconds', 0) // 60,
-        'sleep_awake_minutes': daily.get('awakeSleepSeconds', 0) // 60,
+        'sleep_deep_minutes': _mins('deepSleepSeconds'),
+        'sleep_light_minutes': _mins('lightSleepSeconds'),
+        'sleep_rem_minutes': _mins('remSleepSeconds'),
+        'sleep_awake_minutes': _mins('awakeSleepSeconds'),
     }
 
 
@@ -61,7 +68,9 @@ async def fetch_body_battery(page: Page, date_str: str) -> dict:
     if isinstance(data, list) and len(data) > 0:
         readings = data[0].get('bodyBatteryValuesArray', [])
         if readings:
-            return {'body_battery': readings[-1][1] if readings[-1] else None}
+            entry = readings[-1]
+            val = entry[1] if isinstance(entry, (list, tuple)) and len(entry) > 1 else None
+            return {'body_battery': val}
     return {'body_battery': None}
 
 

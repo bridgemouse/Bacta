@@ -25,7 +25,7 @@ app.use('/api/poll', stubRouter)
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(process.cwd(), 'dist/client')))
-  app.get('*', (_req, res) => {
+  app.get('/{*splat}', (_req, res) => {
     res.sendFile(path.join(process.cwd(), 'dist/client/index.html'))
   })
 }

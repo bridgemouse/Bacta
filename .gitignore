@@ -1,3 +1,13 @@
 .env
 .superpowers/
 .worktrees/
+node_modules/
+dist/
+data/
+!data/.gitkeep
+insights/*.html
+azi3/medical-log.md
+azi3/patient-summary.md
+__pycache__/
+*.pyc
+.venv/

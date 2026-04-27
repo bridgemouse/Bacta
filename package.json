@@ -9,7 +9,9 @@
     "dev:client": "vite",
     "build": "tsc -p tsconfig.server.json && vite build",
     "start": "node dist/server/index.js",
-    "test": "vitest run --config vitest.config.ts"
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.client.config.ts",
+    "test:server": "vitest run --config vitest.config.ts",
+    "test:client": "vitest run --config vitest.client.config.ts"
   },
   "keywords": [],
   "license": "ISC",
@@ -20,9 +22,14 @@
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
@@ -30,6 +37,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/supertest": "^7.2.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "jsdom": "^29.1.0",
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",

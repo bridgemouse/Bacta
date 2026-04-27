@@ -15,7 +15,7 @@ def fetch_daily_summary(client: Garmin, date_str: str) -> dict:
                 (data.get('moderateIntensityMinutes') or 0) +
                 (data.get('vigorousIntensityMinutes') or 0) * 2
             ) or None,
-            'floors': data.get('floorsAscended'),
+            'floors': round(data['floorsAscended']) if data.get('floorsAscended') is not None else None,
             'hydration_ml': data.get('waterIntakeInML'),
         }
     except Exception:
@@ -60,10 +60,11 @@ def fetch_recovery(client: Garmin, date_str: str) -> dict:
     try:
         data = client.get_training_readiness(date_str)
         entry = data[0] if isinstance(data, list) and data else {}
+        recovery_mins = entry.get('recoveryTime')
         return {
             'recovery_score': entry.get('score'),
             'training_load': entry.get('acuteLoad'),
-            'recovery_time_hours': entry.get('recoveryTime'),
+            'recovery_time_hours': round(recovery_mins / 60, 1) if recovery_mins is not None else None,
         }
     except Exception:
         return {}
@@ -72,8 +73,8 @@ def fetch_recovery(client: Garmin, date_str: str) -> dict:
 def fetch_vo2max(client: Garmin, date_str: str) -> dict:
     try:
         data = client.get_max_metrics(date_str)
-        if isinstance(data, list) and data:
-            return {'vo2max': data[0].get('vo2MaxPreciseValue') or data[0].get('vo2MaxValue')}
+        if isinstance(data, dict) and data.get('vo2Max'):
+            return {'vo2max': data['vo2Max']}
     except Exception:
         pass
     return {}

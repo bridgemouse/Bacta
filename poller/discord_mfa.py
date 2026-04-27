@@ -18,6 +18,12 @@ _BASE = 'https://discord.com/api/v10'
 _TIMEOUT_SECONDS = 600   # 10 minutes
 _POLL_INTERVAL = 5
 
+_RESEND_COMMAND = 'resend'
+
+
+class MFARetryRequested(Exception):
+    """Raised when the user requests a new MFA code via Discord."""
+
 
 def _headers() -> dict:
     return {
@@ -73,16 +79,30 @@ def prompt_mfa_via_discord() -> str:
 
     print('[discord_mfa] waiting for MFA code in Discord...', flush=True)
     deadline = time.time() + _TIMEOUT_SECONDS
+    reminder_at = time.time() + 1800  # 30 minutes
+    reminded = False
     while time.time() < deadline:
         time.sleep(_POLL_INTERVAL)
+        if not reminded and time.time() >= reminder_at:
+            _send(
+                channel_id,
+                '⏳ Still waiting for your Garmin MFA code.\n'
+                'Reply with the **6-digit code** from your email, '
+                'or type `resend` to request a new one.',
+            )
+            reminded = True
         for msg in _messages_after(channel_id, msg_id):
             if msg.get('author', {}).get('bot'):
                 continue
-            code = msg.get('content', '').strip()
-            if re.fullmatch(r'\d{6}', code):
-                _send(channel_id, f'✅ Got it — entering code `{code}`...')
+            content = msg.get('content', '').strip()
+            if content.lower() == _RESEND_COMMAND:
+                _send(channel_id, '🔄 Requesting a new code from Garmin — check your email again...')
+                print('[discord_mfa] resend requested, restarting login', flush=True)
+                raise MFARetryRequested()
+            if re.fullmatch(r'\d{6}', content):
+                _send(channel_id, f'✅ Got it — entering code `{content}`...')
                 print('[discord_mfa] received MFA code from Discord', flush=True)
-                return code
+                return content
 
     raise RuntimeError(
         f'Timed out waiting for MFA code after {_TIMEOUT_SECONDS // 60} minutes.'

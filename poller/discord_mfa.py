@@ -1,13 +1,12 @@
 """
 Discord-based MFA code retrieval for Garmin login.
 
-When Garmin requires an MFA code, sends a notification to a Discord channel
-and polls for a reply containing the code. Requires a bot with read/send
-message permissions in the configured channel.
+When Garmin requires an MFA code, sends a notification to the Bacta Discord
+channel and polls for a reply containing the 6-digit code.
 
 Required env vars:
     DISCORD_BOT_TOKEN      — bot token from Discord Developer Portal
-    DISCORD_MFA_CHANNEL_ID — channel ID to send/receive the MFA code
+    DISCORD_BACTA_CHANNEL_ID — channel ID to send/receive the MFA code
 """
 import os
 import re
@@ -16,17 +15,19 @@ import time
 import requests
 
 _BASE = 'https://discord.com/api/v10'
-_TIMEOUT_SECONDS = 600  # 10 minutes
+_TIMEOUT_SECONDS = 600   # 10 minutes
 _POLL_INTERVAL = 5
 
 
 def _headers() -> dict:
-    token = os.environ.get('DISCORD_BOT_TOKEN', '')
-    return {'Authorization': f'Bot {token}', 'Content-Type': 'application/json'}
+    return {
+        'Authorization': f'Bot {os.environ["DISCORD_BOT_TOKEN"]}',
+        'Content-Type': 'application/json',
+    }
 
 
-def _send_message(channel_id: str, text: str) -> str | None:
-    """Send a message; return its ID."""
+def _send(channel_id: str, text: str) -> str | None:
+    """Send a message to the channel; return its snowflake ID."""
     resp = requests.post(
         f'{_BASE}/channels/{channel_id}/messages',
         headers=_headers(),
@@ -35,11 +36,12 @@ def _send_message(channel_id: str, text: str) -> str | None:
     )
     if resp.ok:
         return resp.json().get('id')
+    print(f'[discord_mfa] send failed: {resp.status_code} {resp.text}', flush=True)
     return None
 
 
-def _get_messages_after(channel_id: str, after_id: str) -> list[dict]:
-    """Return messages posted after after_id."""
+def _messages_after(channel_id: str, after_id: str) -> list[dict]:
+    """Return messages posted after after_id, oldest first."""
     resp = requests.get(
         f'{_BASE}/channels/{channel_id}/messages',
         headers=_headers(),
@@ -47,45 +49,39 @@ def _get_messages_after(channel_id: str, after_id: str) -> list[dict]:
         timeout=10,
     )
     if resp.ok:
-        return resp.json()
+        return sorted(resp.json(), key=lambda m: m['id'])
     return []
 
 
 def prompt_mfa_via_discord() -> str:
     """
-    Notify the Discord channel that an MFA code is needed and wait for a reply.
-    Returns the code string when received.
-    Raises RuntimeError on timeout or misconfiguration.
+    Notify the Bacta Discord channel that an MFA code is needed and wait
+    for a reply containing a 6-digit code. Returns the code as a string.
+    Raises RuntimeError on timeout.
     """
-    channel_id = os.environ.get('DISCORD_MFA_CHANNEL_ID', '')
-    if not channel_id or not os.environ.get('DISCORD_BOT_TOKEN', ''):
-        raise RuntimeError(
-            'DISCORD_BOT_TOKEN and DISCORD_MFA_CHANNEL_ID must be set for Discord MFA.'
-        )
+    channel_id = os.environ['DISCORD_BACTA_CHANNEL_ID']
 
     print('[discord_mfa] sending MFA notification to Discord...', flush=True)
-    msg_id = _send_message(
+    msg_id = _send(
         channel_id,
         '🔐 **Garmin MFA required**\n'
-        'Check your email for a one-time code and reply here with just the number.\n'
-        f'*(waiting up to {_TIMEOUT_SECONDS // 60} minutes)*',
+        'Check your email for a one-time code and **reply here with just the 6-digit number**.\n'
+        f'*(will wait up to {_TIMEOUT_SECONDS // 60} minutes)*',
     )
     if not msg_id:
-        raise RuntimeError('Failed to send Discord MFA notification.')
+        raise RuntimeError('Failed to send Discord MFA notification — check bot token and channel ID.')
 
-    print('[discord_mfa] waiting for MFA code reply...', flush=True)
+    print('[discord_mfa] waiting for MFA code in Discord...', flush=True)
     deadline = time.time() + _TIMEOUT_SECONDS
     while time.time() < deadline:
         time.sleep(_POLL_INTERVAL)
-        messages = _get_messages_after(channel_id, msg_id)
-        for msg in reversed(messages):  # oldest first
-            # Ignore bot's own messages
+        for msg in _messages_after(channel_id, msg_id):
             if msg.get('author', {}).get('bot'):
                 continue
             code = msg.get('content', '').strip()
             if re.fullmatch(r'\d{6}', code):
-                _send_message(channel_id, f'✅ Got it, entering code `{code}`...')
-                print(f'[discord_mfa] received MFA code', flush=True)
+                _send(channel_id, f'✅ Got it — entering code `{code}`...')
+                print('[discord_mfa] received MFA code from Discord', flush=True)
                 return code
 
     raise RuntimeError(
@@ -93,9 +89,27 @@ def prompt_mfa_via_discord() -> str:
     )
 
 
+def notify_mfa_required() -> None:
+    """
+    Send a one-way notification that MFA re-setup is needed (no reply expected).
+    Used when the service exits rather than waiting interactively.
+    """
+    channel_id = os.environ.get('DISCORD_BACTA_CHANNEL_ID', '')
+    if not channel_id or not os.environ.get('DISCORD_BOT_TOKEN', ''):
+        return
+    _send(
+        channel_id,
+        '⚠️ **Bacta — Garmin token expired**\n'
+        'SSH into the server and run:\n'
+        '```\ncd /path/to/bacta\n'
+        'source poller/.venv/bin/activate\n'
+        'python poller/setup_garmin_session.py\n```\n'
+        'Then restart the poller.',
+    )
+
+
 def is_configured() -> bool:
-    """Return True if Discord MFA env vars are set."""
     return bool(
         os.environ.get('DISCORD_BOT_TOKEN') and
-        os.environ.get('DISCORD_MFA_CHANNEL_ID')
+        os.environ.get('DISCORD_BACTA_CHANNEL_ID')
     )

@@ -1,102 +1,85 @@
-from playwright.async_api import Page
-
-BASE = 'https://connect.garmin.com/modern/proxy'
+from garminconnect import Garmin
 
 
-async def _get_json(page: Page, url: str) -> dict:
+def fetch_daily_summary(client: Garmin, date_str: str) -> dict:
     try:
-        response = await page.goto(url, wait_until='networkidle')
-        if response is None:
-            return {}
-        return await response.json()
+        data = client.get_user_summary(date_str)
+        return {
+            'steps': data.get('totalSteps'),
+            'resting_hr': data.get('restingHeartRate'),
+            'stress_score': data.get('averageStressLevel'),
+            'body_battery': data.get('bodyBatteryMostRecentValue'),
+            'body_battery_charged': data.get('bodyBatteryChargedValue'),
+            'body_battery_drained': data.get('bodyBatteryDrainedValue'),
+            'intensity_minutes': (
+                (data.get('moderateIntensityMinutes') or 0) +
+                (data.get('vigorousIntensityMinutes') or 0) * 2
+            ) or None,
+            'floors': data.get('floorsAscended'),
+            'hydration_ml': data.get('waterIntakeInML'),
+        }
     except Exception:
         return {}
 
 
-async def fetch_daily_summary(page: Page, display_name: str, date_str: str) -> dict:
-    """Fetch the core daily user summary from Garmin Connect."""
-    url = f'{BASE}/usersummary-service/usersummary/daily/{display_name}?calendarDate={date_str}'
-    data = await _get_json(page, url)
-    return {
-        'steps': data.get('totalSteps'),
-        'resting_hr': data.get('restingHeartRate'),
-        'stress_score': data.get('averageStressLevel'),
-        'body_battery_charged': data.get('bodyBatteryChargedValue'),
-        'body_battery_drained': data.get('bodyBatteryDrainedValue'),
-        'intensity_minutes': (
-            data.get('moderateIntensityMinutes', 0) +
-            data.get('vigorousIntensityMinutes', 0) * 2
-        ),
-        'floors': data.get('floorsAscended'),
-        'hydration_ml': data.get('waterIntakeInML'),
-    }
+def fetch_hrv(client: Garmin, date_str: str) -> dict:
+    try:
+        data = client.get_hrv_data(date_str)
+        summary = data.get('hrvSummary', {})
+        return {
+            'hrv': summary.get('lastNightAvg'),
+            'hrv_5min_high': summary.get('lastNight5MinHigh'),
+            'hrv_status': summary.get('status'),
+        }
+    except Exception:
+        return {}
 
 
-async def fetch_hrv(page: Page, date_str: str) -> dict:
-    url = f'{BASE}/hrv-service/hrv/{date_str}'
-    data = await _get_json(page, url)
-    summary = data.get('hrvSummary', {})
-    return {
-        'hrv': summary.get('lastNight'),
-        'hrv_5min_high': summary.get('lastNight5MinHigh'),
-        'hrv_status': summary.get('status'),
-    }
+def fetch_sleep(client: Garmin, date_str: str) -> dict:
+    try:
+        data = client.get_sleep_data(date_str)
+        daily = data.get('dailySleepDTO', {})
+
+        def _mins(key: str):
+            v = daily.get(key)
+            return v // 60 if v is not None else None
+
+        return {
+            'sleep_duration': _mins('sleepTimeSeconds'),
+            'sleep_score': daily.get('sleepScores', {}).get('overall', {}).get('value'),
+            'sleep_deep_minutes': _mins('deepSleepSeconds'),
+            'sleep_light_minutes': _mins('lightSleepSeconds'),
+            'sleep_rem_minutes': _mins('remSleepSeconds'),
+            'sleep_awake_minutes': _mins('awakeSleepSeconds'),
+        }
+    except Exception:
+        return {}
 
 
-async def fetch_sleep(page: Page, date_str: str) -> dict:
-    url = f'{BASE}/wellness-service/wellness/dailySleepData?date={date_str}'
-    data = await _get_json(page, url)
-    daily = data.get('dailySleepDTO', {})
-
-    def _mins(key: str):
-        v = daily.get(key)
-        return v // 60 if v is not None else None
-
-    return {
-        'sleep_duration': _mins('sleepTimeSeconds'),
-        'sleep_score': daily.get('sleepScores', {}).get('overall', {}).get('value'),
-        'sleep_deep_minutes': _mins('deepSleepSeconds'),
-        'sleep_light_minutes': _mins('lightSleepSeconds'),
-        'sleep_rem_minutes': _mins('remSleepSeconds'),
-        'sleep_awake_minutes': _mins('awakeSleepSeconds'),
-    }
+def fetch_recovery(client: Garmin, date_str: str) -> dict:
+    try:
+        data = client.get_training_readiness(date_str)
+        entry = data[0] if isinstance(data, list) and data else {}
+        return {
+            'recovery_score': entry.get('score'),
+            'training_load': entry.get('acuteLoad'),
+            'recovery_time_hours': entry.get('recoveryTime'),
+        }
+    except Exception:
+        return {}
 
 
-async def fetch_body_battery(page: Page, date_str: str) -> dict:
-    url = f'{BASE}/wellness-service/wellness/bodyBattery?startDate={date_str}&endDate={date_str}'
-    data = await _get_json(page, url)
-    if isinstance(data, list) and len(data) > 0:
-        readings = data[0].get('bodyBatteryValuesArray', [])
-        if readings:
-            entry = readings[-1]
-            val = entry[1] if isinstance(entry, (list, tuple)) and len(entry) > 1 else None
-            return {'body_battery': val}
-    return {'body_battery': None}
+def fetch_vo2max(client: Garmin, date_str: str) -> dict:
+    try:
+        data = client.get_max_metrics(date_str)
+        if isinstance(data, list) and data:
+            return {'vo2max': data[0].get('vo2MaxPreciseValue') or data[0].get('vo2MaxValue')}
+    except Exception:
+        pass
+    return {}
 
 
-async def fetch_recovery(page: Page, date_str: str) -> dict:
-    url = f'{BASE}/training-readiness-service/trainingReadiness/{date_str}'
-    data = await _get_json(page, url)
-    return {
-        'recovery_score': data.get('score'),
-        'training_load': data.get('acuteLoad'),
-        'recovery_time_hours': data.get('recoveryTime'),
-    }
-
-
-async def fetch_vo2max(page: Page, display_name: str) -> dict:
-    url = (
-        f'{BASE}/fitnessstats-service/activity/{display_name}'
-        '?aggregation=weekly&startDate=2020-01-01&endDate=2099-12-31'
-        '&metrics=VO2_MAX_RUNNING'
-    )
-    data = await _get_json(page, url)
-    values = data.get('metricsMap', {}).get('VO2_MAX_RUNNING', [])
-    latest = values[-1] if values else {}
-    return {'vo2max': latest.get('value')}
-
-
-async def fetch_all(page: Page, display_name: str, date_str: str) -> dict:
+def fetch_all(client: Garmin, date_str: str) -> dict:
     """Fetch all metrics and return as flat dict of {metric: (value, unit)}."""
     results: dict[str, tuple] = {}
 
@@ -105,23 +88,23 @@ async def fetch_all(page: Page, display_name: str, date_str: str) -> dict:
             if v is not None:
                 results[k] = (v, units.get(k, ''))
 
-    add(await fetch_daily_summary(page, display_name, date_str), {
+    add(fetch_daily_summary(client, date_str), {
         'steps': 'steps', 'resting_hr': 'bpm', 'stress_score': 'score',
-        'body_battery_charged': 'score', 'body_battery_drained': 'score',
-        'intensity_minutes': 'minutes', 'floors': 'floors', 'hydration_ml': 'ml'
+        'body_battery': 'score', 'body_battery_charged': 'score',
+        'body_battery_drained': 'score', 'intensity_minutes': 'minutes',
+        'floors': 'floors', 'hydration_ml': 'ml',
     })
-    add(await fetch_hrv(page, date_str), {
-        'hrv': 'ms', 'hrv_5min_high': 'ms', 'hrv_status': ''
+    add(fetch_hrv(client, date_str), {
+        'hrv': 'ms', 'hrv_5min_high': 'ms', 'hrv_status': '',
     })
-    add(await fetch_sleep(page, date_str), {
+    add(fetch_sleep(client, date_str), {
         'sleep_duration': 'minutes', 'sleep_score': 'score',
         'sleep_deep_minutes': 'minutes', 'sleep_light_minutes': 'minutes',
-        'sleep_rem_minutes': 'minutes', 'sleep_awake_minutes': 'minutes'
+        'sleep_rem_minutes': 'minutes', 'sleep_awake_minutes': 'minutes',
     })
-    add(await fetch_body_battery(page, date_str), {'body_battery': 'score'})
-    add(await fetch_recovery(page, date_str), {
-        'recovery_score': 'score', 'training_load': 'load', 'recovery_time_hours': 'hours'
+    add(fetch_recovery(client, date_str), {
+        'recovery_score': 'score', 'training_load': 'load', 'recovery_time_hours': 'hours',
     })
-    add(await fetch_vo2max(page, display_name), {'vo2max': 'ml/kg/min'})
+    add(fetch_vo2max(client, date_str), {'vo2max': 'ml/kg/min'})
 
     return results

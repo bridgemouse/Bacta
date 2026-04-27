@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 """
 Persistent Garmin Connect polling service.
-Authenticates once via headless Chromium, polls all metrics hourly.
+Loads OAuth tokens, polls all metrics hourly.
 Watches for a signal file to trigger immediate poll (force-poll from API).
 """
-import asyncio
 import os
 import sys
+import time
 from datetime import date, datetime
 from pathlib import Path
 
-from playwright.async_api import async_playwright
-
 from db import upsert_many_snapshots
-from garmin_auth import login, get_display_name
+from garmin_auth import load_client, get_display_name
 from garmin_metrics import fetch_all
 
 DB_PATH = os.environ.get('DB_PATH', './data/bacta.db')
@@ -25,11 +23,11 @@ def log(msg: str):
     print(f'[garmin_service] {datetime.now().isoformat()} {msg}', flush=True)
 
 
-async def poll_once(page, display_name: str):
+def poll_once(client, display_name: str):
     today = date.today().isoformat()
     log(f'polling metrics for {today}')
     try:
-        metrics = await fetch_all(page, display_name, today)
+        metrics = fetch_all(client, today)
         rows = [(metric, value, unit) for metric, (value, unit) in metrics.items()]
         upsert_many_snapshots(DB_PATH, 'garmin_snapshots', today, rows, '{}')
         log(f'wrote {len(rows)} metrics to db')
@@ -46,31 +44,30 @@ def check_signal() -> bool:
     return False
 
 
-async def main():
+def main():
     log('starting up')
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=['--disable-blink-features=AutomationControlled', '--no-sandbox'],
-        )
-        page = await login(browser)
-        display_name = await get_display_name(page)
-        log(f'authenticated as {display_name}')
 
-        # Initial poll on startup
-        await poll_once(page, display_name)
+    try:
+        client = load_client()
+    except FileNotFoundError as e:
+        log(f'ERROR: {e}')
+        sys.exit(1)
 
-        while True:
-            # Sleep in 10-second increments, checking for signal file
-            for _ in range(POLL_INTERVAL_SECONDS // 10):
-                await asyncio.sleep(10)
-                if check_signal():
-                    log('force-poll signal received')
-                    await poll_once(page, display_name)
-                    break  # Reset the hourly timer
+    display_name = get_display_name(client)
+    log(f'authenticated as {display_name or os.environ.get("GARMIN_EMAIL", "unknown")}')
 
-            await poll_once(page, display_name)
+    poll_once(client, display_name)
+
+    while True:
+        for _ in range(POLL_INTERVAL_SECONDS // 10):
+            time.sleep(10)
+            if check_signal():
+                log('force-poll signal received')
+                poll_once(client, display_name)
+                break
+
+        poll_once(client, display_name)
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

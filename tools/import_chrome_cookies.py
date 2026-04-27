@@ -34,7 +34,7 @@ def convert(cookies: list[dict]) -> dict:
         if 'garmin' not in domain:
             continue
 
-        sameSite = SAMESIDE_MAP.get(c.get('sameSite', '').lower(), 'None')
+        sameSite = SAMESIDE_MAP.get((c.get('sameSite') or '').lower(), 'None')
         entry = {
             'name': c['name'],
             'value': c['value'],

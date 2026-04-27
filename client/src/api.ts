@@ -52,7 +52,7 @@ export async function getManualToday(): Promise<ManualEntry | null> {
   const res = await fetch(`${BASE}/manual/today`)
   if (!res.ok) return null
   const data = await res.json()
-  return data.entry
+  return data.entry ?? null
 }
 
 export async function postManual(payload: {

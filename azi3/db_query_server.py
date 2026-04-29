@@ -3,11 +3,23 @@
 
 import asyncio
 import os
+import re
 import sqlite3
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
+
+_DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+
+def _validate_dates(*dates: str) -> str | None:
+    """Return an error message if any date is not YYYY-MM-DD, else None."""
+    for d in dates:
+        if not _DATE_RE.match(d):
+            return f"Invalid date format: expected YYYY-MM-DD, got {d!r}"
+    return None
+
 
 app = Server("bacta-db")
 
@@ -76,19 +88,26 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 def _list_metrics() -> list[TextContent]:
+    conn = None
     try:
         conn = _connect()
         rows = conn.execute(
             "SELECT DISTINCT metric FROM garmin_snapshots ORDER BY metric"
         ).fetchall()
-        conn.close()
         metrics = [r["metric"] for r in rows]
         return [TextContent(type="text", text="Available metrics:\n" + "\n".join(f"- {m}" for m in metrics))]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {e}")]
+    finally:
+        if conn:
+            conn.close()
 
 
 def _query_metric(metric: str, start_date: str, end_date: str) -> list[TextContent]:
+    err = _validate_dates(start_date, end_date)
+    if err:
+        return [TextContent(type="text", text=err)]
+    conn = None
     try:
         conn = _connect()
         rows = conn.execute(
@@ -96,7 +115,6 @@ def _query_metric(metric: str, start_date: str, end_date: str) -> list[TextConte
             "WHERE metric = ? AND date BETWEEN ? AND ? ORDER BY date ASC",
             (metric, start_date, end_date),
         ).fetchall()
-        conn.close()
         if not rows:
             return [TextContent(type="text", text=f"No data for metric '{metric}' between {start_date} and {end_date}.")]
         unit = rows[0]["unit"]
@@ -105,9 +123,16 @@ def _query_metric(metric: str, start_date: str, end_date: str) -> list[TextConte
         return [TextContent(type="text", text="\n".join(lines))]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {e}")]
+    finally:
+        if conn:
+            conn.close()
 
 
 def _query_manual_inputs(start_date: str, end_date: str) -> list[TextContent]:
+    err = _validate_dates(start_date, end_date)
+    if err:
+        return [TextContent(type="text", text=err)]
+    conn = None
     try:
         conn = _connect()
         rows = conn.execute(
@@ -115,7 +140,6 @@ def _query_manual_inputs(start_date: str, end_date: str) -> list[TextContent]:
             "WHERE date BETWEEN ? AND ? ORDER BY date ASC",
             (start_date, end_date),
         ).fetchall()
-        conn.close()
         if not rows:
             return [TextContent(type="text", text=f"No manual inputs between {start_date} and {end_date}.")]
         lines = [
@@ -130,6 +154,9 @@ def _query_manual_inputs(start_date: str, end_date: str) -> list[TextContent]:
         return [TextContent(type="text", text="\n".join(lines))]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {e}")]
+    finally:
+        if conn:
+            conn.close()
 
 
 async def main() -> None:

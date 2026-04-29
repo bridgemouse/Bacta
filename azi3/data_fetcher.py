@@ -24,6 +24,8 @@ def fetch_metrics(metrics: list[str], days: int = 30) -> dict[str, list[dict]]:
     Returns a dict mapping each metric name to a list of {date, value, unit} dicts,
     sorted oldest-first. Missing metrics return an empty list.
     """
+    if not metrics:
+        return {}
     start, end = _date_range(days)
     conn = sqlite3.connect(f'file:{_db_path()}?mode=ro', uri=True)
     conn.row_factory = sqlite3.Row

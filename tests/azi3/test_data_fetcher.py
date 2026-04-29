@@ -51,6 +51,13 @@ def test_fetch_metrics_empty_for_missing_metric(db_path):
     assert result['vo2max'] == []
 
 
+def test_fetch_metrics_empty_list_returns_empty_dict(db_path):
+    import data_fetcher
+    importlib.reload(data_fetcher)
+    result = data_fetcher.fetch_metrics([], days=30)
+    assert result == {}
+
+
 def test_fetch_manual_inputs_returns_entries(db_path):
     conn = sqlite3.connect(db_path)
     conn.execute(

@@ -72,5 +72,5 @@ export async function triggerPoll(): Promise<void> {
 }
 
 export async function triggerAzi3(): Promise<void> {
-  await fetch('/api/azi3/run', { method: 'POST' })
+  await fetch(`${BASE}/azi3/run`, { method: 'POST' })
 }

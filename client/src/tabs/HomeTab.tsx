@@ -1,6 +1,6 @@
 // client/src/tabs/HomeTab.tsx
 import { useState, useEffect, useCallback } from 'react'
-import { getGarminSummary, triggerPoll } from '../api'
+import { getGarminSummary, triggerPoll, triggerAzi3 } from '../api'
 import { AziCard } from '../components/AziCard'
 import { StatGrid } from '../components/StatGrid'
 import { LogForm } from '../components/LogForm'
@@ -9,6 +9,7 @@ import type { GarminSummary } from '../api'
 export function HomeTab() {
   const [summary, setSummary] = useState<GarminSummary>({})
   const [polling, setPolling] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
 
   const fetchSummary = useCallback(async () => {
     const data = await getGarminSummary()
@@ -20,10 +21,17 @@ export function HomeTab() {
   async function handlePoll() {
     setPolling(true)
     await triggerPoll()
-    // Brief wait so the poller has time to write, then refresh
     await new Promise((r) => setTimeout(r, 2000))
     await fetchSummary()
     setPolling(false)
+  }
+
+  async function handleRegenerate() {
+    setRegenerating(true)
+    await triggerAzi3()
+    // Spinner for 3s — feedback that signal was sent (run takes minutes)
+    await new Promise((r) => setTimeout(r, 3000))
+    setRegenerating(false)
   }
 
   const steps = summary.steps
@@ -33,30 +41,58 @@ export function HomeTab() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4">
         <h1 className="text-lg font-bold text-gray-50">Bacta</h1>
-        <button
-          aria-label="Sync"
-          onClick={handlePoll}
-          disabled={polling}
-          className="text-gray-400 hover:text-blue-400 transition-colors disabled:opacity-40 p-1"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width={20}
-            height={20}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={polling ? 'animate-spin' : ''}
+        <div className="flex items-center gap-2">
+          {/* AZI-3 Regenerate button */}
+          <button
+            aria-label="Regenerate"
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="text-gray-400 hover:text-blue-400 transition-colors disabled:opacity-40 p-1"
           >
-            <path d="M21 2v6h-6" />
-            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-            <path d="M3 22v-6h6" />
-            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width={20}
+              height={20}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={regenerating ? 'animate-spin' : ''}
+            >
+              <path d="M12 2a10 10 0 0 1 7.38 16.75" />
+              <path d="m16 16 3 3-3 3" />
+              <path d="M12 22a10 10 0 0 1-7.38-16.75" />
+              <path d="m8 8-3-3 3-3" />
+            </svg>
+          </button>
+          {/* Garmin Sync button */}
+          <button
+            aria-label="Sync"
+            onClick={handlePoll}
+            disabled={polling}
+            className="text-gray-400 hover:text-blue-400 transition-colors disabled:opacity-40 p-1"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width={20}
+              height={20}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={polling ? 'animate-spin' : ''}
+            >
+              <path d="M21 2v6h-6" />
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M3 22v-6h6" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* AZI-3 Daily Briefing */}

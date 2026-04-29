@@ -49,4 +49,12 @@ describe('HomeTab', () => {
     await userEvent.click(screen.getByRole('button', { name: /sync/i }))
     expect(mockFetch).toHaveBeenCalledWith('/api/poll/force', { method: 'POST' })
   })
+
+  test('regenerate button triggers POST /api/azi3/run', async () => {
+    mockSummary({ steps: 1000 })
+    render(<HomeTab />)
+    await waitFor(() => screen.getByRole('button', { name: /regenerate/i }))
+    await userEvent.click(screen.getByRole('button', { name: /regenerate/i }))
+    expect(mockFetch).toHaveBeenCalledWith('/api/azi3/run', { method: 'POST' })
+  })
 })

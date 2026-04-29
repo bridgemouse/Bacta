@@ -70,3 +70,7 @@ export async function postManual(payload: {
 export async function triggerPoll(): Promise<void> {
   await fetch(`${BASE}/poll/force`, { method: 'POST' })
 }
+
+export async function triggerAzi3(): Promise<void> {
+  await fetch('/api/azi3/run', { method: 'POST' })
+}

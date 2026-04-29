@@ -8,6 +8,7 @@ import manualRouter from './api/manual'
 import insightsRouter from './api/insights'
 import bloodworkRouter from './api/bloodwork'
 import pollRouter from './api/poll'
+import azi3Router from './api/azi3'
 
 migrate()
 
@@ -20,6 +21,7 @@ app.use('/api/manual', manualRouter)
 app.use('/api/insights', insightsRouter)
 app.use('/api/bloodwork', bloodworkRouter)
 app.use('/api/poll', pollRouter)
+app.use('/api/azi3', azi3Router)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {

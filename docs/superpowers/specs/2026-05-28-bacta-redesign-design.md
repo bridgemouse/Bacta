@@ -40,7 +40,7 @@ React + Node/Express. The backend exposes:
 The frontend never talks to SQLite directly. It never calls Haiku. It reads, renders, and logs manual input through the API.
 
 ### Deployment
-Dedicated LXC. Node app + Python poller/MX-4 process run directly on the LXC. SQLite on the local filesystem. Reverse proxy via Nginx Proxy Manager (already running on the homelab), DNS via AdGuard. `bacta.local` resolves through the existing AdGuard setup. No Caddy. Vault mounted read-only for blood work parsing. GitHub Actions for CI/CD.
+Dedicated LXC. Node app + Python poller/MX-4 process run directly on the LXC. SQLite on the local filesystem. Reverse proxy via Nginx Proxy Manager (already running on the homelab), DNS via AdGuard. `bacta.local` resolves through the existing AdGuard setup. No Caddy. No vault mount required. GitHub Actions for CI/CD.
 
 ### Workflow
 1. This spec → Claude Code builds the skeleton (navigation, design system, stub endpoints, MX-4 card shell)
@@ -110,7 +110,7 @@ Same three files, same structure:
 - `mx4-personality.md` — opinion log (Current Beliefs injected, Full Log indexed in Chroma)
 - `mx4-state.md` — factual run state, updated after each generation
 
-Vault remains available via vault-query MCP for blood work context and personal background (training block, hypermobility, wedding taper, etc.).
+Vault-query MCP remains available for personal background context (training block, hypermobility, wedding taper, etc.) if MX-4 needs it for deeper insight generation — but is no longer required for blood work.
 
 ### Tone
 Adherence-neutral. MX-4 doesn't shame overages, doesn't celebrate compliance. He gives genuine assessments in the Nines/Two-Boots register — direct, curious, occasionally dry. He will flag things that warrant attention but won't nag.
@@ -171,7 +171,7 @@ Adherence-neutral. MX-4 doesn't shame overages, doesn't celebrate compliance. He
 ### Blood Work Tables
 
 **`blood_work_panels`**
-`id, date, source_vault_path, raw_markdown`
+`id, date, lab_name, notes, file_path (encrypted), uploaded_at`
 
 **`blood_work_results`**
 `id, panel_id, marker_name, value, unit, reference_range_low, reference_range_high, flagged`
@@ -179,8 +179,8 @@ Adherence-neutral. MX-4 doesn't shame overages, doesn't celebrate compliance. He
 ### Garmin Poller
 Runs every 30 minutes during waking hours, every 2 hours overnight. Garth handles token refresh. On each write, updates `synced_at` on the relevant table — this is MX-4's staleness signal.
 
-### Blood Work Vault Parsing
-The backend includes a vault reader that parses blood work markdown from the mounted vault volume and populates `blood_work_panels` and `blood_work_results`. Triggered manually (user initiates a sync after new lab results are ingested into the vault via LLM-Wiki). Schema deferred until actual Factor results are available — parser built to the frontmatter schema established at that time.
+### Blood Work Upload and Storage
+User uploads lab results directly in the Blood Work section (PDF or image). No vault dependency. Backend stores the uploaded file and the user manually enters or confirms parsed marker values into `blood_work_results`. Sensitive blood work fields are encrypted at the application layer before writing to SQLite. Encryption key stored in `.env` on the LXC, never committed. Local-only access by design, but encryption adds a protection layer for sensitive health data.
 
 ### Extensibility
 New data sources: new poller + new SQLite tables. No other changes to the architecture.
@@ -243,7 +243,7 @@ Each section is its own feature branch, merged when the full slice is solid:
 | `feature/section-training` | `garmin_activities`, `garmin_vo2max`, `garmin_running_dynamics` — workouts, load, VO2 max, volume, pace. |
 | `feature/section-daily-log` | `daily_log`, `supplements_log` — readiness, energy, caffeine, supplements form. |
 | `feature/section-nutrition` | All nutrition tables, OpenFoodFacts integration, food logging UI, adaptive targeting, weight log. Most complex — last. |
-| `feature/section-bloodwork` | `blood_work_panels`, `blood_work_results`, vault parser. Deferred until Factor lab results are ingested and frontmatter schema is established. |
+| `feature/section-bloodwork` | `blood_work_panels`, `blood_work_results`, file upload endpoint, encryption layer, manual result entry UI. |
 
 ### Phase 4 — MX-4 Full Wiring
 After sections have real data. Python MX-4 process fully connected: Haiku API, staleness check logic, `BACTA_HEARTBEAT.md` authored per section, memory files initialized from existing `mx4-persona.md`. Adaptive TDEE calculation wired to nutrition targets.

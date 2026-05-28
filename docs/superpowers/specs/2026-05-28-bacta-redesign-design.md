@@ -40,11 +40,12 @@ React + Node/Express. The backend exposes:
 The frontend never talks to SQLite directly. It never calls Haiku. It reads, renders, and logs manual input through the API.
 
 ### Deployment
-Docker Compose on LXC 107. Two containers: Node app, Garmin poller + MX-4 process. SQLite on a named volume. Caddy reverse proxy at `bacta.local`. Vault mounted read-only for blood work parsing.
+Dedicated LXC. Node app + Python poller/MX-4 process run directly on the LXC. SQLite on the local filesystem. Reverse proxy via Nginx Proxy Manager (already running on the homelab), DNS via AdGuard. `bacta.local` resolves through the existing AdGuard setup. No Caddy. Vault mounted read-only for blood work parsing. GitHub Actions for CI/CD.
 
 ### Workflow
-1. This spec → Claude Design (UI prototyping)
-2. Claude Design output → Claude Code (full implementation, front and back)
+1. This spec → Claude Code builds the skeleton (navigation, design system, stub endpoints, MX-4 card shell)
+2. Skeleton running on-device → Claude Design iterates with the live codebase until the UI feel is right
+3. Claude Design output → Claude Code implements sections one by one on feature branches
 
 ---
 

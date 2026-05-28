@@ -10,7 +10,7 @@ export interface MX4Insight {
 
 interface MX4CardProps {
   insight: MX4Insight | null
-  section: string
+  section: SectionKey
   isGenerating?: boolean
 }
 
@@ -21,9 +21,8 @@ const TONE_COLORS: Record<string, string> = {
 }
 
 export function MX4Card({ insight, section, isGenerating = false }: MX4CardProps) {
-  const sectionKey = section as SectionKey
-  const accent = SECTION_ACCENTS[sectionKey] ?? COLORS.mx4Green
-  const label = SECTION_LABELS[sectionKey] ?? section
+  const accent = SECTION_ACCENTS[section]
+  const label = SECTION_LABELS[section]
 
   if (!insight) {
     return (

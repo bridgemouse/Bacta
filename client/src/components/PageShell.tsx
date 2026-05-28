@@ -5,9 +5,10 @@ import { SubNav } from './SubNav'
 import { MX4Card, type MX4Insight } from './MX4Card'
 
 interface PageShellProps {
-  section: string
+  section: SectionKey
   tabs: string[]
-  insight: MX4Insight | null
+  /** Pass null to show loading state. Omit entirely to hide the MX-4 card (e.g. Daily Log). */
+  insight?: MX4Insight | null
   isGenerating?: boolean
   onMenuOpen: () => void
   children: React.ReactNode
@@ -22,9 +23,8 @@ export function PageShell({
   children,
 }: PageShellProps) {
   const [activeTab, setActiveTab] = useState(tabs[0] ?? '')
-  const sectionKey = section as SectionKey
-  const accent = SECTION_ACCENTS[sectionKey] ?? COLORS.mx4Green
-  const label = SECTION_LABELS[sectionKey] ?? section
+  const accent = SECTION_ACCENTS[section]
+  const label = SECTION_LABELS[section]
 
   return (
     <div
@@ -72,7 +72,9 @@ export function PageShell({
         {tabs.length > 1 && (
           <SubNav tabs={tabs} active={activeTab} accent={accent} onChange={setActiveTab} />
         )}
-        <MX4Card insight={insight} section={section} isGenerating={isGenerating} />
+        {insight !== undefined && (
+          <MX4Card insight={insight} section={section} isGenerating={isGenerating} />
+        )}
         {children}
       </div>
     </div>

@@ -2,7 +2,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { App } from '../../client/src/App'
+import { MemoryRouter } from 'react-router-dom'
+import App from '../../client/src/App'
 
 global.ResizeObserver = class {
   observe() {}
@@ -10,40 +11,46 @@ global.ResizeObserver = class {
   disconnect() {}
 }
 
-// Silence all fetches in App tests — components handle their own data
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
 })
 
+function renderApp(initialPath = '/') {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <App />
+    </MemoryRouter>
+  )
+}
+
 describe('App', () => {
-  test('renders tab bar with 5 tabs', () => {
-    render(<App />)
+  test('renders home page with Bacta header on /', () => {
+    renderApp('/')
+    expect(screen.getByText('Bacta')).toBeInTheDocument()
+  })
+
+  test('renders menu button on home page', () => {
+    renderApp('/')
+    expect(screen.getByTestId('menu-button')).toBeInTheDocument()
+  })
+
+  test('opens drawer when menu button is clicked', async () => {
+    renderApp('/')
+    const menuBtn = screen.getByTestId('menu-button')
+    await userEvent.click(menuBtn)
+    // Drawer nav links should appear
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Recovery')).toBeInTheDocument()
-    expect(screen.getByText('Sleep')).toBeInTheDocument()
-    expect(screen.getByText('Training')).toBeInTheDocument()
-    expect(screen.getByText('Fitness')).toBeInTheDocument()
   })
 
-  test('shows Home content on initial render', () => {
-    render(<App />)
-    // Home tab content mounts on first render
-    expect(screen.getByTestId('home-tab')).toBeInTheDocument()
+  test('renders recovery page on /recovery route', () => {
+    renderApp('/recovery')
+    const matches = screen.getAllByText('Body Battery')
+    expect(matches.length).toBeGreaterThan(0)
   })
 
-  test('lazy-mounts Recovery tab only on first visit', async () => {
-    render(<App />)
-    expect(screen.queryByTestId('recovery-tab')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByText('Recovery'))
-    expect(screen.getByTestId('recovery-tab')).toBeInTheDocument()
-  })
-
-  test('keeps tab mounted after switching away', async () => {
-    render(<App />)
-    await userEvent.click(screen.getByText('Recovery'))
-    expect(screen.getByTestId('recovery-tab')).toBeInTheDocument()
-    await userEvent.click(screen.getByText('Home'))
-    // Recovery tab is still in DOM, just hidden
-    expect(screen.getByTestId('recovery-tab')).toBeInTheDocument()
+  test('renders sleep page on /sleep route', () => {
+    renderApp('/sleep')
+    expect(screen.getByText('Sleep Score')).toBeInTheDocument()
   })
 })

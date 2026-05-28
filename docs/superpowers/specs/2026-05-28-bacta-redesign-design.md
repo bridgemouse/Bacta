@@ -224,22 +224,28 @@ Manual entry in Nutrition section. Smoothed 7-day rolling average computed at re
 
 ## Section 6 — Build Sequencing
 
+Development philosophy: get the skeleton right and the feel confirmed on-device first, then build out sections one at a time on their own feature branches. Each section ships its own backend routes, SQLite tables, frontend pages, and HEARTBEAT entry together — no section is "done" until the full slice is working. This avoids building an entire backend against assumptions that turn out to be wrong.
+
 ### Phase 1 — Spec and Prototype
 This document. Taken into Claude Design to prototype key screens (Home, Recovery, Nutrition at minimum). Claude Design produces the visual target before app code is written.
 
-### Phase 2 — Backend and Data Layer
-SQLite schema, Garmin poller, all REST API routes, food search integration (OpenFoodFacts), nutrition CRUD endpoints, weight logging, MX-4 trigger endpoint. Backend fully functional and independently testable before frontend exists. Heaviest SparkyFitness borrowing happens here.
+### Phase 2 — Skeleton
+Side drawer navigation, section routing, design system (colors, typography, card components), MX-4 card component shell with mock data, stub API endpoints. Goal: get the app on the iPhone home screen with the navigation and feel confirmed before any real data is wired. No real backend yet — stubs return hardcoded mock responses.
 
-### Phase 3 — Frontend
-React frontend built section by section to the Claude Design target:
-1. Side drawer navigation (skeleton)
-2. Home screen
-3. Recovery (establishes MX-4 card pattern used everywhere)
-4. Sleep, Training, Blood Work, Daily Log
-5. Nutrition (most complex — last)
+### Phase 3 — Section Feature Branches
+Each section is its own feature branch, merged when the full slice is solid:
 
-### Phase 4 — MX-4 Integration
-MX-4 process wired in after frontend exists and insight card slots are real. `BACTA_HEARTBEAT.md` written per section. Haiku API connected. Staleness check logic. Memory files initialized from existing `mx4-persona.md`.
+| Branch | Scope |
+|---|---|
+| `feature/section-recovery` | `garmin_hrv`, `garmin_daily` (partial), `garmin_sleep` (partial) — HRV, body battery, resting HR, stress, SpO2. Garmin poller wired. Establishes MX-4 card pattern for all future sections. |
+| `feature/section-sleep` | `garmin_sleep` (full) — sleep score, stages, trends. |
+| `feature/section-training` | `garmin_activities`, `garmin_vo2max`, `garmin_running_dynamics` — workouts, load, VO2 max, volume, pace. |
+| `feature/section-daily-log` | `daily_log`, `supplements_log` — readiness, energy, caffeine, supplements form. |
+| `feature/section-nutrition` | All nutrition tables, OpenFoodFacts integration, food logging UI, adaptive targeting, weight log. Most complex — last. |
+| `feature/section-bloodwork` | `blood_work_panels`, `blood_work_results`, vault parser. Deferred until Factor lab results are ingested and frontmatter schema is established. |
+
+### Phase 4 — MX-4 Full Wiring
+After sections have real data. Python MX-4 process fully connected: Haiku API, staleness check logic, `BACTA_HEARTBEAT.md` authored per section, memory files initialized from existing `mx4-persona.md`. Adaptive TDEE calculation wired to nutrition targets.
 
 ### Phase 5 — Docker + Deployment
 Docker Compose on LXC 107, Caddy at `bacta.local`, vault NFS mounted read-only, PWA manifest, iOS home screen.

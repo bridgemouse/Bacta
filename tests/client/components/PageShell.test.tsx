@@ -55,4 +55,15 @@ describe('PageShell', () => {
     )
     expect(screen.getByTestId('child-content')).toBeInTheDocument()
   })
+
+  it('omits MX4Card when insight prop is not provided', () => {
+    render(
+      <MemoryRouter>
+        <PageShell section="dailylog" tabs={[]} onMenuOpen={() => {}}>
+          <div>form</div>
+        </PageShell>
+      </MemoryRouter>
+    )
+    expect(screen.queryByTestId('mx4-loading')).not.toBeInTheDocument()
+  })
 })

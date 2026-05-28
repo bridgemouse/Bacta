@@ -5,7 +5,7 @@ interface DailyLogPageProps { onMenuOpen: () => void }
 
 export function DailyLogPage({ onMenuOpen }: DailyLogPageProps) {
   return (
-    <PageShell section="dailylog" tabs={[]} insight={null} onMenuOpen={onMenuOpen}>
+    <PageShell section="dailylog" tabs={[]} onMenuOpen={onMenuOpen}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Readiness */}
         <div>

@@ -8,19 +8,52 @@ const INSIGHTS_DIR = process.env.INSIGHTS_DIR ?? path.join(process.cwd(), 'insig
 
 const VALID_SECTIONS = ['home', 'recovery', 'training', 'sleep', 'nutrition', 'bloodwork', 'dailylog']
 
-// List available sections (those with an HTML file present)
-insightsRouter.get('/', (_req, res) => {
-  const available: string[] = []
-  for (const section of VALID_SECTIONS) {
-    const filePath = path.join(INSIGHTS_DIR, `${section}.html`)
-    if (fs.existsSync(filePath)) {
-      available.push(section)
-    }
-  }
-  res.json({ sections: available })
-})
+const MOCK_INSIGHTS: Record<string, object> = {
+  home: {
+    generated_at: new Date().toISOString(),
+    summary: 'Recovery solid. Training on track. Nutrition close — protein slightly under. MX-4 standing by.',
+    tone: 'positive',
+    flags: [],
+  },
+  recovery: {
+    generated_at: new Date().toISOString(),
+    summary: 'HRV up 4ms. Body battery at 74. Green for tomorrow.',
+    tone: 'positive',
+    flags: [],
+  },
+  training: {
+    generated_at: new Date().toISOString(),
+    summary: 'Load moderate. Week 4 of 8. Thursday tempo is the key session.',
+    tone: 'positive',
+    flags: [],
+  },
+  sleep: {
+    generated_at: new Date().toISOString(),
+    summary: '8.1h, score 82. Deep sleep slightly low but consistent with mileage spike.',
+    tone: 'positive',
+    flags: [],
+  },
+  nutrition: {
+    generated_at: new Date().toISOString(),
+    summary: 'Calories on target. Protein under by 18g — close the gap at dinner.',
+    tone: 'caution',
+    flags: ['protein under target'],
+  },
+  bloodwork: {
+    generated_at: new Date().toISOString(),
+    summary: 'No panels uploaded yet.',
+    tone: 'caution',
+    flags: [],
+  },
+  dailylog: {
+    generated_at: new Date().toISOString(),
+    summary: 'Daily log ready.',
+    tone: 'positive',
+    flags: [],
+  },
+}
 
-// Serve a section's HTML insight file
+// Get insight for a section — reads JSON from insights dir if available, falls back to mock
 insightsRouter.get('/:section', (req, res) => {
   const { section } = req.params
 
@@ -29,14 +62,18 @@ insightsRouter.get('/:section', (req, res) => {
     return
   }
 
-  const filePath = path.join(INSIGHTS_DIR, `${section}.html`)
-  if (!fs.existsSync(filePath)) {
-    res.status(404).json({ error: 'No insight available for section' })
-    return
+  const filePath = path.join(INSIGHTS_DIR, `${section}.json`)
+  if (fs.existsSync(filePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+      res.json(data)
+      return
+    } catch {
+      // Fall through to mock
+    }
   }
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8')
-  res.send(fs.readFileSync(filePath, 'utf8'))
+  res.json(MOCK_INSIGHTS[section])
 })
 
 export default insightsRouter

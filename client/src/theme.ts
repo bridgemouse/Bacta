@@ -1,3 +1,5 @@
+export type SectionKey = 'home' | 'recovery' | 'training' | 'sleep' | 'nutrition' | 'bloodwork' | 'dailylog'
+
 export const COLORS = {
   base: '#0f1117',
   surface: '#111827',
@@ -11,7 +13,7 @@ export const COLORS = {
   mx4Red: '#f87171',
 } as const
 
-export const SECTION_ACCENTS: Record<string, string> = {
+export const SECTION_ACCENTS: Record<SectionKey, string> = {
   home:      '#4ade80',
   recovery:  '#64b5f6',
   training:  '#fb923c',
@@ -21,7 +23,7 @@ export const SECTION_ACCENTS: Record<string, string> = {
   dailylog:  '#fbbf24',
 }
 
-export const SECTION_LABELS: Record<string, string> = {
+export const SECTION_LABELS: Record<SectionKey, string> = {
   home:      'Home',
   recovery:  'Recovery',
   training:  'Training',
@@ -31,7 +33,7 @@ export const SECTION_LABELS: Record<string, string> = {
   dailylog:  'Daily Log',
 }
 
-export const SECTION_ICONS: Record<string, string> = {
+export const SECTION_ICONS: Record<SectionKey, string> = {
   home:      '🏠',
   recovery:  '🔋',
   training:  '💪',

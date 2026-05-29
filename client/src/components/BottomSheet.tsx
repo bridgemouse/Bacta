@@ -78,7 +78,7 @@ export function BottomSheet({ isOpen, onClose, activeSection }: BottomSheetProps
             E
           </div>
           <div>
-            <div style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 600 }}>Ethan</div>
+            <div style={{ color: COLORS.text, fontSize: 13, fontWeight: 600 }}>Ethan</div>
             <div style={{ color: COLORS.mx4Green, fontSize: 11 }}>● MX-4 online</div>
           </div>
         </div>

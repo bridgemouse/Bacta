@@ -37,7 +37,7 @@ export function HomePage() {
             <div style={{ color: COLORS.textSecondary, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
               {SECTION_ICONS[section]} {SECTION_LABELS[section]}
             </div>
-            <div style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 600 }}>{status}</div>
+            <div style={{ color: COLORS.text, fontSize: 13, fontWeight: 600 }}>{status}</div>
             <div style={{ color: COLORS.textMuted, fontSize: 11, marginTop: 2 }}>{metric}</div>
           </div>
         ))}

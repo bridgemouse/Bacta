@@ -34,11 +34,11 @@ describe('App', () => {
     expect(screen.getByTestId('menu-button')).toBeInTheDocument()
   })
 
-  test('opens drawer when menu button is clicked', async () => {
+  test('opens bottom sheet when menu button is clicked', async () => {
     renderApp('/')
     const menuBtn = screen.getByTestId('menu-button')
     await userEvent.click(menuBtn)
-    // Drawer nav links should appear
+    // Bottom sheet nav links should appear
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Recovery')).toBeInTheDocument()
   })

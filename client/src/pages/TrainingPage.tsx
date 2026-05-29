@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { AppShell, type BottomAction } from '../components/AppShell'
-import { SubNav } from '../components/SubNav'
+import { AppShell } from '../components/AppShell'
 import { MX4Card } from '../components/MX4Card'
 import { MetricTile } from '../components/MetricTile'
 import { SECTION_ACCENTS } from '../theme'
 
-const TABS = ['Overview', 'Workouts', 'Load', 'VO2 Max', 'Volume', 'Pace']
+const TABS = ['Overview', 'Workouts']
 
 const MOCK_INSIGHT = {
   generated_at: new Date().toISOString(),
@@ -14,16 +13,10 @@ const MOCK_INSIGHT = {
   flags: [],
 }
 
-const ACTIONS: BottomAction[] = [
-  { icon: '✏️', label: 'Log',  onClick: () => {} },
-  { icon: '🔄', label: 'Sync', onClick: () => {} },
-]
-
 export function TrainingPage() {
   const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <AppShell section="training" actions={ACTIONS}>
-      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.training} onChange={setActiveTab} />
+    <AppShell section="training" tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
       <MX4Card insight={MOCK_INSIGHT} section="training" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <MetricTile value="342"  label="Training Load" accent={SECTION_ACCENTS.training} />

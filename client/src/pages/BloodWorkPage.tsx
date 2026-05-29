@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AppShell, type BottomAction } from '../components/AppShell'
 import { SubNav } from '../components/SubNav'
 import { MX4Card } from '../components/MX4Card'
-import { COLORS } from '../theme'
+import { COLORS, SECTION_ACCENTS } from '../theme'
 
 const TABS = ['Overview', 'Results', 'Trends']
 
@@ -22,7 +22,7 @@ export function BloodWorkPage() {
   const [activeTab, setActiveTab] = useState(TABS[0])
   return (
     <AppShell section="bloodwork" actions={ACTIONS}>
-      <SubNav tabs={TABS} active={activeTab} accent="#f87171" onChange={setActiveTab} />
+      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.bloodwork} onChange={setActiveTab} />
       <MX4Card insight={MOCK_INSIGHT} section="bloodwork" />
       <div style={{
         background: COLORS.surfaceElevated,

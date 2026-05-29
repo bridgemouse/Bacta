@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import { COLORS } from '../theme'
 import type { SectionKey } from '../theme'
 import { TopBar } from './TopBar'
@@ -16,8 +15,6 @@ interface AppShellProps {
 
 export function AppShell({ section, actions = [], children }: AppShellProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
-  const { pathname } = useLocation()
-  const activeSection = (pathname.split('/').filter(Boolean)[0] ?? 'home') as SectionKey
 
   return (
     <div
@@ -44,7 +41,7 @@ export function AppShell({ section, actions = [], children }: AppShellProps) {
       <BottomSheet
         isOpen={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        activeSection={activeSection}
+        activeSection={section}
       />
     </div>
   )

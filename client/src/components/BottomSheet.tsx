@@ -7,7 +7,7 @@ const SECTIONS: SectionKey[] = ['home', 'recovery', 'training', 'sleep', 'nutrit
 interface BottomSheetProps {
   isOpen: boolean
   onClose: () => void
-  activeSection: string
+  activeSection: SectionKey
 }
 
 export function BottomSheet({ isOpen, onClose, activeSection }: BottomSheetProps) {

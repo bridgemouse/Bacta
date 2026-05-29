@@ -2,10 +2,14 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AppShell } from '../../../client/src/components/AppShell'
 
-function renderShell(props: { actions?: { icon: string; label: string; onClick: () => void }[] } = {}) {
+function renderShell(props: {
+  tabs?: string[]
+  activeTab?: string
+  onTabChange?: (tab: string) => void
+} = {}) {
   return render(
     <MemoryRouter initialEntries={['/recovery']}>
-      <AppShell section="recovery" actions={props.actions ?? []}>
+      <AppShell section="recovery" {...props}>
         <div data-testid="child">content</div>
       </AppShell>
     </MemoryRouter>
@@ -23,9 +27,13 @@ describe('AppShell', () => {
     expect(screen.getByText('Recovery')).toBeInTheDocument()
   })
 
-  it('renders provided action buttons via BottomBar', () => {
-    renderShell({ actions: [{ icon: '🔄', label: 'Sync', onClick: vi.fn() }] })
-    expect(screen.getByText('Sync')).toBeInTheDocument()
+  it('forwards tab props to BottomBar', () => {
+    const onTabChange = vi.fn()
+    renderShell({ tabs: ['Overview', 'Trends'], activeTab: 'Overview', onTabChange })
+    expect(screen.getByText('Overview')).toBeInTheDocument()
+    expect(screen.getByText('Trends')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Trends'))
+    expect(onTabChange).toHaveBeenCalledWith('Trends')
   })
 
   it('opens BottomSheet when menu button is clicked', () => {

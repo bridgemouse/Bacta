@@ -3,7 +3,7 @@ import { COLORS } from '../theme'
 interface BottomBarProps {
   tabs?: string[]
   activeTab?: string
-  accent?: string
+  accent?: string // must be a 6-digit hex string e.g. "#64b5f6" — appended with "22" for the active tint
   onTabChange?: (tab: string) => void
   onMenuOpen: () => void
 }

@@ -16,4 +16,9 @@ describe('TopBar', () => {
     render(<TopBar section="recovery" />)
     expect(screen.getByText(/MX-4/)).toBeInTheDocument()
   })
+
+  it('renders accent underline below the label', () => {
+    render(<TopBar section="training" />)
+    expect(screen.getByTestId('accent-bar')).toBeInTheDocument()
+  })
 })

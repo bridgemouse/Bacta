@@ -25,7 +25,7 @@ export function TopBar({ section }: TopBarProps) {
       <div style={{ width: 50 }} />
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <span style={{ color: COLORS.textPrimary, fontSize: 15, fontWeight: 600 }}>{label}</span>
-        <div style={{ width: 28, height: 2, background: accent, borderRadius: 1 }} />
+        <div data-testid="accent-bar" style={{ width: 28, height: 2, background: accent, borderRadius: 1 }} />
       </div>
       <span style={{ color: COLORS.mx4Green, fontSize: 10, whiteSpace: 'nowrap' }}>● MX-4</span>
     </div>

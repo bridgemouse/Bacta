@@ -1,4 +1,7 @@
-import { PageShell } from '../components/PageShell'
+import { useState } from 'react'
+import { AppShell, type BottomAction } from '../components/AppShell'
+import { SubNav } from '../components/SubNav'
+import { MX4Card } from '../components/MX4Card'
 import { MetricTile } from '../components/MetricTile'
 import { SECTION_ACCENTS } from '../theme'
 
@@ -11,17 +14,23 @@ const MOCK_INSIGHT = {
   flags: [],
 }
 
-interface SleepPageProps { onMenuOpen: () => void }
+const ACTIONS: BottomAction[] = [
+  { icon: '🔄', label: 'Sync',   onClick: () => {} },
+  { icon: '✏️', label: 'Manual', onClick: () => {} },
+]
 
-export function SleepPage({ onMenuOpen }: SleepPageProps) {
+export function SleepPage() {
+  const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <PageShell section="sleep" tabs={TABS} insight={MOCK_INSIGHT} onMenuOpen={onMenuOpen}>
+    <AppShell section="sleep" actions={ACTIONS}>
+      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.sleep} onChange={setActiveTab} />
+      <MX4Card insight={MOCK_INSIGHT} section="sleep" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <MetricTile value="8.1" unit="h" label="Duration" accent={SECTION_ACCENTS.sleep} />
-        <MetricTile value="82"  label="Sleep Score" accent={SECTION_ACCENTS.sleep} progress={0.82} />
-        <MetricTile value="18"  unit="%" label="Deep Sleep" accent={SECTION_ACCENTS.sleep} />
-        <MetricTile value="24"  unit="%" label="REM" accent={SECTION_ACCENTS.sleep} />
+        <MetricTile value="8.1" unit="h"  label="Duration"    accent={SECTION_ACCENTS.sleep} />
+        <MetricTile value="82"            label="Sleep Score"  accent={SECTION_ACCENTS.sleep} progress={0.82} />
+        <MetricTile value="18"  unit="%" label="Deep Sleep"   accent={SECTION_ACCENTS.sleep} />
+        <MetricTile value="24"  unit="%" label="REM"          accent={SECTION_ACCENTS.sleep} />
       </div>
-    </PageShell>
+    </AppShell>
   )
 }

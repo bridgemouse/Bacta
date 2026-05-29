@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { AppShell, type BottomAction } from '../components/AppShell'
-import { SubNav } from '../components/SubNav'
+import { AppShell } from '../components/AppShell'
 import { MX4Card } from '../components/MX4Card'
 import { MetricTile } from '../components/MetricTile'
 import { SECTION_ACCENTS } from '../theme'
 
-const TABS = ['Overview', 'Log Food', 'Macros', 'Weight', 'Food History']
+const TABS = ['Overview', 'Log']
 
 const MOCK_INSIGHT = {
   generated_at: new Date().toISOString(),
@@ -14,16 +13,10 @@ const MOCK_INSIGHT = {
   flags: ['protein under target'],
 }
 
-const ACTIONS: BottomAction[] = [
-  { icon: '📝', label: 'Log',  onClick: () => {} },
-  { icon: '🔄', label: 'Sync', onClick: () => {} },
-]
-
 export function NutritionPage() {
   const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <AppShell section="nutrition" actions={ACTIONS}>
-      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.nutrition} onChange={setActiveTab} />
+    <AppShell section="nutrition" tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
       <MX4Card insight={MOCK_INSIGHT} section="nutrition" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <MetricTile value="2,340" unit="kcal" label="Calories" accent={SECTION_ACCENTS.nutrition} progress={0.94} />

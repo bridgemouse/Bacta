@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { AppShell, type BottomAction } from '../components/AppShell'
-import { SubNav } from '../components/SubNav'
+import { AppShell } from '../components/AppShell'
 import { MX4Card } from '../components/MX4Card'
 import { MetricTile } from '../components/MetricTile'
 import { SECTION_ACCENTS } from '../theme'
 
-const TABS = ['Overview', 'HRV', 'Body Battery', 'Stress', 'SpO2']
+const TABS = ['Overview', 'Trends']
 
 const MOCK_INSIGHT = {
   generated_at: new Date().toISOString(),
@@ -14,16 +13,10 @@ const MOCK_INSIGHT = {
   flags: [],
 }
 
-const ACTIONS: BottomAction[] = [
-  { icon: '🔄', label: 'Sync',   onClick: () => {} },
-  { icon: '✏️', label: 'Manual', onClick: () => {} },
-]
-
 export function RecoveryPage() {
   const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <AppShell section="recovery" actions={ACTIONS}>
-      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.recovery} onChange={setActiveTab} />
+    <AppShell section="recovery" tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
       <MX4Card insight={MOCK_INSIGHT} section="recovery" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <MetricTile value="74"  label="Body Battery" accent={SECTION_ACCENTS.recovery} progress={0.74} />

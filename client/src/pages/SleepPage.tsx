@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { AppShell, type BottomAction } from '../components/AppShell'
-import { SubNav } from '../components/SubNav'
+import { AppShell } from '../components/AppShell'
 import { MX4Card } from '../components/MX4Card'
 import { MetricTile } from '../components/MetricTile'
 import { SECTION_ACCENTS } from '../theme'
 
-const TABS = ['Overview', 'Stages', 'Trends']
+const TABS = ['Overview', 'Trends']
 
 const MOCK_INSIGHT = {
   generated_at: new Date().toISOString(),
@@ -14,16 +13,10 @@ const MOCK_INSIGHT = {
   flags: [],
 }
 
-const ACTIONS: BottomAction[] = [
-  { icon: '🔄', label: 'Sync',   onClick: () => {} },
-  { icon: '✏️', label: 'Manual', onClick: () => {} },
-]
-
 export function SleepPage() {
   const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <AppShell section="sleep" actions={ACTIONS}>
-      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.sleep} onChange={setActiveTab} />
+    <AppShell section="sleep" tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
       <MX4Card insight={MOCK_INSIGHT} section="sleep" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <MetricTile value="8.1" unit="h"  label="Duration"    accent={SECTION_ACCENTS.sleep} />

@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { AppShell, type BottomAction } from '../components/AppShell'
-import { SubNav } from '../components/SubNav'
+import { AppShell } from '../components/AppShell'
 import { MX4Card } from '../components/MX4Card'
-import { COLORS, SECTION_ACCENTS } from '../theme'
+import { COLORS } from '../theme'
 
-const TABS = ['Overview', 'Results', 'Trends']
+const TABS = ['Overview', 'Results']
 
 const MOCK_INSIGHT = {
   generated_at: new Date().toISOString(),
@@ -13,16 +12,10 @@ const MOCK_INSIGHT = {
   flags: [],
 }
 
-const ACTIONS: BottomAction[] = [
-  { icon: '📤', label: 'Upload',  onClick: () => {} },
-  { icon: '📊', label: 'History', onClick: () => {} },
-]
-
 export function BloodWorkPage() {
   const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <AppShell section="bloodwork" actions={ACTIONS}>
-      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.bloodwork} onChange={setActiveTab} />
+    <AppShell section="bloodwork" tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
       <MX4Card insight={MOCK_INSIGHT} section="bloodwork" />
       <div style={{
         background: COLORS.surfaceElevated,

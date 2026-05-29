@@ -1,13 +1,9 @@
-import { AppShell, type BottomAction } from '../components/AppShell'
+import { AppShell } from '../components/AppShell'
 import { COLORS, SECTION_ACCENTS } from '../theme'
-
-const ACTIONS: BottomAction[] = [
-  { icon: '💾', label: 'Save', onClick: () => {} },
-]
 
 export function DailyLogPage() {
   return (
-    <AppShell section="dailylog" actions={ACTIONS}>
+    <AppShell section="dailylog">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Readiness */}
         <div>

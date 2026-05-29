@@ -1,4 +1,7 @@
-import { PageShell } from '../components/PageShell'
+import { useState } from 'react'
+import { AppShell, type BottomAction } from '../components/AppShell'
+import { SubNav } from '../components/SubNav'
+import { MX4Card } from '../components/MX4Card'
 import { MetricTile } from '../components/MetricTile'
 import { SECTION_ACCENTS } from '../theme'
 
@@ -11,17 +14,23 @@ const MOCK_INSIGHT = {
   flags: ['protein under target'],
 }
 
-interface NutritionPageProps { onMenuOpen: () => void }
+const ACTIONS: BottomAction[] = [
+  { icon: '📝', label: 'Log',  onClick: () => {} },
+  { icon: '🔄', label: 'Sync', onClick: () => {} },
+]
 
-export function NutritionPage({ onMenuOpen }: NutritionPageProps) {
+export function NutritionPage() {
+  const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <PageShell section="nutrition" tabs={TABS} insight={MOCK_INSIGHT} onMenuOpen={onMenuOpen}>
+    <AppShell section="nutrition" actions={ACTIONS}>
+      <SubNav tabs={TABS} active={activeTab} accent={SECTION_ACCENTS.nutrition} onChange={setActiveTab} />
+      <MX4Card insight={MOCK_INSIGHT} section="nutrition" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <MetricTile value="2,340" unit="kcal" label="Calories" accent={SECTION_ACCENTS.nutrition} progress={0.94} />
-        <MetricTile value="142"   unit="g" label="Protein" accent={SECTION_ACCENTS.nutrition} progress={0.89} trend="↓ 18g under" />
-        <MetricTile value="280"   unit="g" label="Carbs" accent={SECTION_ACCENTS.nutrition} />
-        <MetricTile value="74"    unit="g" label="Fat" accent={SECTION_ACCENTS.nutrition} />
+        <MetricTile value="142"   unit="g"    label="Protein"  accent={SECTION_ACCENTS.nutrition} progress={0.89} trend="↓ 18g under" />
+        <MetricTile value="280"   unit="g"    label="Carbs"    accent={SECTION_ACCENTS.nutrition} />
+        <MetricTile value="74"    unit="g"    label="Fat"      accent={SECTION_ACCENTS.nutrition} />
       </div>
-    </PageShell>
+    </AppShell>
   )
 }

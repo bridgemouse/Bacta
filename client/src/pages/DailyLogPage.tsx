@@ -1,17 +1,19 @@
-import { PageShell } from '../components/PageShell'
+import { AppShell, type BottomAction } from '../components/AppShell'
 import { COLORS, SECTION_ACCENTS } from '../theme'
 
-interface DailyLogPageProps { onMenuOpen: () => void }
+const ACTIONS: BottomAction[] = [
+  { icon: '💾', label: 'Save', onClick: () => {} },
+]
 
-export function DailyLogPage({ onMenuOpen }: DailyLogPageProps) {
+export function DailyLogPage() {
   return (
-    <PageShell section="dailylog" tabs={[]} onMenuOpen={onMenuOpen}>
+    <AppShell section="dailylog" actions={ACTIONS}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Readiness */}
         <div>
           <div style={{ color: COLORS.textSecondary, fontSize: 12, marginBottom: 8 }}>Readiness</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            {[1,2,3,4,5].map(n => (
+            {[1, 2, 3, 4, 5].map(n => (
               <button
                 key={n}
                 style={{
@@ -70,19 +72,21 @@ export function DailyLogPage({ onMenuOpen }: DailyLogPageProps) {
           />
         </div>
 
-        <button style={{
-          background: SECTION_ACCENTS.dailylog,
-          border: 'none',
-          borderRadius: 10,
-          padding: '12px',
-          color: '#000',
-          fontWeight: 700,
-          fontSize: 14,
-          cursor: 'pointer',
-        }}>
+        <button
+          style={{
+            background: SECTION_ACCENTS.dailylog,
+            border: 'none',
+            borderRadius: 10,
+            padding: '12px',
+            color: '#000',
+            fontWeight: 700,
+            fontSize: 14,
+            cursor: 'pointer',
+          }}
+        >
           Log Today
         </button>
       </div>
-    </PageShell>
+    </AppShell>
   )
 }

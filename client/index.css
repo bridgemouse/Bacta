@@ -38,3 +38,12 @@ body {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* MX-4 OS keyframes — referenced by name in inline animation strings */
+@keyframes mx4spin        { to { transform: rotate(360deg); } }
+@keyframes mx4breathe     { 0%,100% { transform: scale(0.82); opacity: 0.7; } 50% { transform: scale(1); opacity: 1; } }
+@keyframes mx4ping        { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes mx4tele        { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+@keyframes mx4blink       { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes mx4glowbreathe { 0%,100% { box-shadow: 0 0 8px var(--mx4-accent,#2bc4e8); } 50% { box-shadow: 0 0 20px var(--mx4-accent,#2bc4e8); } }
+@keyframes mx4shimmer     { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

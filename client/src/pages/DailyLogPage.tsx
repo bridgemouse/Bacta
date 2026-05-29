@@ -41,7 +41,7 @@ export function DailyLogPage() {
               border: `1px solid ${COLORS.border}`,
               borderRadius: 8,
               padding: '10px 12px',
-              color: COLORS.textPrimary,
+              color: COLORS.text,
               fontSize: 14,
               boxSizing: 'border-box',
             }}
@@ -60,7 +60,7 @@ export function DailyLogPage() {
               border: `1px solid ${COLORS.border}`,
               borderRadius: 8,
               padding: '10px 12px',
-              color: COLORS.textPrimary,
+              color: COLORS.text,
               fontSize: 14,
               resize: 'none',
               boxSizing: 'border-box',

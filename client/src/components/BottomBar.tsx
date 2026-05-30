@@ -1,68 +1,79 @@
-import { COLORS } from '../theme'
+import { COLORS, FONT_MONO, FONT_UI } from '../theme'
+import { MX4Sigil } from './primitives/MX4Sigil'
+import { NavIcon } from './primitives/NavIcon'
+import { hexA } from '../lib/hexA'
 
 interface BottomBarProps {
-  tabs?: string[]
-  activeTab?: string
-  accent?: string // must be a 6-digit hex string e.g. "#64b5f6" — appended with "22" for the active tint
-  onTabChange?: (tab: string) => void
-  onMenuOpen: () => void
+  accent: string
+  onAsk: () => void
+  onNav: () => void
 }
 
-export function BottomBar({ tabs, activeTab, accent = COLORS.textSecondary, onTabChange, onMenuOpen }: BottomBarProps) {
+export function BottomBar({ accent, onAsk, onNav }: BottomBarProps) {
+  const circleBase = {
+    width: 44,
+    height: 44,
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    cursor: 'pointer',
+    border: 'none',
+    padding: 0,
+  }
+
   return (
     <div
       style={{
-        background: COLORS.surface,
-        borderTop: `1px solid ${COLORS.border}`,
+        background: 'rgba(17,24,39,0.92)',
+        borderTop: `1px solid ${hexA(accent, 0.28)}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '8px 20px',
-        paddingBottom: 'calc(8px + env(safe-area-inset-bottom))',
+        padding: `10px 18px calc(10px + env(safe-area-inset-bottom))`,
         flexShrink: 0,
+        position: 'relative',
+        zIndex: 2,
       }}
     >
-      <div style={{ display: 'flex', gap: 6 }}>
-        {(tabs ?? []).map(tab => {
-          const isActive = tab === activeTab
-          return (
-            <button
-              key={tab}
-              data-active={isActive}
-              onClick={() => onTabChange?.(tab)}
-              style={{
-                background: isActive ? accent + '22' : 'transparent',
-                border: `1px solid ${isActive ? accent : COLORS.border}`,
-                borderRadius: 20,
-                padding: '5px 14px',
-                color: isActive ? accent : COLORS.textSecondary,
-                fontSize: 12,
-                fontWeight: isActive ? 600 : 400,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {tab}
-            </button>
-          )
-        })}
+      {/* Ask MX-4 button (left) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <button
+          data-testid="ask-button"
+          onClick={onAsk}
+          aria-label="Ask MX-4"
+          style={{
+            ...circleBase,
+            background: `radial-gradient(circle, ${hexA(accent, 0.13)}, ${hexA(accent, 0.03)} 70%)`,
+            border: `1px solid ${hexA(accent, 0.55)}`,
+            animation: 'mx4glowbreathe 3.6s ease-in-out infinite',
+          }}
+        >
+          <MX4Sigil color={accent} size={28} glow mood="listen" />
+        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontFamily: FONT_UI, fontSize: 13.5, fontWeight: 650, color: COLORS.text }}>
+            Ask MX-4
+          </span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.12em', color: COLORS.textMuted }}>
+            TAP TO TALK
+          </span>
+        </div>
       </div>
+
+      {/* Nav button (right) */}
       <button
-        data-testid="menu-button"
-        onClick={onMenuOpen}
+        data-testid="nav-button"
+        onClick={onNav}
+        aria-label="All Systems"
         style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 3,
-          padding: 4,
+          ...circleBase,
+          background: COLORS.base,
+          border: `1px solid ${COLORS.line}`,
         }}
       >
-        <span style={{ fontSize: 20, color: COLORS.textSecondary }}>☰</span>
-        <span style={{ color: COLORS.textSecondary, fontSize: 10 }}>Menu</span>
+        <NavIcon color={COLORS.textSecondary} size={26} />
       </button>
     </div>
   )

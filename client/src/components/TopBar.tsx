@@ -59,9 +59,7 @@ export function TopBar({ section, onBack }: TopBarProps) {
               <polyline points="15,18 9,12 15,6" />
             </svg>
           </button>
-          {section !== 'home' && (
-            <Sigil name={section as Exclude<SectionKey, 'home'>} color={accent} size={16} />
-          )}
+          <Sigil name={section as Exclude<SectionKey, 'home'>} color={accent} size={16} />
           <span style={{ fontFamily: FONT_MONO, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.12em', color: accent }}>
             {SECTION_LABELS[section].toUpperCase()}
           </span>

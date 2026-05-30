@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactElement } from 'react'
 
 export type MX4Mood = 'transmit' | 'idle' | 'listen' | 'think' | 'alert' | 'pleased'
 
@@ -39,7 +39,7 @@ export function MX4Sigil({ color = '#4ade80', size = 40, spin = false, glow = fa
   const core = <circle cx="24" cy="24" r="3.4" fill={color} />
   const coreSm = <circle cx="24" cy="24" r="2.6" fill={color} />
 
-  let inner: JSX.Element
+  let inner: ReactElement
   switch (mood) {
     case 'idle':
       inner = (

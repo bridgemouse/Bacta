@@ -1,9 +1,6 @@
-import { useState } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Card } from '../components/MX4Card'
 import { COLORS } from '../theme'
-
-const TABS = ['Overview', 'Results']
 
 const MOCK_INSIGHT = {
   generated_at: new Date().toISOString(),
@@ -13,9 +10,8 @@ const MOCK_INSIGHT = {
 }
 
 export function BloodWorkPage() {
-  const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <AppShell section="bloodwork" tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+    <AppShell section="bloodwork">
       <MX4Card insight={MOCK_INSIGHT} section="bloodwork" />
       <div style={{
         background: COLORS.surfaceElevated,

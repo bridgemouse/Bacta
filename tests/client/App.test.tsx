@@ -24,33 +24,31 @@ function renderApp(initialPath = '/') {
 }
 
 describe('App', () => {
-  test('renders home page with Bacta header on /', () => {
+  test('renders home page with BACTA header on /', () => {
     renderApp('/')
-    expect(screen.getByText('Bacta')).toBeInTheDocument()
+    expect(screen.getByText('BACTA')).toBeInTheDocument()
   })
 
-  test('renders menu button on home page', () => {
+  test('renders nav button on home page', () => {
     renderApp('/')
-    expect(screen.getByTestId('menu-button')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-button')).toBeInTheDocument()
   })
 
-  test('opens bottom sheet when menu button is clicked', async () => {
+  test('opens nav sheet when nav button is clicked', async () => {
     renderApp('/')
-    const menuBtn = screen.getByTestId('menu-button')
-    await userEvent.click(menuBtn)
-    // Bottom sheet nav links should appear
-    expect(screen.getByText('Home')).toBeInTheDocument()
+    const navBtn = screen.getByTestId('nav-button')
+    await userEvent.click(navBtn)
+    expect(screen.getByText('ALL SYSTEMS')).toBeInTheDocument()
     expect(screen.getByText('Recovery')).toBeInTheDocument()
   })
 
   test('renders recovery page on /recovery route', () => {
     renderApp('/recovery')
-    const matches = screen.getAllByText('Body Battery')
-    expect(matches.length).toBeGreaterThan(0)
+    expect(screen.getByText('RECOVERY')).toBeInTheDocument()
   })
 
   test('renders sleep page on /sleep route', () => {
     renderApp('/sleep')
-    expect(screen.getByText('Sleep Score')).toBeInTheDocument()
+    expect(screen.getByText('SLEEP')).toBeInTheDocument()
   })
 })

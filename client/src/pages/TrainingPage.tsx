@@ -1,10 +1,7 @@
-import { useState } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Card } from '../components/MX4Card'
 import { MetricTile } from '../components/MetricTile'
 import { SECTION_ACCENTS } from '../theme'
-
-const TABS = ['Overview', 'Workouts']
 
 const MOCK_INSIGHT = {
   generated_at: new Date().toISOString(),
@@ -14,9 +11,8 @@ const MOCK_INSIGHT = {
 }
 
 export function TrainingPage() {
-  const [activeTab, setActiveTab] = useState(TABS[0])
   return (
-    <AppShell section="training" tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+    <AppShell section="training">
       <MX4Card insight={MOCK_INSIGHT} section="training" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <MetricTile value="342"  label="Training Load" accent={SECTION_ACCENTS.training} />

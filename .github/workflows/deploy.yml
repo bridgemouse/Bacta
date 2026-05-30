@@ -6,29 +6,21 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to LXC 108
+    name: Deploy to LXC 109
     runs-on: [self-hosted, bacta]
 
     steps:
       - name: Pull latest code
-        run: |
-          cd /opt/bacta
-          git pull origin main
+        run: git -C /opt/bacta fetch origin main && git -C /opt/bacta reset --hard origin/main
 
       - name: Install dependencies
-        run: |
-          cd /opt/bacta
-          npm ci
+        run: npm --prefix /opt/bacta ci
 
       - name: Build
-        run: |
-          cd /opt/bacta
-          npm run build
+        run: npm --prefix /opt/bacta run build
 
       - name: Restart service
         run: sudo systemctl restart bacta-api
 
       - name: Health check
-        run: |
-          sleep 3
-          curl -sf http://localhost:3001/health | jq .
+        run: sleep 3 && curl -sf http://localhost:3001/api/health

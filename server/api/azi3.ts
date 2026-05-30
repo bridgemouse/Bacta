@@ -1,13 +1,17 @@
-// server/api/azi3.ts
 import { Router } from 'express'
 import fs from 'fs'
+import path from 'path'
 
-const router = Router()
+const azi3Router = Router()
 
-router.post('/run', (_req, res) => {
-  const signalPath = process.env.AZI3_SIGNAL_PATH ?? './data/azi3_run_signal'
+const DEFAULT_SIGNAL_PATH = path.join(process.cwd(), 'data', 'azi3_signal')
+
+// POST /api/azi3/run — write a signal file to trigger an MX-4 / AZI-3 run
+azi3Router.post('/run', (_req, res) => {
+  const signalPath = process.env.AZI3_SIGNAL_PATH ?? DEFAULT_SIGNAL_PATH
+  fs.mkdirSync(path.dirname(signalPath), { recursive: true })
   fs.writeFileSync(signalPath, new Date().toISOString())
   res.status(202).json({ ok: true })
 })
 
-export default router
+export default azi3Router

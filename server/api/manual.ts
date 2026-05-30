@@ -1,9 +1,10 @@
 import { Router } from 'express'
 import db from '../db/client'
 
-const router = Router()
+const manualRouter = Router()
 
-router.get('/today', (_req, res) => {
+// GET /api/manual/today — fetch today's manual input entry
+manualRouter.get('/today', (_req, res) => {
   const today = new Date().toISOString().slice(0, 10)
   const entry = db.prepare(
     'SELECT * FROM manual_inputs WHERE date = ?'
@@ -11,35 +12,38 @@ router.get('/today', (_req, res) => {
   res.json({ entry })
 })
 
-router.post('/', (req, res) => {
-  const { date, readiness, caffeine_mg, supplements } = req.body
-
-  if (readiness !== undefined && (readiness < 1 || readiness > 5)) {
-    return res.status(400).json({ error: 'readiness must be 1–5' })
+// POST /api/manual — upsert a manual input entry
+manualRouter.post('/', (req, res) => {
+  const { date, readiness, caffeine_mg, supplements } = req.body as {
+    date: string
+    readiness?: number
+    caffeine_mg?: number
+    supplements?: string[]
   }
 
-  // lastInsertRowid is 0 on conflict-update, so re-fetch by date after upsert
-  const resolvedDate = date ?? new Date().toISOString().slice(0, 10)
+  if (readiness !== undefined && (readiness < 1 || readiness > 5)) {
+    res.status(400).json({ error: 'readiness must be between 1 and 5' })
+    return
+  }
+
+  const supplementsJson = supplements ? JSON.stringify(supplements) : null
 
   try {
-    db.prepare(`
+    const stmt = db.prepare(`
       INSERT INTO manual_inputs (date, readiness, caffeine_mg, supplements)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(date) DO UPDATE SET
-        readiness = excluded.readiness,
+        readiness   = excluded.readiness,
         caffeine_mg = excluded.caffeine_mg,
         supplements = excluded.supplements
-    `).run(
-      resolvedDate,
-      readiness ?? null,
-      caffeine_mg ?? null,
-      supplements ? JSON.stringify(supplements) : null
-    )
-    const entry = db.prepare('SELECT * FROM manual_inputs WHERE date = ?').get(resolvedDate)
-    res.status(201).json(entry)
-  } catch (err) {
-    res.status(500).json({ error: 'db error' })
+    `)
+    stmt.run(date, readiness ?? null, caffeine_mg ?? null, supplementsJson)
+    const row = db.prepare('SELECT * FROM manual_inputs WHERE date = ?').get(date)
+    res.status(201).json(row)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Database error'
+    res.status(400).json({ error: message })
   }
 })
 
-export default router
+export default manualRouter

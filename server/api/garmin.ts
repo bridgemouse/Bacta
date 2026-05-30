@@ -1,51 +1,56 @@
 import { Router } from 'express'
 import db from '../db/client'
 
-const router = Router()
+const garminRouter = Router()
 
-const SUMMARY_METRICS = [
+const VALID_METRICS = [
   'steps', 'hrv', 'body_battery', 'resting_hr',
-  'sleep_duration', 'recovery_score', 'stress_score', 'vo2max'
+  'sleep_duration', 'recovery_score', 'stress_score', 'vo2max',
 ]
 
-router.get('/summary', (_req, res) => {
+// GET /api/garmin/summary — today's key metrics as a flat object
+garminRouter.get('/summary', (_req, res) => {
   const today = new Date().toISOString().slice(0, 10)
   const rows = db.prepare(
-    'SELECT metric, value, unit FROM garmin_snapshots WHERE date = ? AND metric IN (' +
-    SUMMARY_METRICS.map(() => '?').join(',') + ')'
-  ).all(today, ...SUMMARY_METRICS) as { metric: string; value: number; unit: string }[]
+    'SELECT metric, value FROM garmin_snapshots WHERE date = ?'
+  ).all(today) as Array<{ metric: string; value: number }>
 
   const summary: Record<string, number> = {}
-  for (const row of rows) summary[row.metric] = row.value
-
+  for (const row of rows) {
+    summary[row.metric] = row.value
+  }
   res.json(summary)
 })
 
-router.get('/:metric', (req, res) => {
+// GET /api/garmin/:metric — single metric, optional date range
+garminRouter.get('/:metric', (req, res) => {
   const { metric } = req.params
-  const { from, to } = req.query as { from?: string; to?: string }
+  const { from, to } = req.query
 
-  if (!SUMMARY_METRICS.includes(metric)) {
-    return res.status(400).json({ error: 'unknown metric' })
+  if (!VALID_METRICS.includes(metric)) {
+    res.status(400).json({ error: `Unknown metric: ${metric}` })
+    return
   }
-  const today = new Date().toISOString().slice(0, 10)
 
   if (from && to) {
     const rows = db.prepare(
-      'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? AND date BETWEEN ? AND ? ORDER BY date ASC'
-    ).all(metric, from, to)
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return res.status(404).json({ error: 'no data' })
-    }
-    return res.json({ metric, rows })
+      'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? AND date BETWEEN ? AND ? ORDER BY date'
+    ).all(metric, from as string, to as string)
+    res.json({ rows })
+    return
   }
 
+  const today = new Date().toISOString().slice(0, 10)
   const row = db.prepare(
     'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? AND date = ?'
-  ).get(metric, today)
+  ).get(metric, today) as { date: string; metric: string; value: number; unit: string } | undefined
 
-  if (!row) return res.status(404).json({ error: 'no data' })
+  if (!row) {
+    res.json({ metric, value: null, unit: null })
+    return
+  }
+
   res.json(row)
 })
 
-export default router
+export default garminRouter

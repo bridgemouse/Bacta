@@ -2,10 +2,11 @@
   "name": "Bacta",
   "short_name": "Bacta",
   "description": "Personal health dashboard",
-  "display": "standalone",
   "start_url": "/",
-  "background_color": "#111827",
-  "theme_color": "#111827",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/icon-192.png",

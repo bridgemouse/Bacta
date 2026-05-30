@@ -1,4 +1,4 @@
-# tests/azi3/test_orchestrator.py
+# tests/mx4/test_orchestrator.py
 import subprocess
 import sys
 from pathlib import Path
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'azi3'))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'mx4'))
 
 
 def test_is_usage_limit_error_detects_limit():
@@ -54,11 +54,11 @@ def test_run_claude_returns_html_on_success(tmp_path):
 
     mock_result = MagicMock()
     mock_result.returncode = 0
-    mock_result.stdout = '<div style="color:#f9fafb">AZI-3 recovery card</div>'
+    mock_result.stdout = '<div style="color:#f9fafb">MX-4 recovery card</div>'
     mock_result.stderr = ''
 
     prompt_path = tmp_path / 'system-prompt.md'
-    prompt_path.write_text('You are AZI-3.')
+    prompt_path.write_text('You are MX-4.')
     config_path = tmp_path / 'mcp-config.json'
     config_path.write_text('{}')
 
@@ -67,7 +67,7 @@ def test_run_claude_returns_html_on_success(tmp_path):
          patch('subprocess.run', return_value=mock_result):
         result = orchestrator.run_claude('Generate recovery card')
 
-    assert result == '<div style="color:#f9fafb">AZI-3 recovery card</div>'
+    assert result == '<div style="color:#f9fafb">MX-4 recovery card</div>'
 
 
 def test_run_claude_retries_on_transient_failure_and_returns_none(tmp_path):
@@ -81,7 +81,7 @@ def test_run_claude_retries_on_transient_failure_and_returns_none(tmp_path):
     mock_result.stderr = 'some transient connection error'
 
     prompt_path = tmp_path / 'system-prompt.md'
-    prompt_path.write_text('You are AZI-3.')
+    prompt_path.write_text('You are MX-4.')
     config_path = tmp_path / 'mcp-config.json'
     config_path.write_text('{}')
 
@@ -112,7 +112,7 @@ def test_run_claude_raises_immediately_on_usage_limit(tmp_path):
     mock_result.stderr = 'Usage limit exceeded for this billing period'
 
     prompt_path = tmp_path / 'system-prompt.md'
-    prompt_path.write_text('You are AZI-3.')
+    prompt_path.write_text('You are MX-4.')
     config_path = tmp_path / 'mcp-config.json'
     config_path.write_text('{}')
 

@@ -7,7 +7,7 @@
 
 ## Overview
 
-Plan 2 builds the React frontend for Bacta. The data layer (SQLite, Express API, Garmin poller) is complete from Plan 1. This plan wires up the client: a PWA saved to the iPhone home screen that shows a morning health overview powered by AZI-3 insight cards and live Garmin data.
+Plan 2 builds the React frontend for Bacta. The data layer (SQLite, Express API, Garmin poller) is complete from Plan 1. This plan wires up the client: a PWA saved to the iPhone home screen that shows a morning health overview powered by MX-4 insight cards and live Garmin data.
 
 ---
 
@@ -40,16 +40,16 @@ client/
 │   ├── App.tsx                   # Tab state, lazy mount logic, TabBar
 │   ├── api.ts                    # All fetch helpers for /api/*
 │   ├── tabs/
-│   │   ├── HomeTab.tsx           # AZI-3 briefing + stat grid + log form
-│   │   ├── RecoveryTab.tsx       # AZI-3 recovery card + HRV chart
-│   │   ├── SleepTab.tsx          # AZI-3 sleep card + sleep duration chart
-│   │   ├── TrainingTab.tsx       # AZI-3 training card + steps chart
-│   │   └── FitnessTab.tsx        # AZI-3 fitness card + VO2 max chart
+│   │   ├── HomeTab.tsx           # MX-4 briefing + stat grid + log form
+│   │   ├── RecoveryTab.tsx       # MX-4 recovery card + HRV chart
+│   │   ├── SleepTab.tsx          # MX-4 sleep card + sleep duration chart
+│   │   ├── TrainingTab.tsx       # MX-4 training card + steps chart
+│   │   └── FitnessTab.tsx        # MX-4 fitness card + VO2 max chart
 │   ├── components/
 │   │   ├── TabBar.tsx            # Bottom nav — 5 icon+label buttons
 │   │   ├── StatGrid.tsx          # 3-column stat tile grid
 │   │   ├── StatTile.tsx          # Single metric tile (label, value, unit, color)
-│   │   ├── AziCard.tsx           # Renders AZI-3 HTML via dangerouslySetInnerHTML
+│   │   ├── AziCard.tsx           # Renders MX-4 HTML via dangerouslySetInnerHTML
 │   │   ├── TrendChart.tsx        # Recharts 7-day bar/line chart, parameterized
 │   │   └── LogForm.tsx           # Readiness selector + caffeine + supplements
 │   └── index.css                 # Tailwind directives
@@ -66,7 +66,7 @@ client/
 
 The default tab and morning overview. Scroll from top to bottom follows a natural morning routine:
 
-1. **AZI-3 Daily Briefing card** — renders `GET /api/insights/recovery` as HTML via `dangerouslySetInnerHTML`. Shimmer skeleton while loading. "April 26 · Recovery section ›" link taps to the Recovery tab.
+1. **MX-4 Daily Briefing card** — renders `GET /api/insights/recovery` as HTML via `dangerouslySetInnerHTML`. Shimmer skeleton while loading. "April 26 · Recovery section ›" link taps to the Recovery tab.
 2. **Stat grid** — 3-column grid of 6 `StatTile` components. Fixed metric-to-color mapping:
    - Recovery: green (`#34d399`)
    - HRV: blue (`#60a5fa`)
@@ -82,9 +82,9 @@ The default tab and morning overview. Scroll from top to bottom follows a natura
 
 ## Section Tabs
 
-Each section tab has the same structure: AZI-3 section card at top, 7-day trend chart below.
+Each section tab has the same structure: MX-4 section card at top, 7-day trend chart below.
 
-| Tab | AZI-3 section | Chart metric |
+| Tab | MX-4 section | Chart metric |
 |-----|---------------|--------------|
 | Recovery | `recovery` | `hrv` |
 | Sleep | `sleep-quality` | `sleep_duration` |
@@ -210,5 +210,5 @@ No service worker for v1 — offline caching adds complexity for marginal gain o
 - Nutrition tab (deferred until MacroFactor account exists)
 - Blood Work tab (deferred until Factor results arrive)
 - Service worker / offline caching
-- AZI-3 insight card generation (Plan 4)
+- MX-4 insight card generation (Plan 4)
 - Containerization / deployment (Plan 5)

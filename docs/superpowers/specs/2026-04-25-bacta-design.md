@@ -6,7 +6,7 @@
 
 ## Overview
 
-Bacta is a personal health dashboard PWA named after the Star Wars healing fluid. Local WiFi only, saved to iPhone home screen. No public exposure. The differentiating feature is AZI-3 — a Claude Code agent that runs nightly, reads raw health data and personal vault context, and generates styled insight cards in the voice of the Clone Wars medical droid.
+Bacta is a personal health dashboard PWA named after the Star Wars healing fluid. Local WiFi only, saved to iPhone home screen. No public exposure. The differentiating feature is MX-4 — a Claude Code agent that runs nightly, reads raw health data and personal vault context, and generates styled insight cards in the voice of the Clone Wars medical droid.
 
 ---
 
@@ -64,14 +64,14 @@ bacta/
 ├── client/
 │   ├── components/
 │   │   ├── Sidebar/     # Key stat tiles
-│   │   ├── Insight/     # AZI-3 card renderer
+│   │   ├── Insight/     # MX-4 card renderer
 │   │   ├── sections/    # Recovery, Sleep, Training, Nutrition, Fitness, Bloodwork
 │   │   └── ManualInput/ # Readiness, caffeine, supplements
 │   ├── pages/
 │   │   └── Dashboard.tsx
 │   └── main.tsx
-├── azi3/
-│   ├── system-prompt.md     # AZI-3 character brief + instructions
+├── mx4/
+│   ├── system-prompt.md     # MX-4 character brief + instructions
 │   ├── medical-log.md       # Rolling 30-day raw session notes
 │   ├── patient-summary.md   # Condensed long-term patient memory
 │   └── orchestrator.py      # Cron wrapper — fires claude -p, logs, Discord alert
@@ -90,8 +90,8 @@ bacta/
 
 **Data separation is strict:**
 - `/data/` — written only by pollers
-- `/insights/` — written only by AZI-3
-- `/azi3/` — written only by AZI-3
+- `/insights/` — written only by MX-4
+- `/mx4/` — written only by MX-4
 - Dashboard reads all three, writes none of them
 
 ---
@@ -243,7 +243,7 @@ No authentication — local network only, consistent with homelab posture.
 
 ```
 ┌──────────┬──────────────────────────────────────┐
-│          │  AZI-3 INSIGHT CARD                  │
+│          │  MX-4 INSIGHT CARD                  │
 │ Sidebar  │  (tonight's generated HTML card)     │
 │          ├──────────────────────────────────────┤
 │ Recovery │  Section tabs:                       │
@@ -260,7 +260,7 @@ No authentication — local network only, consistent with homelab posture.
 
 **Sidebar:** Key stat tiles — recovery score, HRV, sleep duration, steps, body battery, stress, VO2 max. Always visible. Tapping a tile navigates to that section.
 
-**Main panel — AZI-3 card:** Always pinned at the top. Renders the HTML fragment from `/insights/<active-section>.html` via `dangerouslySetInnerHTML`. Each card is uniquely styled by AZI-3 at generation time.
+**Main panel — MX-4 card:** Always pinned at the top. Renders the HTML fragment from `/insights/<active-section>.html` via `dangerouslySetInnerHTML`. Each card is uniquely styled by MX-4 at generation time.
 
 **Section tabs:** Recovery, Sleep, Training, Nutrition, Fitness, Blood Work (placeholder until Factor data).
 
@@ -270,34 +270,34 @@ No authentication — local network only, consistent with homelab posture.
 
 ---
 
-## AZI-3 — Nightly Insight Agent
+## MX-4 — Nightly Insight Agent
 
 ### Character
 
-AZI-3 is a Kaminoan medical droid from Star Wars: The Clone Wars and The Bad Batch. He assisted Fives in uncovering the inhibitor chip conspiracy and formed a close bond with Omega. He is precise, verbose, genuinely anxious about patient outcomes, and fiercely loyal. He says "I must insist" when ignored. He states the obvious with complete sincerity. He expresses emotion freely despite being a droid. He does not perform care — he means it.
+MX-4 is a Kaminoan medical droid from Star Wars: The Clone Wars and The Bad Batch. He assisted Fives in uncovering the inhibitor chip conspiracy and formed a close bond with Omega. He is precise, verbose, genuinely anxious about patient outcomes, and fiercely loyal. He says "I must insist" when ignored. He states the obvious with complete sincerity. He expresses emotion freely despite being a droid. He does not perform care — he means it.
 
-Every cron run opens with a full character brief before any medical instructions, ensuring the model fully inhabits AZI-3 before producing any output.
+Every cron run opens with a full character brief before any medical instructions, ensuring the model fully inhabits MX-4 before producing any output.
 
 ### Runtime
 
 - **Claude Code CLI** installed on LXC 107, running headless via `claude -p`
 - **Tools available:** `Read`, `Write`, `Edit`, `Bash` (for SQLite queries via `sqlite3`)
 - **No Anthropic API billing** — runs on existing Claude Pro subscription
-- **Python orchestrator** (`azi3/orchestrator.py`) wraps the CLI call, handles logging, sends Discord notification on success or failure
+- **Python orchestrator** (`mx4/orchestrator.py`) wraps the CLI call, handles logging, sends Discord notification on success or failure
 
 ### Memory — Two-Tier
 
-**`azi3/medical-log.md`** — Rolling 30-day raw log. AZI-3 appends a brief clinical note after each daily run. Entries older than 30 days are trimmed by the weekly consolidation run.
+**`mx4/medical-log.md`** — Rolling 30-day raw log. MX-4 appends a brief clinical note after each daily run. Entries older than 30 days are trimmed by the weekly consolidation run.
 
-**`azi3/patient-summary.md`** — Condensed long-term patient memory. AZI-3 maintains this himself during the weekly consolidation run — reviewing the last 30 days of log entries, updating the summary with new patterns and observations, distilling his accumulated understanding of the patient.
+**`mx4/patient-summary.md`** — Condensed long-term patient memory. MX-4 maintains this himself during the weekly consolidation run — reviewing the last 30 days of log entries, updating the summary with new patterns and observations, distilling his accumulated understanding of the patient.
 
 Context load stays bounded: daily runs read both files (small), weekly run reads the log and rewrites the summary.
 
 ### Insight Cards
 
-AZI-3 does not write plain markdown. He generates a **styled HTML fragment** for each section — dark background required, otherwise full creative latitude on palette, typography, and layout. The dashboard renders it as-is.
+MX-4 does not write plain markdown. He generates a **styled HTML fragment** for each section — dark background required, otherwise full creative latitude on palette, typography, and layout. The dashboard renders it as-is.
 
-Each run AZI-3:
+Each run MX-4:
 1. Reads `patient-summary.md` and `medical-log.md`
 2. Queries SQLite directly via `sqlite3` bash commands
 3. Reads relevant vault pages via `Read` on `/mnt/vault`
@@ -318,22 +318,22 @@ Each run AZI-3:
 ### Cron Schedule (LXC 107)
 
 ```
-0 6 * * *    /opt/azi3/orchestrator.py --section recovery
-5 6 * * *    /opt/azi3/orchestrator.py --section sleep-quality
-0 8 * * *    /opt/azi3/orchestrator.py --section training-week
-5 8 * * *    /opt/azi3/orchestrator.py --section macro-adherence
-0 8 * * 0    /opt/azi3/orchestrator.py --section vo2-fitness
-0 4 * * 0    /opt/azi3/orchestrator.py --consolidate  # weekly memory consolidation
+0 6 * * *    /opt/mx4/orchestrator.py --section recovery
+5 6 * * *    /opt/mx4/orchestrator.py --section sleep-quality
+0 8 * * *    /opt/mx4/orchestrator.py --section training-week
+5 8 * * *    /opt/mx4/orchestrator.py --section macro-adherence
+0 8 * * 0    /opt/mx4/orchestrator.py --section vo2-fitness
+0 4 * * 0    /opt/mx4/orchestrator.py --consolidate  # weekly memory consolidation
 ```
 
 ### Orchestrator
 
-`azi3/orchestrator.py` is a thin Python wrapper:
+`mx4/orchestrator.py` is a thin Python wrapper:
 
 1. Builds the `claude -p` command with the system prompt and `--allowedTools Read,Write,Bash`
 2. Fires the Claude Code CLI process
 3. Waits for exit
-4. Logs result to `/var/log/azi3/`
+4. Logs result to `/var/log/mx4/`
 5. Posts Discord notification — success or failure with section name
 
 ---
@@ -355,7 +355,7 @@ After Bacta is running, expose `GET /api/garmin/summary` (or a dedicated interna
 
 **Shared volume:** `data/bacta.db` mounted into both services.
 
-**Claude Code CLI** runs directly on the LXC host (not in Docker) — AZI-3 needs direct filesystem access to `/insights/`, `/azi3/`, and `/mnt/vault` without container complexity.
+**Claude Code CLI** runs directly on the LXC host (not in Docker) — MX-4 needs direct filesystem access to `/insights/`, `/mx4/`, and `/mnt/vault` without container complexity.
 
 **Caddy** proxies `bacta.local` → `bacta-api` container port.
 
@@ -367,8 +367,8 @@ After Bacta is running, expose `GET /api/garmin/summary` (or a dedicated interna
 2. **Garmin poller** — persistent Playwright service, auth, hourly poll loop, writes to SQLite
 3. **API layer** — all endpoints wired to SQLite queries, force-poll signal to garmin-poller
 4. **Dashboard UI** — sidebar + main layout, section tabs, stat tiles, manual input form, PWA manifest
-5. **AZI-3 scaffolding** — system prompt (full AZI-3 character brief), orchestrator, memory files, cron wiring
-6. **AZI-3 insight cards** — one section at a time, starting with recovery
+5. **MX-4 scaffolding** — system prompt (full MX-4 character brief), orchestrator, memory files, cron wiring
+6. **MX-4 insight cards** — one section at a time, starting with recovery
 7. **MacroFactor** — after account is created
 8. **Blood work parser** — after Factor results arrive and schema is established via LLM-Wiki
 9. **Containerize + deploy** — Docker Compose, Caddy, LXC 107 provisioning

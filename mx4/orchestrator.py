@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# azi3/orchestrator.py
-"""AZI-3 Orchestrator — generate insight cards using claude -p."""
+# mx4/orchestrator.py
+"""MX-4 Orchestrator — generate insight cards using claude -p."""
 
 import argparse
 import os
@@ -128,7 +128,7 @@ def notify_discord(results: dict[str, str], scheduled: bool, runtime_seconds: fl
         status_lines.append(f'{icon} {section_id}{detail}')
 
     outcome = 'Complete' if all_ok else 'Failed'
-    title = f"⚕ AZI-3 — {run_type} Run {outcome} ({timestamp})"
+    title = f"⚕ MX-4 — {run_type} Run {outcome} ({timestamp})"
     body = '\n'.join(status_lines) + f'\nRuntime: {runtime}'
 
     try:
@@ -139,7 +139,7 @@ def notify_discord(results: dict[str, str], scheduled: bool, runtime_seconds: fl
 
 def run(scheduled: bool) -> None:
     start_time = time.time()
-    log(f'AZI-3 run starting (scheduled={scheduled})')
+    log(f'MX-4 run starting (scheduled={scheduled})')
 
     INSIGHTS_DIR.mkdir(exist_ok=True)
 
@@ -175,7 +175,7 @@ def run(scheduled: bool) -> None:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='AZI-3 insight card generator')
+    parser = argparse.ArgumentParser(description='MX-4 insight card generator')
     parser.add_argument('--scheduled', action='store_true',
                         help='Mark as scheduled run (suppresses Discord on success)')
     args = parser.parse_args()

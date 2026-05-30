@@ -6,8 +6,8 @@ dist/
 data/
 !data/.gitkeep
 insights/*.html
-azi3/medical-log.md
-azi3/patient-summary.md
+mx4/medical-log.md
+mx4/patient-summary.md
 __pycache__/
 *.pyc
 .venv/

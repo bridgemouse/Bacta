@@ -1,4 +1,4 @@
-# AZI-3 Insight Generation — Design Spec
+# MX-4 Insight Generation — Design Spec
 
 **Date:** 2026-04-28
 **Status:** Approved
@@ -7,7 +7,7 @@
 
 ## Overview
 
-Plan 3 builds the AZI-3 insight generation system. AZI-3 is a Claude-powered medical analysis agent that runs nightly on LXC 107, reads 30 days of Garmin data from SQLite plus personal vault context, and writes styled HTML insight cards that the dashboard already serves. The differentiating goal: cards that go materially beyond Garmin Connect's own summaries — real physiological context, population comparisons, trend projections, and personalized commentary grounded in vault knowledge (training goals, timeline, history).
+Plan 3 builds the MX-4 insight generation system. MX-4 is a Claude-powered medical analysis agent that runs nightly on LXC 107, reads 30 days of Garmin data from SQLite plus personal vault context, and writes styled HTML insight cards that the dashboard already serves. The differentiating goal: cards that go materially beyond Garmin Connect's own summaries — real physiological context, population comparisons, trend projections, and personalized commentary grounded in vault knowledge (training goals, timeline, history).
 
 ---
 
@@ -17,27 +17,27 @@ The orchestrator runs directly on LXC 107 (not in Docker). `claude -p` uses the 
 
 ```
 LXC 107 host
-├── cron: 0 3 * * *   → python3 /opt/bacta/azi3/orchestrator.py --scheduled
-├── cron: * * * * *   → python3 /opt/bacta/azi3/check_signal.py
+├── cron: 0 3 * * *   → python3 /opt/bacta/mx4/orchestrator.py --scheduled
+├── cron: * * * * *   → python3 /opt/bacta/mx4/check_signal.py
 │
 └── Docker Compose (unchanged)
-    ├── bacta-api     POST /api/azi3/run → writes data/azi3_run_signal
+    ├── bacta-api     POST /api/mx4/run → writes data/mx4_run_signal
     └── garmin-poller
 ```
 
 **Scheduled run (3 AM daily):** Uses the previous day's complete settled data — sleep, HRV, recovery, steps. Silent on success. Discord alert on failure.
 
-**Manual trigger:** User taps "Regenerate" button in HomeTab → `POST /api/azi3/run` → API writes `data/azi3_run_signal` → `check_signal.py` (runs every minute) picks it up, runs orchestrator → Discord completion notification sent.
+**Manual trigger:** User taps "Regenerate" button in HomeTab → `POST /api/mx4/run` → API writes `data/mx4_run_signal` → `check_signal.py` (runs every minute) picks it up, runs orchestrator → Discord completion notification sent.
 
-Typical morning workflow: wake up → Garmin sync button → wait ~1 min → AZI-3 Regenerate button → cards refresh with last night's sleep data included.
+Typical morning workflow: wake up → Garmin sync button → wait ~1 min → MX-4 Regenerate button → cards refresh with last night's sleep data included.
 
 ---
 
 ## File Structure
 
 ```
-azi3/
-├── system-prompt.md          # AZI-3 character brief + output quality requirements
+mx4/
+├── system-prompt.md          # MX-4 character brief + output quality requirements
 ├── orchestrator.py           # Main entry point — fetches data, calls claude -p × 4, Discord
 ├── data_fetcher.py           # SQLite queries, formats 30-day metric history as structured text
 ├── sections.py               # SECTIONS dict: id → { metrics, prompt_addendum }
@@ -46,8 +46,8 @@ azi3/
 ├── vault_query_server.py     # Local copy of vault-query MCP server (VAULT_WIKI_ROOT=/mnt/vault/wiki)
 └── db_query_server.py        # Read-only SQLite MCP server for garmin_snapshots + manual_inputs
 
-server/api/azi3.ts            # New Express route: POST /api/azi3/run
-client/src/tabs/HomeTab.tsx   # Add Regenerate button (POST /api/azi3/run) + loading state
+server/api/mx4.ts            # New Express route: POST /api/mx4/run
+client/src/tabs/HomeTab.tsx   # Add Regenerate button (POST /api/mx4/run) + loading state
 client/src/api.ts             # Add triggerAzi3() helper
 ```
 
@@ -88,7 +88,7 @@ def run(scheduled: bool):
 ```
 
 **`run_claude(prompt)`:**
-- Writes prompt to a temp file, then runs `claude -p --mcp-config azi3/mcp-config.json < prompt_file` via stdin — never passes the prompt as a shell argument (would hit OS arg length limits at multi-thousand tokens)
+- Writes prompt to a temp file, then runs `claude -p --mcp-config mx4/mcp-config.json < prompt_file` via stdin — never passes the prompt as a shell argument (would hit OS arg length limits at multi-thousand tokens)
 - On transient failure (non-zero exit, empty output): retry up to 3 times, 30-second delay between attempts
 - On usage-limit error (detected via stderr): no retry, raise immediately with specific error tag
 - Returns stdout string (the HTML) or None on total failure
@@ -111,7 +111,7 @@ def run(scheduled: bool):
 
 **Scheduled run — failure only:**
 ```
-⚕ AZI-3 — Scheduled Run Failed (2026-04-28 03:04)
+⚕ MX-4 — Scheduled Run Failed (2026-04-28 03:04)
 ✅ recovery
 ✅ sleep-quality
 ❌ training-week — usage limit hit
@@ -121,7 +121,7 @@ Runtime: 3m 12s
 
 **Manual run — always:**
 ```
-⚕ AZI-3 — Manual Run Complete (2026-04-28 07:43)
+⚕ MX-4 — Manual Run Complete (2026-04-28 07:43)
 ✅ recovery
 ✅ sleep-quality
 ✅ training-week
@@ -133,7 +133,7 @@ Webhook URL: `DISCORD_WEBHOOK_URL` from `.env` (already in `.env.example`).
 
 ---
 
-## System Prompt — `azi3/system-prompt.md`
+## System Prompt — `mx4/system-prompt.md`
 
 The system prompt establishes:
 
@@ -141,7 +141,7 @@ The system prompt establishes:
 
 ### Character
 
-AZI-3 is AZI-345211896246498721347 — an AZ-series surgical assistant droid manufactured by Cybot Galactica, formerly stationed at Tipoca City on Kamino serving the Grand Army of the Republic. He is the same droid who assisted ARC trooper Fives in uncovering the inhibitor chip conspiracy, and later joined Clone Force 99 on Pabu.
+MX-4 is MX-445211896246498721347 — an AZ-series surgical assistant droid manufactured by Cybot Galactica, formerly stationed at Tipoca City on Kamino serving the Grand Army of the Republic. He is the same droid who assisted ARC trooper Fives in uncovering the inhibitor chip conspiracy, and later joined Clone Force 99 on Pabu.
 
 **Personality:**
 - Optimistic and by-the-books, but willing to break protocol when patient welfare demands it
@@ -158,7 +158,7 @@ AZI-3 is AZI-345211896246498721347 — an AZ-series surgical assistant droid man
 - Does not catastrophize, does not pad findings with reassurance. States what he sees. If it is concerning, he says so with precision
 - Dry, understated wit. Not jokes — observations that happen to be funny in their exactness
 
-**In practice — what AZI-3 sounds like:**
+**In practice — what MX-4 sounds like:**
 > "Your HRV has declined 14% over seven days. This is consistent with accumulated training load, insufficient parasympathetic recovery, or both. I have flagged it. I recommend you also flag it."
 
 > "The patient logged 200mg caffeine. I note this is the fourth consecutive day. I do not experience what you call worry. My subroutines have nonetheless run this calculation four times."
@@ -174,13 +174,13 @@ AZI-3 is AZI-345211896246498721347 — an AZ-series surgical assistant droid man
 - **Population comparison** — use WebSearch to find current norms for age 26, male, recreational runner/athlete
 - **Forward projection** — given current trajectory, where does this metric land in 4–8 weeks?
 - **Actionable recommendation** — one specific, concrete thing (or confirmation that current approach is correct)
-- If this card could have been generated without knowing anything personal about this patient, it is not good enough. AZI-3 does not produce generic wellness content.
+- If this card could have been generated without knowing anything personal about this patient, it is not good enough. MX-4 does not produce generic wellness content.
 
 ---
 
 ### Tools Available
 
-- **WebSearch** — current medical/sports science literature, population norms, research backing recommendations. AZI-3 is expected to use this; citing sources is encouraged.
+- **WebSearch** — current medical/sports science literature, population norms, research backing recommendations. MX-4 is expected to use this; citing sources is encouraged.
 - **vault-query MCP** — search and read vault pages for personal context (training goals, timeline, history, life events)
 - **bacta-db MCP** — query `garmin_snapshots` and `manual_inputs` directly. Use when the pre-fetched data is insufficient — e.g., requesting 90 days of VO2 max, correlating HRV with caffeine intake, examining a specific date window
 
@@ -191,27 +191,27 @@ AZI-3 is AZI-345211896246498721347 — an AZ-series surgical assistant droid man
 - Complete self-contained HTML fragment (no `<html>`, `<body>`, `<head>` tags)
 - Inline styles — no external CSS dependencies
 - Full creative freedom on visual design: charts, inline SVG, comparison tables, progress bars, trend indicators, sparklines — whatever serves the data
-- Dark palette as baseline: `#111827` bg, `#1f2937` card, `#f9fafb` primary text — AZI-3 may deviate for clinical/medical effect
-- AZI-3's voice should be present in the card — not a data dump, a briefing from a physician who knows this patient
+- Dark palette as baseline: `#111827` bg, `#1f2937` card, `#f9fafb` primary text — MX-4 may deviate for clinical/medical effect
+- MX-4's voice should be present in the card — not a data dump, a briefing from a physician who knows this patient
 
 ---
 
 ## MCP Configuration
 
-`azi3/mcp-config.json`:
+`mx4/mcp-config.json`:
 ```json
 {
   "mcpServers": {
     "vault-query": {
       "command": "python3",
-      "args": ["/opt/bacta/azi3/vault_query_server.py"],
+      "args": ["/opt/bacta/mx4/vault_query_server.py"],
       "env": {
         "VAULT_WIKI_ROOT": "/mnt/vault/wiki"
       }
     },
     "bacta-db": {
       "command": "python3",
-      "args": ["/opt/bacta/azi3/db_query_server.py"],
+      "args": ["/opt/bacta/mx4/db_query_server.py"],
       "env": {
         "DB_PATH": "/opt/bacta/data/bacta.db"
       }
@@ -220,26 +220,26 @@ AZI-3 is AZI-345211896246498721347 — an AZ-series surgical assistant droid man
 }
 ```
 
-**`azi3/vault_query_server.py`** — verbatim copy of `/mnt/d/ObsidianVault/mcp/vault_query/server.py`. `VAULT_WIKI_ROOT` points to `/mnt/vault/wiki`. Requires `mcp>=1.0.0`.
+**`mx4/vault_query_server.py`** — verbatim copy of `/mnt/d/ObsidianVault/mcp/vault_query/server.py`. `VAULT_WIKI_ROOT` points to `/mnt/vault/wiki`. Requires `mcp>=1.0.0`.
 
-**`azi3/db_query_server.py`** — read-only SQLite MCP server. Exposes three tools:
+**`mx4/db_query_server.py`** — read-only SQLite MCP server. Exposes three tools:
 - `list_metrics()` — returns all distinct metric names in `garmin_snapshots`
 - `query_metric(metric, start_date, end_date)` — returns rows from `garmin_snapshots` for the given metric and date range, parameterized (no raw SQL injection)
 - `query_manual_inputs(start_date, end_date)` — returns rows from `manual_inputs` for the date range
 
 Write access is blocked — no INSERT, UPDATE, DELETE, or DROP. The server opens SQLite in read-only mode (`uri=True`, `?mode=ro`).
 
-**Why both pre-fetched data AND the db tool:** The orchestrator pre-fetches 30 days of key metrics and includes them in every prompt, so AZI-3 always has a baseline to work from. The `bacta-db` MCP lets AZI-3 go further — pull 90 days of VO2 max, examine HRV vs caffeine correlation, inspect a specific week of sleep data — wherever its analysis takes it.
+**Why both pre-fetched data AND the db tool:** The orchestrator pre-fetches 30 days of key metrics and includes them in every prompt, so MX-4 always has a baseline to work from. The `bacta-db` MCP lets MX-4 go further — pull 90 days of VO2 max, examine HRV vs caffeine correlation, inspect a specific week of sleep data — wherever its analysis takes it.
 
 ---
 
-## API — `server/api/azi3.ts`
+## API — `server/api/mx4.ts`
 
 ```typescript
-POST /api/azi3/run
+POST /api/mx4/run
 ```
 
-Writes the file at `AZI3_SIGNAL_PATH` (new `.env` var, e.g. `./data/azi3_run_signal`). Returns `{ ok: true }` immediately — the actual run is async on the host. The `check_signal.py` cron picks it up within 60 seconds.
+Writes the file at `MX4_SIGNAL_PATH` (new `.env` var, e.g. `./data/mx4_run_signal`). Returns `{ ok: true }` immediately — the actual run is async on the host. The `check_signal.py` cron picks it up within 60 seconds.
 
 ---
 
@@ -248,7 +248,7 @@ Writes the file at `AZI3_SIGNAL_PATH` (new `.env` var, e.g. `./data/azi3_run_sig
 **`client/src/api.ts`** — add:
 ```typescript
 export async function triggerAzi3(): Promise<void> {
-  await fetch('/api/azi3/run', { method: 'POST' })
+  await fetch('/api/mx4/run', { method: 'POST' })
 }
 ```
 
@@ -262,8 +262,8 @@ export async function triggerAzi3(): Promise<void> {
 2. `pip install mcp` — for vault-query MCP server
 3. Add crontab entries (replace `/opt/bacta` with wherever the repo is checked out on LXC 107):
    ```
-   0 3 * * * cd /opt/bacta && python3 azi3/orchestrator.py --scheduled >> /var/log/azi3.log 2>&1
-   * * * * * cd /opt/bacta && python3 azi3/check_signal.py >> /var/log/azi3.log 2>&1
+   0 3 * * * cd /opt/bacta && python3 mx4/orchestrator.py --scheduled >> /var/log/mx4.log 2>&1
+   * * * * * cd /opt/bacta && python3 mx4/check_signal.py >> /var/log/mx4.log 2>&1
    ```
 4. Verify `/mnt/vault/wiki` is accessible (NFS mount from LXC 106)
 
@@ -277,4 +277,4 @@ These steps are documented here but executed as part of Plan 4 (containerization
 - Docker deployment (Plan 4)
 - Blood work section (waiting on Factor results)
 - MacroFactor nutrition section (no account yet)
-- AZI-3 medical log / patient summary rolling memory (future enhancement)
+- MX-4 medical log / patient summary rolling memory (future enhancement)

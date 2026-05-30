@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the React PWA frontend for Bacta — a bottom-tab dashboard showing Garmin health data and AZI-3 insight cards, saved to the iPhone home screen.
+**Goal:** Build the React PWA frontend for Bacta — a bottom-tab dashboard showing Garmin health data and MX-4 insight cards, saved to the iPhone home screen.
 
 **Architecture:** Single-page React app with no router — active tab is local state in `App.tsx`. Tabs are lazy-mounted (only rendered on first visit, then kept alive). Each component fetches its own data from the existing Express API. No global state store.
 
@@ -19,15 +19,15 @@
 | `client/src/main.tsx` | Create | React root mount |
 | `client/src/api.ts` | Create | All fetch helpers for `/api/*` |
 | `client/src/App.tsx` | Create | Tab state, lazy mount logic, layout shell |
-| `client/src/tabs/HomeTab.tsx` | Create | AZI-3 briefing + stat grid + steps bar + log form + poll button |
-| `client/src/tabs/RecoveryTab.tsx` | Create | AZI-3 recovery card + HRV trend chart |
-| `client/src/tabs/SleepTab.tsx` | Create | AZI-3 sleep card + sleep duration chart |
-| `client/src/tabs/TrainingTab.tsx` | Create | AZI-3 training card + steps chart |
-| `client/src/tabs/FitnessTab.tsx` | Create | AZI-3 fitness card + VO2 max chart |
+| `client/src/tabs/HomeTab.tsx` | Create | MX-4 briefing + stat grid + steps bar + log form + poll button |
+| `client/src/tabs/RecoveryTab.tsx` | Create | MX-4 recovery card + HRV trend chart |
+| `client/src/tabs/SleepTab.tsx` | Create | MX-4 sleep card + sleep duration chart |
+| `client/src/tabs/TrainingTab.tsx` | Create | MX-4 training card + steps chart |
+| `client/src/tabs/FitnessTab.tsx` | Create | MX-4 fitness card + VO2 max chart |
 | `client/src/components/TabBar.tsx` | Create | 5-tab bottom nav |
 | `client/src/components/StatTile.tsx` | Create | Single metric display tile |
 | `client/src/components/StatGrid.tsx` | Create | 3-column grid of StatTiles |
-| `client/src/components/AziCard.tsx` | Create | Renders AZI-3 HTML insight via dangerouslySetInnerHTML |
+| `client/src/components/AziCard.tsx` | Create | Renders MX-4 HTML insight via dangerouslySetInnerHTML |
 | `client/src/components/TrendChart.tsx` | Create | Recharts 7-day bar/line chart |
 | `client/src/components/LogForm.tsx` | Create | Readiness + caffeine + supplements form |
 | `client/public/manifest.json` | Create | PWA manifest |
@@ -398,9 +398,9 @@ describe('getGarminSummary', () => {
 
 describe('getInsight', () => {
   test('returns HTML string on success', async () => {
-    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<p>AZI-3</p>') })
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<p>MX-4</p>') })
     const result = await getInsight('recovery')
-    expect(result).toBe('<p>AZI-3</p>')
+    expect(result).toBe('<p>MX-4</p>')
     expect(mockFetch).toHaveBeenCalledWith('/api/insights/recovery')
   })
 
@@ -873,7 +873,7 @@ describe('AziCard', () => {
   test('renders fetched HTML content', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      text: () => Promise.resolve('<p data-testid="azi-content">AZI-3 briefing</p>'),
+      text: () => Promise.resolve('<p data-testid="azi-content">MX-4 briefing</p>'),
     })
     render(<AziCard section="recovery" />)
     await waitFor(() =>
@@ -1518,7 +1518,7 @@ export function HomeTab() {
         </button>
       </div>
 
-      {/* AZI-3 Daily Briefing */}
+      {/* MX-4 Daily Briefing */}
       <div className="px-4">
         <AziCard section="recovery" />
       </div>
@@ -1568,7 +1568,7 @@ Expected: All tests PASS.
 
 ```bash
 git add client/src/tabs/HomeTab.tsx tests/client/HomeTab.test.tsx
-git commit -m "feat: HomeTab — AZI-3 briefing, stat grid, steps bar, log form, poll button"
+git commit -m "feat: HomeTab — MX-4 briefing, stat grid, steps bar, log form, poll button"
 ```
 
 ---

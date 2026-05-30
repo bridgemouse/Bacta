@@ -1,4 +1,4 @@
-# tests/azi3/test_db_query_server.py
+# tests/mx4/test_db_query_server.py
 import importlib
 import sqlite3
 import sys
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'azi3'))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'mx4'))
 
 SCHEMA = (Path(__file__).parent.parent.parent / 'server/db/schema.sql').read_text()
 

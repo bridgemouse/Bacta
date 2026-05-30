@@ -25,9 +25,11 @@ app.use('/api/azi3', azi3Router)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(process.cwd(), 'dist/client')))
+  const clientDir = path.join(process.cwd(), 'dist/client')
+  app.use(express.static(clientDir, { etag: false }))
   app.get('/{*splat}', (_req, res) => {
-    res.sendFile(path.join(process.cwd(), 'dist/client/index.html'))
+    res.set('Cache-Control', 'no-store')
+    res.sendFile(path.join(clientDir, 'index.html'))
   })
 }
 

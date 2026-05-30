@@ -1,15 +1,11 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitForElementToBeRemoved } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AppShell } from '../../../client/src/components/AppShell'
 
-function renderShell(props: {
-  tabs?: string[]
-  activeTab?: string
-  onTabChange?: (tab: string) => void
-} = {}) {
+function renderShell(section: 'home' | 'recovery' = 'home') {
   return render(
-    <MemoryRouter initialEntries={['/recovery']}>
-      <AppShell section="recovery" {...props}>
+    <MemoryRouter initialEntries={[section === 'home' ? '/' : `/${section}`]}>
+      <AppShell section={section}>
         <div data-testid="child">content</div>
       </AppShell>
     </MemoryRouter>
@@ -22,43 +18,40 @@ describe('AppShell', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument()
   })
 
-  it('renders the section label via TopBar', () => {
-    renderShell()
-    expect(screen.getByText('Recovery')).toBeInTheDocument()
+  it('renders BACTA·OS in home mode', () => {
+    renderShell('home')
+    expect(screen.getByText('BACTA')).toBeInTheDocument()
+    expect(screen.getByText('·OS')).toBeInTheDocument()
   })
 
-  it('forwards tab props to BottomBar', () => {
-    const onTabChange = vi.fn()
-    renderShell({ tabs: ['Overview', 'Trends'], activeTab: 'Overview', onTabChange })
-    expect(screen.getByText('Overview')).toBeInTheDocument()
-    expect(screen.getByText('Trends')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Trends'))
-    expect(onTabChange).toHaveBeenCalledWith('Trends')
+  it('renders section label in section mode', () => {
+    renderShell('recovery')
+    expect(screen.getByText('RECOVERY')).toBeInTheDocument()
   })
 
-  it('opens BottomSheet when menu button is clicked', () => {
+  it('renders ask button and nav button', () => {
     renderShell()
-    fireEvent.click(screen.getByTestId('menu-button'))
-    expect(screen.getByTestId('bottom-sheet')).toBeInTheDocument()
+    expect(screen.getByTestId('ask-button')).toBeInTheDocument()
+    expect(screen.getByTestId('nav-button')).toBeInTheDocument()
   })
 
-  it('closes BottomSheet when overlay is clicked', () => {
+  it('opens NavSheet when nav button is clicked', () => {
     renderShell()
-    fireEvent.click(screen.getByTestId('menu-button'))
-    fireEvent.click(screen.getByTestId('bottom-sheet-overlay'))
-    expect(screen.queryByTestId('bottom-sheet')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('nav-button'))
+    expect(screen.getByText('ALL SYSTEMS')).toBeInTheDocument()
   })
 
-  it('bottom sheet lists all 7 sections', () => {
+  it('opens AskSheet when ask button is clicked', () => {
     renderShell()
-    fireEvent.click(screen.getByTestId('menu-button'))
-    const sheet = screen.getByTestId('bottom-sheet')
-    expect(sheet).toHaveTextContent('Home')
-    expect(sheet).toHaveTextContent('Recovery')
-    expect(sheet).toHaveTextContent('Training')
-    expect(sheet).toHaveTextContent('Sleep')
-    expect(sheet).toHaveTextContent('Nutrition')
-    expect(sheet).toHaveTextContent('Blood Work')
-    expect(sheet).toHaveTextContent('Daily Log')
+    fireEvent.click(screen.getByTestId('ask-button'))
+    expect(screen.getByText(/Standing by, Commander/)).toBeInTheDocument()
+  })
+
+  it('closes NavSheet when backdrop is clicked', async () => {
+    renderShell()
+    fireEvent.click(screen.getByTestId('nav-button'))
+    expect(screen.getByText('ALL SYSTEMS')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('sheet-backdrop'))
+    await waitForElementToBeRemoved(() => screen.queryByText('ALL SYSTEMS'), { timeout: 1000 })
   })
 })

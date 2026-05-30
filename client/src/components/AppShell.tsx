@@ -24,7 +24,8 @@ export function AppShell({ section, children }: AppShellProps) {
   return (
     <div
       style={{
-        height: '100%',
+        position: 'fixed',
+        inset: 0,
         background: COLORS.base,
         display: 'flex',
         flexDirection: 'column',

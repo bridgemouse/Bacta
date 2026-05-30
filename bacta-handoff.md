@@ -11,11 +11,11 @@ tags:
 > [!success] Revived — Session 63 (2026-05-27)
 > Back on track. UI blocker solved by **Claude Design** (claude.ai/design, powered by Opus 4.7) — use it to prototype the dashboard UI before implementing. **SparkyFitness** and **wger** are now deployed on LXC 107 as running reference implementations; borrow schema design and feature logic freely.
 >
-> **AZI-3 rethink:** On-demand insights (not just nightly cron) via local **Ollama** model on LXC 106 — avoids Claude API costs. Inspired by Google Health's AI insight card pattern (summary + sources at top of dashboard).
+> **MX-4 rethink:** On-demand insights (not just nightly cron) via local **Ollama** model on LXC 106 — avoids Claude API costs. Inspired by Google Health's AI insight card pattern (summary + sources at top of dashboard).
 >
 > **Architecture confirmed:** Standalone app, own backend (custom SQLite). NOT a SparkyFitness fork. NOT riding on SparkyFitness API.
 
-**Design specs (approved, pre-stall):** [[2026-04-25-bacta-design|Bacta Design Spec]] · [[2026-04-26-dashboard-ui-design|Dashboard UI Design]] · [[2026-04-28-azi3-insight-generation-design|AZI-3 Insight Generation Design]]
+**Design specs (approved, pre-stall):** [[2026-04-25-bacta-design|Bacta Design Spec]] · [[2026-04-26-dashboard-ui-design|Dashboard UI Design]] · [[2026-04-28-mx4-insight-generation-design|MX-4 Insight Generation Design]]
 
 Personal health dashboard PWA. Named after the Star Wars healing fluid. This doc is a handoff to a fresh Claude session to kick off the build.
 

@@ -1,5 +1,5 @@
-# azi3/sections.py
-"""Section definitions for AZI-3 insight cards."""
+# mx4/sections.py
+"""Section definitions for MX-4 insight cards."""
 
 from dataclasses import dataclass
 

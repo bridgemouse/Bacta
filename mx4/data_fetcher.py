@@ -1,5 +1,5 @@
-# azi3/data_fetcher.py
-"""Fetch Garmin and manual data from SQLite and format as markdown tables for AZI-3 prompts."""
+# mx4/data_fetcher.py
+"""Fetch Garmin and manual data from SQLite and format as markdown tables for MX-4 prompts."""
 
 import os
 import sqlite3

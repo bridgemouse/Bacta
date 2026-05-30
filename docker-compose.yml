@@ -9,7 +9,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./insights:/app/insights
-      - ./azi3:/app/azi3
+      - ./mx4:/app/mx4
       - /mnt/vault:/mnt/vault:ro
     restart: unless-stopped
     depends_on:

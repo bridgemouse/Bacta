@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# azi3/check_signal.py
+# mx4/check_signal.py
 """Signal watcher — run by host cron every minute.
 
-Checks for AZI3_SIGNAL_PATH file. If found, atomically removes it
+Checks for MX4_SIGNAL_PATH file. If found, atomically removes it
 and spawns the orchestrator. Atomic removal prevents double-trigger
 if cron fires again before the orchestrator finishes.
 """
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
-SIGNAL_PATH = Path(os.environ.get('AZI3_SIGNAL_PATH', str(SCRIPT_DIR.parent / 'data' / 'azi3_run_signal')))
+SIGNAL_PATH = Path(os.environ.get('MX4_SIGNAL_PATH', str(SCRIPT_DIR.parent / 'data' / 'mx4_run_signal')))
 
 
 def main() -> None:

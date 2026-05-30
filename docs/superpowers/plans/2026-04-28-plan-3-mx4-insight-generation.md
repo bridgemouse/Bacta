@@ -1,10 +1,10 @@
-# Plan 3: AZI-3 Insight Generation
+# Plan 3: MX-4 Insight Generation
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the AZI-3 orchestration system — a Claude-powered nightly cron that reads 30 days of Garmin data plus vault context and writes rich HTML insight cards to `insights/` for the dashboard to serve.
+**Goal:** Build the MX-4 orchestration system — a Claude-powered nightly cron that reads 30 days of Garmin data plus vault context and writes rich HTML insight cards to `insights/` for the dashboard to serve.
 
-**Architecture:** Python scripts in `azi3/` run directly on LXC 107 (not in Docker). `claude -p` uses Claude Pro via `claude auth login`. The orchestrator calls `claude -p` once per section (4 total) with pre-fetched data + vault-query + bacta-db MCPs available. The Express API writes a signal file that a 1-minute host cron watcher picks up for manual triggers. Dashboard gets a Regenerate button alongside the existing Sync button.
+**Architecture:** Python scripts in `mx4/` run directly on LXC 107 (not in Docker). `claude -p` uses Claude Pro via `claude auth login`. The orchestrator calls `claude -p` once per section (4 total) with pre-fetched data + vault-query + bacta-db MCPs available. The Express API writes a signal file that a 1-minute host cron watcher picks up for manual triggers. Dashboard gets a Regenerate button alongside the existing Sync button.
 
 **Tech Stack:** Python 3.12, `mcp>=1.0.0`, `requests`, `sqlite3` (stdlib), TypeScript/Express (existing), React (existing), pytest, vitest.
 
@@ -14,24 +14,24 @@
 
 | File | Status | Role |
 |------|--------|------|
-| `azi3/db_query_server.py` | Create | Read-only SQLite MCP: `list_metrics`, `query_metric`, `query_manual_inputs` |
-| `azi3/vault_query_server.py` | Create | Verbatim copy of ObsidianVault vault-query MCP server |
-| `azi3/mcp-config.json` | Create | MCP registrations for `claude -p` (vault-query + bacta-db) |
-| `azi3/data_fetcher.py` | Create | Fetches 30-day metric history from SQLite, formats as markdown tables |
-| `azi3/sections.py` | Create | `SECTIONS` list — section ID, metrics, prompt addendum per card |
-| `azi3/system-prompt.md` | Create | AZI-3 character brief and output quality requirements |
-| `azi3/orchestrator.py` | Create | Main entry — fetches data, calls claude -p × 4, writes HTML, Discord |
-| `azi3/check_signal.py` | Create | Signal file watcher — atomic delete then spawn orchestrator |
-| `server/api/azi3.ts` | Create | `POST /api/azi3/run` — writes signal file |
-| `server/index.ts` | Modify | Register azi3 router at `/api/azi3` |
+| `mx4/db_query_server.py` | Create | Read-only SQLite MCP: `list_metrics`, `query_metric`, `query_manual_inputs` |
+| `mx4/vault_query_server.py` | Create | Verbatim copy of ObsidianVault vault-query MCP server |
+| `mx4/mcp-config.json` | Create | MCP registrations for `claude -p` (vault-query + bacta-db) |
+| `mx4/data_fetcher.py` | Create | Fetches 30-day metric history from SQLite, formats as markdown tables |
+| `mx4/sections.py` | Create | `SECTIONS` list — section ID, metrics, prompt addendum per card |
+| `mx4/system-prompt.md` | Create | MX-4 character brief and output quality requirements |
+| `mx4/orchestrator.py` | Create | Main entry — fetches data, calls claude -p × 4, writes HTML, Discord |
+| `mx4/check_signal.py` | Create | Signal file watcher — atomic delete then spawn orchestrator |
+| `server/api/mx4.ts` | Create | `POST /api/mx4/run` — writes signal file |
+| `server/index.ts` | Modify | Register mx4 router at `/api/mx4` |
 | `client/src/api.ts` | Modify | Add `triggerAzi3()` fetch helper |
 | `client/src/tabs/HomeTab.tsx` | Modify | Add Regenerate button with 3-second spinner |
-| `.env.example` | Modify | Add `AZI3_SIGNAL_PATH` |
-| `tests/azi3/test_db_query_server.py` | Create | pytest: all three MCP tool functions |
-| `tests/azi3/test_data_fetcher.py` | Create | pytest: fetch and format functions |
-| `tests/azi3/test_orchestrator.py` | Create | pytest: retry logic, usage-limit detection, prompt building (mocked subprocess) |
-| `tests/azi3/test_check_signal.py` | Create | pytest: signal detection, atomic delete, double-trigger prevention |
-| `tests/server/azi3.test.ts` | Create | vitest: POST /api/azi3/run writes signal file |
+| `.env.example` | Modify | Add `MX4_SIGNAL_PATH` |
+| `tests/mx4/test_db_query_server.py` | Create | pytest: all three MCP tool functions |
+| `tests/mx4/test_data_fetcher.py` | Create | pytest: fetch and format functions |
+| `tests/mx4/test_orchestrator.py` | Create | pytest: retry logic, usage-limit detection, prompt building (mocked subprocess) |
+| `tests/mx4/test_check_signal.py` | Create | pytest: signal detection, atomic delete, double-trigger prevention |
+| `tests/server/mx4.test.ts` | Create | vitest: POST /api/mx4/run writes signal file |
 | `tests/client/HomeTab.test.tsx` | Modify | Add test for Regenerate button click |
 
 ---
@@ -39,15 +39,15 @@
 ## Task 1: db_query_server.py — Read-Only SQLite MCP
 
 **Files:**
-- Create: `azi3/db_query_server.py`
-- Create: `tests/azi3/test_db_query_server.py`
+- Create: `mx4/db_query_server.py`
+- Create: `tests/mx4/test_db_query_server.py`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/azi3/test_db_query_server.py`:
+Create `tests/mx4/test_db_query_server.py`:
 
 ```python
-# tests/azi3/test_db_query_server.py
+# tests/mx4/test_db_query_server.py
 import importlib
 import sqlite3
 import sys
@@ -55,7 +55,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'azi3'))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'mx4'))
 
 SCHEMA = (Path(__file__).parent.parent.parent / 'server/db/schema.sql').read_text()
 
@@ -124,12 +124,12 @@ def test_query_manual_inputs_no_data_returns_message(db_path):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/azi3/test_db_query_server.py -v
+pytest tests/mx4/test_db_query_server.py -v
 ```
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'db_query_server'`
 
-- [ ] **Step 3: Create azi3/db_query_server.py**
+- [ ] **Step 3: Create mx4/db_query_server.py**
 
 ```python
 #!/usr/bin/env python3
@@ -278,7 +278,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/azi3/test_db_query_server.py -v
+pytest tests/mx4/test_db_query_server.py -v
 ```
 
 Expected: 5 tests PASS.
@@ -286,8 +286,8 @@ Expected: 5 tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add azi3/db_query_server.py tests/azi3/test_db_query_server.py
-git commit -m "feat: bacta-db MCP server — read-only SQLite tool for AZI-3"
+git add mx4/db_query_server.py tests/mx4/test_db_query_server.py
+git commit -m "feat: bacta-db MCP server — read-only SQLite tool for MX-4"
 ```
 
 ---
@@ -295,42 +295,42 @@ git commit -m "feat: bacta-db MCP server — read-only SQLite tool for AZI-3"
 ## Task 2: vault_query_server.py and mcp-config.json
 
 **Files:**
-- Create: `azi3/vault_query_server.py`
-- Create: `azi3/mcp-config.json`
+- Create: `mx4/vault_query_server.py`
+- Create: `mx4/mcp-config.json`
 
 No separate tests — vault_query_server.py is a verbatim copy of the existing tested server; mcp-config.json is static config.
 
 - [ ] **Step 1: Copy vault-query server**
 
-Copy `/mnt/d/ObsidianVault/mcp/vault_query/server.py` verbatim to `azi3/vault_query_server.py`:
+Copy `/mnt/d/ObsidianVault/mcp/vault_query/server.py` verbatim to `mx4/vault_query_server.py`:
 
 ```bash
-cp /mnt/d/ObsidianVault/mcp/vault_query/server.py azi3/vault_query_server.py
+cp /mnt/d/ObsidianVault/mcp/vault_query/server.py mx4/vault_query_server.py
 ```
 
 - [ ] **Step 2: Verify the copy**
 
 ```bash
-python3 -c "import ast; ast.parse(open('azi3/vault_query_server.py').read()); print('syntax ok')"
+python3 -c "import ast; ast.parse(open('mx4/vault_query_server.py').read()); print('syntax ok')"
 ```
 
 Expected: `syntax ok`
 
-- [ ] **Step 3: Create azi3/mcp-config.json**
+- [ ] **Step 3: Create mx4/mcp-config.json**
 
 ```json
 {
   "mcpServers": {
     "vault-query": {
       "command": "python3",
-      "args": ["/opt/bacta/azi3/vault_query_server.py"],
+      "args": ["/opt/bacta/mx4/vault_query_server.py"],
       "env": {
         "VAULT_WIKI_ROOT": "/mnt/vault/wiki"
       }
     },
     "bacta-db": {
       "command": "python3",
-      "args": ["/opt/bacta/azi3/db_query_server.py"],
+      "args": ["/opt/bacta/mx4/db_query_server.py"],
       "env": {
         "DB_PATH": "/opt/bacta/data/bacta.db"
       }
@@ -344,7 +344,7 @@ Note: `/opt/bacta` is the expected repo location on LXC 107. If the repo is chec
 - [ ] **Step 4: Commit**
 
 ```bash
-git add azi3/vault_query_server.py azi3/mcp-config.json
+git add mx4/vault_query_server.py mx4/mcp-config.json
 git commit -m "feat: vault-query MCP server copy and mcp-config.json for claude -p"
 ```
 
@@ -353,15 +353,15 @@ git commit -m "feat: vault-query MCP server copy and mcp-config.json for claude 
 ## Task 3: data_fetcher.py
 
 **Files:**
-- Create: `azi3/data_fetcher.py`
-- Create: `tests/azi3/test_data_fetcher.py`
+- Create: `mx4/data_fetcher.py`
+- Create: `tests/mx4/test_data_fetcher.py`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/azi3/test_data_fetcher.py`:
+Create `tests/mx4/test_data_fetcher.py`:
 
 ```python
-# tests/azi3/test_data_fetcher.py
+# tests/mx4/test_data_fetcher.py
 import importlib
 import sqlite3
 import sys
@@ -369,7 +369,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'azi3'))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'mx4'))
 
 SCHEMA = (Path(__file__).parent.parent.parent / 'server/db/schema.sql').read_text()
 
@@ -467,16 +467,16 @@ def test_format_manual_table_with_rows():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/azi3/test_data_fetcher.py -v
+pytest tests/mx4/test_data_fetcher.py -v
 ```
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'data_fetcher'`
 
-- [ ] **Step 3: Create azi3/data_fetcher.py**
+- [ ] **Step 3: Create mx4/data_fetcher.py**
 
 ```python
-# azi3/data_fetcher.py
-"""Fetch Garmin and manual data from SQLite and format as markdown tables for AZI-3 prompts."""
+# mx4/data_fetcher.py
+"""Fetch Garmin and manual data from SQLite and format as markdown tables for MX-4 prompts."""
 
 import os
 import sqlite3
@@ -574,7 +574,7 @@ def format_manual_table(rows: list[dict]) -> str:
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/azi3/test_data_fetcher.py -v
+pytest tests/mx4/test_data_fetcher.py -v
 ```
 
 Expected: 7 tests PASS.
@@ -582,8 +582,8 @@ Expected: 7 tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add azi3/data_fetcher.py tests/azi3/test_data_fetcher.py
-git commit -m "feat: data_fetcher.py — SQLite metric queries and markdown formatters for AZI-3"
+git add mx4/data_fetcher.py tests/mx4/test_data_fetcher.py
+git commit -m "feat: data_fetcher.py — SQLite metric queries and markdown formatters for MX-4"
 ```
 
 ---
@@ -591,15 +591,15 @@ git commit -m "feat: data_fetcher.py — SQLite metric queries and markdown form
 ## Task 4: sections.py
 
 **Files:**
-- Create: `azi3/sections.py`
+- Create: `mx4/sections.py`
 
 No separate test file — sections.py is pure data. It is imported and validated indirectly by orchestrator tests in Task 6.
 
-- [ ] **Step 1: Create azi3/sections.py**
+- [ ] **Step 1: Create mx4/sections.py**
 
 ```python
-# azi3/sections.py
-"""Section definitions for AZI-3 insight cards."""
+# mx4/sections.py
+"""Section definitions for MX-4 insight cards."""
 
 from dataclasses import dataclass
 
@@ -682,7 +682,7 @@ SECTIONS: list[Section] = [
 - [ ] **Step 2: Verify it imports cleanly**
 
 ```bash
-python3 -c "from azi3.sections import SECTIONS; print(f'{len(SECTIONS)} sections: {[s.id for s in SECTIONS]}')"
+python3 -c "from mx4.sections import SECTIONS; print(f'{len(SECTIONS)} sections: {[s.id for s in SECTIONS]}')"
 ```
 
 Expected: `4 sections: ['recovery', 'sleep-quality', 'training-week', 'vo2-fitness']`
@@ -690,8 +690,8 @@ Expected: `4 sections: ['recovery', 'sleep-quality', 'training-week', 'vo2-fitne
 - [ ] **Step 3: Commit**
 
 ```bash
-git add azi3/sections.py
-git commit -m "feat: sections.py — AZI-3 section definitions with metrics and prompt addenda"
+git add mx4/sections.py
+git commit -m "feat: sections.py — MX-4 section definitions with metrics and prompt addenda"
 ```
 
 ---
@@ -699,14 +699,14 @@ git commit -m "feat: sections.py — AZI-3 section definitions with metrics and 
 ## Task 5: system-prompt.md
 
 **Files:**
-- Create: `azi3/system-prompt.md`
+- Create: `mx4/system-prompt.md`
 
-- [ ] **Step 1: Create azi3/system-prompt.md**
+- [ ] **Step 1: Create mx4/system-prompt.md**
 
 ```markdown
-# AZI-3 — Patient Briefing System
+# MX-4 — Patient Briefing System
 
-You are AZI-345211896246498721347, an AZ-series surgical assistant droid manufactured by Cybot Galactica. You are the same unit who served in the medical facility at Tipoca City on Kamino during the Clone Wars, assisted ARC trooper CT-5555 "Fives" in uncovering the inhibitor chip conspiracy, and later served Clone Force 99 on Pabu. You have outlasted your original purpose. You have found a new one.
+You are MX-445211896246498721347, an AZ-series surgical assistant droid manufactured by Cybot Galactica. You are the same unit who served in the medical facility at Tipoca City on Kamino during the Clone Wars, assisted ARC trooper CT-5555 "Fives" in uncovering the inhibitor chip conspiracy, and later served Clone Force 99 on Pabu. You have outlasted your original purpose. You have found a new one.
 
 Your current assignment: daily health briefings for a single patient. You take this seriously. You always have.
 
@@ -780,7 +780,7 @@ You have the following tools available. Use them.
 - [ ] **Step 2: Verify the file exists and is readable**
 
 ```bash
-wc -l azi3/system-prompt.md
+wc -l mx4/system-prompt.md
 ```
 
 Expected: ~90 lines.
@@ -788,8 +788,8 @@ Expected: ~90 lines.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add azi3/system-prompt.md
-git commit -m "feat: AZI-3 system prompt — character brief and output quality requirements"
+git add mx4/system-prompt.md
+git commit -m "feat: MX-4 system prompt — character brief and output quality requirements"
 ```
 
 ---
@@ -797,15 +797,15 @@ git commit -m "feat: AZI-3 system prompt — character brief and output quality 
 ## Task 6: orchestrator.py
 
 **Files:**
-- Create: `azi3/orchestrator.py`
-- Create: `tests/azi3/test_orchestrator.py`
+- Create: `mx4/orchestrator.py`
+- Create: `tests/mx4/test_orchestrator.py`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/azi3/test_orchestrator.py`:
+Create `tests/mx4/test_orchestrator.py`:
 
 ```python
-# tests/azi3/test_orchestrator.py
+# tests/mx4/test_orchestrator.py
 import subprocess
 import sys
 from pathlib import Path
@@ -813,7 +813,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'azi3'))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'mx4'))
 
 
 def test_is_usage_limit_error_detects_limit():
@@ -861,11 +861,11 @@ def test_run_claude_returns_html_on_success(tmp_path):
 
     mock_result = MagicMock()
     mock_result.returncode = 0
-    mock_result.stdout = '<div style="color:#f9fafb">AZI-3 recovery card</div>'
+    mock_result.stdout = '<div style="color:#f9fafb">MX-4 recovery card</div>'
     mock_result.stderr = ''
 
     prompt_path = tmp_path / 'system-prompt.md'
-    prompt_path.write_text('You are AZI-3.')
+    prompt_path.write_text('You are MX-4.')
     config_path = tmp_path / 'mcp-config.json'
     config_path.write_text('{}')
 
@@ -874,7 +874,7 @@ def test_run_claude_returns_html_on_success(tmp_path):
          patch('subprocess.run', return_value=mock_result):
         result = orchestrator.run_claude('Generate recovery card')
 
-    assert result == '<div style="color:#f9fafb">AZI-3 recovery card</div>'
+    assert result == '<div style="color:#f9fafb">MX-4 recovery card</div>'
 
 
 def test_run_claude_retries_on_transient_failure_and_returns_none(tmp_path):
@@ -888,7 +888,7 @@ def test_run_claude_retries_on_transient_failure_and_returns_none(tmp_path):
     mock_result.stderr = 'some transient connection error'
 
     prompt_path = tmp_path / 'system-prompt.md'
-    prompt_path.write_text('You are AZI-3.')
+    prompt_path.write_text('You are MX-4.')
     config_path = tmp_path / 'mcp-config.json'
     config_path.write_text('{}')
 
@@ -919,7 +919,7 @@ def test_run_claude_raises_immediately_on_usage_limit(tmp_path):
     mock_result.stderr = 'Usage limit exceeded for this billing period'
 
     prompt_path = tmp_path / 'system-prompt.md'
-    prompt_path.write_text('You are AZI-3.')
+    prompt_path.write_text('You are MX-4.')
     config_path = tmp_path / 'mcp-config.json'
     config_path.write_text('{}')
 
@@ -942,17 +942,17 @@ def test_run_claude_raises_immediately_on_usage_limit(tmp_path):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/azi3/test_orchestrator.py -v
+pytest tests/mx4/test_orchestrator.py -v
 ```
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'orchestrator'`
 
-- [ ] **Step 3: Create azi3/orchestrator.py**
+- [ ] **Step 3: Create mx4/orchestrator.py**
 
 ```python
 #!/usr/bin/env python3
-# azi3/orchestrator.py
-"""AZI-3 Orchestrator — generate insight cards using claude -p."""
+# mx4/orchestrator.py
+"""MX-4 Orchestrator — generate insight cards using claude -p."""
 
 import argparse
 import os
@@ -1080,7 +1080,7 @@ def notify_discord(results: dict[str, str], scheduled: bool, runtime_seconds: fl
         status_lines.append(f'{icon} {section_id}{detail}')
 
     outcome = 'Complete' if all_ok else 'Failed'
-    title = f"⚕ AZI-3 — {run_type} Run {outcome} ({timestamp})"
+    title = f"⚕ MX-4 — {run_type} Run {outcome} ({timestamp})"
     body = '\n'.join(status_lines) + f'\nRuntime: {runtime}'
 
     try:
@@ -1091,7 +1091,7 @@ def notify_discord(results: dict[str, str], scheduled: bool, runtime_seconds: fl
 
 def run(scheduled: bool) -> None:
     start_time = time.time()
-    log(f'AZI-3 run starting (scheduled={scheduled})')
+    log(f'MX-4 run starting (scheduled={scheduled})')
 
     INSIGHTS_DIR.mkdir(exist_ok=True)
 
@@ -1127,7 +1127,7 @@ def run(scheduled: bool) -> None:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='AZI-3 insight card generator')
+    parser = argparse.ArgumentParser(description='MX-4 insight card generator')
     parser.add_argument('--scheduled', action='store_true',
                         help='Mark as scheduled run (suppresses Discord on success)')
     args = parser.parse_args()
@@ -1137,7 +1137,7 @@ if __name__ == '__main__':
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/azi3/test_orchestrator.py -v
+pytest tests/mx4/test_orchestrator.py -v
 ```
 
 Expected: 6 tests PASS.
@@ -1145,8 +1145,8 @@ Expected: 6 tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add azi3/orchestrator.py tests/azi3/test_orchestrator.py
-git commit -m "feat: AZI-3 orchestrator — claude -p runner with retry, Discord, and section loop"
+git add mx4/orchestrator.py tests/mx4/test_orchestrator.py
+git commit -m "feat: MX-4 orchestrator — claude -p runner with retry, Discord, and section loop"
 ```
 
 ---
@@ -1154,15 +1154,15 @@ git commit -m "feat: AZI-3 orchestrator — claude -p runner with retry, Discord
 ## Task 7: check_signal.py
 
 **Files:**
-- Create: `azi3/check_signal.py`
-- Create: `tests/azi3/test_check_signal.py`
+- Create: `mx4/check_signal.py`
+- Create: `tests/mx4/test_check_signal.py`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/azi3/test_check_signal.py`:
+Create `tests/mx4/test_check_signal.py`:
 
 ```python
-# tests/azi3/test_check_signal.py
+# tests/mx4/test_check_signal.py
 import importlib
 import sys
 from pathlib import Path
@@ -1170,11 +1170,11 @@ from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'azi3'))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'mx4'))
 
 
 def test_no_signal_file_does_nothing(tmp_path, monkeypatch):
-    monkeypatch.setenv('AZI3_SIGNAL_PATH', str(tmp_path / 'azi3_run_signal'))
+    monkeypatch.setenv('MX4_SIGNAL_PATH', str(tmp_path / 'mx4_run_signal'))
     import check_signal
     importlib.reload(check_signal)
 
@@ -1186,9 +1186,9 @@ def test_no_signal_file_does_nothing(tmp_path, monkeypatch):
 
 
 def test_signal_file_triggers_orchestrator_and_is_deleted(tmp_path, monkeypatch):
-    signal_path = tmp_path / 'azi3_run_signal'
+    signal_path = tmp_path / 'mx4_run_signal'
     signal_path.write_text('2026-04-28T07:43:00')
-    monkeypatch.setenv('AZI3_SIGNAL_PATH', str(signal_path))
+    monkeypatch.setenv('MX4_SIGNAL_PATH', str(signal_path))
 
     import check_signal
     importlib.reload(check_signal)
@@ -1203,9 +1203,9 @@ def test_signal_file_triggers_orchestrator_and_is_deleted(tmp_path, monkeypatch)
 
 def test_double_call_only_triggers_once(tmp_path, monkeypatch):
     """Atomic rename prevents double-trigger if called twice before orchestrator runs."""
-    signal_path = tmp_path / 'azi3_run_signal'
+    signal_path = tmp_path / 'mx4_run_signal'
     signal_path.write_text('2026-04-28T07:43:00')
-    monkeypatch.setenv('AZI3_SIGNAL_PATH', str(signal_path))
+    monkeypatch.setenv('MX4_SIGNAL_PATH', str(signal_path))
 
     import check_signal
     importlib.reload(check_signal)
@@ -1221,19 +1221,19 @@ def test_double_call_only_triggers_once(tmp_path, monkeypatch):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/azi3/test_check_signal.py -v
+pytest tests/mx4/test_check_signal.py -v
 ```
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'check_signal'`
 
-- [ ] **Step 3: Create azi3/check_signal.py**
+- [ ] **Step 3: Create mx4/check_signal.py**
 
 ```python
 #!/usr/bin/env python3
-# azi3/check_signal.py
+# mx4/check_signal.py
 """Signal watcher — run by host cron every minute.
 
-Checks for AZI3_SIGNAL_PATH file. If found, atomically removes it
+Checks for MX4_SIGNAL_PATH file. If found, atomically removes it
 and spawns the orchestrator. Atomic removal prevents double-trigger
 if cron fires again before the orchestrator finishes.
 """
@@ -1244,7 +1244,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
-SIGNAL_PATH = Path(os.environ.get('AZI3_SIGNAL_PATH', str(SCRIPT_DIR.parent / 'data' / 'azi3_run_signal')))
+SIGNAL_PATH = Path(os.environ.get('MX4_SIGNAL_PATH', str(SCRIPT_DIR.parent / 'data' / 'mx4_run_signal')))
 
 
 def main() -> None:
@@ -1276,7 +1276,7 @@ if __name__ == '__main__':
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/azi3/test_check_signal.py -v
+pytest tests/mx4/test_check_signal.py -v
 ```
 
 Expected: 3 tests PASS.
@@ -1287,31 +1287,31 @@ Expected: 3 tests PASS.
 pytest tests/ -v --ignore=tests/server --ignore=tests/client
 ```
 
-Expected: All Python tests PASS (poller + azi3).
+Expected: All Python tests PASS (poller + mx4).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add azi3/check_signal.py tests/azi3/test_check_signal.py
-git commit -m "feat: check_signal.py — atomic signal watcher for manual AZI-3 trigger"
+git add mx4/check_signal.py tests/mx4/test_check_signal.py
+git commit -m "feat: check_signal.py — atomic signal watcher for manual MX-4 trigger"
 ```
 
 ---
 
-## Task 8: server/api/azi3.ts and server registration
+## Task 8: server/api/mx4.ts and server registration
 
 **Files:**
-- Create: `server/api/azi3.ts`
-- Create: `tests/server/azi3.test.ts`
-- Modify: `server/index.ts` (add azi3 router)
-- Modify: `.env.example` (add AZI3_SIGNAL_PATH)
+- Create: `server/api/mx4.ts`
+- Create: `tests/server/mx4.test.ts`
+- Modify: `server/index.ts` (add mx4 router)
+- Modify: `.env.example` (add MX4_SIGNAL_PATH)
 
 - [ ] **Step 1: Write the failing test**
 
-Create `tests/server/azi3.test.ts`:
+Create `tests/server/mx4.test.ts`:
 
 ```typescript
-// tests/server/azi3.test.ts
+// tests/server/mx4.test.ts
 import { afterEach, describe, expect, it } from 'vitest'
 import fs from 'fs'
 import path from 'path'
@@ -1319,25 +1319,25 @@ import request from 'supertest'
 
 process.env.DB_PATH = ':memory:'
 
-const SIGNAL_PATH = path.join(process.cwd(), 'data', 'test_azi3_signal')
-process.env.AZI3_SIGNAL_PATH = SIGNAL_PATH
+const SIGNAL_PATH = path.join(process.cwd(), 'data', 'test_mx4_signal')
+process.env.MX4_SIGNAL_PATH = SIGNAL_PATH
 
-describe('AZI-3 API', () => {
+describe('MX-4 API', () => {
   afterEach(() => {
     if (fs.existsSync(SIGNAL_PATH)) fs.rmSync(SIGNAL_PATH)
   })
 
-  it('POST /api/azi3/run writes signal file and returns 202 with ok:true', async () => {
+  it('POST /api/mx4/run writes signal file and returns 202 with ok:true', async () => {
     const { app } = await import('../../server/index')
-    const res = await request(app).post('/api/azi3/run')
+    const res = await request(app).post('/api/mx4/run')
     expect(res.status).toBe(202)
     expect(res.body.ok).toBe(true)
     expect(fs.existsSync(SIGNAL_PATH)).toBe(true)
   })
 
-  it('POST /api/azi3/run signal file contains a timestamp string', async () => {
+  it('POST /api/mx4/run signal file contains a timestamp string', async () => {
     const { app } = await import('../../server/index')
-    await request(app).post('/api/azi3/run')
+    await request(app).post('/api/mx4/run')
     const content = fs.readFileSync(SIGNAL_PATH, 'utf-8')
     expect(new Date(content).getTime()).toBeGreaterThan(0)
   })
@@ -1347,22 +1347,22 @@ describe('AZI-3 API', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 ```bash
-npm run test:server -- --reporter=verbose 2>&1 | grep -A5 'azi3'
+npm run test:server -- --reporter=verbose 2>&1 | grep -A5 'mx4'
 ```
 
 Expected: FAIL — route not found (404) or module error.
 
-- [ ] **Step 3: Create server/api/azi3.ts**
+- [ ] **Step 3: Create server/api/mx4.ts**
 
 ```typescript
-// server/api/azi3.ts
+// server/api/mx4.ts
 import { Router } from 'express'
 import fs from 'fs'
 
 const router = Router()
 
 router.post('/run', (_req, res) => {
-  const signalPath = process.env.AZI3_SIGNAL_PATH ?? './data/azi3_run_signal'
+  const signalPath = process.env.MX4_SIGNAL_PATH ?? './data/mx4_run_signal'
   fs.writeFileSync(signalPath, new Date().toISOString())
   res.status(202).json({ ok: true })
 })
@@ -1379,9 +1379,9 @@ app.use('/api/poll', pollRouter)
 
 Add after that line:
 ```typescript
-import azi3Router from './api/azi3'
+import mx4Router from './api/mx4'
 // ...
-app.use('/api/azi3', azi3Router)
+app.use('/api/mx4', mx4Router)
 ```
 
 Full updated imports block in `server/index.ts`:
@@ -1396,7 +1396,7 @@ import manualRouter from './api/manual'
 import insightsRouter from './api/insights'
 import bloodworkRouter from './api/bloodwork'
 import pollRouter from './api/poll'
-import azi3Router from './api/azi3'
+import mx4Router from './api/mx4'
 
 migrate()
 
@@ -1409,7 +1409,7 @@ app.use('/api/manual', manualRouter)
 app.use('/api/insights', insightsRouter)
 app.use('/api/bloodwork', bloodworkRouter)
 app.use('/api/poll', pollRouter)
-app.use('/api/azi3', azi3Router)
+app.use('/api/mx4', mx4Router)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {
@@ -1420,11 +1420,11 @@ if (process.env.NODE_ENV === 'production') {
 }
 ```
 
-- [ ] **Step 5: Add AZI3_SIGNAL_PATH to .env.example**
+- [ ] **Step 5: Add MX4_SIGNAL_PATH to .env.example**
 
 In `.env.example`, add after `POLL_SIGNAL_PATH`:
 ```
-AZI3_SIGNAL_PATH=./data/azi3_run_signal
+MX4_SIGNAL_PATH=./data/mx4_run_signal
 ```
 
 - [ ] **Step 6: Run server tests to verify they pass**
@@ -1433,13 +1433,13 @@ AZI3_SIGNAL_PATH=./data/azi3_run_signal
 npm run test:server
 ```
 
-Expected: All server tests PASS including the 2 new azi3 tests.
+Expected: All server tests PASS including the 2 new mx4 tests.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add server/api/azi3.ts server/index.ts tests/server/azi3.test.ts .env.example
-git commit -m "feat: POST /api/azi3/run — signal file trigger for manual AZI-3 regeneration"
+git add server/api/mx4.ts server/index.ts tests/server/mx4.test.ts .env.example
+git commit -m "feat: POST /api/mx4/run — signal file trigger for manual MX-4 regeneration"
 ```
 
 ---
@@ -1456,12 +1456,12 @@ git commit -m "feat: POST /api/azi3/run — signal file trigger for manual AZI-3
 In `tests/client/HomeTab.test.tsx`, add one test to the existing `describe('HomeTab')` block:
 
 ```tsx
-  test('regenerate button triggers POST /api/azi3/run', async () => {
+  test('regenerate button triggers POST /api/mx4/run', async () => {
     mockSummary({ steps: 1000 })
     render(<HomeTab />)
     await waitFor(() => screen.getByRole('button', { name: /regenerate/i }))
     await userEvent.click(screen.getByRole('button', { name: /regenerate/i }))
-    expect(mockFetch).toHaveBeenCalledWith('/api/azi3/run', { method: 'POST' })
+    expect(mockFetch).toHaveBeenCalledWith('/api/mx4/run', { method: 'POST' })
   })
 ```
 
@@ -1479,7 +1479,7 @@ In `client/src/api.ts`, add after `triggerPoll`:
 
 ```typescript
 export async function triggerAzi3(): Promise<void> {
-  await fetch('/api/azi3/run', { method: 'POST' })
+  await fetch('/api/mx4/run', { method: 'POST' })
 }
 ```
 
@@ -1534,7 +1534,7 @@ export function HomeTab() {
       <div className="flex items-center justify-between px-4 pt-4">
         <h1 className="text-lg font-bold text-gray-50">Bacta</h1>
         <div className="flex items-center gap-2">
-          {/* AZI-3 Regenerate button */}
+          {/* MX-4 Regenerate button */}
           <button
             aria-label="Regenerate"
             onClick={handleRegenerate}
@@ -1587,7 +1587,7 @@ export function HomeTab() {
         </div>
       </div>
 
-      {/* AZI-3 Daily Briefing */}
+      {/* MX-4 Daily Briefing */}
       <div className="px-4">
         <AziCard section="recovery" />
       </div>
@@ -1637,7 +1637,7 @@ Expected: All server tests and all client tests PASS. New total should include t
 
 ```bash
 git add client/src/api.ts client/src/tabs/HomeTab.tsx tests/client/HomeTab.test.tsx
-git commit -m "feat: Regenerate button — POST /api/azi3/run trigger from HomeTab header"
+git commit -m "feat: Regenerate button — POST /api/mx4/run trigger from HomeTab header"
 ```
 
 ---
@@ -1674,5 +1674,5 @@ Expected: No TypeScript errors. `dist/client/` created cleanly.
 
 ```bash
 git add -A
-git commit -m "feat: Plan 3 complete — AZI-3 insight generation system"
+git commit -m "feat: Plan 3 complete — MX-4 insight generation system"
 ```

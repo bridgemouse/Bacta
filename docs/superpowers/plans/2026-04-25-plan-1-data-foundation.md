@@ -52,7 +52,7 @@ bacta/
 │       └── test_garmin_metrics.py   # Unit tests with mocked Playwright page
 ├── data/                            # gitignored — SQLite lives here
 │   └── .gitkeep
-├── insights/                        # gitignored — AZI-3 writes here
+├── insights/                        # gitignored — MX-4 writes here
 │   └── .gitkeep
 └── docker-compose.yml
 ```
@@ -175,8 +175,8 @@ dist/
 data/*.db
 data/poll_signal
 insights/*.html
-azi3/medical-log.md
-azi3/patient-summary.md
+mx4/medical-log.md
+mx4/patient-summary.md
 __pycache__/
 *.pyc
 .venv/
@@ -193,7 +193,7 @@ pytest-asyncio==0.25.0
 - [ ] **Step 9: Create placeholder directories**
 
 ```bash
-mkdir -p data insights azi3 server/db server/api poller tests/server tests/poller client/src
+mkdir -p data insights mx4 server/db server/api poller tests/server tests/poller client/src
 touch data/.gitkeep insights/.gitkeep
 ```
 
@@ -804,7 +804,7 @@ const INSIGHTS_DIR = path.join(process.cwd(), 'insights')
 describe('Insights API', () => {
   beforeAll(() => {
     fs.mkdirSync(INSIGHTS_DIR, { recursive: true })
-    fs.writeFileSync(path.join(INSIGHTS_DIR, 'recovery.html'), '<div>AZI-3 recovery card</div>')
+    fs.writeFileSync(path.join(INSIGHTS_DIR, 'recovery.html'), '<div>MX-4 recovery card</div>')
   })
 
   afterAll(() => {
@@ -822,7 +822,7 @@ describe('Insights API', () => {
     const { app } = await import('../../server/index')
     const res = await request(app).get('/api/insights/recovery')
     expect(res.status).toBe(200)
-    expect(res.text).toContain('AZI-3 recovery card')
+    expect(res.text).toContain('MX-4 recovery card')
   })
 
   it('GET /api/insights/missing returns 404', async () => {
@@ -1524,7 +1524,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./insights:/app/insights
-      - ./azi3:/app/azi3
+      - ./mx4:/app/mx4
       - /mnt/vault:/mnt/vault:ro
     restart: unless-stopped
     depends_on:
@@ -1603,7 +1603,7 @@ git commit -m "feat: Docker Compose stack — bacta-api and garmin-poller servic
 
 **Not in Plan 1 (covered in Plans 2 and 3):**
 - React frontend / dashboard UI → Plan 2
-- AZI-3 agent, system prompt, cron wiring → Plan 3
+- MX-4 agent, system prompt, cron wiring → Plan 3
 - Caddy config, LXC deployment → Plan 3 epilogue
 - MacroFactor wiring → future (no account yet)
 - Blood work parser → future (no Factor results yet)

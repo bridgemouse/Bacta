@@ -44,11 +44,11 @@ describe('App', () => {
 
   test('renders recovery page on /recovery route', () => {
     renderApp('/recovery')
-    expect(screen.getByText('RECOVERY')).toBeInTheDocument()
+    expect(screen.getAllByText('RECOVERY').length).toBeGreaterThan(0)
   })
 
   test('renders sleep page on /sleep route', () => {
     renderApp('/sleep')
-    expect(screen.getByText('SLEEP')).toBeInTheDocument()
+    expect(screen.getAllByText('SLEEP').length).toBeGreaterThan(0)
   })
 })

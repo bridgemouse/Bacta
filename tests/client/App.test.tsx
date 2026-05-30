@@ -51,4 +51,14 @@ describe('App', () => {
     renderApp('/sleep')
     expect(screen.getAllByText('SLEEP').length).toBeGreaterThan(0)
   })
+
+  test('renders recovery shell content on /recovery route', () => {
+    renderApp('/recovery')
+    expect(screen.getByText(/Recovery channel online/)).toBeInTheDocument()
+  })
+
+  test('renders sleep shell content on /sleep route', () => {
+    renderApp('/sleep')
+    expect(screen.getByText(/Sleep channel online/)).toBeInTheDocument()
+  })
 })

@@ -1,9 +1,9 @@
 import { Router } from 'express'
 
-const router = Router()
+const healthRouter = Router()
 
-router.get('/', (_req, res) => {
-  res.json({ status: 'ok', ts: new Date().toISOString() })
+healthRouter.get('/', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-export default router
+export default healthRouter

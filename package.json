@@ -15,9 +15,11 @@
   },
   "keywords": [],
   "license": "ISC",
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.0.3"
+  },
   "type": "commonjs",
   "dependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.0.3",
     "better-sqlite3": "^12.9.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

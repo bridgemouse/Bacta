@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react'
 import type { SectionKey } from '../../theme'
 
 interface SigilProps {
@@ -16,7 +17,7 @@ export function Sigil({ name, color = '#fff', size = 18, sw = 1.6 }: SigilProps)
     strokeLinejoin: 'round' as const,
   }
 
-  const shapes: Record<Exclude<SectionKey, 'home'>, JSX.Element> = {
+  const shapes: Record<Exclude<SectionKey, 'home'>, ReactElement> = {
     recovery: (
       <g {...p}>
         <circle cx="12" cy="12" r="7.5" strokeDasharray="34 13" transform="rotate(-90 12 12)" />

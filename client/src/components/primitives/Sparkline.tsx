@@ -1,3 +1,5 @@
+import { useId } from 'react'
+
 interface SparklineProps {
   data: number[]
   accent: string
@@ -21,7 +23,7 @@ export function Sparkline({ data, accent, w = 92, h = 30, sw = 1.8, fill = true,
   ])
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
   const area = `${line} L${w} ${h} L0 ${h} Z`
-  const id = 'sg' + Math.random().toString(36).slice(2, 7)
+  const id = 'sg' + useId().replace(/:/g, '')
   const last = pts[pts.length - 1]
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', overflow: 'visible' }}>

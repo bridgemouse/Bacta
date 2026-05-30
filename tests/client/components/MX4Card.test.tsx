@@ -1,31 +1,72 @@
 import { render, screen } from '@testing-library/react'
-import { MX4Card } from '../../../client/src/components/MX4Card'
+import { TransmissionPanel } from '../../../client/src/components/MX4Card'
 
-describe('MX4Card', () => {
-  const mockInsight = {
-    generated_at: '2026-05-28T06:12:00',
-    summary: 'HRV up 4ms — looking good for Thursday.',
-    tone: 'positive' as const,
-    flags: [],
-  }
-
-  it('renders the summary text', () => {
-    render(<MX4Card insight={mockInsight} section="recovery" />)
-    expect(screen.getByText('HRV up 4ms — looking good for Thursday.')).toBeInTheDocument()
+describe('TransmissionPanel', () => {
+  it('renders the assessment text', () => {
+    render(
+      <TransmissionPanel
+        accent="#2bc4e8"
+        assessment="Recovery is solid and trending up."
+      />
+    )
+    expect(screen.getByText(/Recovery is solid and trending up/)).toBeInTheDocument()
   })
 
-  it('renders section label in header', () => {
-    render(<MX4Card insight={mockInsight} section="recovery" />)
-    expect(screen.getByText(/MX-4/)).toBeInTheDocument()
+  it('renders the default label', () => {
+    render(
+      <TransmissionPanel
+        accent="#2bc4e8"
+        assessment="Standing by."
+      />
+    )
+    expect(screen.getByText('INCOMING // MX-4')).toBeInTheDocument()
   })
 
-  it('shows a loading state when insight is null', () => {
-    render(<MX4Card insight={null} section="recovery" />)
-    expect(screen.getByTestId('mx4-loading')).toBeInTheDocument()
+  it('renders a custom label', () => {
+    render(
+      <TransmissionPanel
+        accent="#7c9af8"
+        label="MX-4 // RECOVERY"
+        assessment="Recovery channel standing by."
+      />
+    )
+    expect(screen.getByText('MX-4 // RECOVERY')).toBeInTheDocument()
   })
 
-  it('shows a generating indicator when isGenerating is true', () => {
-    render(<MX4Card insight={mockInsight} section="recovery" isGenerating />)
-    expect(screen.getByTestId('mx4-generating')).toBeInTheDocument()
+  it('renders default chip keys', () => {
+    render(
+      <TransmissionPanel
+        accent="#2bc4e8"
+        assessment="Standing by."
+      />
+    )
+    expect(screen.getByText('TONE')).toBeInTheDocument()
+    expect(screen.getByText('FLAGS')).toBeInTheDocument()
+    expect(screen.getByText('SYNC')).toBeInTheDocument()
+  })
+
+  it('renders custom chips', () => {
+    render(
+      <TransmissionPanel
+        accent="#7c9af8"
+        assessment="Recovery channel standing by."
+        chips={[['CH', 'RECOVERY'], ['DATA', 'PENDING']]}
+      />
+    )
+    expect(screen.getByText('CH')).toBeInTheDocument()
+    expect(screen.getByText('RECOVERY')).toBeInTheDocument()
+    expect(screen.getByText('DATA')).toBeInTheDocument()
+    expect(screen.getByText('PENDING')).toBeInTheDocument()
+  })
+
+  it('renders meta text when provided', () => {
+    render(
+      <TransmissionPanel
+        accent="#2bc4e8"
+        assessment="Standing by."
+        meta="MON · MAY 29 · 06:00"
+      />
+    )
+    expect(screen.getByText('MON · MAY 29 · 06:00')).toBeInTheDocument()
   })
 })

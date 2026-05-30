@@ -1,4 +1,5 @@
-import { COLORS, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
+// Legacy compatibility — pages still using old API (will be removed in later tasks)
+import { COLORS as _COLORS, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
 import type { SectionKey } from '../theme'
 
 export interface MX4Insight {
@@ -14,99 +15,132 @@ interface MX4CardProps {
   isGenerating?: boolean
 }
 
-const TONE_COLORS: Record<string, string> = {
-  positive: COLORS.mx4Green,
-  caution:  COLORS.mx4Amber,
-  flag:     COLORS.mx4Red,
-}
-
-export function MX4Card({ insight, section, isGenerating = false }: MX4CardProps) {
+/** @deprecated Use TransmissionPanel instead */
+export function MX4Card({ insight, section }: MX4CardProps) {
   const accent = SECTION_ACCENTS[section]
   const label = SECTION_LABELS[section]
+  if (!insight) return <div data-testid="mx4-loading" style={{ color: _COLORS.textMuted, fontSize: 12 }}>MX-4 · loading…</div>
+  return (
+    <TransmissionPanel
+      accent={accent}
+      label={`MX-4 · ${label.toUpperCase()}`}
+      assessment={insight.summary}
+    />
+  )
+}
 
-  if (!insight) {
-    return (
-      <div
-        data-testid="mx4-loading"
-        style={{
-          background: 'linear-gradient(135deg, #0d2818, #0a1929)',
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: 12,
-          padding: '12px 14px',
-          marginBottom: 12,
-        }}
-      >
-        <div style={{ color: COLORS.textMuted, fontSize: 12 }}>MX-4 · loading…</div>
-      </div>
-    )
-  }
+// ─── New API ──────────────────────────────────────────────────────────────────
+import { MX4Sigil } from './primitives/MX4Sigil'
+import type { MX4Mood } from './primitives/MX4Sigil'
+import { FTelemetry } from './primitives/FTelemetry'
+import { hexA } from '../lib/hexA'
+import { COLORS, FONT_MONO, FONT_UI } from '../theme'
 
-  const pulseColor = TONE_COLORS[insight.tone] ?? COLORS.mx4Green
+interface TransmissionPanelProps {
+  accent: string
+  mood?: MX4Mood
+  label?: string
+  meta?: string
+  assessment: string
+  chips?: [string, string][]
+}
 
+const DEFAULT_CHIPS: [string, string][] = [
+  ['TONE', 'POSITIVE'],
+  ['FLAGS', '0'],
+  ['SYNC', 'OK'],
+]
+
+export function TransmissionPanel({
+  accent,
+  mood = 'transmit',
+  label = 'INCOMING // MX-4',
+  meta,
+  assessment,
+  chips = DEFAULT_CHIPS,
+}: TransmissionPanelProps) {
   return (
     <div
       style={{
-        background: 'linear-gradient(135deg, #0d2818, #0a1929)',
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: 12,
-        padding: '12px 14px',
-        marginBottom: 12,
+        position: 'relative',
+        background: `linear-gradient(160deg, ${hexA(accent, 0.10)}, ${COLORS.surface} 50%)`,
+        border: `1px solid ${hexA(accent, 0.35)}`,
+        borderRadius: 14,
+        boxShadow: `0 0 32px ${hexA(accent, 0.08)}`,
+        marginBottom: 14,
+        overflow: 'hidden',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <div
-          style={{
-            width: 7,
-            height: 7,
-            borderRadius: '50%',
-            background: pulseColor,
-            flexShrink: 0,
-          }}
-        />
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 15px 11px' }}>
+        <MX4Sigil color={accent} size={19} spin mood={mood} />
         <span
           style={{
-            color: pulseColor,
-            fontSize: 10,
+            fontFamily: FONT_MONO,
+            fontSize: 10.5,
             fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
+            letterSpacing: '0.16em',
+            color: accent,
+            flex: 1,
+            minWidth: 0,
           }}
         >
-          MX-4 · {label.toUpperCase()}
+          {label}
         </span>
-        {isGenerating && (
+        {meta && (
           <span
-            data-testid="mx4-generating"
-            style={{ marginLeft: 'auto', color: COLORS.textMuted, fontSize: 10 }}
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 8.5,
+              letterSpacing: '0.08em',
+              color: COLORS.textMuted,
+              flexShrink: 0,
+            }}
           >
-            updating…
+            {meta}
           </span>
         )}
       </div>
 
-      <p style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.55, margin: 0 }}>
-        {insight.summary}
-      </p>
+      {/* Body */}
+      <div style={{ padding: '0 15px 13px' }}>
+        <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 16.5, lineHeight: 1.5, color: '#eef4fb' }}>
+          {assessment}
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-block',
+              width: 7,
+              height: '0.9em',
+              background: accent,
+              marginLeft: 3,
+              verticalAlign: 'middle',
+              animation: 'mx4blink 1.1s step-end infinite',
+            }}
+          />
+        </p>
+      </div>
 
-      {insight.flags.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {insight.flags.map((flag, i) => (
-            <span
-              key={i}
-              style={{
-                background: COLORS.mx4Red + '22',
-                color: COLORS.mx4Red,
-                fontSize: 10,
-                padding: '2px 8px',
-                borderRadius: 20,
-                border: `1px solid ${COLORS.mx4Red}44`,
-              }}
-            >
-              {flag}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Footer chip row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '10px 15px 13px',
+          borderTop: `1px solid ${hexA(accent, 0.18)}`,
+        }}
+      >
+        {chips.map(([key, val]) => (
+          <span key={key} style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
+            {key}{' '}
+            <span style={{ color: accent }}>{val}</span>
+          </span>
+        ))}
+        <span style={{ marginLeft: 'auto' }}>
+          <FTelemetry color={accent} bars={4} />
+        </span>
+      </div>
     </div>
   )
 }

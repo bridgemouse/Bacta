@@ -23,7 +23,7 @@ export function TopBar({ section, onBack }: TopBarProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: `50px 16px 12px`,
+        padding: `10px 16px 10px`,
         flexShrink: 0,
         position: 'relative',
         zIndex: 2,

@@ -34,7 +34,7 @@ export function BottomBar({ accent, onAsk, onNav }: BottomBarProps) {
         paddingTop: 10,
         paddingLeft: 18,
         paddingRight: 18,
-        paddingBottom: `max(10px, env(safe-area-inset-bottom))`,
+        paddingBottom: `env(safe-area-inset-bottom, 10px)`,
         flexShrink: 0,
         position: 'relative',
         zIndex: 2,

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:github.com)",
+      "mcp__vault-query__search_wiki",
+      "WebFetch(domain:blog.google)",
+      "WebFetch(domain:9to5google.com)",
+      "WebFetch(domain:www.theverge.com)",
+      "WebFetch(domain:health.google)",
+      "WebFetch(domain:connect.garmin.com)",
+      "WebSearch",
+      "WebFetch(domain:macrofactor.com)",
+      "WebFetch(domain:help.macrofactorapp.com)",
+      "WebFetch(domain:www.strongerbyscience.com)",
+      "WebFetch(domain:stripearmy.medium.com)",
+      "WebFetch(domain:benfrain.com)",
+      "WebFetch(domain:support.claude.com)",
+      "mcp__vault-query__get_wiki_index",
+      "mcp__vault-query__read_wiki_page"
+    ]
+  }
+}

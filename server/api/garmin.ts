@@ -4,8 +4,31 @@ import db from '../db/client'
 const garminRouter = Router()
 
 const VALID_METRICS = [
-  'steps', 'hrv', 'body_battery', 'resting_hr',
-  'sleep_duration', 'recovery_score', 'stress_score', 'vo2max',
+  // Daily stats
+  'steps', 'resting_hr', 'stress_avg', 'stress_max',
+  'calories_total', 'calories_active', 'distance_m',
+  'floors_up', 'floors_down',
+  // Sleep
+  'sleep_s', 'sleep_deep_s', 'sleep_light_s', 'sleep_rem_s', 'sleep_awake_s',
+  'sleep_score', 'sleep_spo2', 'sleep_resp',
+  // HRV
+  'hrv', 'hrv_week_avg',
+  // Body battery
+  'body_battery_max', 'body_battery_min',
+  // SpO2 / respiration
+  'spo2_avg', 'spo2_min', 'resp_avg', 'resp_max',
+  // Training / readiness
+  'recovery_score', 'training_status_n', 'training_load',
+  // Fitness metrics
+  'vo2max', 'fitness_age', 'endurance_score', 'hill_score',
+  // Body composition / weight
+  'weight_kg', 'bmi', 'body_fat_pct', 'muscle_mass_kg',
+  // Blood pressure
+  'bp_systolic', 'bp_diastolic',
+  // Intensity
+  'intensity_mod_min', 'intensity_vig_min',
+  // Activities
+  'act_distance_m', 'act_duration_s', 'act_calories', 'act_avg_hr',
 ]
 
 // GET /api/garmin/summary — today's key metrics as a flat object

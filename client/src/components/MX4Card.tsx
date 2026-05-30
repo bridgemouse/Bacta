@@ -1,7 +1,11 @@
-// Legacy compatibility — pages still using old API (will be removed in later tasks)
-import { COLORS as _COLORS, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
-import type { SectionKey } from '../theme'
+// All imports at top
+import { MX4Sigil } from './primitives/MX4Sigil'
+import type { MX4Mood } from './primitives/MX4Sigil'
+import { FTelemetry } from './primitives/FTelemetry'
+import { hexA } from '../lib/hexA'
+import { COLORS, FONT_MONO, FONT_UI } from '../theme'
 
+// ─── Temporary compatibility stub — removed in Task 3 / Task 5 ───
 export interface MX4Insight {
   generated_at: string
   summary: string
@@ -9,33 +13,13 @@ export interface MX4Insight {
   flags: string[]
 }
 
-interface MX4CardProps {
-  insight: MX4Insight | null
-  section: SectionKey
-  isGenerating?: boolean
+/** @deprecated Use TransmissionPanel instead. This stub returns null until pages are updated in Tasks 3 and 5. */
+export function MX4Card(_props: { insight: MX4Insight | null; section: string; isGenerating?: boolean }): null {
+  return null
 }
+// ────────────────────────────────────────────────────────────────
 
-/** @deprecated Use TransmissionPanel instead */
-export function MX4Card({ insight, section }: MX4CardProps) {
-  const accent = SECTION_ACCENTS[section]
-  const label = SECTION_LABELS[section]
-  if (!insight) return <div data-testid="mx4-loading" style={{ color: _COLORS.textMuted, fontSize: 12 }}>MX-4 · loading…</div>
-  return (
-    <TransmissionPanel
-      accent={accent}
-      label={`MX-4 · ${label.toUpperCase()}`}
-      assessment={insight.summary}
-    />
-  )
-}
-
-// ─── New API ──────────────────────────────────────────────────────────────────
-import { MX4Sigil } from './primitives/MX4Sigil'
-import type { MX4Mood } from './primitives/MX4Sigil'
-import { FTelemetry } from './primitives/FTelemetry'
-import { hexA } from '../lib/hexA'
-import { COLORS, FONT_MONO, FONT_UI } from '../theme'
-
+// ─── New API ─────────────────────────────────────────────────────
 interface TransmissionPanelProps {
   accent: string
   mood?: MX4Mood
@@ -71,7 +55,6 @@ export function TransmissionPanel({
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 15px 11px' }}>
         <MX4Sigil color={accent} size={19} spin mood={mood} />
         <span
@@ -102,7 +85,6 @@ export function TransmissionPanel({
         )}
       </div>
 
-      {/* Body */}
       <div style={{ padding: '0 15px 13px' }}>
         <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 16.5, lineHeight: 1.5, color: '#eef4fb' }}>
           {assessment}
@@ -121,7 +103,6 @@ export function TransmissionPanel({
         </p>
       </div>
 
-      {/* Footer chip row */}
       <div
         style={{
           display: 'flex',

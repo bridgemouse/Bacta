@@ -1,45 +1,129 @@
+import { useNavigate } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
-import { COLORS, SECTION_ACCENTS, SECTION_LABELS, SECTION_ICONS } from '../theme'
-import type { SectionKey } from '../theme'
-import { MX4Card, type MX4Insight } from '../components/MX4Card'
+import { TransmissionPanel } from '../components/MX4Card'
+import { SystemCard } from '../components/MetricTile'
+import type { SystemCardTile } from '../components/MetricTile'
+import { COLORS, MX4_COLOR, FONT_MONO } from '../theme'
 
-const MOCK_HOME_INSIGHT: MX4Insight = {
-  generated_at: new Date().toISOString(),
-  summary: 'Recovery looking solid. Training load on track. Nutrition close — protein slightly under target. MX-4 standing by.',
-  tone: 'positive',
-  flags: [],
-}
+const ASSESSMENT =
+  'Recovery is solid and trending up. Training load is on track for week four. Nutrition is close — protein is the only gap worth closing tonight.'
 
-const MOCK_TILES: Array<{ section: SectionKey; status: string; metric: string }> = [
-  { section: 'recovery',  status: 'Good',      metric: 'HRV ↑ · Battery 74' },
-  { section: 'training',  status: 'On track',  metric: 'Load: Moderate' },
-  { section: 'sleep',     status: '8.1h',       metric: 'Score: 82' },
-  { section: 'nutrition', status: 'On target', metric: '2,340 / 2,500 kcal' },
-  { section: 'bloodwork', status: 'No flags',  metric: 'Last panel: —' },
-  { section: 'dailylog',  status: 'Logged',    metric: 'Readiness: 4/5' },
+const TILES: SystemCardTile[] = [
+  {
+    key: 'recovery',
+    value: '74',
+    unit: 'battery',
+    sub: 'HRV ↑ 61ms',
+    viz: 'spark',
+    spark: [50, 54, 49, 57, 55, 60, 66, 74],
+    status: 'Good',
+  },
+  {
+    key: 'training',
+    value: '342',
+    unit: 'load',
+    sub: 'Moderate · wk 4 / 8',
+    viz: 'spark',
+    spark: [280, 300, 260, 320, 340, 310, 330, 342],
+    status: 'On track',
+  },
+  {
+    key: 'sleep',
+    value: '8.1',
+    unit: 'h',
+    sub: 'Score 82',
+    viz: 'ring',
+    ring: 0.82,
+    status: 'Solid',
+  },
+  {
+    key: 'nutrition',
+    value: '2,340',
+    unit: 'kcal',
+    sub: 'Protein 142 / 160g',
+    viz: 'ring',
+    ring: 0.94,
+    status: 'On target',
+  },
+  {
+    key: 'bloodwork',
+    value: 'Clear',
+    unit: '',
+    sub: 'No flags · 0 panels',
+    viz: 'shield',
+    status: 'Nominal',
+  },
+  {
+    key: 'dailylog',
+    value: '4',
+    unit: '/ 5',
+    sub: 'Logged today',
+    viz: 'dots',
+    dots: 4,
+    status: 'Logged',
+  },
 ]
 
 export function HomePage() {
+  const navigate = useNavigate()
+
   return (
     <AppShell section="home">
-      <MX4Card insight={MOCK_HOME_INSIGHT} section="home" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
-        {MOCK_TILES.map(({ section, status, metric }) => (
-          <div
-            key={section}
-            style={{
-              background: COLORS.surfaceElevated,
-              borderRadius: 10,
-              padding: '10px 12px',
-              borderLeft: `3px solid ${SECTION_ACCENTS[section]}`,
-            }}
-          >
-            <div style={{ color: COLORS.textSecondary, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-              {SECTION_ICONS[section]} {SECTION_LABELS[section]}
-            </div>
-            <div style={{ color: COLORS.text, fontSize: 13, fontWeight: 600 }}>{status}</div>
-            <div style={{ color: COLORS.textMuted, fontSize: 11, marginTop: 2 }}>{metric}</div>
-          </div>
+      <TransmissionPanel
+        accent={MX4_COLOR}
+        mood="transmit"
+        label="INCOMING // MX-4"
+        assessment={ASSESSMENT}
+      />
+
+      {/* SYSTEMS rail */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 9,
+          marginBottom: 11,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            color: MX4_COLOR,
+          }}
+        >
+          SYSTEMS
+        </span>
+        <span
+          style={{
+            flex: 1,
+            height: 1,
+            background: `linear-gradient(90deg, ${MX4_COLOR}44, transparent)`,
+          }}
+        />
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 9,
+            letterSpacing: '0.1em',
+            color: COLORS.textMuted,
+          }}
+        >
+          6 ONLINE
+        </span>
+      </div>
+
+      {/* SystemCard grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+        {TILES.map((tile, i) => (
+          <SystemCard
+            key={tile.key}
+            tile={tile}
+            index={i + 1}
+            onClick={() => navigate(`/${tile.key}`)}
+          />
         ))}
       </div>
     </AppShell>

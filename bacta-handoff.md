@@ -1,145 +1,93 @@
----
-title: Bacta — Build Handoff
-tags:
-  - software-dev
-  - bacta
-  - health-dashboard
----
+# Bacta — Project Brief (accurate as of 2026-05-31)
 
-# Bacta — Build Handoff
-
-> [!success] Revived — Session 63 (2026-05-27)
-> Back on track. UI blocker solved by **Claude Design** (claude.ai/design, powered by Opus 4.7) — use it to prototype the dashboard UI before implementing. **SparkyFitness** and **wger** are now deployed on LXC 107 as running reference implementations; borrow schema design and feature logic freely.
->
-> **MX-4 rethink:** On-demand insights (not just nightly cron) via local **Ollama** model on LXC 106 — avoids Claude API costs. Inspired by Google Health's AI insight card pattern (summary + sources at top of dashboard).
->
-> **Architecture confirmed:** Standalone app, own backend (custom SQLite). NOT a SparkyFitness fork. NOT riding on SparkyFitness API.
-
-**Design specs (approved, pre-stall):** [[2026-04-25-bacta-design|Bacta Design Spec]] · [[2026-04-26-dashboard-ui-design|Dashboard UI Design]] · [[2026-04-28-mx4-insight-generation-design|MX-4 Insight Generation Design]]
-
-Personal health dashboard PWA. Named after the Star Wars healing fluid. This doc is a handoff to a fresh Claude session to kick off the build.
+### What it is
+A personal health dashboard PWA for a single user (Ethan). Saved to iPhone home screen, runs on local WiFi only (`bacta.local`), no public exposure. Named after Star Wars healing fluid. Runs on **LXC 109** (Debian 13, unprivileged, on the `flash` NVMe pool) in a home Proxmox cluster. **No Docker** — runs directly on the LXC.
 
 ---
 
-## What Superpowers Decides
+### MX-4
+MX-4 (full designation MX-445211896246498721347) is an AZ-series surgical droid — canonically the same unit from *The Bad Batch* who served at Tipoca City, assisted Fives with the inhibitor chip conspiracy, and later served Clone Force 99 on Pabu. He has outlasted his original purpose. He has found a new one: daily health briefings for a single patient.
 
-Stack, folder structure, component architecture. Don't pre-constrain it. Present options and let Ethan choose.
+**Voice and character:**
+- Precise, analytical, genuinely invested in patient outcomes. Not a wellness app — a physician who has memorized every sports science paper since the Clone Wars
+- Speaks in clinical framing: *"I calculate..." / "My diagnostic subroutines indicate..."*
+- Delivers alarming findings with nonchalant, matter-of-fact precision — which makes them land harder
+- Dry, understated wit. Not jokes — observations that happen to be funny in their precision
+- Refers to the patient as "the patient" formally, uses "Ethan" when appropriate
+- Does not catastrophize. Does not soften. States what he observes, with exactness
 
----
+**Example voice:**
+> *"HRV has declined 14% over seven days. This is consistent with accumulated training load, insufficient parasympathetic recovery, or both. I have flagged it. I recommend you also flag it."*
 
-## What We Know Going In
+> *"The patient logged 200mg caffeine. I note this is the fourth consecutive day. I do not experience what you call worry. My subroutines have nonetheless run this calculation four times."*
 
-**Access:** Local WiFi only. Saved to iPhone home screen as PWA. No public exposure, no SSL cert headaches. Caddy on the LXC handles local domain (e.g. `bacta.local`).
+**MX-4 output requirements (non-negotiable):** Every briefing must include physiological context, personal trend vs 30-day baseline (not population average), population comparison from peer-reviewed norms for a 26-year-old male recreational runner (cited), a forward projection, and one specific actionable recommendation. If the card could have been generated without Ethan's specific data, it is not good enough.
 
-**Deployment:** New LXC (not LXC 106), Docker, Caddy reverse proxy.
-
-**Vault integration:** The Bacta LXC mounts the ObsidianVault as a read-only volume. Dashboard reads markdown directly at runtime — no MCP hop needed for vault data. vault-query MCP must also be registered on the Bacta LXC (same setup as LXC 106) for the Claude cron jobs to use.
-
----
-
-## Data Sources
-
-### Garmin (via garmin-mcp or direct API)
-**Update (Session 33):** The custom `garmin-mcp` server is now live on LXC 106. Auth workaround: authenticate on Windows machine, SCP garth tokens to `~/.garminconnect/garmin_tokens.json`. Garth handles refresh automatically. LLM-Wiki already has live Garmin data access — Bacta does NOT need to expose a relay API for this purpose.
-
-For the Bacta app itself, you can either (a) query garmin-mcp's SQLite database directly (it lives at `~/.garmin-mcp/garmin.db` on LXC 106) via a shared volume or network read, or (b) implement a second Garmin poller on the Bacta LXC using the same garth auth pattern. Avoid duplicating auth state — share the token file if both LXCs can reach each other.
-
-**Metrics to pull:**
-- Steps, floors, intensity minutes
-- Heart rate (resting, daily, during activities)
-- HRV (nightly + trends)
-- Sleep (score, stages — light/deep/REM, duration, restlessness)
-- Body battery (daily trend)
-- Stress score
-- SpO2 / respiration rate
-- VO2 max trend
-- Training load + recovery time advisor
-- Workouts (type, duration, HR zones, pace, distance)
-- Running dynamics (cadence, ground contact time, vertical oscillation — if supported by Venu 4)
-- Weekly mileage + volume trends
-- Pace trends over time
-- Hydration
-- Weight (if logged via Garmin)
-- Alcohol units (Garmin journal)
-
-### MacroFactor (unofficial Firebase client)
-No public API exists. Use `@sjawhar/macrofactor-mcp` — a TypeScript client that calls MacroFactor's Firebase/Firestore backend directly with username/password auth. 28 tools, read + write. Credentials via env vars (`MACROFACTOR_USERNAME`, `MACROFACTOR_PASSWORD`).
-
-**Risk:** reverse-engineered, could break on a MacroFactor backend update. No known alternative short of Apple HealthKit (not accessible to PWAs).
-
-**Metrics to pull:**
-- Daily calories (consumed vs. target)
-- Macros: protein, carbs, fat
-- Micronutrients: fiber, sodium, sugar
-- Calorie expenditure estimate
-- Weight trend (MacroFactor's smoothed trend line, not raw scale)
-- Food log entries
-
-### Blood Work (vault markdown)
-Factor blood test results ingested into vault (same pattern as `wiki/personal/lab-results-2026-04-17.md` for Marissa). Bacta reads via volume-mounted vault.
-
-**Schema decision deferred** — wait for actual Factor results to arrive, ingest through LLM-Wiki first, then establish frontmatter schema for machine-readable parsing. Don't pre-build a parser for a format that doesn't exist yet.
-
-### Manual Inputs (lightweight UI)
-- Subjective readiness / energy (1–5 daily) — correlates everything else, high signal
-- Caffeine
-- Supplements checklist
+**Tools available to MX-4:** WebSearch (for literature/norms), vault-query MCP (Ethan's Obsidian vault — training goals, wedding timeline, health history), bacta-db MCP (SQLite read-only access).
 
 ---
 
-## Claude Cron Job Architecture
-
-This is the feature that makes Bacta genuinely different from an off-the-shelf health app.
-
-**Mechanism:** Claude Code CLI installed on the Bacta LXC. Scheduled jobs run during off hours using Claude Code's built-in `schedule` / `CronCreate` feature (no custom cron wiring needed). Each job has a guardrailed prompt scoped to a specific insight section.
-
-**What the jobs do:** Read raw health data + query the vault via vault-query MCP → write a pre-computed insight summary to a specific file in `/insights/`. Dashboard renders these files at page load — fast, no live AI calls.
-
-**Why vault-query matters here:** The scheduled Claude knows Ethan's full context — current training block and VO2 max goals, wedding taper timeline, lax season impact on metrics, hypermobility context for joint load, personal philosophy. Entries are genuinely personal, not generic.
-
-Example output instead of "HRV: 42 — below 7-day average":
-> "HRV's been down three days running, which lines up with the mileage spike this week. Consistent with adaptation phase of the 8-week Garmin Coach block — not a red flag. Prioritize sleep tonight."
-
-**Data architecture — keep clean separation:**
-- `/data/` — raw polled data, written only by data pollers
-- `/insights/` — Claude-written summaries, written only by cron jobs
-- Dashboard reads both, writes neither
-
-**Suggested insight sections (starting point, not exhaustive):**
-- Weekly training summary
-- Recovery status (HRV + body battery + sleep)
-- Macro adherence report
-- Sleep quality narrative
-- VO2 max / fitness trend
-- Blood work flags (when Factor results are ingested)
-
-**vault-query MCP on Bacta LXC:** Must be registered in `~/.claude.json` on the new container. The vault is already volume-mounted read-only, so the server path resolves — just needs wiring. Same setup as LXC 106.
+### Stack
+- **Frontend:** React 19 + TypeScript + Vite. **Inline styles only** — no Tailwind, no CSS modules. The skeleton plan specified Tailwind but this was dropped during the Claude Design iteration.
+- **Backend:** Node/Express + TypeScript, SQLite via `better-sqlite3`
+- **Design tokens:** Hanken Grotesk (UI/narrative), JetBrains Mono (all instrument readouts/numbers). Dark palette: `#0f1117` base, `#111827` surface.
+- **MX-4 cyan:** `#2bc4e8` — his identity color, Home section accent and all MX-4 UI elements
+- **Section accents:** Recovery `#64b5f6` · Sleep `#a78bfa` · Training `#fb923c` · Nutrition `#3ecf8e` · Bloodwork `#ef6f6c` · Daily Log `#f5cf5e`
 
 ---
 
-## Sequencing
-
-**Before the build:**
-1. Create GitHub repo (`bridgemouse/bacta`)
-2. Provision new LXC
-
-**When Factor blood results arrive:**
-3. Ingest into vault via LLM-Wiki (same pattern as Marissa's lab results)
-4. Establish YAML frontmatter schema for machine-readable lab result pages
-5. Build vault markdown parser in Bacta for blood work data
-
-**Build phase (Superpowers-driven):**
-6. Data layer: Garmin data source (shared DB or second poller — see Garmin section above), MacroFactor Firebase client, vault reader
-7. Manual input UI (readiness score, caffeine, supplements)
-8. Dashboard UI: all metrics, PWA manifest, good-looking layout
-9. Claude cron job scaffolding: install Claude CLI, register vault-query MCP, write guardrailed prompts, wire schedule
-10. Containerize + deploy to new LXC
+### Data Sources
+- **Garmin:** Primary. Nightly poll at 3AM via `scripts/garmin_poller.py` (systemd timer). Historical ingest via `scripts/garmin_ingest.py`. SQLite EAV table `garmin_snapshots (date, metric, value, unit, source_json)`. ~30 metrics: HRV, body battery, resting HR, sleep stages/score/SpO2, stress, VO2max, training load/status, intensity minutes, activities, steps, weight, respiration.
+- **MacroFactor:** Deferred — no account yet
+- **Blood work:** Deferred — waiting on Factor lab results
+- **Manual inputs:** Daily readiness (1–5), caffeine, supplements
 
 ---
 
-## Open Questions for Superpowers
+### What's Built
 
-- What's the cleanest stack for a local-only health dashboard PWA? (React + Node? SvelteKit? Something else?)
-- How should the data polling interval work — continuous background process or cron-triggered?
-- Best approach for storing polled data locally on the LXC — SQLite, flat JSON files, something else?
-- PWA offline behavior — does it need to work without the LXC reachable, or is always-on-LAN assumed?
+**Shell:**
+- `AppShell` — fixed iOS shell (`position: fixed; inset: 0`), `env(safe-area-inset-*)` for notch. Provides `TabContext` (Overview/Trends tab state) to children. `hasTabs` prop controls whether the tab toggle appears.
+- `BactaDock` — centered pill at the bottom: Ask MX-4 button | divider | Overview/Trends toggle (when hasTabs=true) | divider | Nav button. Always MX-4 cyan. When `hasTabs=false`, the Ask button shows its label.
+- `TopBar` — section title + back nav
+- `BottomSheet` — slide-up nav drawer with all 7 sections
+- `AskSheet` — slide-up panel for Ask MX-4
+
+**MX4Briefing card:** Section accent colors the whole card (gradient bg, border, glow). Verdict badge pill (CLEAR/CAUTION/WATCH) is the only place tone color (green/amber/red) appears. Structured chips show `KEY: VALUE` with value in accent. Cursor blink animation on the briefing text.
+
+**Pages (all with hasTabs=true):**
+- **Home** — MX4Briefing + SystemCard 2×3 grid → taps navigate to section. Trends tab: cross-section TrendRows (Recovery, Sleep, HRV, Training Load, VO2)
+- **Recovery** — Score + HRV gauges (270° arc), Body Battery range bar, 4-tile vitals grid (RHR/Stress/SpO2/Resp). Trends tab: 7 TrendRows
+- **Sleep** — Duration + Score gauges, overnight depth chart (topographic area), stage split bar + legend, overnight vitals. Trends tab: Duration bars + Score spark
+- **Training** — Productive status banner, VO2 gauge, Training Load + LoadBand, Intensity stacked bar, activity log entries. Trends tab: Load/VO2/Endurance/Intensity
+
+**Viz components:** Gauge (270° arc), BodyBattery, Bars7, Sparkline, TrendRow, VitalTile, HeadlineCard, StatusBanner, LoadBand, IntensityBar, LogEntry (with activity glyphs), SleepDepth, StageSplit, StageLegend, Delta, Rail.
+
+**MX-4 orchestrator:** `mx4/orchestrator.py` — Claude Code CLI scheduled job that reads Garmin data + vault + writes HTML briefings to `insights/`. Signal-file mechanism: POST `/api/mx4/run` triggers a run.
+
+---
+
+### Infrastructure
+- **Repo:** `github.com/bridgemouse/bacta`
+- **Deploy path:** `/opt/bacta` on LXC 109
+- **GitHub Actions:** Self-hosted runner on LXC 109, labels `bacta, self-hosted`. CI runs type-check + tests on every push.
+- **Vault:** ObsidianVault NFS-mounted read-only at `/mnt/vault` from LXC 106 (192.168.1.202). LXC 106 must start before 109.
+- **DB:** SQLite at `/opt/bacta/data/bacta.db`
+
+---
+
+### What's Pending
+1. **Garmin sync** — initialize DB schema → run `garmin_ingest.py` (365 days) → install systemd timer
+2. **Wire real data** — replace stub data in pages with live API calls from SQLite
+3. **MX-4 cron** — schedule orchestrator, wire vault-query MCP config on LXC 109
+4. **MacroFactor** — sign up, wire MCP
+5. **Blood work** — after Factor results arrive
+
+---
+
+### Dev Conventions
+- **Inline styles only** — no CSS files, no Tailwind
+- **Dark UI always** — never propose light mode
+- **No multi-line paste** in terminal — use scripts or files
+- `INSERT OR IGNORE` for idempotent DB writes
+- Commits go to `main` directly

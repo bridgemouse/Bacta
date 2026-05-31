@@ -4,40 +4,41 @@ import { MX4Sigil } from './primitives/MX4Sigil'
 import { NavIcon } from './primitives/NavIcon'
 import { hexA } from '../lib/hexA'
 
-// ── Section tab toggle (always MX-4 cyan) ────────────────────────────────────
+const oct = (c: number) =>
+  `polygon(${c}px 0, calc(100% - ${c}px) 0, 100% ${c}px, 100% calc(100% - ${c}px), calc(100% - ${c}px) 100%, ${c}px 100%, 0 calc(100% - ${c}px), 0 ${c}px)`
+
 function SectionTabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 2 }}>
-      {(['overview', 'trends'] as const).map(t => {
-        const active = tab === t
-        return (
-          <button
-            key={t}
-            onClick={() => onTab(t)}
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 9.5,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase' as const,
-              padding: '5px 12px',
-              borderRadius: 20,
-              border: 'none',
-              cursor: 'pointer',
-              background: active ? MX4_COLOR : 'transparent',
-              color: active ? '#0b0d12' : COLORS.textMuted,
-              fontWeight: active ? 700 : 500,
-              transition: 'background 0.18s, color 0.18s',
-            }}
-          >
-            {t}
-          </button>
-        )
-      })}
+    <div style={{ clipPath: oct(7), background: hexA(MX4_COLOR, 0.45), padding: 1.5, flexShrink: 0 }}>
+      <div style={{ clipPath: oct(6), background: COLORS.base, display: 'flex', gap: 3, padding: 3 }}>
+        {(['overview', 'trends'] as const).map(t => {
+          const active = tab === t
+          return (
+            <button
+              key={t}
+              onClick={() => onTab(t)}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10.5,
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase' as const,
+                padding: '7px 14px',
+                border: 'none',
+                cursor: 'pointer',
+                clipPath: oct(4),
+                background: active ? hexA(MX4_COLOR, 0.2) : 'transparent',
+                color: active ? MX4_COLOR : COLORS.textMuted,
+              }}
+            >
+              {t === 'overview' ? 'Overview' : 'Trends'}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface BottomBarProps {
   accent: string
@@ -49,34 +50,22 @@ interface BottomBarProps {
 }
 
 const DIVIDER = (
-  <span style={{ width: 1, height: 22, background: hexA(MX4_COLOR, 0.22), flexShrink: 0 }} />
+  <span style={{ width: 1, height: 24, background: hexA(MX4_COLOR, 0.22), flexShrink: 0 }} />
 )
 
-export function BottomBar({ accent, hasTabs, tab, onTabChange, onAsk, onNav }: BottomBarProps) {
-  const circleBtn: React.CSSProperties = {
-    width: 40,
-    height: 40,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    cursor: 'pointer',
-    border: 'none',
-    padding: 0,
-  }
-
+export function BottomBar({ hasTabs, tab, onTabChange, onAsk, onNav }: BottomBarProps) {
   return (
     <div
       style={{
         flexShrink: 0,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-end',
-        padding: '8px 16px',
-        paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))',
         position: 'relative',
         zIndex: 2,
+        background: 'rgba(17,24,39,0.92)',
+        borderTop: `1px solid ${hexA(MX4_COLOR, 0.28)}`,
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '12px 16px',
+        paddingBottom: 'max(18px, env(safe-area-inset-bottom))',
       }}
     >
       <div
@@ -84,43 +73,60 @@ export function BottomBar({ accent, hasTabs, tab, onTabChange, onAsk, onNav }: B
           display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
-          background: 'rgba(15,17,23,0.94)',
-          border: `1px solid ${hexA(MX4_COLOR, 0.28)}`,
+          background: `linear-gradient(180deg, ${hexA(MX4_COLOR, 0.07)}, ${COLORS.surface})`,
+          border: `1px solid ${hexA(MX4_COLOR, 0.3)}`,
           borderRadius: 30,
-          boxShadow: `0 0 20px ${hexA(MX4_COLOR, 0.09)}, 0 2px 16px rgba(0,0,0,0.5)`,
-          padding: '5px 10px',
+          boxShadow: `0 0 20px ${hexA(MX4_COLOR, 0.09)}, inset 0 1px 0 rgba(255,255,255,0.04)`,
+          padding: '5px 7px',
         }}
       >
-        {/* Ask MX-4 */}
+        {/* Ask MX-4 — always cyan, his identity anchor */}
         <button
           data-testid="ask-button"
           onClick={onAsk}
           aria-label="Ask MX-4"
           style={{
-            ...circleBtn,
-            background: `radial-gradient(circle, ${hexA(accent, 0.14)}, ${hexA(accent, 0.04)} 70%)`,
-            border: `1px solid ${hexA(accent, 0.5)}`,
-            animation: 'mx4glowbreathe 3.6s ease-in-out infinite',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: hasTabs ? 0 : 9,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
           }}
         >
-          <MX4Sigil color={accent} size={26} glow mood="listen" />
+          <span
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 42,
+              height: 42,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${hexA(MX4_COLOR, 0.16)}, ${hexA(MX4_COLOR, 0.03)} 70%)`,
+              border: `1px solid ${hexA(MX4_COLOR, 0.55)}`,
+              animation: 'mx4glowbreathe 3.6s ease-in-out infinite',
+              flexShrink: 0,
+            }}
+          >
+            <MX4Sigil color={MX4_COLOR} size={27} glow mood="listen" />
+          </span>
+          {!hasTabs && (
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, paddingRight: 4 }}>
+              <span style={{ fontFamily: FONT_UI, fontSize: 13, fontWeight: 650, color: COLORS.text, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+                Ask MX-4
+              </span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8, letterSpacing: '0.12em', color: COLORS.textMuted, whiteSpace: 'nowrap' }}>
+                TAP TO TALK
+              </span>
+            </span>
+          )}
         </button>
-
-        {/* Label when no tabs (home or stub pages) */}
-        {!hasTabs && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingRight: 4 }}>
-            <span style={{ fontFamily: FONT_UI, fontSize: 13, fontWeight: 650, color: COLORS.text, lineHeight: 1 }}>
-              Ask MX-4
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, letterSpacing: '0.12em', color: COLORS.textMuted }}>
-              TAP TO TALK
-            </span>
-          </div>
-        )}
 
         {DIVIDER}
 
-        {/* Section tabs */}
         {hasTabs && (
           <>
             <SectionTabs tab={tab} onTab={onTabChange} />
@@ -134,9 +140,18 @@ export function BottomBar({ accent, hasTabs, tab, onTabChange, onAsk, onNav }: B
           onClick={onNav}
           aria-label="All Systems"
           style={{
-            ...circleBtn,
-            background: hexA(COLORS.line, 0.5),
-            border: `1px solid ${COLORS.line}`,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 42,
+            height: 42,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${hexA(COLORS.textSecondary, 0.1)}, transparent 70%)`,
+            border: `1px solid ${hexA(COLORS.textSecondary, 0.45)}`,
+            boxShadow: `0 0 11px ${hexA(COLORS.textSecondary, 0.22)}, inset 0 0 7px ${hexA(COLORS.textSecondary, 0.06)}`,
+            cursor: 'pointer',
+            padding: 0,
           }}
         >
           <NavIcon color={COLORS.textSecondary} size={24} />

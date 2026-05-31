@@ -1,10 +1,126 @@
 import { AppShell } from '../components/AppShell'
-import { SectionShell } from '../components/SectionShell'
+import { MX4Briefing } from '../components/MX4Card'
+import { useTab } from '../lib/TabContext'
+import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../theme'
+import { BRIEFS, TRAINING } from '../lib/stubData'
+import { Gauge } from '../components/viz/Gauge'
+import { Delta } from '../components/viz/Delta'
+import { HeadlineCard } from '../components/viz/HeadlineCard'
+import { Rail } from '../components/viz/Rail'
+import { TrendRow } from '../components/viz/TrendRow'
+import { StatusBanner } from '../components/viz/StatusBanner'
+import { LoadBand } from '../components/viz/LoadBand'
+import { IntensityBar } from '../components/viz/IntensityBar'
+import { LogEntry } from '../components/viz/LogEntry'
+
+const A = SECTION_ACCENTS.training
+
+function TrainingOverview() {
+  return (
+    <>
+      <MX4Briefing accent={A} brief={BRIEFS.training} />
+
+      <StatusBanner
+        status={TRAINING.status.value}
+        sub={TRAINING.status.sub}
+        accent={A}
+      />
+
+      {/* VO2max + Endurance row */}
+      <div style={{ display: 'flex', gap: 9, marginTop: 9, marginBottom: 9 }}>
+        <HeadlineCard
+          accent={A}
+          label="VO2 Max"
+          foot={
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>
+              Fitness age {TRAINING.vo2max.fitnessAge}
+            </span>
+          }
+        >
+          <Gauge value={TRAINING.vo2max.value} max={70} accent={A} size={100}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
+              {TRAINING.vo2max.value}
+            </span>
+            <Delta value={TRAINING.vo2max.delta} size={9} />
+          </Gauge>
+        </HeadlineCard>
+
+        <HeadlineCard
+          accent={A}
+          label="Training Load"
+          foot={
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: COLORS.textSecondary }}>
+              {TRAINING.load.state}
+            </span>
+          }
+        >
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 10 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 30, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
+              {TRAINING.load.value}
+            </span>
+          </div>
+          <LoadBand
+            value={TRAINING.load.value}
+            low={TRAINING.load.low}
+            high={TRAINING.load.high}
+            accent={A}
+          />
+        </HeadlineCard>
+      </div>
+
+      <Rail label="INTENSITY THIS WEEK" accent={A} right={`GOAL ${TRAINING.intensity.goal} MIN`} />
+
+      <IntensityBar
+        moderate={TRAINING.intensity.moderate}
+        vigorous={TRAINING.intensity.vigorous}
+        goal={TRAINING.intensity.goal}
+        accent={A}
+      />
+
+      <Rail label="ACTIVITY LOG" accent={A} right={`${TRAINING.activities.length} RECENT`} />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {TRAINING.activities.map((act, i) => (
+          <LogEntry key={i} activity={act} accent={A} />
+        ))}
+      </div>
+    </>
+  )
+}
+
+function TrainingTrends() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <TrendRow
+        label="Load" value={TRAINING.load.value}
+        data={TRAINING.load.trend} accent={A} kind="bars"
+      />
+      <TrendRow
+        label="VO2 Max" value={TRAINING.vo2max.value} unit="mL/kg"
+        data={TRAINING.status.trend} accent={A}
+        delta={TRAINING.vo2max.delta}
+      />
+      <TrendRow
+        label="Endurance" value={TRAINING.endurance.value}
+        data={TRAINING.endurance.trend} accent={A}
+      />
+      <TrendRow
+        label="Intensity" value={`${TRAINING.intensity.moderate + TRAINING.intensity.vigorous * 2}`} unit="pts"
+        data={TRAINING.intensity.trend} accent={A} kind="bars"
+      />
+    </div>
+  )
+}
+
+function TrainingContent() {
+  const tab = useTab()
+  return tab === 'overview' ? <TrainingOverview /> : <TrainingTrends />
+}
 
 export function TrainingPage() {
   return (
-    <AppShell section="training">
-      <SectionShell section="training" />
+    <AppShell section="training" hasTabs>
+      <TrainingContent />
     </AppShell>
   )
 }

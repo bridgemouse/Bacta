@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
-import { TransmissionPanel } from '../components/MX4Card'
+import { MX4Briefing } from '../components/MX4Card'
 import { SystemCard } from '../components/MetricTile'
 import type { SystemCardTile } from '../components/MetricTile'
+import { useTab } from '../lib/TabContext'
+import { BRIEFS, RECOVERY, SLEEP, TRAINING } from '../lib/stubData'
 import { COLORS, MX4_COLOR, FONT_MONO } from '../theme'
-
-const ASSESSMENT =
-  'Recovery is solid and trending up. Training load is on track for week four. Nutrition is close — protein is the only gap worth closing tonight.'
+import { TrendRow } from '../components/viz/TrendRow'
+import { Rail } from '../components/viz/Rail'
 
 const TILES: SystemCardTile[] = [
   {
@@ -64,68 +65,82 @@ const TILES: SystemCardTile[] = [
   },
 ]
 
-export function HomePage() {
-  const navigate = useNavigate()
+const A = MX4_COLOR
 
+function HomeOverview({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
-    <AppShell section="home">
-      <TransmissionPanel
-        accent={MX4_COLOR}
-        mood="transmit"
-        label="INCOMING // MX-4"
-        assessment={ASSESSMENT}
-      />
+    <>
+      <MX4Briefing accent={A} brief={BRIEFS.home} />
 
       {/* SYSTEMS rail */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 9,
-          marginBottom: 11,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            color: MX4_COLOR,
-          }}
-        >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 11 }}>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', color: A }}>
           SYSTEMS
         </span>
-        <span
-          style={{
-            flex: 1,
-            height: 1,
-            background: `linear-gradient(90deg, ${MX4_COLOR}44, transparent)`,
-          }}
-        />
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 9,
-            letterSpacing: '0.1em',
-            color: COLORS.textMuted,
-          }}
-        >
+        <span style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${A}44, transparent)` }} />
+        <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.1em', color: COLORS.textMuted }}>
           6 ONLINE
         </span>
       </div>
 
-      {/* SystemCard grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
         {TILES.map((tile, i) => (
           <SystemCard
             key={tile.key}
             tile={tile}
             index={i + 1}
-            onClick={() => navigate(`/${tile.key}`)}
+            onClick={() => onNavigate(`/${tile.key}`)}
           />
         ))}
       </div>
+    </>
+  )
+}
+
+function HomeTrends() {
+  return (
+    <>
+      <Rail label="CROSS-SECTION TRENDS" accent={A} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <TrendRow
+          label="Recovery" value={RECOVERY.score.value}
+          data={RECOVERY.score.trend} accent={A}
+        />
+        <TrendRow
+          label="Sleep Score" value={SLEEP.score.value}
+          data={SLEEP.score.trend} accent={A}
+        />
+        <TrendRow
+          label="HRV" value={RECOVERY.hrv.value} unit="ms"
+          data={RECOVERY.hrv.trend} accent={A}
+          delta={RECOVERY.hrv.value - RECOVERY.hrv.avg}
+        />
+        <TrendRow
+          label="Training Load" value={TRAINING.load.value}
+          data={TRAINING.load.trend} accent={A} kind="bars"
+        />
+        <TrendRow
+          label="VO2 Max" value={TRAINING.vo2max.value} unit="mL/kg"
+          data={TRAINING.status.trend} accent={A}
+        />
+      </div>
+    </>
+  )
+}
+
+function HomeContent({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const tab = useTab()
+  return tab === 'overview'
+    ? <HomeOverview onNavigate={onNavigate} />
+    : <HomeTrends />
+}
+
+export function HomePage() {
+  const navigate = useNavigate()
+
+  return (
+    <AppShell section="home" hasTabs>
+      <HomeContent onNavigate={navigate} />
     </AppShell>
   )
 }

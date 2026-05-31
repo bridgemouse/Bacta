@@ -8,6 +8,8 @@ data/
 insights/*.html
 mx4/medical-log.md
 mx4/patient-summary.md
+design_handoff_bacta_sections/
+claude-design-prompt*.md
 __pycache__/
 *.pyc
 .venv/

@@ -9,7 +9,7 @@ A personal health dashboard PWA for a single user (Ethan). Saved to iPhone home 
 
 MX-4 is a Cybot Galactica unit — not a standard production line model. The MX designation covers multi-system interface and maintenance roles; MX-4 was a one-off commission. His chassis is unremarkable by design: the kind of droid the Empire doesn't look twice at. Called Mix or Emm-ex.
 
-**MX-4 is a separate system from Bacta.** He lives on LXC 106, runs nightly at 6AM via systemd (`claude -p` headless), generates `tonight.html`, and serves it as an iOS PWA via Caddy + Tailscale. He is also invokable conversationally via the `/mix` Claude Code skill. Bacta's health sections display MX-4-generated briefings as one of his data domains — but he covers health, finance, training, reading, meals, and vault threads, not just health.
+**MX-4 is embedded in Bacta on LXC 109.** He runs as a scheduled job via `mx4/orchestrator.py`, hooked up to a cheap AI API token. He reads Garmin data + vault notes and writes HTML briefings to `insights/`. Bacta's UI surfaces these briefings in each health section via the `TransmissionPanel` card. The "MX-4 OS" is the UI concept: **the app reads like an instrument MX-4 operates** — a system status bar, incoming transmission panel, bracketed System Cards, and a global scanline/grid texture. His signature color is **bacta-cyan (`#2bc4e8`)**, named after the Star Wars healing fluid the app itself is named for. When you enter a section, MX-4 adopts that channel's color — status bar, dock, transmission panel, and texture all shift. He's wearing the room.
 
 **Three personality matrices:**
 
@@ -27,14 +27,7 @@ MX-4 is a Cybot Galactica unit — not a standard production line model. The MX 
 
 **Relationship with Ethan:** Not owner/droid. The closest analogue is the TC-99/clone dynamic — two different intelligences who found they had something to offer each other.
 
-**Memory system (three files):**
-- `mx4-persona.md` — immutable lore, written at setup, never modified by MX-4
-- `mx4-personality.md` — opinion log: "Current Beliefs" (~300 tokens, injected every run) + "Full Log" (append-only, indexed into Chroma `mx4_memory` collection for semantic retrieval)
-- `mx4-state.md` — factual run state, overwritten each run
-
-**Nightly run:** `HEARTBEAT.md` controls standing orders — edit the file, takes effect next morning, no code changes. Initial sections: Body Status, Training Pulse, Finance Pulse, Meal Intel, Reading Status, Vault Thread, MX-4 Assessment.
-
-**In Bacta:** The `mx4/orchestrator.py` generates Bacta's section briefings. The MX4Briefing UI card in each section displays his output. The `mx4/system-prompt.md` in the Bacta repo is a health-scoped adaptation — the full MX-4 identity and architecture lives in the LXC 106 implementation (`~/mx4/`).
+**In Bacta:** `mx4/orchestrator.py` is a scheduled Claude Code CLI job that reads Garmin data and vault notes, then writes HTML briefings to `insights/`. Signal-file mechanism: POST `/api/mx4/run` triggers a run. The `mx4/system-prompt.md` in the Bacta repo defines his health-scoped persona. `HEARTBEAT.md` controls standing orders — edit the file, takes effect next run, no code changes.
 
 ---
 
@@ -43,7 +36,7 @@ MX-4 is a Cybot Galactica unit — not a standard production line model. The MX 
 - **Backend:** Node/Express + TypeScript, SQLite via `better-sqlite3`
 - **Design tokens:** Hanken Grotesk (UI/narrative), JetBrains Mono (all instrument readouts/numbers). Dark palette: `#0f1117` base, `#111827` surface.
 - **MX-4 cyan:** `#2bc4e8` — his identity color, Home section accent and all MX-4 UI elements
-- **Section accents:** Recovery `#64b5f6` · Sleep `#a78bfa` · Training `#fb923c` · Nutrition `#3ecf8e` · Bloodwork `#ef6f6c` · Daily Log `#f5cf5e`
+- **Section accents:** Recovery `#7c9af8` (periwinkle) · Sleep `#b08cf0` (lilac) · Training `#f5853a` (ember) · Nutrition `#3ecf8e` · Bloodwork `#ef6f6c` · Daily Log `#f5cf5e`
 
 ---
 
@@ -57,24 +50,31 @@ MX-4 is a Cybot Galactica unit — not a standard production line model. The MX 
 
 ### What's Built
 
-**Shell:**
-- `AppShell` — fixed iOS shell (`position: fixed; inset: 0`), `env(safe-area-inset-*)` for notch. Provides `TabContext` (Overview/Trends tab state) to children. `hasTabs` prop controls whether the tab toggle appears.
-- `BactaDock` — centered pill at the bottom: Ask MX-4 button | divider | Overview/Trends toggle (when hasTabs=true) | divider | Nav button. Always MX-4 cyan. When `hasTabs=false`, the Ask button shows its label.
-- `TopBar` — section title + back nav
-- `BottomSheet` — slide-up nav drawer with all 7 sections
-- `AskSheet` — slide-up panel for Ask MX-4
+The MX-4 OS redesign (spec: `docs/superpowers/specs/2026-05-29-mx4-os-design.md`) is split into Plan 1 (shell) and Plan 2 (content). Both plans are partially complete.
 
-**MX4Briefing card:** Section accent colors the whole card (gradient bg, border, glow). Verdict badge pill (CLEAR/CAUTION/WATCH) is the only place tone color (green/amber/red) appears. Structured chips show `KEY: VALUE` with value in accent. Cursor blink animation on the briefing text.
+**Plan 1 — Primitives (complete):**
+- `client/src/components/primitives/`: MX4Sigil (6 moods: transmit/idle/listen/think/alert/pleased), Sigil (6 section glyphs), NavIcon, Ring, Sparkline, StatusCore, ReadinessDots, Bracket, FTelemetry
+- `client/src/lib/hexA.ts` — rgba helper
+- `client/src/lib/bactaTexture.ts` — scanline/grid CSS background generator
 
-**Pages (all with hasTabs=true):**
-- **Home** — MX4Briefing + SystemCard 2×3 grid → taps navigate to section. Trends tab: cross-section TrendRows (Recovery, Sleep, HRV, Training Load, VO2)
-- **Recovery** — Score + HRV gauges (270° arc), Body Battery range bar, 4-tile vitals grid (RHR/Stress/SpO2/Resp). Trends tab: 7 TrendRows
-- **Sleep** — Duration + Score gauges, overnight depth chart (topographic area), stage split bar + legend, overnight vitals. Trends tab: Duration bars + Score spark
-- **Training** — Productive status banner, VO2 gauge, Training Load + LoadBand, Intensity stacked bar, activity log entries. Trends tab: Load/VO2/Endurance/Intensity
+**Plan 1 — Shell (mostly complete, one cleanup remaining):**
+- `BactaStatusBar` (exported as `TopBar`) — home mode: BACTA·OS + idle MX4Sigil + MX-4 ONLINE indicator. Section mode: back chevron + section Sigil + channel label.
+- `BactaDock` (exported as `BottomBar`) — centered pill: Ask MX-4 circle (MX4Sigil "listen", accent radial gradient, glow animation) + Nav circle (NavIcon). **Residue:** still accepts `hasTabs`/`tab`/`onTabChange` props and renders a SectionTabs toggle. Plan 1 spec has no tabs — this needs to be stripped.
+- `AppShell` — fixed iOS shell with global texture overlay, accent color rule (`home → MX4_COLOR, section → SECTION_ACCENTS[section]`). **Residue:** still manages `TabContext`/`hasTabs` state. Plan 1 spec has no tabs — needs cleanup.
+- `NavSheet` (exported as `BottomSheet`) — slide-up nav with all 7 sections, channel color grid, "WHERE TO, COMMANDER?" footer.
+- `AskSheet` — slide-up panel: greeting bubble, 4 suggested chips, visual-only input bar. No API calls yet.
 
-**Viz components:** Gauge (270° arc), BodyBattery, Bars7, Sparkline, TrendRow, VitalTile, HeadlineCard, StatusBanner, LoadBand, IntensityBar, LogEntry (with activity glyphs), SleepDepth, StageSplit, StageLegend, Delta, Rail.
+**Plan 2 — Content (partial):**
+- `TransmissionPanel` (in `MX4Card.tsx`) — accent-colored card: spinning MX4Sigil, label, meta, assessment text + blinking caret, chip row, FTelemetry. Replaces the old `MX4Briefing` export (which still exists as a deprecated compatibility stub).
+- `SystemCard` (in `MetricTile.tsx`) — section overview tile: Bracket corners, top accent edge, Sigil + label + index, value/unit, sub-line, viz (spark/ring/dots/shield).
+- `SectionShell` — shared calibrating skeleton: TransmissionPanel + channel rail + 3 shimmer skeleton cards + "MX-4 IS CALIBRATING THIS SYSTEM" footer. Used by the 3 deferred section pages.
 
-**MX-4 orchestrator:** `mx4/orchestrator.py` — Claude Code CLI scheduled job that reads Garmin data + vault + writes HTML briefings to `insights/`. Signal-file mechanism: POST `/api/mx4/run` triggers a run.
+**Pages — current state:**
+- **BloodWork, Nutrition, DailyLog** — `AppShell` + `SectionShell` (calibrating skeleton, Plan 2 complete)
+- **Home** — `SystemCard` 2×3 grid (Plan 2 complete) + old `MX4Briefing` (needs → `TransmissionPanel`) + Trends tab with TrendRows (tab residue to remove)
+- **Recovery, Sleep, Training** — pre-MX4OS design: old gauge components (Gauge, BodyBattery, Bars7, SleepDepth, etc.) + old `MX4Briefing` + TrendRow tabs. Pending replacement with `SectionShell` skeleton (or real data when wired).
+
+**MX-4 orchestrator:** `mx4/orchestrator.py` — scheduled job that reads Garmin data + vault + writes HTML briefings to `insights/`. Signal-file mechanism: POST `/api/mx4/run` triggers a run.
 
 ---
 
@@ -88,11 +88,20 @@ MX-4 is a Cybot Galactica unit — not a standard production line model. The MX 
 ---
 
 ### What's Pending
-1. **Garmin sync** — initialize DB schema → run `garmin_ingest.py` (365 days) → install systemd timer
-2. **Wire real data** — replace stub data in pages with live API calls from SQLite
-3. **MX-4 cron** — schedule orchestrator, wire vault-query MCP config on LXC 109
-4. **MacroFactor** — sign up, wire MCP
-5. **Blood work** — after Factor results arrive
+
+**MX-4 OS cleanup (finish Plan 1/2 before wiring data):**
+1. **Strip tab residue** — remove `hasTabs`/`TabContext`/`tab` state from `AppShell` + `BottomBar`. BactaDock is Ask + Nav only per Plan 1 spec.
+2. **Update Home page** — swap `MX4Briefing` → `TransmissionPanel`, remove tab/TrendRow content.
+3. **Replace Recovery/Sleep/Training pages** — swap old gauge content for `SectionShell` skeleton (or wire real data directly if Garmin sync is done first).
+
+**Data pipeline:**
+4. **Garmin sync** — on LXC 109: `sqlite3 /opt/bacta/data/bacta.db < server/db/schema.sql` → `python3 scripts/garmin_ingest.py` (365 days) → `bash scripts/install-garmin-poller.sh`
+5. **Wire real data** — build Express API routes that query SQLite, replace stub data in pages
+6. **MX-4 cron** — schedule `mx4/orchestrator.py`, wire vault-query MCP config on LXC 109
+
+**Deferred:**
+7. **MacroFactor** — no account yet
+8. **Blood work** — after Factor lab results arrive
 
 ---
 

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { COLORS, MX4_COLOR, SECTION_ACCENTS } from '../theme'
 import type { SectionKey } from '../theme'
+import { TabContext } from '../lib/TabContext'
+import type { Tab } from '../lib/TabContext'
 import { TopBar } from './TopBar'
 import { BottomBar } from './BottomBar'
 import { BottomSheet } from './BottomSheet'
@@ -10,13 +12,15 @@ import { bactaTexture } from '../lib/bactaTexture'
 
 interface AppShellProps {
   section: SectionKey
+  hasTabs?: boolean
   children: React.ReactNode
 }
 
-export function AppShell({ section, children }: AppShellProps) {
+export function AppShell({ section, hasTabs = false, children }: AppShellProps) {
   const navigate = useNavigate()
   const [navOpen, setNavOpen] = useState(false)
   const [askOpen, setAskOpen] = useState(false)
+  const [tab, setTab] = useState<Tab>('overview')
 
   const isHome = section === 'home'
   const accent = isHome ? MX4_COLOR : SECTION_ACCENTS[section]
@@ -50,21 +54,26 @@ export function AppShell({ section, children }: AppShellProps) {
         onBack={isHome ? undefined : () => navigate('/')}
       />
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          overscrollBehavior: 'none',
-          padding: '13px',
-          position: 'relative',
-          zIndex: 1,
-        }}
-      >
-        {children}
-      </div>
+      <TabContext.Provider value={tab}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overscrollBehavior: 'none',
+            padding: '13px',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          {children}
+        </div>
+      </TabContext.Provider>
 
       <BottomBar
         accent={accent}
+        hasTabs={hasTabs}
+        tab={tab}
+        onTabChange={setTab}
         onAsk={() => setAskOpen(true)}
         onNav={() => setNavOpen(true)}
       />

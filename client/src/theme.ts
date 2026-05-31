@@ -11,16 +11,19 @@ export const COLORS = {
   text:            '#f4f7fb',
   textSecondary:   '#94a3b8',
   textMuted:       '#56657a',
+  green:           '#4ade80',   // tone: positive
+  amber:           '#fbbf24',   // tone: caution
+  red:             '#f87171',   // tone: flag
   mx4Green:        '#4ade80',
   mx4Amber:        '#fbbf24',
   mx4Red:          '#f87171',
 } as const
 
 export const SECTION_ACCENTS: Record<SectionKey, string> = {
-  home:      '#4ade80',
-  recovery:  '#7c9af8',
-  training:  '#f5853a',
-  sleep:     '#b08cf0',
+  home:      MX4_COLOR,   // home wears MX-4 cyan, not green
+  recovery:  '#64b5f6',
+  training:  '#fb923c',
+  sleep:     '#a78bfa',
   nutrition: '#3ecf8e',
   bloodwork: '#ef6f6c',
   dailylog:  '#f5cf5e',
@@ -48,3 +51,10 @@ export const SECTION_ICONS: Record<SectionKey, string> = {
 
 export const FONT_UI   = "'Hanken Grotesk', system-ui, sans-serif"
 export const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace"
+
+export type Tone = 'positive' | 'caution' | 'flag'
+export const toneColor = (t: Tone): string =>
+  t === 'flag' ? COLORS.red : t === 'caution' ? COLORS.amber : COLORS.green
+
+/** Sections that have full Overview + Trends content built */
+export const BUILT_SECTIONS: SectionKey[] = ['home', 'recovery', 'sleep', 'training']

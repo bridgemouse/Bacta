@@ -31,7 +31,7 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
         const lightMins = Math.round(lightS / 60)
         const remMins   = Math.round(remS   / 60)
         const awakeMins = Math.round(awakeS / 60)
-        const totalForPct = deepMins + lightMins + remMins + awakeMins || 1
+        const totalForPct = deepMins + lightMins + remMins || 1
 
         setData({
           ...SLEEP,

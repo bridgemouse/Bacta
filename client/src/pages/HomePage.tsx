@@ -4,23 +4,57 @@ import { MX4Briefing } from '../components/MX4Card'
 import { SystemCard } from '../components/MetricTile'
 import type { SystemCardTile } from '../components/MetricTile'
 import { useTab } from '../lib/TabContext'
-import { BRIEFS, RECOVERY, SLEEP, TRAINING } from '../lib/stubData'
-import { COLORS, MX4_COLOR, SECTION_ACCENTS, FONT_MONO } from '../theme'
+import { BRIEFS } from '../lib/stubData'
+import { MX4_COLOR, SECTION_ACCENTS } from '../theme'
 import { TrendRow } from '../components/viz/TrendRow'
 import { Rail } from '../components/viz/Rail'
+import { useHomeData } from '../hooks/useHomeData'
+import { useRecoveryData } from '../hooks/useRecoveryData'
+import { useSleepData } from '../hooks/useSleepData'
+import { useTrainingData } from '../hooks/useTrainingData'
 
-const TILES: SystemCardTile[] = [
-  { key: 'recovery', value: '74',    unit: 'battery', sub: 'HRV ↑ 61ms',         viz: 'spark', spark: [50,54,49,57,55,60,66,74], status: 'Good' },
-  { key: 'training', value: '342',   unit: 'load',    sub: 'Moderate · wk 4 / 8', viz: 'spark', spark: [280,300,260,320,340,310,330,342], status: 'On track' },
-  { key: 'sleep',    value: '8.1',   unit: 'h',       sub: 'Score 82',            viz: 'ring',  ring: 0.82, status: 'Solid' },
-  { key: 'nutrition', value: '',     unit: '',        sub: '', viz: 'spark', status: '', calibrating: true },
-  { key: 'bloodwork', value: '',     unit: '',        sub: '', viz: 'spark', status: '', calibrating: true },
-  { key: 'dailylog',  value: '',     unit: '',        sub: '', viz: 'spark', status: '', calibrating: true },
+const CALIBRATING_TILES: SystemCardTile[] = [
+  { key: 'nutrition', value: '', unit: '', sub: '', viz: 'spark', status: '', calibrating: true },
+  { key: 'bloodwork', value: '', unit: '', sub: '', viz: 'spark', status: '', calibrating: true },
+  { key: 'dailylog',  value: '', unit: '', sub: '', viz: 'spark', status: '', calibrating: true },
 ]
 
 const A = MX4_COLOR
 
 function HomeOverview({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const { data: home } = useHomeData()
+
+  const LIVE_TILES: SystemCardTile[] = [
+    {
+      key: 'recovery',
+      value: home.recovery.value,
+      unit: 'battery',
+      sub: home.recovery.sub,
+      viz: 'spark',
+      spark: [50, 54, 49, 57, 55, 60, 66, 74],
+      status: 'Good',
+    },
+    {
+      key: 'training',
+      value: home.training.value,
+      unit: 'load',
+      sub: home.training.sub,
+      viz: 'spark',
+      spark: [280, 300, 260, 320, 340, 310, 330, 342],
+      status: home.training.sub,
+    },
+    {
+      key: 'sleep',
+      value: home.sleep.value,
+      unit: home.sleep.value.includes('h') ? '' : 'h',
+      sub: home.sleep.sub,
+      viz: 'ring',
+      ring: home.sleep.ring,
+      status: 'Solid',
+    },
+  ]
+  const TILES = [...LIVE_TILES, ...CALIBRATING_TILES]
+
   return (
     <>
       <MX4Briefing accent={A} brief={BRIEFS.home} />
@@ -46,34 +80,38 @@ function HomeTrends() {
   const SLP  = SECTION_ACCENTS.sleep
   const TRN  = SECTION_ACCENTS.training
 
+  const { data: rec } = useRecoveryData()
+  const { data: slp } = useSleepData()
+  const { data: trn } = useTrainingData()
+
   return (
     <>
       <MX4Briefing accent={A} brief={BRIEFS.home} />
       <Rail label="WEEK IN REVIEW" accent={A} right="3 CHANNELS" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         <TrendRow
-          label="Recovery" value={RECOVERY.score.value}
-          data={RECOVERY.score.trend} accent={REC}
-          delta={RECOVERY.score.value - RECOVERY.score.trend[5]}
+          label="Recovery" value={rec.score.value}
+          data={rec.score.trend} accent={REC}
+          delta={rec.score.value - rec.score.trend[5]}
         />
         <TrendRow
-          label="HRV" value={RECOVERY.hrv.value} unit="ms"
-          data={RECOVERY.hrv.trend} accent={REC}
-          delta={RECOVERY.hrv.value - RECOVERY.hrv.avg}
+          label="HRV" value={rec.hrv.value} unit="ms"
+          data={rec.hrv.trend} accent={REC}
+          delta={rec.hrv.value - rec.hrv.avg}
         />
         <TrendRow
-          label="Sleep" value={SLEEP.score.value}
-          data={SLEEP.score.trend} accent={SLP}
-          delta={SLEEP.score.value - SLEEP.score.trend[5]}
+          label="Sleep" value={slp.score.value}
+          data={slp.score.trend} accent={SLP}
+          delta={slp.score.value - slp.score.trend[5]}
         />
         <TrendRow
-          label="Training Load" value={TRAINING.load.value}
-          data={TRAINING.load.trend} accent={TRN} kind="bars"
-          delta={TRAINING.load.value - TRAINING.load.trend[5]}
+          label="Training Load" value={trn.load.value}
+          data={trn.load.trend} accent={TRN} kind="bars"
+          delta={trn.load.value - trn.load.trend[5]}
         />
         <TrendRow
-          label="Intensity" value={TRAINING.intensity.moderate + TRAINING.intensity.vigorous * 2} unit="min"
-          data={TRAINING.intensity.trend} accent={TRN} kind="bars"
+          label="Intensity" value={trn.intensity.moderate + trn.intensity.vigorous * 2} unit="min"
+          data={trn.intensity.trend} accent={TRN} kind="bars"
         />
       </div>
     </>

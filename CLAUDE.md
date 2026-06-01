@@ -238,6 +238,25 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 ---
 
+## Garmin API & Data Conventions
+
+- `get_sleep_data(d)` returns sleep that *ended* on morning of `d` — store under `d`, not `d-1`
+- `get_fitnessage_data()` field is `fitnessAge`, not `biometricAge`; never fall back to `chronologicalAge`
+- `garmin_snapshots.source_json` stores the raw API response — query it to debug field names before touching the poller
+- Summary queries must use per-metric `MAX(date)` — hardcoding `today` breaks when metrics arrive at different times
+- Activities need a dedicated `garmin_activities` table — EAV can't represent multiple rows per day
+- Use `INSERT OR REPLACE` (not `INSERT OR IGNORE`) for activity rows so re-syncs overwrite stale data
+- Common Garmin `typeKey` values: `running`, `trail_running`, `walking`, `hiking`, `cycling`, `strength_training`, `multi_sport`
+
+## Server & DB Gotchas
+
+- `sqlite3` CLI not installed — query DB with: `node -e "const db = require('better-sqlite3')('/opt/bacta/data/bacta.db'); console.log(db.prepare('...').all()); db.close()"`
+- Express: define specific routes (`/activities`, `/sync/status`) **before** `/:param` wildcards or they get swallowed
+- Some files in `client/src/components/viz/` are owned by root from initial scaffold — run `sudo chown wheat:wheat <file>` if Edit fails with EACCES
+- `mx4spin` keyframe is global (defined in `client/index.css`) — use as `animation: 'mx4spin 1s linear infinite'` in inline styles
+
+---
+
 ## Infrastructure
 
 - **Repo:** `github.com/bridgemouse/bacta`

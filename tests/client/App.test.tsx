@@ -52,13 +52,13 @@ describe('App', () => {
     expect(screen.getAllByText('SLEEP').length).toBeGreaterThan(0)
   })
 
-  test('renders recovery shell content on /recovery route', () => {
+  test('renders recovery content on /recovery route', () => {
     renderApp('/recovery')
-    expect(screen.getByText(/Recovery channel online/)).toBeInTheDocument()
+    expect(screen.getByText(/READINESS/)).toBeInTheDocument()
   })
 
-  test('renders sleep shell content on /sleep route', () => {
+  test('renders sleep content on /sleep route', () => {
     renderApp('/sleep')
-    expect(screen.getByText(/Sleep channel online/)).toBeInTheDocument()
+    expect(screen.getByText(/OVERNIGHT VITALS/)).toBeInTheDocument()
   })
 })

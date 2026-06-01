@@ -45,6 +45,26 @@ export async function fetchTrend(metric: string, days = 7): Promise<number[]> {
   return rows.map(r => r.value)
 }
 
+export interface GarminActivity {
+  activity_id: number
+  date: string
+  start_time: string
+  name: string
+  type_key: string
+  distance_m: number | null
+  duration_s: number | null
+  calories: number | null
+  avg_hr: number | null
+  elevation_m: number | null
+}
+
+export async function fetchActivities(limit = 8): Promise<GarminActivity[]> {
+  const res = await fetch(`/api/garmin/activities?limit=${limit}`)
+  if (!res.ok) return []
+  const { activities } = await res.json() as { activities: GarminActivity[] }
+  return activities
+}
+
 export const TRAINING_STATUS: Record<number, string> = {
   0: 'No Data', 1: 'No Data', 2: 'Detraining', 3: 'Recovery',
   4: 'Maintaining', 5: 'Productive', 6: 'Productive', 7: 'Productive',

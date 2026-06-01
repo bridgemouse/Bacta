@@ -29,6 +29,21 @@ CREATE TABLE IF NOT EXISTS manual_inputs (
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS garmin_activities (
+  activity_id  INTEGER PRIMARY KEY,
+  date         TEXT NOT NULL,
+  start_time   TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  type_key     TEXT NOT NULL,
+  distance_m   REAL,
+  duration_s   REAL,
+  calories     INTEGER,
+  avg_hr       INTEGER,
+  elevation_m  REAL,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_garmin_activities_date ON garmin_activities(date);
+
 CREATE TABLE IF NOT EXISTS blood_work (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   date            TEXT NOT NULL,

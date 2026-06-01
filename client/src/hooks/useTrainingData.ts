@@ -1,21 +1,24 @@
 import { useState, useEffect } from 'react'
-import { fetchSummary, fetchTrend, TRAINING_STATUS } from '../lib/garminApi'
+import { fetchSummary, fetchTrend, fetchActivities, TRAINING_STATUS, type GarminActivity } from '../lib/garminApi'
 import { TRAINING } from '../lib/stubData'
 
-export type TrainingData = typeof TRAINING
+export type TrainingData = Omit<typeof TRAINING, 'activities'> & {
+  activities: GarminActivity[]
+}
 
 export function useTrainingData(): { data: TrainingData; loading: boolean } {
-  const [data, setData] = useState(TRAINING)
+  const [data, setData] = useState<TrainingData>({ ...TRAINING, activities: [] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [summary, loadTrend, intensityTrend] = await Promise.all([
+        const [summary, loadTrend, intensityTrend, activities] = await Promise.all([
           fetchSummary(),
           fetchTrend('training_load'),
           fetchTrend('intensity_vig_min'),
+          fetchActivities(8),
         ])
         if (cancelled) return
 
@@ -59,6 +62,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             goal:     150,
             trend:    intensityTrend.length ? intensityTrend : TRAINING.intensity.trend,
           },
+          activities,
         })
       } catch {
         // keep stub on error

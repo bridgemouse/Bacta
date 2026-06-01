@@ -93,9 +93,9 @@ def sync_day(db, store, c, d):
         errors.append(f'rhr({e})')
     time.sleep(SLEEP_PER_CALL)
 
-    # Sleep (sleep for morning-of-d = night of prev→d)
+    # Sleep for date d = the night ending on d morning (prev→d)
     try:
-        s = c.get_sleep_data(prev)
+        s = c.get_sleep_data(d)
         dto = safe(s, 'dailySleepDTO') or {}
         if dto:
             store(db, d, 'sleep_s',       safe(dto, 'durationInSeconds'),      's',    s)
@@ -217,8 +217,7 @@ def sync_day(db, store, c, d):
     try:
         s = c.get_fitnessage_data(d)
         if s:
-            store(db, d, 'fitness_age', (safe(s, 'biometricAge') or
-                                          safe(s, 'chronologicalAge')), 'years', s)
+            store(db, d, 'fitness_age', safe(s, 'fitnessAge'), 'years', s)
     except Exception as e:
         errors.append(f'fitness_age({e})')
     time.sleep(SLEEP_PER_CALL)

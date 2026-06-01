@@ -89,9 +89,9 @@ def sync_day(db, c, d):
         err.append(f'rhr({e})')
     time.sleep(SLEEP_BETWEEN)
 
-    # Sleep — "d" morning means the night of prev→d
+    # Sleep for date d = the night ending on d morning (prev→d)
     try:
-        s = c.get_sleep_data(prev)
+        s = c.get_sleep_data(d)
         dto = safe(s, 'dailySleepDTO') or {}
         if dto:
             store(db, d, 'sleep_s',         safe(dto, 'durationInSeconds'),      's',    s)
@@ -228,8 +228,7 @@ def sync_day(db, c, d):
     try:
         s = c.get_fitnessage_data(d)
         if s:
-            store(db, d, 'fitness_age', (safe(s, 'biometricAge') or
-                                          safe(s, 'chronologicalAge')), 'years', s)
+            store(db, d, 'fitness_age', safe(s, 'fitnessAge'), 'years', s)
         ok.append('fitness_age')
     except Exception as e:
         err.append(f'fitness_age({e})')

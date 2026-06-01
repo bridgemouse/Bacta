@@ -53,6 +53,17 @@ garminRouter.get('/summary', (_req, res) => {
   res.json(summary)
 })
 
+// GET /api/garmin/activities — recent activities, newest first
+garminRouter.get('/activities', (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 10, 50)
+  const rows = db.prepare(
+    `SELECT activity_id, date, start_time, name, type_key,
+            distance_m, duration_s, calories, avg_hr, elevation_m
+     FROM garmin_activities ORDER BY start_time DESC LIMIT ?`
+  ).all(limit)
+  res.json({ activities: rows })
+})
+
 // GET /api/garmin/:metric — single metric, optional date range
 garminRouter.get('/:metric', (req, res) => {
   const { metric } = req.params

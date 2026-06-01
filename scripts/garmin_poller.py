@@ -269,11 +269,19 @@ def sync_range(db, c, start, end):
         acts = c.get_activities_by_date(start, end)
         for act in (acts or []):
             d = (safe(act, 'startTimeLocal') or '')[:10]
-            if d:
-                store(db, d, 'act_distance_m', safe(act, 'distance'),   'm',    act)
-                store(db, d, 'act_duration_s', safe(act, 'duration'),   's',    act)
-                store(db, d, 'act_calories',   safe(act, 'calories'),   'kcal', act)
-                store(db, d, 'act_avg_hr',     safe(act, 'averageHR'), 'bpm',  act)
+            if not d:
+                continue
+            db.execute(
+                'INSERT OR REPLACE INTO garmin_activities '
+                '(activity_id, date, start_time, name, type_key, distance_m, duration_s, calories, avg_hr, elevation_m) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (safe(act, 'activityId'), d,
+                 safe(act, 'startTimeLocal'), safe(act, 'activityName'),
+                 safe(act, 'activityType', 'typeKey') or 'other',
+                 safe(act, 'distance'), safe(act, 'duration'),
+                 safe(act, 'calories'), safe(act, 'averageHR'),
+                 safe(act, 'elevationGain'))
+            )
         db.commit()
         print(f'  activities: {len(acts or [])} rows')
     except Exception as e:

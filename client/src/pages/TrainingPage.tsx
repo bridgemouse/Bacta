@@ -13,6 +13,7 @@ import { StatusBanner } from '../components/viz/StatusBanner'
 import { LoadBand } from '../components/viz/LoadBand'
 import { IntensityBar } from '../components/viz/IntensityBar'
 import { hexA } from '../lib/hexA'
+import { LogEntry } from '../components/viz/LogEntry'
 
 const A = SECTION_ACCENTS.training
 
@@ -35,7 +36,7 @@ function TrainingOverview() {
           label="VO2 Max"
           foot={
             <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>
-              Fitness age {TRN.vo2max.fitnessAge}
+              Fitness age {typeof TRN.vo2max.fitnessAge === 'number' ? Math.round(TRN.vo2max.fitnessAge * 10) / 10 : TRN.vo2max.fitnessAge}
             </span>
           }
         >
@@ -69,16 +70,24 @@ function TrainingOverview() {
         accent={A}
       />
 
-      <Rail label="ACTIVITY LOG" accent={A} />
+      <Rail label="ACTIVITY LOG" accent={A} right={TRN.activities.length > 0 ? `${TRN.activities.length} RECENT` : undefined} />
 
-      <div style={{
-        background: hexA(A, 0.06), border: `1px solid ${hexA(A, 0.18)}`,
-        borderRadius: 10, padding: '20px 16px', textAlign: 'center',
-      }}>
-        <span style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.12em', color: COLORS.textMuted }}>
-          CALIBRATING
-        </span>
-      </div>
+      {TRN.activities.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {TRN.activities.map(act => (
+            <LogEntry key={act.activity_id} activity={act} accent={A} />
+          ))}
+        </div>
+      ) : (
+        <div style={{
+          background: hexA(A, 0.06), border: `1px solid ${hexA(A, 0.18)}`,
+          borderRadius: 10, padding: '20px 16px', textAlign: 'center',
+        }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.12em', color: COLORS.textMuted }}>
+            CALIBRATING
+          </span>
+        </div>
+      )}
     </>
   )
 }

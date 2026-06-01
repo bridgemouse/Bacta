@@ -1,37 +1,34 @@
-import { useState, useRef } from 'react'
 import { COLORS, FONT_MONO, MX4_COLOR, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
 import type { SectionKey } from '../theme'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import { Sigil } from './primitives/Sigil'
 import { StatusCore } from './primitives/StatusCore'
 import { hexA } from '../lib/hexA'
+import { useSyncState } from '../hooks/useSyncState'
 
 interface TopBarProps {
   section: SectionKey
   onBack?: () => void
 }
 
-type SyncState = 'idle' | 'syncing' | 'done' | 'error'
+const GARMIN_SECTIONS: SectionKey[] = ['home', 'recovery', 'sleep', 'training']
 
 export function TopBar({ section, onBack }: TopBarProps) {
   const isHome = section === 'home'
   const accent = isHome ? MX4_COLOR : SECTION_ACCENTS[section]
-  const [syncState, setSyncState] = useState<SyncState>('idle')
-  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showSync = GARMIN_SECTIONS.includes(section)
+  const { status, elapsed, startSync } = useSyncState()
 
-  async function handleSync() {
-    if (syncState === 'syncing') return
-    setSyncState('syncing')
-    try {
-      await fetch('/api/garmin/sync', { method: 'POST' })
-      setSyncState('done')
-      // Reload after 45s to pick up fresh data (poller takes ~30-45s)
-      reloadTimer.current = setTimeout(() => window.location.reload(), 45_000)
-    } catch {
-      setSyncState('error')
-      setTimeout(() => setSyncState('idle'), 3000)
-    }
-  }
+  const syncLabel =
+    status === 'running' ? `${elapsed ?? 0}s` :
+    status === 'done'    ? 'SYNCED' :
+    status === 'error'   ? 'ERROR' :
+    'SYNC'
+
+  const syncColor =
+    status === 'error' ? COLORS.mx4Red :
+    status === 'done'  ? COLORS.mx4Green :
+    accent
 
   return (
     <div
@@ -68,13 +65,8 @@ export function TopBar({ section, onBack }: TopBarProps) {
             aria-label="Back"
             onClick={onBack}
             style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 4,
-              display: 'flex',
-              alignItems: 'center',
-              color: accent,
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 4, display: 'flex', alignItems: 'center', color: accent,
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -89,32 +81,38 @@ export function TopBar({ section, onBack }: TopBarProps) {
       )}
 
       {/* Right side */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {isHome && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {showSync && (
           <button
-            onClick={handleSync}
+            onClick={startSync}
             aria-label="Sync Garmin data"
-            title={syncState === 'syncing' ? 'Syncing… reloads in ~45s' : syncState === 'done' ? 'Syncing — will reload' : 'Sync Garmin data'}
+            disabled={status === 'running'}
             style={{
-              background: 'none', border: 'none', padding: 2, cursor: syncState === 'syncing' ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', opacity: syncState === 'idle' ? 0.55 : 1,
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: hexA(syncColor, status === 'idle' ? 0.08 : 0.15),
+              border: `1px solid ${hexA(syncColor, status === 'idle' ? 0.2 : 0.45)}`,
+              borderRadius: 20, padding: '3px 8px 3px 6px',
+              cursor: status === 'running' ? 'default' : 'pointer',
             }}
           >
             <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke={syncState === 'error' ? COLORS.mx4Red : syncState === 'done' ? COLORS.mx4Green : accent}
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ animation: syncState === 'syncing' ? 'mx4spin 1s linear infinite' : 'none' }}
+              width="11" height="11" viewBox="0 0 24 24" fill="none"
+              stroke={syncColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ animation: status === 'running' ? 'mx4spin 1s linear infinite' : 'none', flexShrink: 0 }}
             >
               <polyline points="1 4 1 10 7 10" />
               <path d="M3.51 15a9 9 0 1 0 .49-3.51" />
             </svg>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.1em', color: syncColor, whiteSpace: 'nowrap' }}>
+              {syncLabel}
+            </span>
           </button>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <StatusCore accent={COLORS.mx4Green} size={6} />
           <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.08em', color: COLORS.mx4Green }}>
-            {syncState === 'syncing' ? 'SYNCING' : syncState === 'done' ? 'SYNCED' : 'MX-4 ONLINE'}
+            MX-4 ONLINE
           </span>
         </div>
       </div>

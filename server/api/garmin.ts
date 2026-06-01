@@ -35,11 +35,16 @@ const VALID_METRICS = [
   'bp_systolic', 'bp_diastolic',
   // Intensity
   'intensity_mod_min', 'intensity_vig_min',
-  // Activities
+  // Activities (legacy EAV — kept for backwards compat)
   'act_distance_m', 'act_duration_s', 'act_calories', 'act_avg_hr',
 ]
 
-// GET /api/garmin/summary — latest available value per metric (most recent date wins per metric)
+// In-memory sync state — resets on server restart, which is fine
+type SyncStatus = 'idle' | 'running' | 'done' | 'error'
+let syncStatus: SyncStatus = 'idle'
+let syncStartedAt: number | null = null
+
+// GET /api/garmin/summary — latest available value per metric
 garminRouter.get('/summary', (_req, res) => {
   const rows = db.prepare(
     `SELECT metric, value FROM garmin_snapshots gs
@@ -47,21 +52,44 @@ garminRouter.get('/summary', (_req, res) => {
   ).all() as Array<{ metric: string; value: number }>
 
   const summary: Record<string, number> = {}
-  for (const row of rows) {
-    summary[row.metric] = row.value
-  }
+  for (const row of rows) summary[row.metric] = row.value
   res.json(summary)
 })
 
-// GET /api/garmin/activities — recent activities, newest first
+// GET /api/garmin/activities — last N days, newest first
 garminRouter.get('/activities', (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 10, 50)
+  const days = Math.min(Number(req.query.days) || 7, 30)
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
   const rows = db.prepare(
     `SELECT activity_id, date, start_time, name, type_key,
             distance_m, duration_s, calories, avg_hr, elevation_m
-     FROM garmin_activities ORDER BY start_time DESC LIMIT ?`
-  ).all(limit)
+     FROM garmin_activities WHERE date >= ? ORDER BY start_time DESC`
+  ).all(since)
   res.json({ activities: rows })
+})
+
+// GET /api/garmin/sync/status — current sync state
+garminRouter.get('/sync/status', (_req, res) => {
+  const elapsed = syncStartedAt != null ? Math.round((Date.now() - syncStartedAt) / 1000) : null
+  res.json({ status: syncStatus, elapsed })
+})
+
+// POST /api/garmin/sync — spawn poller, track completion
+garminRouter.post('/sync', (_req, res) => {
+  if (syncStatus === 'running') {
+    res.status(202).json({ ok: true, status: 'running' })
+    return
+  }
+  const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
+  syncStatus = 'running'
+  syncStartedAt = Date.now()
+  const child = spawn('python3', [script], { stdio: 'ignore' })
+  child.on('close', (code) => {
+    syncStatus = code === 0 ? 'done' : 'error'
+    // Auto-reset to idle after 90s so the button returns to ready state
+    setTimeout(() => { syncStatus = 'idle'; syncStartedAt = null }, 90_000)
+  })
+  res.status(202).json({ ok: true, status: 'running' })
 })
 
 // GET /api/garmin/:metric — single metric, optional date range
@@ -87,20 +115,7 @@ garminRouter.get('/:metric', (req, res) => {
     'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? AND date = ?'
   ).get(metric, today) as { date: string; metric: string; value: number; unit: string } | undefined
 
-  if (!row) {
-    res.json({ metric, value: null, unit: null })
-    return
-  }
-
-  res.json(row)
-})
-
-// POST /api/garmin/sync — spawn garmin_poller.py in background, return 202 immediately
-garminRouter.post('/sync', (_req, res) => {
-  const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
-  const child = spawn('python3', [script], { detached: true, stdio: 'ignore' })
-  child.unref()
-  res.status(202).json({ ok: true, message: 'Sync started' })
+  res.json(row ?? { metric, value: null, unit: null })
 })
 
 export default garminRouter

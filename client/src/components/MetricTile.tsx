@@ -39,6 +39,7 @@ export interface SystemCardTile {
   ring?: number
   dots?: number
   status: string
+  calibrating?: boolean
 }
 
 interface SystemCardProps {
@@ -52,6 +53,44 @@ export function SystemCard({ tile, index, onClick }: SystemCardProps) {
   const label = SECTION_LABELS[tile.key].toUpperCase()
   const idx = String(index).padStart(2, '0')
   const hasRing = tile.viz === 'ring' && tile.ring !== undefined
+
+  if (tile.calibrating) {
+    return (
+      <button
+        onClick={onClick}
+        style={{
+          position: 'relative',
+          textAlign: 'left',
+          font: 'inherit',
+          color: COLORS.text,
+          cursor: 'pointer',
+          background: COLORS.surface,
+          border: `1px dashed ${hexA(accent, 0.25)}`,
+          borderRadius: 7,
+          padding: '12px',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 7,
+          width: '100%',
+          opacity: 0.55,
+        }}
+      >
+        <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${hexA(accent, 0.25)}, transparent 80%)` }} />
+        <Bracket color={accent} inset={5} op={0.2} radius={3} size={9} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: hexA(accent, 0.07), border: `1px solid ${hexA(accent, 0.15)}` }}>
+            <Sigil name={tile.key} color={accent} size={14} />
+          </span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.14em', color: hexA(accent, 0.7), flex: 1 }}>{label}</span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{idx}</span>
+        </div>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.14em', color: hexA(accent, 0.45), marginTop: 6 }}>
+          ◦ CALIBRATING
+        </span>
+      </button>
+    )
+  }
 
   return (
     <button

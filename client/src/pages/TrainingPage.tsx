@@ -12,6 +12,7 @@ import { StatusBanner } from '../components/viz/StatusBanner'
 import { LoadBand } from '../components/viz/LoadBand'
 import { IntensityBar } from '../components/viz/IntensityBar'
 import { LogEntry } from '../components/viz/LogEntry'
+import { Sparkline } from '../components/primitives/Sparkline'
 
 const A = SECTION_ACCENTS.training
 
@@ -47,25 +48,31 @@ function TrainingOverview() {
 
         <HeadlineCard
           accent={A}
-          label="Training Load"
-          foot={
-            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: COLORS.textSecondary }}>
-              {TRAINING.load.state}
-            </span>
-          }
+          label="Endurance"
+          foot={<Sparkline data={TRAINING.endurance.trend} accent={A} w={130} h={26} />}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 30, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
-              {TRAINING.load.value}
+              {TRAINING.endurance.value}
             </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: COLORS.textMuted }}>/100</span>
           </div>
-          <LoadBand
-            value={TRAINING.load.value}
-            low={TRAINING.load.low}
-            high={TRAINING.load.high}
-            accent={A}
-          />
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.08em', color: A }}>
+            {TRAINING.endurance.state.toUpperCase()}
+          </span>
         </HeadlineCard>
+      </div>
+
+      {/* Acute Load */}
+      <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '12px 13px', marginBottom: 9 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ACUTE LOAD</span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: A }}>{TRAINING.load.state.toUpperCase()}</span>
+        </div>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 30, fontWeight: 700, color: COLORS.text, lineHeight: 1, display: 'block', marginBottom: 10 }}>
+          {TRAINING.load.value}
+        </span>
+        <LoadBand value={TRAINING.load.value} low={TRAINING.load.low} high={TRAINING.load.high} accent={A} />
       </div>
 
       <Rail label="INTENSITY THIS WEEK" accent={A} right={`GOAL ${TRAINING.intensity.goal} MIN`} />

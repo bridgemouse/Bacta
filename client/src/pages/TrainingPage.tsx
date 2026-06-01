@@ -3,6 +3,7 @@ import { MX4Briefing } from '../components/MX4Card'
 import { useTab } from '../lib/TabContext'
 import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../theme'
 import { BRIEFS, TRAINING } from '../lib/stubData'
+import { useTrainingData } from '../hooks/useTrainingData'
 import { Gauge } from '../components/viz/Gauge'
 import { Delta } from '../components/viz/Delta'
 import { HeadlineCard } from '../components/viz/HeadlineCard'
@@ -17,13 +18,14 @@ import { Sparkline } from '../components/primitives/Sparkline'
 const A = SECTION_ACCENTS.training
 
 function TrainingOverview() {
+  const { data: TRN } = useTrainingData()
   return (
     <>
       <MX4Briefing accent={A} brief={BRIEFS.training} />
 
       <StatusBanner
-        status={TRAINING.status.value}
-        sub={TRAINING.status.sub}
+        status={TRN.status.value}
+        sub={TRN.status.sub}
         accent={A}
       />
 
@@ -34,15 +36,15 @@ function TrainingOverview() {
           label="VO2 Max"
           foot={
             <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>
-              Fitness age {TRAINING.vo2max.fitnessAge}
+              Fitness age {TRN.vo2max.fitnessAge}
             </span>
           }
         >
-          <Gauge value={TRAINING.vo2max.value} max={70} accent={A} size={100}>
+          <Gauge value={TRN.vo2max.value} max={70} accent={A} size={100}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
-              {TRAINING.vo2max.value}
+              {TRN.vo2max.value}
             </span>
-            <Delta value={TRAINING.vo2max.delta} size={9} />
+            <Delta value={TRN.vo2max.delta} size={9} />
           </Gauge>
         </HeadlineCard>
 
@@ -67,27 +69,27 @@ function TrainingOverview() {
       <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '12px 13px', marginBottom: 9 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
           <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ACUTE LOAD</span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: A }}>{TRAINING.load.state.toUpperCase()}</span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: A }}>{TRN.load.state.toUpperCase()}</span>
         </div>
         <span style={{ fontFamily: FONT_MONO, fontSize: 30, fontWeight: 700, color: COLORS.text, lineHeight: 1, display: 'block', marginBottom: 10 }}>
-          {TRAINING.load.value}
+          {TRN.load.value}
         </span>
-        <LoadBand value={TRAINING.load.value} low={TRAINING.load.low} high={TRAINING.load.high} accent={A} />
+        <LoadBand value={TRN.load.value} low={TRN.load.low} high={TRN.load.high} accent={A} />
       </div>
 
-      <Rail label="INTENSITY THIS WEEK" accent={A} right={`GOAL ${TRAINING.intensity.goal} MIN`} />
+      <Rail label="INTENSITY THIS WEEK" accent={A} right={`GOAL ${TRN.intensity.goal} MIN`} />
 
       <IntensityBar
-        moderate={TRAINING.intensity.moderate}
-        vigorous={TRAINING.intensity.vigorous}
-        goal={TRAINING.intensity.goal}
+        moderate={TRN.intensity.moderate}
+        vigorous={TRN.intensity.vigorous}
+        goal={TRN.intensity.goal}
         accent={A}
       />
 
-      <Rail label="ACTIVITY LOG" accent={A} right={`${TRAINING.activities.length} RECENT`} />
+      <Rail label="ACTIVITY LOG" accent={A} right={`${TRN.activities.length} RECENT`} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {TRAINING.activities.map((act, i) => (
+        {TRN.activities.map((act, i) => (
           <LogEntry key={i} activity={act} accent={A} />
         ))}
       </div>
@@ -96,24 +98,25 @@ function TrainingOverview() {
 }
 
 function TrainingTrends() {
+  const { data: TRN } = useTrainingData()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
       <TrendRow
-        label="Load" value={TRAINING.load.value}
-        data={TRAINING.load.trend} accent={A} kind="bars"
+        label="Load" value={TRN.load.value}
+        data={TRN.load.trend} accent={A} kind="bars"
       />
       <TrendRow
-        label="VO2 Max" value={TRAINING.vo2max.value} unit="mL/kg"
-        data={TRAINING.status.trend} accent={A}
-        delta={TRAINING.vo2max.delta}
+        label="VO2 Max" value={TRN.vo2max.value} unit="mL/kg"
+        data={TRN.status.trend} accent={A}
+        delta={TRN.vo2max.delta}
       />
       <TrendRow
         label="Endurance" value={TRAINING.endurance.value}
         data={TRAINING.endurance.trend} accent={A}
       />
       <TrendRow
-        label="Intensity" value={`${TRAINING.intensity.moderate + TRAINING.intensity.vigorous * 2}`} unit="pts"
-        data={TRAINING.intensity.trend} accent={A} kind="bars"
+        label="Intensity" value={`${TRN.intensity.moderate + TRN.intensity.vigorous * 2}`} unit="pts"
+        data={TRN.intensity.trend} accent={A} kind="bars"
       />
     </div>
   )

@@ -58,8 +58,8 @@ export interface GarminActivity {
   elevation_m: number | null
 }
 
-export async function fetchActivities(limit = 8): Promise<GarminActivity[]> {
-  const res = await fetch(`/api/garmin/activities?limit=${limit}`)
+export async function fetchActivities(days = 7): Promise<GarminActivity[]> {
+  const res = await fetch(`/api/garmin/activities?days=${days}`)
   if (!res.ok) return []
   const { activities } = await res.json() as { activities: GarminActivity[] }
   return activities

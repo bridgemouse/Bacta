@@ -18,7 +18,13 @@ const VALID_METRICS = [
   // SpO2 / respiration
   'spo2_avg', 'spo2_min', 'resp_avg', 'resp_max',
   // Training / readiness
-  'recovery_score', 'training_status_n', 'training_load',
+  'recovery_score', 'training_status_n', 'training_load', 'training_load_min', 'training_load_max',
+  // HRV
+  'hrv_baseline_low', 'hrv_baseline_high',
+  // Sleep extras
+  'sleep_hr', 'sleep_stress',
+  // Body battery
+  'body_battery_current', 'body_battery_wake',
   // Fitness metrics
   'vo2max', 'fitness_age', 'endurance_score', 'hill_score',
   // Body composition / weight

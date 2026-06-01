@@ -57,18 +57,22 @@ def sync_day(db, c, d):
     ok = []
     err = []
 
-    # Stats (steps, RHR, stress, calories, distance, floors)
+    # Stats (steps, RHR, stress, calories, distance, floors, intensity, body battery)
     try:
         s = c.get_stats(d)
         if s:
-            store(db, d, 'steps',           safe(s, 'totalSteps'),          'steps')
-            store(db, d, 'resting_hr',      safe(s, 'restingHeartRate'),    'bpm',   s)
-            store(db, d, 'stress_avg',      safe(s, 'averageStressLevel'),  '',      s)
-            store(db, d, 'calories_total',  safe(s, 'totalKilocalories'),   'kcal',  s)
-            store(db, d, 'calories_active', safe(s, 'activeKilocalories'),  'kcal',  s)
-            store(db, d, 'distance_m',      safe(s, 'totalDistanceMeters'), 'm',     s)
-            store(db, d, 'floors_up',       safe(s, 'floorsAscended'),      'floors')
-            store(db, d, 'floors_down',     safe(s, 'floorsDescended'),     'floors')
+            store(db, d, 'steps',                safe(s, 'totalSteps'),               'steps')
+            store(db, d, 'resting_hr',           safe(s, 'restingHeartRate'),         'bpm',   s)
+            store(db, d, 'stress_avg',           safe(s, 'averageStressLevel'),       '',      s)
+            store(db, d, 'calories_total',       safe(s, 'totalKilocalories'),        'kcal',  s)
+            store(db, d, 'calories_active',      safe(s, 'activeKilocalories'),       'kcal',  s)
+            store(db, d, 'distance_m',           safe(s, 'totalDistanceMeters'),      'm',     s)
+            store(db, d, 'floors_up',            safe(s, 'floorsAscended'),           'floors')
+            store(db, d, 'floors_down',          safe(s, 'floorsDescended'),          'floors')
+            store(db, d, 'intensity_mod_min',    safe(s, 'moderateIntensityMinutes'), 'min',   s)
+            store(db, d, 'intensity_vig_min',    safe(s, 'vigorousIntensityMinutes'), 'min',   s)
+            store(db, d, 'body_battery_current', safe(s, 'bodyBatteryMostRecentValue'), '%',   s)
+            store(db, d, 'body_battery_wake',    safe(s, 'bodyBatteryAtWakeTime'),    '%',     s)
         ok.append('stats')
     except Exception as e:
         err.append(f'stats({e})')
@@ -97,6 +101,8 @@ def sync_day(db, c, d):
             store(db, d, 'sleep_awake_s',   safe(dto, 'awakeSleepSeconds'),      's',    s)
             store(db, d, 'sleep_spo2',      safe(dto, 'averageSpO2Value'),       '%',    s)
             store(db, d, 'sleep_resp',      safe(dto, 'averageRespirationValue'),'brpm', s)
+            store(db, d, 'sleep_hr',        safe(dto, 'avgHeartRate'),           'bpm',  s)
+            store(db, d, 'sleep_stress',    safe(dto, 'avgSleepStress'),         '',     s)
             # sleep score lives in different places depending on firmware
             score = (safe(dto, 'sleepScore') or
                      safe(dto, 'sleepScores', 'overall', 'value') or
@@ -114,9 +120,11 @@ def sync_day(db, c, d):
                    safe(s, 'hrvSummary') or
                    (s if isinstance(s, dict) else {}))
         if summary:
-            hrv = safe(summary, 'lastNight') or safe(summary, 'weeklyAvg')
-            store(db, d, 'hrv',          hrv,                          'ms', s)
-            store(db, d, 'hrv_week_avg', safe(summary, 'weeklyAvg'),  'ms', s)
+            hrv = safe(summary, 'lastNightAvg') or safe(summary, 'lastNight') or safe(summary, 'weeklyAvg')
+            store(db, d, 'hrv',               hrv,                                    'ms', s)
+            store(db, d, 'hrv_week_avg',      safe(summary, 'weeklyAvg'),            'ms', s)
+            store(db, d, 'hrv_baseline_low',  safe(summary, 'baseline', 'balancedLow'),   'ms', s)
+            store(db, d, 'hrv_baseline_high', safe(summary, 'baseline', 'balancedUpper'), 'ms', s)
         ok.append('hrv')
     except Exception as e:
         err.append(f'hrv({e})')
@@ -173,32 +181,30 @@ def sync_day(db, c, d):
         err.append(f'respiration({e})')
     time.sleep(SLEEP_BETWEEN)
 
-    # Training readiness
+    # Training readiness (returns a list — take first/most recent item)
     try:
         s = c.get_training_readiness(d)
-        if s:
-            score = safe(s, 'score') or safe(s, 'value')
-            store(db, d, 'recovery_score', score, '', s)
+        if s and isinstance(s, list) and len(s) > 0:
+            item = s[0]
+            store(db, d, 'recovery_score', safe(item, 'score'), '', s)
         ok.append('training_readiness')
     except Exception as e:
         err.append(f'training_readiness({e})')
     time.sleep(SLEEP_BETWEEN)
 
-    # Training status
+    # Training status + acute load
     try:
         s = c.get_training_status(d)
         if s:
-            STATUS_MAP = {
-                'NO_DATA': 0, 'DETRAINING': 1, 'RECOVERY': 2,
-                'MAINTAINING': 3, 'PRODUCTIVE': 4, 'PEAKING': 5,
-                'OVERREACHING': 6,
-            }
-            st = (safe(s, 'trainingStatus', 'status') or
-                  safe(s, 'status') or '')
-            store(db, d, 'training_status_n', STATUS_MAP.get(st), '', s)
-            store(db, d, 'training_load',
-                  safe(s, 'trainingStatus', 'trainingLoad') or
-                  safe(s, 'trainingLoad'), '', s)
+            # navigate into per-device map — take the first (primary) device
+            device_map = safe(s, 'mostRecentTrainingStatus', 'latestTrainingStatusData') or {}
+            device = next(iter(device_map.values()), {})
+            if device:
+                store(db, d, 'training_status_n', safe(device, 'trainingStatus'), '', s)
+                acute = safe(device, 'acuteTrainingLoadDTO') or {}
+                store(db, d, 'training_load',     safe(acute, 'dailyTrainingLoadAcute'),  '', s)
+                store(db, d, 'training_load_min', safe(acute, 'minTrainingLoadChronic'),   '', s)
+                store(db, d, 'training_load_max', safe(acute, 'maxTrainingLoadChronic'),   '', s)
         ok.append('training_status')
     except Exception as e:
         err.append(f'training_status({e})')
@@ -257,19 +263,7 @@ def sync_range(db, c, start, end):
         print(f'  weigh-ins error: {e}')
     time.sleep(SLEEP_BETWEEN)
 
-    # Intensity minutes
-    try:
-        rows = c.get_intensity_minutes_data(start, end)
-        for row in (rows or []):
-            d = safe(row, 'calendarDate') or safe(row, 'summaryDate')
-            if d:
-                store(db, d, 'intensity_mod_min', safe(row, 'moderateIntensityMinutes'), 'min', row)
-                store(db, d, 'intensity_vig_min',  safe(row, 'vigorousIntensityMinutes'), 'min', row)
-        db.commit()
-        print(f'  intensity_minutes: {len(rows or [])} rows')
-    except Exception as e:
-        print(f'  intensity_minutes error: {e}')
-    time.sleep(SLEEP_BETWEEN)
+    # intensity_mod_min / intensity_vig_min now fetched from get_stats per day
 
     # Activities
     try:

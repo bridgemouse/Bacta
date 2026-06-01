@@ -1,4 +1,6 @@
 import { Router } from 'express'
+import { spawn } from 'child_process'
+import path from 'path'
 import db from '../db/client'
 
 const garminRouter = Router()
@@ -37,12 +39,12 @@ const VALID_METRICS = [
   'act_distance_m', 'act_duration_s', 'act_calories', 'act_avg_hr',
 ]
 
-// GET /api/garmin/summary — today's key metrics as a flat object
+// GET /api/garmin/summary — latest available value per metric (most recent date wins per metric)
 garminRouter.get('/summary', (_req, res) => {
-  const today = new Date().toISOString().slice(0, 10)
   const rows = db.prepare(
-    'SELECT metric, value FROM garmin_snapshots WHERE date = ?'
-  ).all(today) as Array<{ metric: string; value: number }>
+    `SELECT metric, value FROM garmin_snapshots gs
+     WHERE date = (SELECT MAX(date) FROM garmin_snapshots WHERE metric = gs.metric)`
+  ).all() as Array<{ metric: string; value: number }>
 
   const summary: Record<string, number> = {}
   for (const row of rows) {
@@ -80,6 +82,14 @@ garminRouter.get('/:metric', (req, res) => {
   }
 
   res.json(row)
+})
+
+// POST /api/garmin/sync — spawn garmin_poller.py in background, return 202 immediately
+garminRouter.post('/sync', (_req, res) => {
+  const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
+  const child = spawn('python3', [script], { detached: true, stdio: 'ignore' })
+  child.unref()
+  res.status(202).json({ ok: true, message: 'Sync started' })
 })
 
 export default garminRouter

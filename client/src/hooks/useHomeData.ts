@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchSummary, TRAINING_STATUS } from '../lib/garminApi'
 
-interface HomeTileData {
+export interface HomeTileData {
   recovery: { value: string; sub: string }
   training: { value: string; sub: string }
   sleep:    { value: string; sub: string; ring: number }
@@ -43,7 +43,9 @@ export function useHomeData(): { data: HomeTileData; loading: boolean } {
         const hrv = s.hrv
         const hrvAvg = s.hrv_week_avg
         const hrvSub = hrv != null
-          ? `HRV ${hrv > (hrvAvg ?? hrv) ? '↑' : '↓'} ${hrv}ms`
+          ? hrvAvg != null
+            ? `HRV ${hrv > hrvAvg ? '↑' : '↓'} ${hrv}ms`
+            : `HRV ${hrv}ms`
           : STUB.recovery.sub
 
         setData({

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { fetchSummary, fetchTrend, TRAINING_STATUS } from '../lib/garminApi'
 import { TRAINING } from '../lib/stubData'
 
-export function useTrainingData(): { data: typeof TRAINING; loading: boolean } {
+export type TrainingData = typeof TRAINING
+
+export function useTrainingData(): { data: TrainingData; loading: boolean } {
   const [data, setData] = useState(TRAINING)
   const [loading, setLoading] = useState(true)
 

@@ -92,7 +92,7 @@ function HomeTrends() {
         <TrendRow
           label="Recovery" value={rec.score.value}
           data={rec.score.trend} accent={REC}
-          delta={rec.score.value - rec.score.trend[5]}
+          delta={rec.score.trend.length >= 6 ? rec.score.value - rec.score.trend[5] : undefined}
         />
         <TrendRow
           label="HRV" value={rec.hrv.value} unit="ms"
@@ -102,12 +102,12 @@ function HomeTrends() {
         <TrendRow
           label="Sleep" value={slp.score.value}
           data={slp.score.trend} accent={SLP}
-          delta={slp.score.value - slp.score.trend[5]}
+          delta={slp.score.trend.length >= 6 ? slp.score.value - slp.score.trend[5] : undefined}
         />
         <TrendRow
           label="Training Load" value={trn.load.value}
           data={trn.load.trend} accent={TRN} kind="bars"
-          delta={trn.load.value - trn.load.trend[5]}
+          delta={trn.load.trend.length >= 6 ? trn.load.value - trn.load.trend[5] : undefined}
         />
         <TrendRow
           label="Intensity" value={trn.intensity.moderate + trn.intensity.vigorous * 2} unit="min"

@@ -42,7 +42,7 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
             trend: hrvTrend.length      ? hrvTrend   : RECOVERY.hrv.trend,
           },
           battery: {
-            now:   summary.body_battery_wake    ?? RECOVERY.battery.now,
+            now:   summary.body_battery_current ?? RECOVERY.battery.now,
             max:   summary.body_battery_wake    ?? RECOVERY.battery.max,
             min:   summary.body_battery_current ?? RECOVERY.battery.min,
             trend: battTrend.length ? battTrend : RECOVERY.battery.trend,

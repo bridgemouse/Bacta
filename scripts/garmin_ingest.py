@@ -67,14 +67,18 @@ def sync_day(db, store, c, d):
     try:
         s = c.get_stats(d)
         if s:
-            store(db, d, 'steps',           safe(s, 'totalSteps'),          'steps', s)
-            store(db, d, 'resting_hr',      safe(s, 'restingHeartRate'),    'bpm',   s)
-            store(db, d, 'stress_avg',      safe(s, 'averageStressLevel'),  '',      s)
-            store(db, d, 'calories_total',  safe(s, 'totalKilocalories'),   'kcal',  s)
-            store(db, d, 'calories_active', safe(s, 'activeKilocalories'),  'kcal',  s)
-            store(db, d, 'distance_m',      safe(s, 'totalDistanceMeters'), 'm',     s)
-            store(db, d, 'floors_up',       safe(s, 'floorsAscended'),      'floors', s)
-            store(db, d, 'floors_down',     safe(s, 'floorsDescended'),     'floors', s)
+            store(db, d, 'steps',                safe(s, 'totalSteps'),               'steps', s)
+            store(db, d, 'resting_hr',           safe(s, 'restingHeartRate'),         'bpm',   s)
+            store(db, d, 'stress_avg',           safe(s, 'averageStressLevel'),       '',      s)
+            store(db, d, 'calories_total',       safe(s, 'totalKilocalories'),        'kcal',  s)
+            store(db, d, 'calories_active',      safe(s, 'activeKilocalories'),       'kcal',  s)
+            store(db, d, 'distance_m',           safe(s, 'totalDistanceMeters'),      'm',     s)
+            store(db, d, 'floors_up',            safe(s, 'floorsAscended'),           'floors', s)
+            store(db, d, 'floors_down',          safe(s, 'floorsDescended'),          'floors', s)
+            store(db, d, 'intensity_mod_min',    safe(s, 'moderateIntensityMinutes'), 'min',   s)
+            store(db, d, 'intensity_vig_min',    safe(s, 'vigorousIntensityMinutes'), 'min',   s)
+            store(db, d, 'body_battery_current', safe(s, 'bodyBatteryMostRecentValue'), '%',   s)
+            store(db, d, 'body_battery_wake',    safe(s, 'bodyBatteryAtWakeTime'),    '%',     s)
     except Exception as e:
         errors.append(f'stats({e})')
     time.sleep(SLEEP_PER_CALL)
@@ -101,6 +105,8 @@ def sync_day(db, store, c, d):
             store(db, d, 'sleep_awake_s', safe(dto, 'awakeSleepSeconds'),      's',    s)
             store(db, d, 'sleep_spo2',    safe(dto, 'averageSpO2Value'),       '%',    s)
             store(db, d, 'sleep_resp',    safe(dto, 'averageRespirationValue'),'brpm', s)
+            store(db, d, 'sleep_hr',      safe(dto, 'avgHeartRate'),           'bpm',  s)
+            store(db, d, 'sleep_stress',  safe(dto, 'avgSleepStress'),         '',     s)
             score = (safe(dto, 'sleepScore') or
                      safe(dto, 'sleepScores', 'overall', 'value') or
                      safe(s,   'sleepScores', 'overall', 'value'))
@@ -116,9 +122,11 @@ def sync_day(db, store, c, d):
                    safe(s, 'hrvSummary') or
                    (s if isinstance(s, dict) else {}))
         if summary:
-            hrv = safe(summary, 'lastNight') or safe(summary, 'weeklyAvg')
-            store(db, d, 'hrv',          hrv,                         'ms', s)
-            store(db, d, 'hrv_week_avg', safe(summary, 'weeklyAvg'), 'ms', s)
+            hrv = safe(summary, 'lastNightAvg') or safe(summary, 'lastNight') or safe(summary, 'weeklyAvg')
+            store(db, d, 'hrv',               hrv,                                         'ms', s)
+            store(db, d, 'hrv_week_avg',      safe(summary, 'weeklyAvg'),                 'ms', s)
+            store(db, d, 'hrv_baseline_low',  safe(summary, 'baseline', 'balancedLow'),   'ms', s)
+            store(db, d, 'hrv_baseline_high', safe(summary, 'baseline', 'balancedUpper'), 'ms', s)
     except Exception as e:
         errors.append(f'hrv({e})')
     time.sleep(SLEEP_PER_CALL)
@@ -168,14 +176,29 @@ def sync_day(db, store, c, d):
         errors.append(f'respiration({e})')
     time.sleep(SLEEP_PER_CALL)
 
-    # Training readiness
+    # Training readiness (returns a list — take first/most recent item)
     try:
         s = c.get_training_readiness(d)
-        if s:
-            score = safe(s, 'score') or safe(s, 'value')
-            store(db, d, 'recovery_score', score, '', s)
+        if s and isinstance(s, list) and len(s) > 0:
+            store(db, d, 'recovery_score', safe(s, 0, 'score'), '', s)
     except Exception as e:
         errors.append(f'training_readiness({e})')
+    time.sleep(SLEEP_PER_CALL)
+
+    # Training status + acute load
+    try:
+        s = c.get_training_status(d)
+        if s:
+            device_map = safe(s, 'mostRecentTrainingStatus', 'latestTrainingStatusData') or {}
+            device = next(iter(device_map.values()), {})
+            if device:
+                store(db, d, 'training_status_n', safe(device, 'trainingStatus'), '', s)
+                acute = safe(device, 'acuteTrainingLoadDTO') or {}
+                store(db, d, 'training_load',     safe(acute, 'dailyTrainingLoadAcute'),  '', s)
+                store(db, d, 'training_load_min', safe(acute, 'minTrainingLoadChronic'),   '', s)
+                store(db, d, 'training_load_max', safe(acute, 'maxTrainingLoadChronic'),   '', s)
+    except Exception as e:
+        errors.append(f'training_status({e})')
     time.sleep(SLEEP_PER_CALL)
 
     # VO2max

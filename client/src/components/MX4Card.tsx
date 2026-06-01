@@ -2,6 +2,7 @@
 import { MX4Sigil } from './primitives/MX4Sigil'
 import type { MX4Mood } from './primitives/MX4Sigil'
 import { FTelemetry } from './primitives/FTelemetry'
+import { StatusCore } from './primitives/StatusCore'
 import { hexA } from '../lib/hexA'
 import { COLORS, FONT_MONO, FONT_UI, toneColor } from '../theme'
 import type { Brief } from '../lib/stubData'
@@ -44,7 +45,7 @@ interface MX4BriefingProps {
 
 export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
   const tc = toneColor(brief.tone)
-  const verdictLabel = brief.tone === 'flag' ? 'WATCH' : brief.tone === 'caution' ? 'CAUTION' : 'CLEAR'
+  const verdictLabel = brief.tone === 'flag' ? 'FLAG' : brief.tone === 'caution' ? 'CAUTION' : 'POSITIVE'
 
   return (
     <div
@@ -82,6 +83,9 @@ export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
         {/* Verdict badge — tone color only appears here */}
         <span
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
             fontFamily: FONT_MONO,
             fontSize: 8,
             fontWeight: 700,
@@ -95,6 +99,7 @@ export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
             flexShrink: 0,
           }}
         >
+          <StatusCore accent={tc} size={5} />
           {verdictLabel}
         </span>
       </div>

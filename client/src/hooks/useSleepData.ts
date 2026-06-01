@@ -32,6 +32,7 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
         const remMins   = Math.round(remS   / 60)
         const awakeMins = Math.round(awakeS / 60)
         const totalForPct = deepMins + lightMins + remMins || 1
+        const deepTrendMins = deepTrend.map(v => Math.round(v / 60))
 
         setData({
           ...SLEEP,
@@ -40,8 +41,8 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
             m:    totalMins % 60,
             mins: totalMins,
             inBed: totalMins + awakeMins,
-            trend: deepTrend.map(v => Math.round(v / 60)).filter(v => v > 0).length
-              ? deepTrend.map(v => Math.round(v / 60))
+            trend: deepTrendMins.filter(v => v > 0).length
+              ? deepTrendMins
               : SLEEP.duration.trend,
           },
           score: {

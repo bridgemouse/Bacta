@@ -24,12 +24,12 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           ? (TRAINING_STATUS[Math.round(statusN)] ?? 'Maintaining')
           : TRAINING.status.value
 
-        const load = summary.training_load
+        const trainingLoad = summary.training_load
         const loadMin = summary.training_load_min ?? TRAINING.load.low
         const loadMax = summary.training_load_max ?? TRAINING.load.high
-        const loadState = load != null
-          ? load < loadMin ? 'Under'
-          : load > loadMax ? 'High'
+        const loadState = trainingLoad != null
+          ? trainingLoad < loadMin ? 'Under'
+          : trainingLoad > loadMax ? 'High'
           : 'Optimal'
           : TRAINING.load.state
 
@@ -47,7 +47,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             fitnessAge: summary.fitness_age ?? TRAINING.vo2max.fitnessAge,
           },
           load: {
-            value: load        ?? TRAINING.load.value,
+            value: trainingLoad ?? TRAINING.load.value,
             low:   loadMin,
             high:  loadMax,
             state: loadState,

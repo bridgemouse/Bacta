@@ -77,4 +77,9 @@ describe('App', () => {
     renderApp('/training')
     expect(screen.getByText(/DAILY ACTIVITY/)).toBeInTheDocument()
   })
+
+  test('does not render HR ZONES panel on /training when no zone data', () => {
+    renderApp('/training')
+    expect(screen.queryByText(/HR ZONES/)).not.toBeInTheDocument()
+  })
 })

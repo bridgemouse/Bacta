@@ -17,7 +17,11 @@ const A = SECTION_ACCENTS.sleep
 
 function SleepOverview() {
   const { data: slp } = useSleepData()
-  const efficiencyPct = Math.round((slp.duration.mins / slp.duration.inBed) * 100)
+  const efficiencyPct = slp.duration.inBed > 0
+    ? Math.round((slp.duration.mins / slp.duration.inBed) * 100)
+    : 0
+  const debtH = slp.sleepDebt != null ? Math.floor(slp.sleepDebt / 60) : 0
+  const debtM = slp.sleepDebt != null ? slp.sleepDebt % 60 : 0
 
   return (
     <>
@@ -28,9 +32,16 @@ function SleepOverview() {
           accent={A}
           label="Duration"
           foot={
-            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>
-              {efficiencyPct}% efficiency
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>
+                {efficiencyPct}% efficiency
+              </span>
+              {slp.sleepDebt != null && slp.sleepDebt > 0 && (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.mx4Amber }}>
+                  DEBT {debtH > 0 ? `${debtH}h ` : ''}{String(debtM).padStart(2, '0')}m
+                </span>
+              )}
+            </div>
           }
         >
           <Gauge value={slp.duration.mins} max={480} accent={A} size={100}>
@@ -78,6 +89,8 @@ function SleepOverview() {
       }}>
         <div style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 10 }}>
           STAGE BREAKDOWN · {fmtDur(slp.duration.mins)}
+          {slp.deepRatio != null && ` · DEEP ${slp.deepRatio}%`}
+          {slp.remRatio  != null && ` · REM ${slp.remRatio}%`}
         </div>
         <StageSplit stages={slp.stages} />
         <div style={{ marginTop: 10 }}>
@@ -88,21 +101,18 @@ function SleepOverview() {
       <Rail label="OVERNIGHT VITALS" accent={A} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-        {slp.spo2.avg != null && <VitalTile label="SpO₂ avg" value={slp.spo2.avg} unit="%" accent={A} />}
-        {slp.spo2.low != null && <VitalTile label="SpO₂ low" value={slp.spo2.low} unit="%" accent={A} />}
+        {slp.spo2.avg != null && (
+          <VitalTile label="SpO₂ avg" value={slp.spo2.avg} unit="%" accent={A} />
+        )}
+        {slp.spo2.low != null && (
+          <VitalTile label="SpO₂ low" value={slp.spo2.low} unit="%" accent={A} />
+        )}
         <VitalTile label="Respiration" value={slp.resp.avg} unit="br/m" accent={A} />
         {slp.sleepHr != null && (
-          <VitalTile
-            label="Avg Heart Rate" value={slp.sleepHr} unit="bpm"
-            data={[]} accent={A}
-          />
+          <VitalTile label="Avg Heart Rate" value={slp.sleepHr} unit="bpm" data={slp.sleepHrTrend} accent={A} />
         )}
         {slp.sleepStress != null && (
-          <VitalTile
-            label="Sleep Stress" value={slp.sleepStress} unit=""
-            data={[]} accent={A}
-            lowerBetter
-          />
+          <VitalTile label="Sleep Stress" value={slp.sleepStress} unit="" data={slp.sleepStressTrend} accent={A} lowerBetter />
         )}
       </div>
     </>
@@ -115,15 +125,21 @@ function SleepTrends() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-      <TrendRow
-        label="Duration"
-        value={`${slp.duration.h}h ${String(slp.duration.m).padStart(2, '0')}m`}
-        data={slp.duration.trend} accent={A} kind="bars" fmt={fmtH}
-      />
-      <TrendRow
-        label="Score" value={slp.score.value}
-        data={slp.score.trend} accent={A}
-      />
+      {slp.duration.trend.length > 0 && (
+        <TrendRow label="Duration" value={`${slp.duration.h}h ${String(slp.duration.m).padStart(2, '0')}m`} data={slp.duration.trend} accent={A} kind="bars" fmt={fmtH} />
+      )}
+      {slp.score.trend.length > 0 && (
+        <TrendRow label="Score" value={slp.score.value} data={slp.score.trend} accent={A} />
+      )}
+      {slp.sleepRespTrend.length > 0 && (
+        <TrendRow label="Respiration" value={slp.resp.avg} unit="br/m" data={slp.sleepRespTrend} accent={A} lowerBetter />
+      )}
+      {slp.sleepHrTrend.length > 0 && slp.sleepHr != null && (
+        <TrendRow label="Heart Rate" value={slp.sleepHr} unit="bpm" data={slp.sleepHrTrend} accent={A} lowerBetter />
+      )}
+      {slp.sleepStressTrend.length > 0 && slp.sleepStress != null && (
+        <TrendRow label="Stress" value={slp.sleepStress} unit="avg" data={slp.sleepStressTrend} accent={A} lowerBetter />
+      )}
     </div>
   )
 }

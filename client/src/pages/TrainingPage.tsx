@@ -14,6 +14,7 @@ import { LoadBand } from '../components/viz/LoadBand'
 import { IntensityBar } from '../components/viz/IntensityBar'
 import { hexA } from '../lib/hexA'
 import { LogEntry } from '../components/viz/LogEntry'
+import { VitalTile } from '../components/viz/VitalTile'
 
 const A = SECTION_ACCENTS.training
 
@@ -70,6 +71,32 @@ function TrainingOverview() {
         accent={A}
       />
 
+      {/* Daily Activity */}
+      <Rail label="DAILY ACTIVITY" accent={A} right={TRN.dailyActivity.steps != null ? `${TRN.dailyActivity.steps.toLocaleString()} STEPS` : undefined} />
+      {TRN.dailyActivity.steps != null ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 9 }}>
+          <VitalTile label="Steps" value={TRN.dailyActivity.steps.toLocaleString()} unit="today" accent={A} />
+          {TRN.dailyActivity.distanceKm != null && (
+            <VitalTile label="Distance" value={TRN.dailyActivity.distanceKm} unit="km" accent={A} />
+          )}
+          {TRN.dailyActivity.caloriesTotal != null && (
+            <VitalTile label="Calories" value={TRN.dailyActivity.caloriesTotal} unit="kcal" accent={A} />
+          )}
+          {TRN.dailyActivity.floors != null && (
+            <VitalTile label="Floors" value={TRN.dailyActivity.floors} unit="fl" accent={A} />
+          )}
+        </div>
+      ) : (
+        <div style={{
+          background: hexA(A, 0.06), border: `1px solid ${hexA(A, 0.18)}`,
+          borderRadius: 10, padding: '20px 16px', textAlign: 'center', marginBottom: 9,
+        }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.12em', color: COLORS.textMuted }}>
+            CALIBRATING
+          </span>
+        </div>
+      )}
+
       <Rail label="ACTIVITY LOG" accent={A} right={TRN.activities.length > 0 ? `${TRN.activities.length} RECENT` : undefined} />
 
       {TRN.activities.length > 0 ? (
@@ -96,19 +123,21 @@ function TrainingTrends() {
   const { data: TRN } = useTrainingData()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-      <TrendRow
-        label="Load" value={TRN.load.value}
-        data={TRN.load.trend} accent={A} kind="bars"
-      />
-      <TrendRow
-        label="VO2 Max" value={TRN.vo2max.value} unit="mL/kg"
-        data={TRN.status.trend} accent={A}
-        delta={TRN.vo2max.delta}
-      />
-      <TrendRow
-        label="Intensity" value={`${TRN.intensity.moderate + TRN.intensity.vigorous * 2}`} unit="pts"
-        data={TRN.intensity.trend} accent={A} kind="bars"
-      />
+      {TRN.load.trend.length > 0 && (
+        <TrendRow label="Load" value={TRN.load.value} data={TRN.load.trend} accent={A} kind="bars" />
+      )}
+      {TRN.vo2max.trend.length > 0 && (
+        <TrendRow label="VO2 Max" value={TRN.vo2max.value} unit="mL/kg" data={TRN.vo2max.trend} accent={A} delta={TRN.vo2max.delta} />
+      )}
+      {TRN.intensity.trend.length > 0 && (
+        <TrendRow label="Intensity" value={`${TRN.intensity.moderate + TRN.intensity.vigorous * 2}`} unit="pts" data={TRN.intensity.trend} accent={A} kind="bars" />
+      )}
+      {TRN.dailyActivity.stepsTrend.length > 0 && (
+        <TrendRow label="Steps" value={TRN.dailyActivity.steps != null ? TRN.dailyActivity.steps.toLocaleString() : 0} data={TRN.dailyActivity.stepsTrend} accent={A} kind="bars" />
+      )}
+      {TRN.dailyActivity.calTrend.length > 0 && (
+        <TrendRow label="Calories" value={TRN.dailyActivity.caloriesTotal ?? 0} unit="kcal" data={TRN.dailyActivity.calTrend} accent={A} kind="bars" />
+      )}
     </div>
   )
 }

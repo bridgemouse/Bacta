@@ -72,4 +72,9 @@ describe('App', () => {
     expect(screen.queryByText(/SpO₂ avg/)).not.toBeInTheDocument()
     expect(screen.queryByText(/SpO₂ low/)).not.toBeInTheDocument()
   })
+
+  test('renders DAILY ACTIVITY section on /training route', () => {
+    renderApp('/training')
+    expect(screen.getByText(/DAILY ACTIVITY/)).toBeInTheDocument()
+  })
 })

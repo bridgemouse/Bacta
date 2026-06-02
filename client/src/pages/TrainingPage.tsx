@@ -57,7 +57,7 @@ function TrainingOverview() {
           <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: A }}>{TRN.load.state.toUpperCase()}</span>
         </div>
         <span style={{ fontFamily: FONT_MONO, fontSize: 30, fontWeight: 700, color: COLORS.text, lineHeight: 1, display: 'block', marginBottom: 10 }}>
-          {TRN.load.value}
+          {Math.round(TRN.load.value)}
         </span>
         <LoadBand value={TRN.load.value} low={TRN.load.low} high={TRN.load.high} accent={A} />
       </div>

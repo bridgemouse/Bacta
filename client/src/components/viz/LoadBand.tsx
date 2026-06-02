@@ -42,7 +42,7 @@ export function LoadBand({ value, low, high, accent }: LoadBandProps) {
         fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted,
       }}>
         <span>LOW</span>
-        <span style={{ color: accent }}>OPTIMAL {low}–{high}</span>
+        <span style={{ color: accent }}>OPTIMAL {Math.round(low)}–{Math.round(high)}</span>
         <span>HIGH</span>
       </div>
     </div>

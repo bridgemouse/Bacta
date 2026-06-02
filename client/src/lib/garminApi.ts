@@ -5,11 +5,15 @@ export interface GarminSummary {
   hrv_baseline_high?: number
   resting_hr?: number
   stress_avg?: number
+  stress_max?: number
   resp_avg?: number
+  resp_max?: number
   recovery_score?: number
   body_battery_wake?: number
   body_battery_current?: number
   body_battery_min?: number
+  spo2_avg?: number
+  spo2_min?: number
   sleep_score?: number
   sleep_deep_s?: number
   sleep_light_s?: number
@@ -18,6 +22,7 @@ export interface GarminSummary {
   sleep_resp?: number
   sleep_hr?: number
   sleep_stress?: number
+  sleep_spo2?: number
   training_load?: number
   training_load_min?: number
   training_load_max?: number
@@ -26,6 +31,11 @@ export interface GarminSummary {
   intensity_vig_min?: number
   vo2max?: number
   fitness_age?: number
+  steps?: number
+  distance_m?: number
+  calories_total?: number
+  calories_active?: number
+  floors_up?: number
 }
 
 /** Latest values for every metric — one DB call. */

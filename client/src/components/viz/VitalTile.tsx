@@ -6,6 +6,7 @@ interface VitalTileProps {
   label: string
   value: string | number
   unit?: string
+  sub?: string
   data?: number[]
   accent: string
   delta?: number
@@ -13,7 +14,7 @@ interface VitalTileProps {
 }
 
 /** Compact secondary metric tile with optional sparkline. */
-export function VitalTile({ label, value, unit, data, accent, delta, lowerBetter }: VitalTileProps) {
+export function VitalTile({ label, value, unit, sub, data, accent, delta, lowerBetter }: VitalTileProps) {
   return (
     <div style={{
       position: 'relative', background: COLORS.surface,
@@ -38,6 +39,9 @@ export function VitalTile({ label, value, unit, data, accent, delta, lowerBetter
           <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{unit}</span>
         )}
       </div>
+      {sub && (
+        <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>{sub}</span>
+      )}
       {data && <Sparkline data={data} accent={accent} w={120} h={18} sw={1.5} dot={false} fill={false} />}
     </div>
   )

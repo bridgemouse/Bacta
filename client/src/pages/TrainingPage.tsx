@@ -83,7 +83,7 @@ function TrainingOverview() {
             <VitalTile label="Calories" value={TRN.dailyActivity.caloriesTotal} unit="kcal" accent={A} />
           )}
           {TRN.dailyActivity.floors != null && (
-            <VitalTile label="Floors" value={TRN.dailyActivity.floors} unit="fl" accent={A} />
+            <VitalTile label="Floors" value={Math.round(TRN.dailyActivity.floors)} unit="fl" accent={A} />
           )}
         </div>
       ) : (

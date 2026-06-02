@@ -36,6 +36,11 @@ export interface GarminSummary {
   calories_total?: number
   calories_active?: number
   floors_up?: number
+  hrzone_1_min?: number
+  hrzone_2_min?: number
+  hrzone_3_min?: number
+  hrzone_4_min?: number
+  hrzone_5_min?: number
 }
 
 /** Latest values for every metric — one DB call. */

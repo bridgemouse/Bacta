@@ -61,4 +61,9 @@ describe('App', () => {
     renderApp('/sleep')
     expect(screen.getByText(/OVERNIGHT VITALS/)).toBeInTheDocument()
   })
+
+  test('does not render SpO2 tile on /recovery when watch data unavailable', () => {
+    renderApp('/recovery')
+    expect(screen.queryByText(/SpO₂/)).not.toBeInTheDocument()
+  })
 })

@@ -93,7 +93,16 @@ function RecoveryOverview() {
         <HeadlineCard
           accent={A}
           label="Body Battery"
-          foot={<BodyBattery now={rec.battery.now} max={rec.battery.max} min={rec.battery.min} accent={A} height={12} />}
+          foot={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <BodyBattery now={rec.battery.now} max={rec.battery.max} min={rec.battery.min} accent={A} height={12} />
+              {rec.batteryConsumed != null && (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
+                  CONSUMED {rec.batteryConsumed}%
+                </span>
+              )}
+            </div>
+          }
         >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 30, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
@@ -111,9 +120,17 @@ function RecoveryOverview() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
         <VitalTile label="Resting HR" value={rec.rhr.value} unit="bpm" data={rec.rhr.trend} accent={A} delta={rec.rhr.value - rec.rhr.avg} lowerBetter />
-        <VitalTile label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.value - rec.stress.avg} lowerBetter />
-        {rec.spo2.value != null && <VitalTile label="SpO₂" value={rec.spo2.value} unit="%" data={rec.spo2.trend} accent={A} delta={rec.spo2.avg != null ? rec.spo2.value - rec.spo2.avg : undefined} />}
+        <VitalTile label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.value - rec.stress.avg} lowerBetter sub={rec.stressLabel} />
+        {rec.stressMax != null && (
+          <VitalTile label="Peak Stress" value={rec.stressMax} unit="max" accent={A} lowerBetter />
+        )}
         <VitalTile label="Respiration" value={rec.resp.value} unit="br/m" data={rec.resp.trend} accent={A} delta={rec.resp.value - rec.resp.avg} lowerBetter />
+        {rec.respMax != null && (
+          <VitalTile label="Peak Resp" value={rec.respMax} unit="br/m" accent={A} lowerBetter />
+        )}
+        {rec.spo2.value != null && (
+          <VitalTile label="SpO₂" value={rec.spo2.value} unit="%" data={rec.spo2.trend} accent={A} delta={rec.spo2.avg != null ? rec.spo2.value - rec.spo2.avg : undefined} />
+        )}
       </div>
     </>
   )
@@ -123,37 +140,27 @@ function RecoveryTrends() {
   const { data: rec } = useRecoveryData()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-      <TrendRow
-        label="Score" value={rec.score.value}
-        data={rec.score.trend} accent={A}
-      />
-      <TrendRow
-        label="HRV" value={rec.hrv.value} unit="ms"
-        data={rec.hrv.trend} accent={A}
-        delta={rec.hrv.value - rec.hrv.avg}
-      />
-      <TrendRow
-        label="Body Battery" value={rec.battery.now}
-        data={rec.battery.trend} accent={A} kind="bars"
-      />
-      <TrendRow
-        label="Resting HR" value={rec.rhr.value} unit="bpm"
-        data={rec.rhr.trend} accent={A}
-        delta={rec.rhr.value - rec.rhr.avg} lowerBetter
-      />
-      <TrendRow
-        label="Stress" value={rec.stress.value} unit="avg"
-        data={rec.stress.trend} accent={A}
-        delta={rec.stress.value - rec.stress.avg} lowerBetter
-      />
-      {rec.spo2.value != null && <TrendRow
-        label="SpO₂" value={rec.spo2.value} unit="%"
-        data={rec.spo2.trend} accent={A}
-      />}
-      <TrendRow
-        label="Respiration" value={rec.resp.value} unit="br/m"
-        data={rec.resp.trend} accent={A} lowerBetter
-      />
+      {rec.score.trend.length > 0 && (
+        <TrendRow label="Score" value={rec.score.value} data={rec.score.trend} accent={A} />
+      )}
+      {rec.hrv.trend.length > 0 && (
+        <TrendRow label="HRV" value={rec.hrv.value} unit="ms" data={rec.hrv.trend} accent={A} delta={rec.hrv.value - rec.hrv.avg} />
+      )}
+      {rec.battery.trend.length > 0 && (
+        <TrendRow label="Body Battery" value={rec.battery.now} data={rec.battery.trend} accent={A} kind="bars" />
+      )}
+      {rec.rhr.trend.length > 0 && (
+        <TrendRow label="Resting HR" value={rec.rhr.value} unit="bpm" data={rec.rhr.trend} accent={A} delta={rec.rhr.value - rec.rhr.avg} lowerBetter />
+      )}
+      {rec.stress.trend.length > 0 && (
+        <TrendRow label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.value - rec.stress.avg} lowerBetter />
+      )}
+      {rec.resp.trend.length > 0 && (
+        <TrendRow label="Respiration" value={rec.resp.value} unit="br/m" data={rec.resp.trend} accent={A} lowerBetter />
+      )}
+      {rec.spo2.value != null && rec.spo2.trend.length > 0 && (
+        <TrendRow label="SpO₂" value={rec.spo2.value} unit="%" data={rec.spo2.trend} accent={A} />
+      )}
     </div>
   )
 }

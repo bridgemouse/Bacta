@@ -112,7 +112,7 @@ function RecoveryOverview() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
         <VitalTile label="Resting HR" value={rec.rhr.value} unit="bpm" data={rec.rhr.trend} accent={A} delta={rec.rhr.value - rec.rhr.avg} lowerBetter />
         <VitalTile label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.value - rec.stress.avg} lowerBetter />
-        <VitalTile label="SpO₂" value={rec.spo2.value} unit="%" data={rec.spo2.trend} accent={A} delta={rec.spo2.value - rec.spo2.avg} />
+        {rec.spo2.value != null && <VitalTile label="SpO₂" value={rec.spo2.value} unit="%" data={rec.spo2.trend} accent={A} delta={rec.spo2.avg != null ? rec.spo2.value - rec.spo2.avg : undefined} />}
         <VitalTile label="Respiration" value={rec.resp.value} unit="br/m" data={rec.resp.trend} accent={A} delta={rec.resp.value - rec.resp.avg} lowerBetter />
       </div>
     </>
@@ -146,10 +146,10 @@ function RecoveryTrends() {
         data={rec.stress.trend} accent={A}
         delta={rec.stress.value - rec.stress.avg} lowerBetter
       />
-      <TrendRow
+      {rec.spo2.value != null && <TrendRow
         label="SpO₂" value={rec.spo2.value} unit="%"
         data={rec.spo2.trend} accent={A}
-      />
+      />}
       <TrendRow
         label="Respiration" value={rec.resp.value} unit="br/m"
         data={rec.resp.trend} accent={A} lowerBetter

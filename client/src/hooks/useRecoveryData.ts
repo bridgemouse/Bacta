@@ -2,13 +2,26 @@ import { useState, useEffect } from 'react'
 import { fetchSummary, fetchTrend } from '../lib/garminApi'
 import { RECOVERY } from '../lib/stubData'
 
-export type RecoveryData = typeof RECOVERY & {
+const arrAvg = (a: number[]) =>
+  a.length ? a.reduce((s, v) => s + v, 0) / a.length : null
+
+export type RecoveryData = Omit<typeof RECOVERY, 'spo2'> & {
+  spo2: { value: number | null; unit: string; avg: number | null; trend: number[] }
   hrvBaselineLow?: number
   hrvBaselineHigh?: number
+  stressLabel?: string
+  stressMax?: number
+  respMax?: number
+  batteryConsumed?: number
+}
+
+const INITIAL: RecoveryData = {
+  ...RECOVERY,
+  spo2: { value: null, unit: '%', avg: null, trend: [] },
 }
 
 export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
-  const [data, setData] = useState<RecoveryData>(RECOVERY)
+  const [data, setData] = useState<RecoveryData>(INITIAL)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -27,6 +40,18 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
           ])
         if (cancelled) return
 
+        const stressAvg = summary.stress_avg ?? RECOVERY.stress.value
+        const stressLabel =
+          stressAvg < 26 ? 'LOW' :
+          stressAvg < 51 ? 'MODERATE' :
+          stressAvg < 76 ? 'HIGH' : 'VERY HIGH'
+
+        const wake = summary.body_battery_wake
+        const current = summary.body_battery_current
+        const batteryConsumed = wake != null && current != null
+          ? Math.max(0, wake - current)
+          : undefined
+
         setData({
           score: {
             value: summary.recovery_score ?? RECOVERY.score.value,
@@ -39,7 +64,7 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
             value: summary.hrv          ?? RECOVERY.hrv.value,
             unit:  'ms',
             avg:   summary.hrv_week_avg ?? RECOVERY.hrv.avg,
-            trend: hrvTrend.length      ? hrvTrend   : RECOVERY.hrv.trend,
+            trend: hrvTrend.length      ? hrvTrend : RECOVERY.hrv.trend,
           },
           battery: {
             now:   summary.body_battery_current ?? RECOVERY.battery.now,
@@ -50,27 +75,36 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
           rhr: {
             value: summary.resting_hr ?? RECOVERY.rhr.value,
             unit:  'bpm',
-            avg:   RECOVERY.rhr.avg,
-            trend: rhrTrend.length    ? rhrTrend   : RECOVERY.rhr.trend,
+            avg:   arrAvg(rhrTrend)   ?? RECOVERY.rhr.avg,
+            trend: rhrTrend.length    ? rhrTrend : RECOVERY.rhr.trend,
             lowerBetter: true,
           },
           stress: {
-            value: summary.stress_avg ?? RECOVERY.stress.value,
+            value: stressAvg,
             unit:  'avg',
-            avg:   RECOVERY.stress.avg,
-            trend: stressTrend.length ? stressTrend : RECOVERY.stress.trend,
+            avg:   arrAvg(stressTrend) ?? RECOVERY.stress.avg,
+            trend: stressTrend.length  ? stressTrend : RECOVERY.stress.trend,
             lowerBetter: true,
           },
-          spo2: RECOVERY.spo2,
+          spo2: {
+            value: summary.spo2_avg ?? null,
+            unit:  '%',
+            avg:   summary.spo2_avg ?? null,
+            trend: [],
+          },
           resp: {
             value: summary.resp_avg ?? RECOVERY.resp.value,
             unit:  'br/min',
-            avg:   RECOVERY.resp.avg,
-            trend: respTrend.length ? respTrend : RECOVERY.resp.trend,
+            avg:   arrAvg(respTrend) ?? RECOVERY.resp.avg,
+            trend: respTrend.length  ? respTrend : RECOVERY.resp.trend,
             lowerBetter: true,
           },
           hrvBaselineLow:  summary.hrv_baseline_low,
           hrvBaselineHigh: summary.hrv_baseline_high,
+          stressLabel,
+          stressMax:      summary.stress_max,
+          respMax:        summary.resp_max,
+          batteryConsumed,
         })
       } catch {
         // keep stub data on error

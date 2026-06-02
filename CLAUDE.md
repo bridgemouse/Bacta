@@ -247,6 +247,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - Activities need a dedicated `garmin_activities` table — EAV can't represent multiple rows per day
 - Use `INSERT OR REPLACE` (not `INSERT OR IGNORE`) for activity rows so re-syncs overwrite stale data
 - Common Garmin `typeKey` values: `running`, `trail_running`, `walking`, `hiking`, `cycling`, `strength_training`, `multi_sport`
+- `get_heart_rates(d)` returns minute-by-minute HR values — NOT zone minutes. For HR zone data use `get_activity_hr_in_timezones(activityId)` → field `secsInZone` per zone; aggregate across all activities for the day and divide by 60 for minutes
 
 ## Server & DB Gotchas
 

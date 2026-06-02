@@ -2,24 +2,43 @@ import { useState, useEffect } from 'react'
 import { fetchSummary, fetchTrend } from '../lib/garminApi'
 import { SLEEP } from '../lib/stubData'
 
-export type SleepData = typeof SLEEP & {
+export type SleepData = Omit<typeof SLEEP, 'spo2'> & {
+  spo2: { avg: number | null; low: number | null; unit: string }
   sleepHr?: number | null
   sleepStress?: number | null
+  sleepDebt?: number
+  deepRatio?: number
+  remRatio?: number
+  sleepRespTrend: number[]
+  sleepHrTrend: number[]
+  sleepStressTrend: number[]
+}
+
+const INITIAL: SleepData = {
+  ...SLEEP,
+  spo2: { avg: null, low: null, unit: '%' },
+  sleepRespTrend: [],
+  sleepHrTrend: [],
+  sleepStressTrend: [],
 }
 
 export function useSleepData(): { data: SleepData; loading: boolean } {
-  const [data, setData] = useState<SleepData>(SLEEP)
+  const [data, setData] = useState<SleepData>(INITIAL)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [summary, scoreTrend, deepTrend] = await Promise.all([
-          fetchSummary(),
-          fetchTrend('sleep_score'),
-          fetchTrend('sleep_deep_s'),
-        ])
+        const [summary, scoreTrend, deepTrend, respTrend, hrTrend, stressTrend] =
+          await Promise.all([
+            fetchSummary(),
+            fetchTrend('sleep_score'),
+            fetchTrend('sleep_deep_s'),
+            fetchTrend('sleep_resp'),
+            fetchTrend('sleep_hr'),
+            fetchTrend('sleep_stress'),
+          ])
         if (cancelled) return
 
         const deepS  = summary.sleep_deep_s  ?? 0
@@ -34,12 +53,16 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
         const totalForPct = deepMins + lightMins + remMins || 1
         const deepTrendMins = deepTrend.map(v => Math.round(v / 60))
 
+        const sleepDebt = totalMins > 0 ? Math.max(0, 480 - totalMins) : undefined
+        const deepRatio = totalMins > 0 ? Math.round(deepMins / totalMins * 100) : undefined
+        const remRatio  = totalMins > 0 ? Math.round(remMins  / totalMins * 100) : undefined
+
         setData({
           ...SLEEP,
           duration: {
-            h:    Math.floor(totalMins / 60),
-            m:    totalMins % 60,
-            mins: totalMins,
+            h:     Math.floor(totalMins / 60),
+            m:     totalMins % 60,
+            mins:  totalMins,
             inBed: totalMins + awakeMins,
             trend: deepTrendMins.filter(v => v > 0).length
               ? deepTrendMins
@@ -58,10 +81,16 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
             { key: 'rem' as const,   label: 'REM',   mins: remMins,   pct: Math.round(remMins   / totalForPct * 100), color: '#c4b5fd' },
             { key: 'awake' as const, label: 'Awake', mins: awakeMins, pct: 0, color: '#56657a' },
           ] : SLEEP.stages,
-          resp: { avg: summary.sleep_resp ?? SLEEP.resp.avg, unit: 'br/min' },
-          spo2: SLEEP.spo2,
+          spo2:        { avg: summary.sleep_spo2 ?? null, low: null, unit: '%' },
+          resp:        { avg: summary.sleep_resp ?? SLEEP.resp.avg, unit: 'br/min' },
           sleepHr:     summary.sleep_hr     ?? null,
           sleepStress: summary.sleep_stress ?? null,
+          sleepDebt,
+          deepRatio,
+          remRatio,
+          sleepRespTrend:   respTrend,
+          sleepHrTrend:     hrTrend,
+          sleepStressTrend: stressTrend,
         })
       } catch {
         // keep stub on error

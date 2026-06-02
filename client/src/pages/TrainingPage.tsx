@@ -20,6 +20,7 @@ const A = SECTION_ACCENTS.training
 
 function TrainingOverview() {
   const { data: TRN } = useTrainingData()
+  const totalZoneMins = TRN.hrZones.reduce((s, z) => s + z.mins, 0)
   return (
     <>
       <MX4Briefing accent={A} brief={BRIEFS.training} />
@@ -70,6 +71,37 @@ function TrainingOverview() {
         goal={TRN.intensity.goal}
         accent={A}
       />
+
+      {/* HR Zones */}
+      {TRN.hrZones.length > 0 && (
+        <>
+          <Rail label="HR ZONES" accent={A} right={`${Math.round(totalZoneMins)} MIN`} />
+          <div style={{ display: 'flex', height: 22, borderRadius: 6, overflow: 'hidden', gap: 2, marginBottom: 8 }}>
+            {TRN.hrZones.map(z => (
+              <div key={z.zone} style={{
+                width: `${z.pct}%`, background: z.color,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {z.pct >= 18 && (
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: '#0b0d12' }}>
+                    {z.pct}%
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', marginBottom: 9 }}>
+            {TRN.hrZones.map(z => (
+              <span key={z.zone} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: z.color, flexShrink: 0 }} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>Z{z.zone}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary }}>{z.label}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.text, fontWeight: 600 }}>{z.mins}m</span>
+              </span>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Daily Activity */}
       <Rail label="DAILY ACTIVITY" accent={A} right={TRN.dailyActivity.steps != null ? `${TRN.dailyActivity.steps.toLocaleString()} STEPS` : undefined} />

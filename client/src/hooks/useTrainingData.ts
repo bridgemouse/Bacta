@@ -20,7 +20,22 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
     stepsTrend: number[]
     calTrend: number[]
   }
+  hrZones: Array<{
+    zone: number
+    label: string
+    mins: number
+    pct: number
+    color: string
+  }>
 }
+
+const ZONE_META = [
+  { zone: 1, label: 'Warm Up',   color: '#56657a' },
+  { zone: 2, label: 'Easy',      color: '#4ade80' },
+  { zone: 3, label: 'Aerobic',   color: '#fbbf24' },
+  { zone: 4, label: 'Threshold', color: '#f87171' },
+  { zone: 5, label: 'Maximum',   color: '#ef4444' },
+]
 
 const INITIAL: TrainingData = {
   ...TRAINING,
@@ -30,6 +45,7 @@ const INITIAL: TrainingData = {
     steps: null, distanceKm: null, caloriesTotal: null,
     caloriesActive: null, floors: null, stepsTrend: [], calTrend: [],
   },
+  hrZones: [],
 }
 
 export function useTrainingData(): { data: TrainingData; loading: boolean } {
@@ -70,6 +86,22 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           ? Math.round(summary.distance_m / 100) / 10
           : null
 
+        const zoneMins = [
+          summary.hrzone_1_min ?? null,
+          summary.hrzone_2_min ?? null,
+          summary.hrzone_3_min ?? null,
+          summary.hrzone_4_min ?? null,
+          summary.hrzone_5_min ?? null,
+        ]
+        const totalZoneMins = zoneMins.reduce<number>((s, v) => s + (v ?? 0), 0)
+        const hrZones = totalZoneMins > 0
+          ? ZONE_META.map((m, i) => ({
+              ...m,
+              mins: zoneMins[i] ?? 0,
+              pct:  Math.round((zoneMins[i] ?? 0) / totalZoneMins * 100),
+            }))
+          : []
+
         setData({
           ...TRAINING,
           status: {
@@ -107,6 +139,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             stepsTrend,
             calTrend,
           },
+          hrZones,
         })
       } catch {
         // keep stub on error

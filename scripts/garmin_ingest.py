@@ -222,6 +222,21 @@ def sync_day(db, store, c, d):
         errors.append(f'fitness_age({e})')
     time.sleep(SLEEP_PER_CALL)
 
+    # Heart rate zones (Z1–Z5 minutes)
+    try:
+        s = c.get_heart_rates(d)
+        if s:
+            zones = (safe(s, 'heartRateZones') or safe(s, 'zones') or [])
+            for i, zone in enumerate(zones[:5]):
+                mins = (safe(zone, 'minutesInHeartRateZone') or
+                        safe(zone, 'timeInZone') or
+                        safe(zone, 'minutes'))
+                if mins is not None:
+                    store(db, d, f'hrzone_{i+1}_min', mins, 'min')
+    except Exception as e:
+        errors.append(f'hr_zones({e})')
+    time.sleep(SLEEP_PER_CALL)
+
     db.commit()
     return errors
 

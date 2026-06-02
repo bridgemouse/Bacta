@@ -26,7 +26,7 @@ export function Delta({ value, unit = '', lowerBetter = false, size = 10 }: Delt
       color, fontWeight: 600, letterSpacing: '0.02em',
     }}>
       <span style={{ fontSize: size - 1 }}>{up ? '▲' : '▼'}</span>
-      {Math.abs(value)}{unit}
+      {parseFloat(Math.abs(value).toFixed(1))}{unit}
     </span>
   )
 }

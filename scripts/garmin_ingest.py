@@ -222,17 +222,22 @@ def sync_day(db, store, c, d):
         errors.append(f'fitness_age({e})')
     time.sleep(SLEEP_PER_CALL)
 
-    # Heart rate zones (Z1–Z5 minutes)
+    # Heart rate zones — aggregate secsInZone across all activities for the day
     try:
-        s = c.get_heart_rates(d)
-        if s:
-            zones = (safe(s, 'heartRateZones') or safe(s, 'zones') or [])
-            for i, zone in enumerate(zones[:5]):
-                mins = (safe(zone, 'minutesInHeartRateZone') or
-                        safe(zone, 'timeInZone') or
-                        safe(zone, 'minutes'))
-                if mins is not None:
-                    store(db, d, f'hrzone_{i+1}_min', mins, 'min')
+        acts = c.get_activities_by_date(d, d) or []
+        zone_secs = {}
+        for act in acts:
+            act_id = act.get('activityId')
+            if act_id:
+                try:
+                    for z in (c.get_activity_hr_in_timezones(act_id) or []):
+                        n = z.get('zoneNumber')
+                        if n and 1 <= n <= 5:
+                            zone_secs[n] = zone_secs.get(n, 0) + (z.get('secsInZone') or 0)
+                except Exception:
+                    pass
+        for n, secs in zone_secs.items():
+            store(db, d, f'hrzone_{n}_min', round(secs / 60, 1), 'min')
     except Exception as e:
         errors.append(f'hr_zones({e})')
     time.sleep(SLEEP_PER_CALL)

@@ -88,8 +88,8 @@ function SleepOverview() {
       <Rail label="OVERNIGHT VITALS" accent={A} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-        <VitalTile label="SpO₂ avg" value={slp.spo2.avg} unit="%" accent={A} />
-        <VitalTile label="SpO₂ low" value={slp.spo2.low} unit="%" accent={A} />
+        {slp.spo2.avg != null && <VitalTile label="SpO₂ avg" value={slp.spo2.avg} unit="%" accent={A} />}
+        {slp.spo2.low != null && <VitalTile label="SpO₂ low" value={slp.spo2.low} unit="%" accent={A} />}
         <VitalTile label="Respiration" value={slp.resp.avg} unit="br/m" accent={A} />
         {slp.sleepHr != null && (
           <VitalTile

@@ -37,7 +37,7 @@ function SleepOverview() {
   const { isOpen: debtOpen, handleTap: debtTap } = useCardInfoOverlay('slp-debt', { description: 'Shortfall vs your 8h target. Short-term debt is partially recoverable; chronic debt compounds across cognition and metabolism.' }, A)
 
   const efficiencyPct = slp.duration.inBed > 0
-    ? Math.round((slp.duration.mins / slp.duration.inBed) * 100) : 0
+    ? Math.min(100, Math.round((slp.duration.mins / slp.duration.inBed) * 100)) : 0
   const awakeInBed = slp.duration.inBed - slp.duration.mins
   const debtH = slp.sleepDebt != null ? Math.floor(slp.sleepDebt / 60) : 0
   const debtM = slp.sleepDebt != null ? slp.sleepDebt % 60 : 0
@@ -158,7 +158,7 @@ function SleepOverview() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
         {slp.sleepHr != null && (
           <HealthStatusTile label="Heart Rate" value={slp.sleepHr} unit="bpm" accent={A}
-            inRange data={slp.sleepHrTrend}
+            data={slp.sleepHrTrend}
             info={{ description: 'Average HR while asleep. Lower signals better cardiovascular efficiency. Elevation above your norm often flags alcohol or illness.' }} />
         )}
         <HealthStatusTile label="Respiration" value={slp.resp.avg} unit="br/m" accent={A}

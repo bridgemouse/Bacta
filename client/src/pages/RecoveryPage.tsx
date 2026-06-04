@@ -72,7 +72,7 @@ function RecoveryOverview() {
           label="HRV · Last Night"
           foot={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Delta value={rec.hrv.value - rec.hrv.avg} unit="ms" size={10} />
+              <Delta value={rec.hrv.avg != null ? rec.hrv.value - rec.hrv.avg : undefined} unit="ms" size={10} />
               {rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null && (
                 <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>
                   baseline {rec.hrvBaselineLow}–{rec.hrvBaselineHigh}ms
@@ -144,7 +144,7 @@ function RecoveryTrends() {
         <TrendRow label="Score" value={rec.score.value} data={rec.score.trend} accent={A} />
       )}
       {rec.hrv.trend.length > 0 && (
-        <TrendRow label="HRV" value={rec.hrv.value} unit="ms" data={rec.hrv.trend} accent={A} delta={rec.hrv.value - rec.hrv.avg} />
+        <TrendRow label="HRV" value={rec.hrv.value} unit="ms" data={rec.hrv.trend} accent={A} delta={rec.hrv.avg != null ? rec.hrv.value - rec.hrv.avg : undefined} />
       )}
       {rec.battery.trend.length > 0 && (
         <TrendRow label="Body Battery" value={rec.battery.now} data={rec.battery.trend} accent={A} kind="bars" />

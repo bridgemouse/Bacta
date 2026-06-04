@@ -69,6 +69,8 @@ describe('Garmin API', () => {
 
 describe('Phase B endpoints', () => {
   beforeAll(async () => {
+    const { migrate } = await import('../../server/db/migrate')
+    migrate()
     const { default: db } = await import('../../server/db/client')
     const insertAct = db.prepare(
       `INSERT OR IGNORE INTO garmin_activities (activity_id, date, start_time, name, type_key, duration_s, avg_hr)

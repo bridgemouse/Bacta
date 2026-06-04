@@ -39,6 +39,10 @@ function RecoveryOverview() {
     : true
   const dirColor = rec.hrv.direction?.direction === 'up' ? COLORS.green
     : rec.hrv.direction?.direction === 'down' ? COLORS.mx4Red : COLORS.amber
+  const stressLabelColor =
+    rec.stress.value < 26 ? COLORS.green :
+    rec.stress.value < 51 ? COLORS.amber :
+    COLORS.mx4Red
 
   return (
     <>
@@ -159,7 +163,7 @@ function RecoveryOverview() {
           foot={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {rec.stress.avg != null && <Delta value={rec.stress.value - rec.stress.avg} lowerBetter size={9.5} />}
-              {rec.stressLabel && <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.green }}>{rec.stressLabel}</span>}
+              {rec.stressLabel && <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: stressLabelColor }}>{rec.stressLabel}</span>}
             </div>
           }
         >

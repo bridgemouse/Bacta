@@ -248,6 +248,32 @@ function TrainingTrends() {
   const { data: TRN } = useTrainingData()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+      {TRN.weeklyVolume && TRN.weeklyVolume.length > 0 && (
+        <>
+          <Rail label="WEEKLY VOLUME" accent={A} right="6 WEEKS · HOURS" />
+          <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '13px 14px 11px', marginBottom: 9 }}>
+            <Bracket color={A} inset={6} op={0.28} />
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 10 }}>HOURS / WEEK</div>
+            <Bars7 data={TRN.weeklyVolume.map(w => w.hours)} accent={A} h={70}
+              labels={TRN.weeklyVolume.map(w => `W${w.week.slice(-2)}`)}
+              fmt={v => v.toFixed(1)} />
+          </div>
+        </>
+      )}
+      {TRN.activityHrByWeek && TRN.activityHrByWeek.length > 0 && (
+        <>
+          <Rail label="AVG ACTIVITY HR · 6 WEEKS" accent={A} right="DECLINING = IMPROVING" />
+          <TrendRow
+            label="Avg HR"
+            value={TRN.activityHrByWeek[TRN.activityHrByWeek.length - 1].avg_hr}
+            unit="bpm"
+            data={TRN.activityHrByWeek.map(w => w.avg_hr)}
+            accent={A}
+            delta={TRN.activityHrByWeek[TRN.activityHrByWeek.length - 1].avg_hr - TRN.activityHrByWeek[0].avg_hr}
+            lowerBetter
+          />
+        </>
+      )}
       {TRN.load.trend.length > 0 && (
         <TrendRow label="Load" value={TRN.load.value} data={TRN.load.trend} accent={A} kind="bars" />
       )}

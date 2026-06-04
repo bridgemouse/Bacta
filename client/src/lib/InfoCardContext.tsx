@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-import { COLORS, FONT_MONO, FONT_UI, type CardInfo } from '../theme'
+import { createContext, useCallback, useContext, useState, useEffect } from 'react'
+import { FONT_MONO, FONT_UI, type CardInfo } from '../theme'
 import { hexA } from './hexA'
 
 interface InfoCardContextValue {
@@ -14,14 +14,15 @@ const InfoCardContext = createContext<InfoCardContextValue>({
 
 export function InfoCardProvider({ children }: { children: React.ReactNode }) {
   const [openId, setOpenId] = useState<string | null>(null)
+  const close = useCallback(() => setOpenId(null), [])
   return (
-    <InfoCardContext.Provider value={{ openId, open: setOpenId, close: () => setOpenId(null) }}>
+    <InfoCardContext.Provider value={{ openId, open: setOpenId, close }}>
       {children}
     </InfoCardContext.Provider>
   )
 }
 
-export function useCardInfoOverlay(id: string, info: CardInfo | undefined, _accent: string) {
+export function useCardInfoOverlay(id: string, info: CardInfo | undefined) {
   const { openId, open, close } = useContext(InfoCardContext)
   const isOpen = openId === id && info != null
 
@@ -32,7 +33,7 @@ export function useCardInfoOverlay(id: string, info: CardInfo | undefined, _acce
     return () => { clearTimeout(t); document.removeEventListener('click', dismiss) }
   }, [isOpen, close])
 
-  const handleTap = (e: React.MouseEvent | { stopPropagation: () => void }) => {
+  const handleTap = (e: React.MouseEvent) => {
     if (!info) return
     e.stopPropagation()
     isOpen ? close() : open(id)

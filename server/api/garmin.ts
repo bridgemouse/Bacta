@@ -94,6 +94,35 @@ garminRouter.post('/sync', (_req, res) => {
   res.status(202).json({ ok: true, status: 'running' })
 })
 
+// GET /api/garmin/weekly-volume?weeks=6
+garminRouter.get('/weekly-volume', (req, res) => {
+  const weeks = Math.min(Number(req.query.weeks) || 6, 26)
+  const rows = db.prepare(
+    `SELECT strftime('%W', date) AS week,
+            ROUND(SUM(duration_s) / 3600.0, 2) AS hours
+     FROM garmin_activities
+     GROUP BY week
+     ORDER BY MIN(date) DESC
+     LIMIT ?`
+  ).all(weeks) as Array<{ week: string; hours: number }>
+  res.json({ weeks: rows.reverse() })
+})
+
+// GET /api/garmin/weekly-avg-hr?weeks=6
+garminRouter.get('/weekly-avg-hr', (req, res) => {
+  const weeks = Math.min(Number(req.query.weeks) || 6, 26)
+  const rows = db.prepare(
+    `SELECT strftime('%W', date) AS week,
+            ROUND(AVG(avg_hr), 0) AS avg_hr
+     FROM garmin_activities
+     WHERE avg_hr IS NOT NULL AND avg_hr > 0
+     GROUP BY week
+     ORDER BY MIN(date) DESC
+     LIMIT ?`
+  ).all(weeks) as Array<{ week: string; avg_hr: number }>
+  res.json({ weeks: rows.reverse() })
+})
+
 // GET /api/garmin/:metric — single metric, optional date range
 garminRouter.get('/:metric', (req, res) => {
   const { metric } = req.params

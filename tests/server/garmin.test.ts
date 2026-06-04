@@ -66,3 +66,33 @@ describe('Garmin API', () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe('Phase B endpoints', () => {
+  beforeAll(async () => {
+    const { default: db } = await import('../../server/db/client')
+    const insertAct = db.prepare(
+      `INSERT OR IGNORE INTO garmin_activities (activity_id, date, start_time, name, type_key, duration_s, avg_hr)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    const dates = ['2026-05-26', '2026-05-27', '2026-06-02', '2026-06-03']
+    dates.forEach((d, i) => {
+      insertAct.run(9000 + i, d, `${d}T07:00:00`, 'Run', 'running', 3600, 140 + i)
+    })
+  })
+
+  it('GET /api/garmin/weekly-volume returns weeks array', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/weekly-volume').query({ weeks: 6 })
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body.weeks)).toBe(true)
+    expect(res.body.weeks[0]).toMatchObject({ week: expect.any(String), hours: expect.any(Number) })
+  })
+
+  it('GET /api/garmin/weekly-avg-hr returns weeks array', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/weekly-avg-hr').query({ weeks: 6 })
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body.weeks)).toBe(true)
+    expect(res.body.weeks[0]).toMatchObject({ week: expect.any(String), avg_hr: expect.any(Number) })
+  })
+})

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchSummary, fetchTrend, fetchActivities, TRAINING_STATUS, type GarminActivity } from '../lib/garminApi'
+import { fetchSummary, fetchTrend, fetchActivities, fetchWeeklyVolume, fetchWeeklyAvgHr, TRAINING_STATUS, type GarminActivity, type WeeklyVolume, type WeeklyAvgHr } from '../lib/garminApi'
 import { TRAINING } from '../lib/stubData'
 
 export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
@@ -34,6 +34,8 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
     chronic: number
     state: 'Optimal' | 'High' | 'Low'
   } | null
+  weeklyVolume: WeeklyVolume[] | null
+  activityHrByWeek: WeeklyAvgHr[] | null
 }
 
 const ZONE_META = [
@@ -54,6 +56,8 @@ const INITIAL: TrainingData = {
   },
   hrZones: [],
   loadRatio: null,
+  weeklyVolume: null,
+  activityHrByWeek: null,
 }
 
 export function useTrainingData(): { data: TrainingData; loading: boolean } {
@@ -64,7 +68,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
     let cancelled = false
     async function load() {
       try {
-        const [summary, loadTrend, intensityTrend, vo2maxTrend, stepsTrend, calTrend, activities, load42Trend, fitnessAgeTrend] =
+        const [summary, loadTrend, intensityTrend, vo2maxTrend, stepsTrend, calTrend, activities, load42Trend, fitnessAgeTrend, weeklyVolume, activityHrByWeek] =
           await Promise.all([
             fetchSummary(),
             fetchTrend('training_load'),
@@ -75,6 +79,8 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             fetchActivities(8),
             fetchTrend('training_load', 42),
             fetchTrend('fitness_age', 30),
+            fetchWeeklyVolume(),
+            fetchWeeklyAvgHr(),
           ])
         if (cancelled) return
 
@@ -167,6 +173,8 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           },
           hrZones,
           loadRatio,
+          weeklyVolume: weeklyVolume.length ? weeklyVolume : null,
+          activityHrByWeek: activityHrByWeek.length ? activityHrByWeek : null,
         })
       } catch {
         // keep stub on error

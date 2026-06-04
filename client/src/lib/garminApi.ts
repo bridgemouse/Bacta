@@ -85,3 +85,20 @@ export const TRAINING_STATUS: Record<number, string> = {
   4: 'Maintaining', 5: 'Productive', 6: 'Productive', 7: 'Productive',
   8: 'Peaking', 9: 'Overreaching', 10: 'Recovery',
 }
+
+export interface WeeklyVolume { week: string; hours: number }
+export interface WeeklyAvgHr { week: string; avg_hr: number }
+
+export async function fetchWeeklyVolume(weeks = 6): Promise<WeeklyVolume[]> {
+  const res = await fetch(`/api/garmin/weekly-volume?weeks=${weeks}`)
+  if (!res.ok) return []
+  const { weeks: data } = await res.json() as { weeks: WeeklyVolume[] }
+  return data
+}
+
+export async function fetchWeeklyAvgHr(weeks = 6): Promise<WeeklyAvgHr[]> {
+  const res = await fetch(`/api/garmin/weekly-avg-hr?weeks=${weeks}`)
+  if (!res.ok) return []
+  const { weeks: data } = await res.json() as { weeks: WeeklyAvgHr[] }
+  return data
+}

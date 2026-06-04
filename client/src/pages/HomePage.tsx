@@ -97,7 +97,7 @@ function HomeTrends() {
         <TrendRow
           label="HRV" value={rec.hrv.value} unit="ms"
           data={rec.hrv.trend} accent={REC}
-          delta={rec.hrv.value - rec.hrv.avg}
+          delta={rec.hrv.avg != null ? rec.hrv.value - rec.hrv.avg : undefined}
         />
         <TrendRow
           label="Sleep" value={slp.score.value}

@@ -22,7 +22,7 @@ export function InfoCardProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function useCardInfoOverlay(id: string, info: CardInfo | undefined) {
+export function useCardInfoOverlay(id: string, info: CardInfo | undefined, _accent?: string) {
   const { openId, open, close } = useContext(InfoCardContext)
   const isOpen = openId === id && info != null
 

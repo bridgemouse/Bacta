@@ -69,6 +69,14 @@ function TrainingOverview() {
   const ratioColor = TRN.loadRatio?.state === 'Optimal' ? COLORS.green
     : TRN.loadRatio?.state === 'High' ? COLORS.amber : COLORS.textMuted
 
+  const FA = typeof TRN.vo2max.fitnessAge === 'number' ? TRN.vo2max.fitnessAge : null
+  const fitnessAgeLabel = FA == null ? null
+    : FA <= 20 ? 'ELITE'
+    : FA <= 30 ? 'EXCELLENT'
+    : FA <= 40 ? 'GOOD'
+    : FA <= 50 ? 'FAIR'
+    : 'DEVELOPING'
+
   return (
     <>
       <MX4Briefing accent={A} brief={BRIEFS.training} />
@@ -76,7 +84,7 @@ function TrainingOverview() {
       {/* Status banner */}
       <div onClick={statusTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 9, minHeight: CARD_SIZES.row }}>
         <StatusBanner status={TRN.status.value} sub={TRN.status.sub} accent={A} />
-        {statusOpen && <InfoOverlay info={STATUS_INFO} accent={A} radius={9} onClick={statusTap} />}
+        {statusOpen && <InfoOverlay info={STATUS_INFO} accent={A} radius={9} compact onClick={statusTap} />}
       </div>
 
       <Rail label="PERFORMANCE" accent={A} right="CURRENT" />
@@ -98,9 +106,11 @@ function TrainingOverview() {
             </span>
             <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: COLORS.textMuted }}>yr</span>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 5, padding: '2px 7px', borderRadius: 4, background: hexA(A, 0.1), border: `1px solid ${hexA(A, 0.35)}` }}>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: A, fontWeight: 700, letterSpacing: '0.06em' }}>ELITE</span>
-          </div>
+          {fitnessAgeLabel && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 5, padding: '2px 7px', borderRadius: 4, background: hexA(A, 0.1), border: `1px solid ${hexA(A, 0.35)}` }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: A, fontWeight: 700, letterSpacing: '0.06em' }}>{fitnessAgeLabel}</span>
+            </div>
+          )}
         </HeadlineCard>
 
         <HeadlineCard accent={A} label="Acute Load" info={ACUTE_LOAD_INFO}
@@ -134,14 +144,14 @@ function TrainingOverview() {
             </div>
             <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>{TRN.loadRatio.acute} ÷ {Math.round(TRN.loadRatio.chronic)}</span>
           </div>
-          {ratioOpen && <InfoOverlay info={LOAD_RATIO_INFO} accent={A} radius={8} onClick={ratioTap} />}
+          {ratioOpen && <InfoOverlay info={LOAD_RATIO_INFO} accent={A} radius={8} compact onClick={ratioTap} />}
         </div>
       )}
 
       <Rail label="INTENSITY THIS WEEK" accent={A} right={`GOAL ${TRN.intensity.goal} MIN`} />
       <div onClick={intensityTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 9, minHeight: CARD_SIZES.row }}>
         <IntensityBar moderate={TRN.intensity.moderate} vigorous={TRN.intensity.vigorous} goal={TRN.intensity.goal} accent={A} />
-        {intensityOpen && <InfoOverlay info={INTENSITY_INFO} accent={A} radius={9} onClick={intensityTap} />}
+        {intensityOpen && <InfoOverlay info={INTENSITY_INFO} accent={A} radius={9} compact onClick={intensityTap} />}
       </div>
 
       {/* HR Zones */}

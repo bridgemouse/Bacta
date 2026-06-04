@@ -82,11 +82,12 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
 
         const trendForDir = hrvTrend.length ? hrvTrend : RECOVERY.hrv.trend
         const slope = linearRegressionSlope(trendForDir)
+        const roundedSlope = Math.round(slope * 10) / 10
         const direction: HrvDirection = {
-          slope: Math.round(slope * 10) / 10,
+          slope: roundedSlope,
           direction: slope > 0.3 ? 'up' : slope < -0.3 ? 'down' : 'stable',
           label: slope > 0.3 ? '↑ IMPROVING' : slope < -0.3 ? '↓ DECLINING' : '→ STABLE',
-          sub: `${slope >= 0 ? '+' : ''}${(Math.round(slope * 10) / 10).toFixed(1)} ms/day`,
+          sub: `${roundedSlope >= 0 ? '+' : ''}${roundedSlope.toFixed(1)} ms/day`,
         }
 
         setData({

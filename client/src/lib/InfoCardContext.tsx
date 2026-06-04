@@ -94,6 +94,3 @@ export function InfoOverlay({ info, accent, radius = 10, compact = false, onClic
     </div>
   )
 }
-
-// Re-export COLORS so callers can use it without importing theme directly if needed
-export { COLORS }

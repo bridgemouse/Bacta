@@ -58,3 +58,19 @@ export const toneColor = (t: Tone): string =>
 
 /** Sections that have full Overview + Trends content built */
 export const BUILT_SECTIONS: SectionKey[] = ['home', 'recovery', 'sleep', 'training']
+
+export const CARD_SIZES = {
+  hero:  220,
+  chart: 170,
+  bar:   140,
+  pair:  110,
+  tile:   88,
+  row:    52,
+} as const
+export type CardSize = keyof typeof CARD_SIZES
+
+export interface CardInfo {
+  description: string
+  title?: string
+  source?: string
+}

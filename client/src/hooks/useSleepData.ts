@@ -12,7 +12,7 @@ export type SleepData = Omit<typeof SLEEP, 'spo2'> & {
   sleepRespTrend: number[]
   sleepHrTrend: number[]
   sleepStressTrend: number[]
-  archScore: number
+  archScore: number | undefined
 }
 
 const INITIAL: SleepData = {
@@ -21,7 +21,7 @@ const INITIAL: SleepData = {
   sleepRespTrend: [],
   sleepHrTrend: [],
   sleepStressTrend: [],
-  archScore: 0,
+  archScore: undefined,
 }
 
 export function useSleepData(): { data: SleepData; loading: boolean } {
@@ -63,7 +63,7 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
           const remScore  = Math.min(remMins  / (totalMins * 0.22), 1)
           const awakePen  = Math.max(0, 1 - awakeMins / (totalMins * 0.05))
           return Math.round((deepScore * 0.4 + remScore * 0.4 + awakePen * 0.2) * 100)
-        })() : 0
+        })() : undefined
 
         setData({
           ...SLEEP,

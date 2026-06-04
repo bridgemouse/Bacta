@@ -10,6 +10,7 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
     delta: number
     fitnessAge: number | string
     trend: number[]
+    fitnessAgeTrend: number[]
   }
   dailyActivity: {
     steps: number | null
@@ -27,6 +28,12 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
     pct: number
     color: string
   }>
+  loadRatio: {
+    value: number
+    acute: number
+    chronic: number
+    state: 'Optimal' | 'High' | 'Low'
+  } | null
 }
 
 const ZONE_META = [
@@ -40,12 +47,13 @@ const ZONE_META = [
 const INITIAL: TrainingData = {
   ...TRAINING,
   activities: [],
-  vo2max: { ...TRAINING.vo2max, trend: [] },
+  vo2max: { ...TRAINING.vo2max, trend: [], fitnessAgeTrend: [] },
   dailyActivity: {
     steps: null, distanceKm: null, caloriesTotal: null,
     caloriesActive: null, floors: null, stepsTrend: [], calTrend: [],
   },
   hrZones: [],
+  loadRatio: null,
 }
 
 export function useTrainingData(): { data: TrainingData; loading: boolean } {
@@ -56,7 +64,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
     let cancelled = false
     async function load() {
       try {
-        const [summary, loadTrend, intensityTrend, vo2maxTrend, stepsTrend, calTrend, activities] =
+        const [summary, loadTrend, intensityTrend, vo2maxTrend, stepsTrend, calTrend, activities, load42Trend, fitnessAgeTrend] =
           await Promise.all([
             fetchSummary(),
             fetchTrend('training_load'),
@@ -65,6 +73,8 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             fetchTrend('steps'),
             fetchTrend('calories_total'),
             fetchActivities(8),
+            fetchTrend('training_load', 42),
+            fetchTrend('fitness_age', 30),
           ])
         if (cancelled) return
 
@@ -81,6 +91,21 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           : trainingLoad > loadMax ? 'High'
           : 'Optimal'
           : TRAINING.load.state
+
+        const acuteLoad = trainingLoad
+        const chronicLoad = load42Trend.length >= 7
+          ? load42Trend.reduce((s, v) => s + v, 0) / load42Trend.length
+          : null
+        const loadRatio = acuteLoad != null && chronicLoad != null && chronicLoad > 0
+          ? {
+              value: Math.round((acuteLoad / chronicLoad) * 100) / 100,
+              acute: Math.round(acuteLoad),
+              chronic: Math.round(chronicLoad),
+              state: acuteLoad / chronicLoad < 0.8 ? 'Low' as const
+                   : acuteLoad / chronicLoad > 1.3 ? 'High' as const
+                   : 'Optimal' as const,
+            }
+          : null
 
         const distanceKm = summary.distance_m != null
           ? Math.round(summary.distance_m / 100) / 10
@@ -110,11 +135,12 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             trend: TRAINING.status.trend,
           },
           vo2max: {
-            value:      summary.vo2max      ?? TRAINING.vo2max.value,
-            unit:       'mL/kg/min',
-            delta:      TRAINING.vo2max.delta,
-            fitnessAge: summary.fitness_age ?? TRAINING.vo2max.fitnessAge,
-            trend:      vo2maxTrend,
+            value:          summary.vo2max      ?? TRAINING.vo2max.value,
+            unit:           'mL/kg/min',
+            delta:          TRAINING.vo2max.delta,
+            fitnessAge:     summary.fitness_age ?? TRAINING.vo2max.fitnessAge,
+            trend:          vo2maxTrend,
+            fitnessAgeTrend,
           },
           load: {
             value: trainingLoad ?? TRAINING.load.value,
@@ -140,6 +166,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             calTrend,
           },
           hrZones,
+          loadRatio,
         })
       } catch {
         // keep stub on error

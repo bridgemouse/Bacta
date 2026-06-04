@@ -17,14 +17,14 @@ describe('HealthStatusTile', () => {
     expect(screen.getByText('LOW')).toBeInTheDocument()
   })
 
-  it('renders without crashing when inRange is true', () => {
-    wrap(<HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange />)
-    expect(screen.getByText('97')).toBeInTheDocument()
+  it('applies green sub text when inRange is true', () => {
+    wrap(<HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />)
+    expect(screen.getByText('NORMAL')).toHaveStyle({ color: '#4ade80' })
   })
 
-  it('renders without crashing when inRange is false', () => {
-    wrap(<HealthStatusTile label="SpO₂" value={93} unit="%" accent="#64b5f6" inRange={false} />)
-    expect(screen.getByText('93')).toBeInTheDocument()
+  it('applies amber sub text when inRange is false', () => {
+    wrap(<HealthStatusTile label="SpO₂" value={93} unit="%" accent="#64b5f6" inRange={false} sub="LOW" />)
+    expect(screen.getByText('LOW')).toHaveStyle({ color: '#fbbf24' })
   })
 
   it('shows info overlay description when tapped with info prop', async () => {

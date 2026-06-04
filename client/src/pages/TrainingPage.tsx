@@ -255,7 +255,7 @@ function TrainingTrends() {
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 10 }}>HOURS / WEEK</div>
             <Bars7 data={TRN.weeklyVolume.map(w => w.hours)} accent={A} h={70}
-              labels={TRN.weeklyVolume.map(w => `W${w.week.slice(-2)}`)}
+              labels={TRN.weeklyVolume.map(w => `W${parseInt(w.week.split('-')[1], 10)}`)}
               fmt={v => v.toFixed(1)} />
           </div>
         </>
@@ -271,6 +271,7 @@ function TrainingTrends() {
             accent={A}
             delta={TRN.activityHrByWeek[TRN.activityHrByWeek.length - 1].avg_hr - TRN.activityHrByWeek[0].avg_hr}
             lowerBetter
+            kind="bars"
           />
         </>
       )}

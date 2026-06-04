@@ -251,10 +251,13 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 ## Server & DB Gotchas
 
-- `sqlite3` CLI not installed — query DB with: `node -e "const db = require('better-sqlite3')('/opt/bacta/data/bacta.db'); console.log(db.prepare('...').all()); db.close()"`
+- `sqlite3` CLI not installed — query DB with Python: `python3 -c "import sqlite3,json; db=sqlite3.connect('/opt/bacta/data/bacta.db'); [print(json.dumps(dict(r))) for r in db.execute('SELECT ...').fetchall()]"` (the `node -e` / better-sqlite3 approach can fail if native bindings aren't compiled in the current shell)
 - Express: define specific routes (`/activities`, `/sync/status`) **before** `/:param` wildcards or they get swallowed
 - Some files in `client/src/components/viz/` are owned by root from initial scaffold — run `sudo chown wheat:wheat <file>` if Edit fails with EACCES
 - `mx4spin` keyframe is global (defined in `client/index.css`) — use as `animation: 'mx4spin 1s linear infinite'` in inline styles
+- `garmin_ingest.py` uses `errors` (not `err`), `SLEEP_PER_CALL` (not `SLEEP_BETWEEN`), and no `ok.append()` — variable names differ from `garmin_poller.py`; match the existing pattern in whichever file you're editing
+- Ingest CLI: `python3 scripts/garmin_ingest.py --days 30` (uses `--days` flag, not positional arg)
+- Validate Python script syntax before committing: `python3 -c "import py_compile; py_compile.compile('scripts/foo.py', doraise=True)"`
 
 ---
 

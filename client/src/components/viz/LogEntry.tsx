@@ -31,7 +31,10 @@ function fmtDur(s: number | null): string | null {
 }
 
 function fmtWhen(startTime: string): string {
-  const d = new Date(startTime.replace(' ', 'T'))
+  const [datePart, timePart] = startTime.split(' ')
+  const [year, month, dom] = datePart.split('-').map(Number)
+  const [hour, minute] = (timePart ?? '00:00:00').split(':').map(Number)
+  const d = new Date(year, month - 1, dom, hour, minute)
   const today = new Date()
   const diffDays = Math.floor((today.getTime() - d.getTime()) / 86400000)
   const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -101,7 +104,7 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
     a.avg_hr != null ? `${a.avg_hr} bpm` : null,
   ].filter(Boolean)
 
-  const hasContent = false
+  const hasContent = false // Phase C: !!(a.trainingEffect || a.activityHrZones || (isRun && a.runDynamics))
 
   return (
     <div style={{
@@ -112,6 +115,7 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
     }}>
       <button
         onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 11,
           padding: '10px 12px', background: 'transparent', border: 'none',

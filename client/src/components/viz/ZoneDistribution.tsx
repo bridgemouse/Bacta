@@ -45,7 +45,7 @@ export function ZoneDistribution({ zones, accent }: ZoneDistributionProps) {
           return (
             <div key={z.zone} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{
-                width: 10, height: 10, borderRadius: 2, background: z.color,
+                display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: z.color,
                 flexShrink: 0, opacity: active ? 1 : 0.25,
               }} />
               <span style={{
@@ -86,11 +86,11 @@ export function ZoneDistribution({ zones, accent }: ZoneDistributionProps) {
       <div style={{ marginTop: 10, display: 'flex', gap: 14 }}>
         <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
           TOTAL{' '}
-          <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>{totalMins} min</span>
+          <span style={{ color: COLORS.textSecondary, fontWeight: 700 }}>{totalMins} min</span>
         </span>
         <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
           Z2+{' '}
-          <span style={{ color: accent, fontWeight: 600 }}>{z2PlusMins} min</span>
+          <span style={{ color: accent, fontWeight: 700 }}>{z2PlusMins} min</span>
         </span>
       </div>
     </div>

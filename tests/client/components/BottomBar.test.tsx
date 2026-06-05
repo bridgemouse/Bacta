@@ -34,13 +34,21 @@ describe('BactaDock (BottomBar)', () => {
   })
 
   it('renders Overview and Trends buttons when hasTabs is true', () => {
-    render(<BottomBar accent="#2bc4e8" hasTabs onAsk={vi.fn()} onNav={vi.fn()} />)
+    render(
+      <TabContext.Provider value={{ tab: 'overview', setTab: vi.fn() }}>
+        <BottomBar accent="#2bc4e8" hasTabs onAsk={vi.fn()} onNav={vi.fn()} />
+      </TabContext.Provider>
+    )
     expect(screen.getByText('Overview')).toBeInTheDocument()
     expect(screen.getByText('Trends')).toBeInTheDocument()
   })
 
   it('does not render tab buttons when hasTabs is false', () => {
-    render(<BottomBar accent="#2bc4e8" hasTabs={false} onAsk={vi.fn()} onNav={vi.fn()} />)
+    render(
+      <TabContext.Provider value={{ tab: 'overview', setTab: vi.fn() }}>
+        <BottomBar accent="#2bc4e8" hasTabs={false} onAsk={vi.fn()} onNav={vi.fn()} />
+      </TabContext.Provider>
+    )
     expect(screen.queryByText('Overview')).not.toBeInTheDocument()
     expect(screen.queryByText('Trends')).not.toBeInTheDocument()
   })

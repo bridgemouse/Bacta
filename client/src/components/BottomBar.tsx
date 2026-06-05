@@ -1,5 +1,7 @@
+import { useContext } from 'react'
 import { COLORS, FONT_MONO, FONT_UI, MX4_COLOR } from '../theme'
 import type { Tab } from '../lib/TabContext'
+import { TabContext } from '../lib/TabContext'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import { NavIcon } from './primitives/NavIcon'
 import { hexA } from '../lib/hexA'
@@ -43,9 +45,7 @@ function SectionTabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 
 interface BottomBarProps {
   accent: string
-  hasTabs: boolean
-  tab: Tab
-  onTabChange: (t: Tab) => void
+  hasTabs?: boolean
   onAsk: () => void
   onNav: () => void
 }
@@ -54,7 +54,8 @@ const DIVIDER = (
   <span style={{ width: 1, height: 24, background: hexA(MX4_COLOR, 0.22), flexShrink: 0 }} />
 )
 
-export function BottomBar({ hasTabs, tab, onTabChange, onAsk, onNav }: BottomBarProps) {
+export function BottomBar({ hasTabs = false, onAsk, onNav }: BottomBarProps) {
+  const { tab, setTab } = useContext(TabContext)
   return (
     <div
       style={{
@@ -135,7 +136,7 @@ export function BottomBar({ hasTabs, tab, onTabChange, onAsk, onNav }: BottomBar
         {hasTabs ? (
           <>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-              <SectionTabs tab={tab} onTab={onTabChange} />
+              <SectionTabs tab={tab} onTab={setTab} />
             </div>
             {DIVIDER}
           </>

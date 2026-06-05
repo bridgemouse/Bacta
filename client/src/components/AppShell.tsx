@@ -67,16 +67,14 @@ export function AppShell({ section, hasTabs = false, children }: AppShellProps) 
         >
           {children}
         </div>
-      </TabContext.Provider>
 
-      <BottomBar
-        accent={accent}
-        hasTabs={hasTabs}
-        tab={tab}
-        onTabChange={setTab}
-        onAsk={() => setAskOpen(true)}
-        onNav={() => setNavOpen(true)}
-      />
+        <BottomBar
+          accent={accent}
+          hasTabs={hasTabs}
+          onAsk={() => setAskOpen(true)}
+          onNav={() => setNavOpen(true)}
+        />
+      </TabContext.Provider>
 
       <BottomSheet
         open={navOpen}

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { COLORS, FONT_MONO, FONT_UI } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import type { GarminActivity } from '../../lib/garminApi'
@@ -90,6 +91,7 @@ interface LogEntryProps {
 }
 
 export function LogEntry({ activity: a, accent }: LogEntryProps) {
+  const [open, setOpen] = useState(false)
   const sigil = TYPE_SIGIL[a.type_key] ?? 'run'
   const label = TYPE_LABEL[a.type_key] ?? a.name
   const stats = [
@@ -99,38 +101,64 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
     a.avg_hr != null ? `${a.avg_hr} bpm` : null,
   ].filter(Boolean)
 
+  const hasContent = false
+
   return (
     <div style={{
-      position: 'relative', display: 'flex', alignItems: 'center', gap: 11,
-      background: COLORS.surface, border: `1px solid ${COLORS.line}`,
-      borderRadius: 8, padding: '10px 12px', overflow: 'hidden',
+      background: COLORS.surface,
+      border: `1px solid ${open ? hexA(accent, 0.4) : COLORS.line}`,
+      borderRadius: 8, overflow: 'hidden',
+      transition: 'border-color 0.18s ease',
     }}>
-      <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: accent, marginRight: -4 }}>›</span>
-      <span style={{
-        flexShrink: 0, width: 32, height: 32, borderRadius: 8,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: hexA(accent, 0.13), border: `1px solid ${hexA(accent, 0.3)}`,
-      }}>
-        <ActivityGlyph sigil={sigil} color={accent} size={17} />
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontFamily: FONT_UI, fontSize: 14, fontWeight: 650, color: COLORS.text }}>
-          {label}
-        </span>
-        <div style={{
-          fontFamily: FONT_MONO, fontSize: 9.5, color: COLORS.textSecondary,
-          marginTop: 3, letterSpacing: '0.02em',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 11,
+          padding: '10px 12px', background: 'transparent', border: 'none',
+          cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit',
+        }}
+      >
+        <span style={{
+          fontFamily: FONT_MONO, fontSize: 13, color: accent, marginRight: -4, flexShrink: 0,
+          display: 'block', lineHeight: 1,
+          transform: open ? 'rotate(90deg)' : 'none',
+          transition: 'transform 0.18s ease',
+        }}>›</span>
+        <span style={{
+          flexShrink: 0, width: 32, height: 32, borderRadius: 8,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: hexA(accent, 0.13), border: `1px solid ${hexA(accent, 0.3)}`,
         }}>
-          {stats.join('  ·  ')}
+          <ActivityGlyph sigil={sigil} color={accent} size={17} />
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ fontFamily: FONT_UI, fontSize: 14, fontWeight: 650, color: COLORS.text }}>
+            {label}
+          </span>
+          <div style={{
+            fontFamily: FONT_MONO, fontSize: 9.5, color: COLORS.textSecondary,
+            marginTop: 3, letterSpacing: '0.02em',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {stats.join('  ·  ')}
+          </div>
         </div>
-      </div>
-      <span style={{
-        fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted,
-        flexShrink: 0, textAlign: 'right', letterSpacing: '0.04em',
-      }}>
-        {fmtWhen(a.start_time)}
-      </span>
+        <span style={{
+          fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted,
+          flexShrink: 0, textAlign: 'right', letterSpacing: '0.04em',
+        }}>
+          {fmtWhen(a.start_time)}
+        </span>
+      </button>
+
+      {open && hasContent && (
+        <div style={{
+          borderTop: `1px solid ${hexA(accent, 0.2)}`,
+          padding: '12px 13px 13px',
+          display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+        </div>
+      )}
     </div>
   )
 }

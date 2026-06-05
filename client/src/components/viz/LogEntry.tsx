@@ -36,12 +36,16 @@ function fmtWhen(startTime: string): string {
   const [hour, minute] = (timePart ?? '00:00:00').split(':').map(Number)
   const d = new Date(year, month - 1, dom, hour, minute)
   const today = new Date()
-  const diffDays = Math.floor((today.getTime() - d.getTime()) / 86400000)
+  const toKey  = (y: number, m: number, day: number) => y * 10000 + m * 100 + day
+  const actKey  = toKey(year, month, dom)
+  const todKey  = toKey(today.getFullYear(), today.getMonth() + 1, today.getDate())
+  const yest    = new Date(today); yest.setDate(today.getDate() - 1)
+  const yestKey = toKey(yest.getFullYear(), yest.getMonth() + 1, yest.getDate())
   const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (diffDays === 0) return `TODAY · ${time}`
-  if (diffDays === 1) return `YESTERDAY · ${time}`
-  const day = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
-  return `${day} · ${time}`
+  if (actKey === todKey)  return `TODAY · ${time}`
+  if (actKey === yestKey) return `YESTERDAY · ${time}`
+  const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+  return `${dayName} · ${time}`
 }
 
 function ActivityGlyph({ sigil, color, size = 16 }: { sigil: Sigil; color: string; size?: number }) {

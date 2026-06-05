@@ -126,11 +126,18 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
         ]
         const totalZoneMins = zoneMins.reduce<number>((s, v) => s + (v ?? 0), 0)
         const hrZones = totalZoneMins > 0
-          ? ZONE_META.map((m, i) => ({
-              ...m,
-              mins: zoneMins[i] ?? 0,
-              pct:  Math.round((zoneMins[i] ?? 0) / totalZoneMins * 100),
-            }))
+          ? (() => {
+              const raw = ZONE_META.map((m, i) => ({
+                ...m,
+                mins: zoneMins[i] ?? 0,
+                exact: ((zoneMins[i] ?? 0) / totalZoneMins) * 100,
+              }))
+              const floored = raw.map(z => ({ ...z, pct: Math.floor(z.exact) }))
+              const remainder = 100 - floored.reduce((s, z) => s + z.pct, 0)
+              const sorted = [...floored].sort((a, b) => (b.exact - b.pct) - (a.exact - a.pct))
+              sorted.slice(0, remainder).forEach(z => { z.pct++ })
+              return floored.map(({ exact: _exact, ...z }) => z)
+            })()
           : []
 
         setData({

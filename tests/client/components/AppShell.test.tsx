@@ -47,6 +47,18 @@ describe('AppShell', () => {
     expect(screen.getByText(/Standing by, Commander/)).toBeInTheDocument()
   })
 
+  it('renders Overview and Trends tabs when hasTabs is true', () => {
+    render(
+      <MemoryRouter initialEntries={['/recovery']}>
+        <AppShell section="recovery" hasTabs>
+          <div>content</div>
+        </AppShell>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Overview')).toBeInTheDocument()
+    expect(screen.getByText('Trends')).toBeInTheDocument()
+  })
+
   it('closes NavSheet when backdrop is clicked', async () => {
     renderShell()
     fireEvent.click(screen.getByTestId('nav-button'))

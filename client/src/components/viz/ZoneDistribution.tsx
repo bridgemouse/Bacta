@@ -14,10 +14,12 @@ interface ZoneDistributionProps {
 }
 
 export function ZoneDistribution({ zones, accent }: ZoneDistributionProps) {
-  const totalMins = Math.round(zones.reduce((s, z) => s + z.mins, 0))
-  const z2PlusMins = zones.filter(z => z.zone >= 2).reduce((s, z) => s + z.mins, 0).toFixed(1)
+  const rawTotal = zones.reduce((s, z) => s + z.mins, 0)
+  const totalMins = Math.round(rawTotal)
+  const z2PlusRaw = zones.filter(z => z.zone >= 2).reduce((s, z) => s + z.mins, 0)
+  const z2PlusMins = Number.isInteger(z2PlusRaw) ? String(z2PlusRaw) : z2PlusRaw.toFixed(1)
 
-  if (totalMins === 0) return null
+  if (rawTotal === 0) return null
 
   return (
     <div>

@@ -54,7 +54,7 @@ export function AppShell({ section, hasTabs = false, children }: AppShellProps) 
         onBack={isHome ? undefined : () => navigate('/')}
       />
 
-      <TabContext.Provider value={tab}>
+      <TabContext.Provider value={{ tab, setTab }}>
         <div
           style={{
             flex: 1,

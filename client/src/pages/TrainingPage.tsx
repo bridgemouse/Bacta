@@ -14,6 +14,7 @@ import { LoadBand } from '../components/viz/LoadBand'
 import { IntensityBar } from '../components/viz/IntensityBar'
 import { LogEntry } from '../components/viz/LogEntry'
 import { Bars7 } from '../components/viz/Bars7'
+import { ZoneDistribution } from '../components/viz/ZoneDistribution'
 import { Bracket } from '../components/primitives/Bracket'
 import { hexA } from '../lib/hexA'
 
@@ -164,23 +165,7 @@ function TrainingOverview() {
             minHeight: CARD_SIZES.bar, marginBottom: 9, cursor: 'pointer',
           }}>
             <Bracket color={A} inset={6} op={0.28} />
-            <div style={{ display: 'flex', height: 22, borderRadius: 6, overflow: 'hidden', gap: 2, marginBottom: 8 }}>
-              {TRN.hrZones.map(z => (
-                <div key={z.zone} style={{ width: `${z.pct}%`, background: z.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {z.pct >= 18 && <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: '#0b0d12' }}>{z.pct}%</span>}
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px' }}>
-              {TRN.hrZones.map(z => (
-                <span key={z.zone} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 2, background: z.color, flexShrink: 0 }} />
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>Z{z.zone}</span>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary }}>{z.label}</span>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.text, fontWeight: 600 }}>{z.mins}m</span>
-                </span>
-              ))}
-            </div>
+            <ZoneDistribution zones={TRN.hrZones} accent={A} />
             {zonesOpen && <InfoOverlay info={ZONES_INFO} accent={A} radius={10} onClick={zonesTap} />}
           </div>
         </>

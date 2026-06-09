@@ -9,8 +9,7 @@ import { Gauge } from '../components/viz/Gauge'
 import { Rail } from '../components/viz/Rail'
 import { TrendRow } from '../components/viz/TrendRow'
 import { SleepDepth } from '../components/viz/SleepDepth'
-import { StageSplit } from '../components/viz/StageSplit'
-import { StageLegend } from '../components/viz/StageLegend'
+import { StageDistribution } from '../components/viz/StageDistribution'
 import { HealthStatusTile } from '../components/viz/HealthStatusTile'
 import { Bracket } from '../components/primitives/Bracket'
 import { StatusCore } from '../components/primitives/StatusCore'
@@ -147,10 +146,7 @@ function SleepOverview() {
             <span key={t} style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{t}</span>
           ))}
         </div>
-        <StageSplit stages={slp.stages} />
-        <div style={{ marginTop: 10 }}>
-          <StageLegend stages={slp.stages} />
-        </div>
+        <StageDistribution stages={slp.stages} />
         {archOpen && <InfoOverlay info={ARCH_INFO} accent={A} radius={12} onClick={archTap} />}
       </div>
 

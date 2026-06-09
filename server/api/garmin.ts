@@ -64,7 +64,10 @@ garminRouter.get('/activities', (req, res) => {
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
   const rows = db.prepare(
     `SELECT activity_id, date, start_time, name, type_key,
-            distance_m, duration_s, calories, avg_hr, elevation_m
+            distance_m, duration_s, calories, avg_hr, elevation_m,
+            aerobic_te, anaerobic_te, recovery_time_h,
+            zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+            run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms
      FROM garmin_activities WHERE date >= ? ORDER BY start_time DESC`
   ).all(since)
   res.json({ activities: rows })

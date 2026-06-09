@@ -67,6 +67,47 @@ describe('Garmin API', () => {
   })
 })
 
+describe('Activities endpoint — expand fields', () => {
+  beforeAll(async () => {
+    const { migrate } = await import('../../server/db/migrate')
+    migrate()
+    const { default: db } = await import('../../server/db/client')
+    const today = new Date().toISOString().slice(0, 10)
+    db.prepare(
+      `INSERT OR REPLACE INTO garmin_activities
+       (activity_id, date, start_time, name, type_key, duration_s, avg_hr,
+        aerobic_te, anaerobic_te, recovery_time_h,
+        zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+        run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      9999, today, `${today} 07:00:00`, 'Test Run', 'running',
+      3600, 148,
+      3.8, 1.2, 24,
+      120, 900, 600, 120, 60,
+      172, 115.5, 8.4, 245
+    )
+  })
+
+  it('GET /api/garmin/activities returns new expand fields', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/activities').query({ days: 7 })
+    expect(res.status).toBe(200)
+    const acts = res.body.activities as any[]
+    const testAct = acts.find((a: any) => a.activity_id === 9999)
+    expect(testAct).toBeDefined()
+    expect(testAct.aerobic_te).toBe(3.8)
+    expect(testAct.anaerobic_te).toBe(1.2)
+    expect(testAct.recovery_time_h).toBe(24)
+    expect(testAct.zone1_s).toBe(120)
+    expect(testAct.zone2_s).toBe(900)
+    expect(testAct.run_cadence).toBe(172)
+    expect(testAct.run_stride_cm).toBe(115.5)
+    expect(testAct.run_vert_osc_cm).toBe(8.4)
+    expect(testAct.run_gct_ms).toBe(245)
+  })
+})
+
 describe('Phase B endpoints', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')

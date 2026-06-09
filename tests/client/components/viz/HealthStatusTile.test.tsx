@@ -17,14 +17,26 @@ describe('HealthStatusTile', () => {
     expect(screen.getByText('LOW')).toBeInTheDocument()
   })
 
-  it('applies green sub text when inRange is true', () => {
-    wrap(<HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />)
-    expect(screen.getByText('NORMAL')).toHaveStyle({ color: '#4ade80' })
+  it('renders status dot when inRange is true', () => {
+    const { container } = wrap(
+      <HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />
+    )
+    // StatusCore renders two nested spans with borderRadius 50% — confirms badge present
+    const dots = container.querySelectorAll('span[style*="border-radius: 50%"]')
+    expect(dots.length).toBeGreaterThan(0)
   })
 
-  it('applies amber sub text when inRange is false', () => {
-    wrap(<HealthStatusTile label="SpO₂" value={93} unit="%" accent="#64b5f6" inRange={false} sub="LOW" />)
-    expect(screen.getByText('LOW')).toHaveStyle({ color: '#fbbf24' })
+  it('renders status dot when inRange is false', () => {
+    const { container } = wrap(
+      <HealthStatusTile label="SpO₂" value={93} unit="%" accent="#64b5f6" inRange={false} sub="LOW" />
+    )
+    const dots = container.querySelectorAll('span[style*="border-radius: 50%"]')
+    expect(dots.length).toBeGreaterThan(0)
+  })
+
+  it('sub text is muted regardless of inRange', () => {
+    wrap(<HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />)
+    expect(screen.getByText('NORMAL')).toHaveStyle({ color: '#56657a' })
   })
 
   it('shows info overlay description when tapped with info prop', async () => {

@@ -2,6 +2,7 @@ import { COLORS, FONT_MONO, type CardInfo } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { Sparkline } from '../primitives/Sparkline'
 import { Bracket } from '../primitives/Bracket'
+import { StatusCore } from '../primitives/StatusCore'
 import { Delta } from './Delta'
 import { useCardInfoOverlay, InfoOverlay } from '../../lib/InfoCardContext'
 
@@ -42,6 +43,11 @@ export function HealthStatusTile({
       }}
     >
       <Bracket color={accent} size={9} sw={1.2} op={0.3} inset={5} />
+      {inRange !== undefined && (
+        <span style={{ position: 'absolute', top: 10, right: 11 }}>
+          <StatusCore accent={statusColor} size={6} />
+        </span>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
           fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em',
@@ -58,11 +64,7 @@ export function HealthStatusTile({
         {unit && <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{unit}</span>}
       </div>
       {sub && (
-        <span style={{
-          fontFamily: FONT_MONO, fontSize: 8.5,
-          color: inRange !== undefined ? statusColor : COLORS.textMuted,
-          fontWeight: inRange !== undefined ? 600 : 400,
-        }}>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
           {sub}
         </span>
       )}

@@ -1,6 +1,7 @@
 import { COLORS, FONT_MONO, type CardInfo } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { Sparkline } from '../primitives/Sparkline'
+import { Bracket } from '../primitives/Bracket'
 import { Delta } from './Delta'
 import { useCardInfoOverlay, InfoOverlay } from '../../lib/InfoCardContext'
 
@@ -31,15 +32,16 @@ export function HealthStatusTile({
       onClick={info ? handleTap : undefined}
       style={{
         position: 'relative',
-        background: inRange !== undefined ? hexA(statusColor, 0.05) : COLORS.surface,
+        background: hexA(accent, 0.05),
         border: `1px solid ${COLORS.line}`,
-        borderLeft: inRange !== undefined ? `3px solid ${statusColor}` : `1px solid ${COLORS.line}`,
+        borderLeft: `3px solid ${accent}`,
         borderRadius: 8,
         padding: '10px 11px 9px', overflow: 'hidden',
         display: 'flex', flexDirection: 'column', gap: 6,
         cursor: info ? 'pointer' : 'default',
       }}
     >
+      <Bracket color={accent} size={9} sw={1.2} op={0.3} inset={5} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
           fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em',

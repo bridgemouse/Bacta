@@ -29,7 +29,16 @@ export function StageDistribution({ stages }: StageDistributionProps) {
     <div>
       <div style={{ display: 'flex', height: 18, borderRadius: 6, overflow: 'hidden', gap: 2, marginBottom: 13 }}>
         {rows.filter(s => s.barPct > 0).map(s => (
-          <div key={s.key} style={{ width: `${s.barPct}%`, background: s.color, borderRadius: 3, flexShrink: 0 }} />
+          <div key={s.key} style={{
+            width: `${s.barPct}%`, background: s.color, borderRadius: 3, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {s.barPct >= 12 && (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, color: '#0b0d12' }}>
+                {s.barPct}%
+              </span>
+            )}
+          </div>
         ))}
       </div>
 

@@ -148,9 +148,9 @@ client/src/
 │       ├── LoadBand.tsx              # Horizontal load band
 │       ├── LogEntry.tsx              # Activity log line
 │       ├── Rail.tsx                  # Section divider rail
+│       ├── HealthStatusTile.tsx       # Overnight vitals tile — accent chrome, StatusCore dot badge for inRange
 │       ├── SleepDepth.tsx            # Topographic sleep depth chart
-│       ├── StageLegend.tsx           # Sleep stage legend
-│       ├── StageSplit.tsx            # Proportional sleep stage bar
+│       ├── StageDistribution.tsx     # Sleep stage bar (pct labels) + breakdown rows + footer
 │       ├── StatusBanner.tsx          # Training status hero panel
 │       ├── TrendRow.tsx              # Trends-tab row
 │       ├── VitalTile.tsx             # Compact secondary metric tile
@@ -182,7 +182,7 @@ client/src/
 - All viz components in `components/viz/` including `ZoneDistribution` (Jun 2026)
 - Home Overview + Trends: live data via `useHomeData` + cross-section `TrendRow` week view
 - Recovery Overview + Trends: live data, all viz wired — **missing Body Battery HeadlineCard**
-- Sleep Overview + Trends: live data, `SleepDepth` + `StageSplit` + stage legend all wired
+- Sleep Overview + Trends: live data, `SleepDepth` + `StageDistribution` (pct labels in top bar, per-stage rows) all wired
 - Training Overview + Trends: live data, v3 layout (fitness age, ACWR, HR zones, activity log)
 - Nutrition, BloodWork, DailyLog: `SectionShell` calibrating placeholders (correct — no data yet)
 
@@ -249,6 +249,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - Use `INSERT OR REPLACE` (not `INSERT OR IGNORE`) for activity rows so re-syncs overwrite stale data
 - Common Garmin `typeKey` values: `running`, `trail_running`, `walking`, `hiking`, `cycling`, `strength_training`, `multi_sport`
 - `get_heart_rates(d)` returns minute-by-minute HR values — NOT zone minutes. For HR zone data use `get_activity_hr_in_timezones(activityId)` → field `secsInZone` per zone; aggregate across all activities for the day and divide by 60 for minutes
+- `multi_sport` activities are containers — `get_activity_hr_in_timezones(parent_id)` returns empty. Use `_child_activity_ids(c, act_id)` (defined in `garmin_poller.py`) which checks `metaData.childActivityIdList` via `get_activity` then `get_activity_details`; query zones on each child instead
 
 ## Server & DB Gotchas
 

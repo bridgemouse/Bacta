@@ -2,11 +2,36 @@ import db from './client'
 import fs from 'fs'
 import path from 'path'
 
+const NEW_ACTIVITY_COLS = [
+  'aerobic_te REAL',
+  'anaerobic_te REAL',
+  'recovery_time_h REAL',
+  'zone1_s INTEGER',
+  'zone2_s INTEGER',
+  'zone3_s INTEGER',
+  'zone4_s INTEGER',
+  'zone5_s INTEGER',
+  'run_cadence INTEGER',
+  'run_stride_cm REAL',
+  'run_vert_osc_cm REAL',
+  'run_gct_ms INTEGER',
+]
+
 export function migrate() {
   const schema = fs.readFileSync(
     path.join(__dirname, 'schema.sql'),
     'utf-8'
   )
   db.exec(schema)
+
+  // Add new columns to existing prod DB — SQLite doesn't support ADD COLUMN IF NOT EXISTS
+  for (const col of NEW_ACTIVITY_COLS) {
+    try {
+      db.exec(`ALTER TABLE garmin_activities ADD COLUMN ${col}`)
+    } catch {
+      // Column already exists — safe to ignore
+    }
+  }
+
   console.log('[db] migrations complete')
 }

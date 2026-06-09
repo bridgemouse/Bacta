@@ -49,6 +49,19 @@ def safe(obj, *keys, default=None):
     return obj if obj is not None else default
 
 
+def _child_activity_ids(c, act_id):
+    """Return child activity IDs for a multi_sport container, or [] if unavailable."""
+    for getter in [c.get_activity, c.get_activity_details]:
+        try:
+            data = getter(act_id) or {}
+            ids = safe(data, 'metaData', 'childActivityIdList') or []
+            if ids:
+                return [int(i) for i in ids]
+        except Exception:
+            pass
+    return []
+
+
 # ─── Per-day sync ──────────────────────────────────────────────────────────────
 
 def sync_day(db, c, d):
@@ -240,9 +253,17 @@ def sync_day(db, c, d):
         zone_secs = {}
         for act in acts:
             act_id = act.get('activityId')
-            if act_id:
+            if not act_id:
+                continue
+            type_key = safe(act, 'activityType', 'typeKey') or ''
+            if type_key == 'multi_sport':
+                # Multi_sport containers return empty zones; use child sub-activities instead
+                query_ids = _child_activity_ids(c, act_id) or [act_id]
+            else:
+                query_ids = [act_id]
+            for qid in query_ids:
                 try:
-                    for z in (c.get_activity_hr_in_timezones(act_id) or []):
+                    for z in (c.get_activity_hr_in_timezones(qid) or []):
                         n = z.get('zoneNumber')
                         if n and 1 <= n <= 5:
                             zone_secs[n] = zone_secs.get(n, 0) + (z.get('secsInZone') or 0)

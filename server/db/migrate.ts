@@ -28,8 +28,9 @@ export function migrate() {
   for (const col of NEW_ACTIVITY_COLS) {
     try {
       db.exec(`ALTER TABLE garmin_activities ADD COLUMN ${col}`)
-    } catch {
-      // Column already exists — safe to ignore
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || !e.message.includes('duplicate column name')) throw e
+      // column already exists, idempotent
     }
   }
 

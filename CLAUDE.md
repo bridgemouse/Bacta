@@ -125,7 +125,7 @@ client/src/
 │   ├── BottomSheet.tsx               # NavSheet (All Systems)
 │   ├── AskSheet.tsx                  # Ask MX-4 sheet
 │   ├── Sheet.tsx                     # Animated bottom-sheet wrapper
-│   ├── MX4Card.tsx                   # TransmissionPanel + MX4Briefing (deprecated stub)
+│   ├── MX4Card.tsx                   # TransmissionPanel (MX4Briefing deprecated, still used for briefing text stub)
 │   ├── MetricTile.tsx                # SystemCard + MetricTile
 │   ├── SectionShell.tsx              # Calibrating skeleton for unbuilt sections
 │   └── primitives/
@@ -153,12 +153,19 @@ client/src/
 │       ├── StageSplit.tsx            # Proportional sleep stage bar
 │       ├── StatusBanner.tsx          # Training status hero panel
 │       ├── TrendRow.tsx              # Trends-tab row
-│       └── VitalTile.tsx             # Compact secondary metric tile
+│       ├── VitalTile.tsx             # Compact secondary metric tile
+│       └── ZoneDistribution.tsx      # HR zone vertical list with bars + summary footer
+├── hooks/
+│   ├── useHomeData.ts                # Home SystemCard live data
+│   ├── useRecoveryData.ts            # Recovery live data (fetches from /api/garmin)
+│   ├── useSleepData.ts               # Sleep live data
+│   ├── useTrainingData.ts            # Training live data (incl. HR zones, activities)
+│   └── useSyncState.ts              # Sync button state
 └── pages/
-    ├── HomePage.tsx                  # 2×3 SystemCard grid + MX4Briefing
-    ├── RecoveryPage.tsx              # Old gauges — needs SectionShell replacement
-    ├── SleepPage.tsx                 # Old gauges — needs SectionShell replacement
-    ├── TrainingPage.tsx              # Old gauges — needs SectionShell replacement
+    ├── HomePage.tsx                  # Overview: MX4Briefing + SystemCard grid; Trends: cross-channel week
+    ├── RecoveryPage.tsx              # COMPLETE: briefing + gauge + HRV + vitals; Trends: 6 metric rows
+    ├── SleepPage.tsx                 # COMPLETE: briefing + duration + SleepDepth + StageSplit; Trends
+    ├── TrainingPage.tsx              # COMPLETE (v3): briefing + status + zones + log; Trends
     ├── NutritionPage.tsx             # SectionShell (calibrating)
     ├── BloodWorkPage.tsx             # SectionShell (calibrating)
     └── DailyLogPage.tsx              # SectionShell (calibrating)
@@ -168,42 +175,36 @@ client/src/
 
 ## Current State & Pending Work
 
-### What's Complete
+### What's Complete (as of Jun 2026)
 
-**Frontend — primitives and shell:**
-- All primitives (`client/src/components/primitives/`)
-- App shell: TopBar, BottomBar, BottomSheet (NavSheet), AskSheet
-- `TransmissionPanel` (in MX4Card.tsx), `SystemCard` (in MetricTile.tsx), `SectionShell`
-- Home page: SystemCard 2×3 grid + old MX4Briefing (needs → TransmissionPanel)
-- Nutrition, BloodWork, DailyLog: SectionShell (calibrating skeleton)
-- All viz components in `components/viz/`
+**Frontend:**
+- App shell, TopBar, BottomBar, NavSheet, AskSheet, tab toggle — all complete
+- All viz components in `components/viz/` including `ZoneDistribution` (Jun 2026)
+- Home Overview + Trends: live data via `useHomeData` + cross-section `TrendRow` week view
+- Recovery Overview + Trends: live data, all viz wired — **missing Body Battery HeadlineCard**
+- Sleep Overview + Trends: live data, `SleepDepth` + `StageSplit` + stage legend all wired
+- Training Overview + Trends: live data, v3 layout (fitness age, ACWR, HR zones, activity log)
+- Nutrition, BloodWork, DailyLog: `SectionShell` calibrating placeholders (correct — no data yet)
 
-**Backend — fully built:**
-- `server/api/garmin.ts` — serves Garmin metrics from SQLite by date/metric/range
-- `server/api/health.ts` — health check
-- `server/api/insights.ts` — reads MX-4 HTML briefings from `insights/`
-- `server/api/bloodwork.ts`, `server/api/manual.ts` — manual data endpoints
-- `server/api/poll.ts` — triggers Garmin ingest
-- `server/api/mx4.ts` — triggers MX-4 orchestrator run
-- `server/db/schema.sql` + `server/db/migrate.ts` — SQLite schema + migrations
-- `server/db/client.ts` — better-sqlite3 connection
+**Backend:**
+- All API endpoints live: `/api/garmin/summary`, `/api/garmin/:metric`, `/api/garmin/activities`, `/api/garmin/weekly-volume`, `/api/garmin/weekly-avg-hr`, `/api/garmin/sync`
+- DB healthy: ~4,500 garmin_snapshots (47 metrics), 64 garmin_activities, current through today
+- Sparse metrics: `vo2max` (10 days), `spo2_avg` (5 days), `endurance_score` (0 days — not collected)
+- `macrofactor_snapshots`, `blood_work`, `manual_inputs` tables exist but are empty
 
 **Data pipeline:**
 - `scripts/garmin_ingest.py` — historical import (365 days, ~35 min)
 - `scripts/garmin_poller.py` — nightly 3AM via `bacta-garmin.timer` systemd unit
 - Garmin tokens at `~/.garminconnect` on LXC 109
 
-### Tab Residue (Known — needs cleanup)
-`AppShell` still manages `TabContext`/`hasTabs` state and passes `hasTabs`/`tab`/`onTabChange` to `BottomBar`. Per Plan 1 spec, the tab toggle belongs in `BottomBar` itself keyed off `hasTabs`. This is intentional incomplete state — do not remove without understanding the sections design handoff.
+**Data stubs still in use:** `client/src/lib/stubData.ts` → `BRIEFS` (MX-4 briefing text). All metric data is live; only the AI narrative text is still stubbed.
 
 ### What's Next (in priority order)
-1. **Wire Overview/Trends toggle** — tab state self-contained in BottomBar; AppShell passes `hasTabs` only
-2. **Update Home page** — swap old `MX4Briefing` → `TransmissionPanel`
-3. **Replace Recovery/Sleep/Training pages** — implement full section content per `design_handoff_bacta_sections/README.md` (viz components already exist in `components/viz/`)
-4. **Connect frontend to API** — replace `client/src/lib/stubData.ts` usage with `fetch('/api/garmin/...')` calls per section
-5. **MX-4 cron** — schedule `mx4/orchestrator.py`, wire vault-query MCP on LXC 109
+1. **MX-4 orchestrator** — `mx4/orchestrator.py` has **never been run**. `insights/` is empty. All sections show static stub briefing text from May 29. Run manually to test, then schedule. This is the highest-impact remaining work.
+2. **Body Battery in Recovery Overview** — `useRecoveryData` already fetches `body_battery_wake`/`body_battery_current` into `rec.battery`, but `RecoveryPage` never renders it. Add a `HeadlineCard` with the `BodyBattery` component between the HRV card and RHR/Stress row.
+3. **LogEntry Phase C** — expand panel content (training effect, HR zones per activity) currently behind `hasContent = false` flag in `LogEntry.tsx`
 
-**Deferred:** MacroFactor (no account), Blood Work (waiting on lab results)
+**Deferred:** MacroFactor/Nutrition (no account), Blood Work (waiting on lab results), Daily Log (no data source)
 
 ---
 
@@ -258,6 +259,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - `garmin_ingest.py` uses `errors` (not `err`), `SLEEP_PER_CALL` (not `SLEEP_BETWEEN`), and no `ok.append()` — variable names differ from `garmin_poller.py`; match the existing pattern in whichever file you're editing
 - Ingest CLI: `python3 scripts/garmin_ingest.py --days 30` (uses `--days` flag, not positional arg)
 - Validate Python script syntax before committing: `python3 -c "import py_compile; py_compile.compile('scripts/foo.py', doraise=True)"`
+- Playwright `fullPage` screenshots only capture viewport height on this app — the outer shell is `position: fixed; overflow: hidden`. To screenshot scrolled content: use `browser_evaluate` to set `document.querySelector('[style*="overflow-y"]').scrollTop = N` then screenshot.
 
 ---
 

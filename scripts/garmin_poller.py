@@ -306,23 +306,71 @@ def sync_range(db, c, start, end):
 
     # intensity_mod_min / intensity_vig_min now fetched from get_stats per day
 
-    # Activities
+    # Activities — includes training effect, HR zones, run dynamics
     try:
         acts = c.get_activities_by_date(start, end)
         for act in (acts or []):
             d = (safe(act, 'startTimeLocal') or '')[:10]
             if not d:
                 continue
+            act_id = safe(act, 'activityId')
+            type_key = safe(act, 'activityType', 'typeKey') or 'other'
+            is_run = type_key in ('running', 'trail_running', 'treadmill_running')
+
+            # Training effect + recovery time — available in activity list response
+            aerobic_te      = safe(act, 'aerobicTrainingEffect')
+            anaerobic_te    = safe(act, 'anaerobicTrainingEffect')
+            recovery_time_h = safe(act, 'recoveryTime')  # Garmin returns hours
+
+            # Per-activity HR zones (skip multi_sport containers — they return empty)
+            zone1_s = zone2_s = zone3_s = zone4_s = zone5_s = None
+            if type_key != 'multi_sport' and act_id:
+                try:
+                    for z in (c.get_activity_hr_in_timezones(act_id) or []):
+                        n = z.get('zoneNumber')
+                        secs = int(z.get('secsInZone') or 0)
+                        if   n == 1: zone1_s = secs
+                        elif n == 2: zone2_s = secs
+                        elif n == 3: zone3_s = secs
+                        elif n == 4: zone4_s = secs
+                        elif n == 5: zone5_s = secs
+                    time.sleep(SLEEP_BETWEEN)
+                except Exception:
+                    pass
+
+            # Run dynamics — requires get_activity_details(), run-type only
+            run_cadence = run_stride_cm = run_vert_osc_cm = run_gct_ms = None
+            if is_run and act_id:
+                try:
+                    details = c.get_activity_details(act_id) or {}
+                    dto = details.get('summaryDTO') or {}
+                    cadence  = dto.get('averageRunningCadenceInStepsPerMinute')
+                    stride_m = dto.get('avgStrideLength')
+                    vert_mm  = dto.get('avgVerticalOscillation')
+                    gct_ms   = dto.get('avgGroundContactTime')
+                    run_cadence     = round(cadence) if cadence is not None else None
+                    run_stride_cm   = round(stride_m * 100, 1) if stride_m is not None else None
+                    run_vert_osc_cm = round(vert_mm / 10, 1) if vert_mm is not None else None
+                    run_gct_ms      = round(gct_ms) if gct_ms is not None else None
+                    time.sleep(SLEEP_BETWEEN)
+                except Exception:
+                    pass
+
             db.execute(
                 'INSERT OR REPLACE INTO garmin_activities '
-                '(activity_id, date, start_time, name, type_key, distance_m, duration_s, calories, avg_hr, elevation_m) '
-                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                (safe(act, 'activityId'), d,
+                '(activity_id, date, start_time, name, type_key, distance_m, duration_s, '
+                'calories, avg_hr, elevation_m, aerobic_te, anaerobic_te, recovery_time_h, '
+                'zone1_s, zone2_s, zone3_s, zone4_s, zone5_s, '
+                'run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (act_id, d,
                  safe(act, 'startTimeLocal'), safe(act, 'activityName'),
-                 safe(act, 'activityType', 'typeKey') or 'other',
+                 type_key,
                  safe(act, 'distance'), safe(act, 'duration'),
-                 safe(act, 'calories'), safe(act, 'averageHR'),
-                 safe(act, 'elevationGain'))
+                 safe(act, 'calories'), safe(act, 'averageHR'), safe(act, 'elevationGain'),
+                 aerobic_te, anaerobic_te, recovery_time_h,
+                 zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+                 run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms)
             )
         db.commit()
         print(f'  activities: {len(acts or [])} rows')

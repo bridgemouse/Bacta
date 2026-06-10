@@ -115,3 +115,9 @@ export async function fetchWeeklyAvgHr(weeks = 6): Promise<WeeklyAvgHr[]> {
   const { weeks: data } = await res.json() as { weeks: WeeklyAvgHr[] }
   return data
 }
+
+export async function fetchWeeklyIntensity(): Promise<{ moderate: number; vigorous: number }> {
+  const res = await fetch('/api/garmin/weekly-intensity')
+  if (!res.ok) return { moderate: 0, vigorous: 0 }
+  return res.json() as Promise<{ moderate: number; vigorous: number }>
+}

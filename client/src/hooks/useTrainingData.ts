@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchSummary, fetchTrend, fetchActivities, fetchWeeklyVolume, fetchWeeklyAvgHr, TRAINING_STATUS, type GarminActivity, type WeeklyVolume, type WeeklyAvgHr } from '../lib/garminApi'
+import { fetchSummary, fetchTrend, fetchActivities, fetchWeeklyVolume, fetchWeeklyAvgHr, fetchWeeklyIntensity, TRAINING_STATUS, type GarminActivity, type WeeklyVolume, type WeeklyAvgHr } from '../lib/garminApi'
 import { TRAINING } from '../lib/stubData'
 
 export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
@@ -68,7 +68,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
     let cancelled = false
     async function load() {
       try {
-        const [summary, loadTrend, intensityTrend, vo2maxTrend, stepsTrend, calTrend, activities, load42Trend, fitnessAgeTrend, weeklyVolume, activityHrByWeek] =
+        const [summary, loadTrend, intensityTrend, vo2maxTrend, stepsTrend, calTrend, activities, load42Trend, fitnessAgeTrend, weeklyVolume, activityHrByWeek, weeklyIntensity] =
           await Promise.all([
             fetchSummary(),
             fetchTrend('training_load'),
@@ -81,6 +81,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             fetchTrend('fitness_age', 30),
             fetchWeeklyVolume(),
             fetchWeeklyAvgHr(),
+            fetchWeeklyIntensity(),
           ])
         if (cancelled) return
 
@@ -163,8 +164,8 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             trend: loadTrend.length ? loadTrend : TRAINING.load.trend,
           },
           intensity: {
-            moderate: summary.intensity_mod_min ?? TRAINING.intensity.moderate,
-            vigorous: summary.intensity_vig_min ?? TRAINING.intensity.vigorous,
+            moderate: weeklyIntensity.moderate,
+            vigorous: weeklyIntensity.vigorous,
             goal:     150,
             trend:    intensityTrend.length ? intensityTrend : TRAINING.intensity.trend,
           },

@@ -111,6 +111,19 @@ garminRouter.get('/weekly-volume', (req, res) => {
   res.json({ weeks: rows.reverse() })
 })
 
+// GET /api/garmin/weekly-intensity — sum mod+vig intensity mins over rolling 7 days
+garminRouter.get('/weekly-intensity', (_req, res) => {
+  const row = db.prepare(
+    `SELECT
+       COALESCE(SUM(CASE WHEN metric = 'intensity_mod_min' THEN value ELSE 0 END), 0) AS moderate,
+       COALESCE(SUM(CASE WHEN metric = 'intensity_vig_min' THEN value ELSE 0 END), 0) AS vigorous
+     FROM garmin_snapshots
+     WHERE metric IN ('intensity_mod_min', 'intensity_vig_min')
+       AND date >= date('now', '-6 days')`
+  ).get() as { moderate: number; vigorous: number }
+  res.json({ moderate: row.moderate, vigorous: row.vigorous })
+})
+
 // GET /api/garmin/weekly-avg-hr?weeks=6
 garminRouter.get('/weekly-avg-hr', (req, res) => {
   const weeks = Math.min(Math.max(1, Number(req.query.weeks) || 6), 26)

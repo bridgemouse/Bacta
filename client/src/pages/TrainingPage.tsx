@@ -271,27 +271,47 @@ function TrainingOverview() {
   )
 }
 
+type TrendSection = { railLabel: string; period: string; subtext: string; info: CardInfo }
+
+const TREND_SECTIONS: Record<string, TrendSection> = {
+  load:       { railLabel: 'TRAINING LOAD',     period: '7 DAYS',  subtext: '', info: LOAD_TREND_INFO },
+  volume:     { railLabel: 'WEEKLY VOLUME',     period: '6 WEEKS', subtext: 'most recent week may be partial', info: VOL_INFO },
+  fitnessAge: { railLabel: 'FITNESS AGE',       period: '30 DAYS', subtext: 'lower = better · descending = improving aerobic capacity', info: FA_TREND_INFO },
+  actHr:      { railLabel: 'AVG ACTIVITY HR',   period: '6 WEEKS', subtext: 'same effort, lower HR = aerobic adaptation', info: ACTHR_INFO },
+  vo2max:     { railLabel: 'VO2 MAX',           period: '30 DAYS', subtext: 'higher = better · improves with consistent zone 2–4 training', info: VO2MAX_TREND_INFO },
+  intensity:  { railLabel: 'INTENSITY MINUTES', period: '7 DAYS',  subtext: 'vigorous minutes weighted 2× toward the weekly goal', info: INTENSITY_TREND_INFO },
+  steps:      { railLabel: 'DAILY STEPS',       period: '7 DAYS',  subtext: '8–10k steps/day linked to reduced all-cause mortality', info: STEPS_INFO },
+  calories:   { railLabel: 'TOTAL CALORIES',    period: '7 DAYS',  subtext: 'resting + active calories · useful for tracking energy trend', info: CALORIES_TREND_INFO },
+}
+
 const BESPOKE_CARD: CSSProperties = {
   position: 'relative', background: COLORS.surface,
   border: `1px solid ${COLORS.line}`, borderRadius: 10,
-  padding: '13px 14px 11px', marginBottom: 9, overflow: 'hidden', cursor: 'pointer',
+  padding: '13px 14px 11px', overflow: 'hidden', cursor: 'pointer',
+}
+
+const SUBTEXT: CSSProperties = {
+  fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, padding: '0 4px',
 }
 
 function TrainingTrends() {
   const { data: TRN } = useTrainingData()
-  const { isOpen: loadOpen, handleTap: loadTap } = useCardInfoOverlay('trn-load-trend', LOAD_TREND_INFO, A)
-  const { isOpen: volOpen, handleTap: volTap } = useCardInfoOverlay('trn-volume', VOL_INFO, A)
-  const { isOpen: faOpen, handleTap: faTap } = useCardInfoOverlay('trn-fitnessage-trend', FA_TREND_INFO, A)
+  const { isOpen: loadOpen, handleTap: loadTap } = useCardInfoOverlay('trn-load-trend', TREND_SECTIONS.load.info, A)
+  const { isOpen: volOpen, handleTap: volTap } = useCardInfoOverlay('trn-volume', TREND_SECTIONS.volume.info, A)
+  const { isOpen: faOpen, handleTap: faTap } = useCardInfoOverlay('trn-fitnessage-trend', TREND_SECTIONS.fitnessAge.info, A)
+  const { isOpen: vo2Open, handleTap: vo2Tap } = useCardInfoOverlay('trn-vo2max', TREND_SECTIONS.vo2max.info, A)
 
-  const optBand = TRN.load.low && TRN.load.high ? `OPTIMAL ${TRN.load.low}–${TRN.load.high}` : '7 DAYS'
   const faValue = typeof TRN.vo2max.fitnessAge === 'number' ? TRN.vo2max.fitnessAge.toFixed(1) : TRN.vo2max.fitnessAge
+  const loadSubtext = TRN.load.low && TRN.load.high
+    ? `optimal band: ${TRN.load.low}–${TRN.load.high} · spikes above raise injury risk`
+    : ''
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
 
       {TRN.load.trend.length > 0 && (
         <>
-          <Rail label="TRAINING LOAD" accent={A} right={optBand} />
+          <Rail label={TREND_SECTIONS.load.railLabel} accent={A} right={TREND_SECTIONS.load.period} />
           <div onClick={loadTap} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -302,14 +322,15 @@ function TrainingTrends() {
               </span>
             </div>
             <Bars7 data={TRN.load.trend} accent={A} h={80} avg />
-            {loadOpen && <InfoOverlay info={LOAD_TREND_INFO} accent={A} radius={10} compact onClick={loadTap} />}
+            {loadOpen && <InfoOverlay info={TREND_SECTIONS.load.info} accent={A} radius={10} compact onClick={loadTap} />}
           </div>
+          {loadSubtext && <div style={SUBTEXT}>{loadSubtext}</div>}
         </>
       )}
 
       {TRN.weeklyVolume && TRN.weeklyVolume.length > 0 && (
         <>
-          <Rail label="WEEKLY VOLUME" accent={A} right="6 WEEKS · HOURS" />
+          <Rail label={TREND_SECTIONS.volume.railLabel} accent={A} right={TREND_SECTIONS.volume.period} />
           <div onClick={volTap} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 10 }}>HOURS / WEEK</div>
@@ -320,15 +341,15 @@ function TrainingTrends() {
               fmt={v => v.toFixed(1)}
               avg
             />
-            <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, marginTop: 7 }}>most recent week may be partial</div>
-            {volOpen && <InfoOverlay info={VOL_INFO} accent={A} radius={10} compact onClick={volTap} />}
+            {volOpen && <InfoOverlay info={TREND_SECTIONS.volume.info} accent={A} radius={10} compact onClick={volTap} />}
           </div>
+          <div style={SUBTEXT}>{TREND_SECTIONS.volume.subtext}</div>
         </>
       )}
 
       {TRN.vo2max.fitnessAgeTrend.length > 0 && (
         <>
-          <Rail label="FITNESS AGE · 30 DAYS" accent={A} right={typeof TRN.vo2max.fitnessAge === 'number' ? `${faValue} YR NOW` : ''} />
+          <Rail label={TREND_SECTIONS.fitnessAge.railLabel} accent={A} right={TREND_SECTIONS.fitnessAge.period} />
           <div onClick={faTap} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -342,15 +363,15 @@ function TrainingTrends() {
               </div>
             </div>
             <Sparkline data={TRN.vo2max.fitnessAgeTrend} accent={A} w={350} h={50} sw={1.8} />
-            <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, marginTop: 5 }}>lower = better · descending = improving aerobic capacity</div>
-            {faOpen && <InfoOverlay info={FA_TREND_INFO} accent={A} radius={10} compact onClick={faTap} />}
+            {faOpen && <InfoOverlay info={TREND_SECTIONS.fitnessAge.info} accent={A} radius={10} compact onClick={faTap} />}
           </div>
+          <div style={SUBTEXT}>{TREND_SECTIONS.fitnessAge.subtext}</div>
         </>
       )}
 
       {TRN.activityHrByWeek && TRN.activityHrByWeek.length > 0 && (
         <>
-          <Rail label="AVG ACTIVITY HR · 6 WEEKS" accent={A} right="DECLINING = IMPROVING" />
+          <Rail label={TREND_SECTIONS.actHr.railLabel} accent={A} right={TREND_SECTIONS.actHr.period} />
           <TrendRow
             label="Avg HR"
             value={TRN.activityHrByWeek[TRN.activityHrByWeek.length - 1].avg_hr}
@@ -359,44 +380,67 @@ function TrainingTrends() {
             accent={A}
             delta={TRN.activityHrByWeek[TRN.activityHrByWeek.length - 1].avg_hr - TRN.activityHrByWeek[0].avg_hr}
             lowerBetter kind="bars" avg
-            info={ACTHR_INFO}
+            info={TREND_SECTIONS.actHr.info}
           />
-          <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, padding: '0 4px', marginTop: -4 }}>same effort, lower HR = aerobic adaptation</div>
+          <div style={SUBTEXT}>{TREND_SECTIONS.actHr.subtext}</div>
         </>
       )}
 
       {TRN.vo2max.trend.length > 0 && (
         <>
-          <Rail label="VO2 MAX · 30 DAYS" accent={A} right="HIGHER = BETTER" />
-          <TrendRow label="VO2 Max" value={TRN.vo2max.value} unit="mL/kg" data={TRN.vo2max.trend} accent={A} delta={TRN.vo2max.delta} info={VO2MAX_TREND_INFO} />
+          <Rail label={TREND_SECTIONS.vo2max.railLabel} accent={A} right={TREND_SECTIONS.vo2max.period} />
+          <div onClick={vo2Tap} style={BESPOKE_CARD}>
+            <Bracket color={A} inset={6} op={0.28} />
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ML/KG/MIN</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text }}>{TRN.vo2max.value}</span>
+                {TRN.vo2max.delta !== 0 && (
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TRN.vo2max.delta > 0 ? COLORS.green : COLORS.red }}>
+                    {TRN.vo2max.delta > 0 ? '+' : ''}{TRN.vo2max.delta.toFixed ? TRN.vo2max.delta.toFixed(1) : TRN.vo2max.delta}
+                  </span>
+                )}
+              </div>
+            </div>
+            <Sparkline data={TRN.vo2max.trend} accent={A} w={350} h={50} sw={1.8} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>30d ago</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: A, fontWeight: 600 }}>today</span>
+            </div>
+            {vo2Open && <InfoOverlay info={TREND_SECTIONS.vo2max.info} accent={A} radius={10} compact onClick={vo2Tap} />}
+          </div>
+          <div style={SUBTEXT}>{TREND_SECTIONS.vo2max.subtext}</div>
         </>
       )}
 
       {TRN.intensity.trend.length > 0 && (
         <>
-          <Rail label="INTENSITY MINUTES" accent={A} right="7 DAYS" />
-          <TrendRow label="Intensity" value={`${TRN.intensity.moderate + TRN.intensity.vigorous * 2}`} unit="pts" data={TRN.intensity.trend} accent={A} kind="bars" avg info={INTENSITY_TREND_INFO} />
+          <Rail label={TREND_SECTIONS.intensity.railLabel} accent={A} right={TREND_SECTIONS.intensity.period} />
+          <TrendRow label="Intensity" value={`${TRN.intensity.moderate + TRN.intensity.vigorous * 2}`} unit="pts" data={TRN.intensity.trend} accent={A} kind="bars" avg info={TREND_SECTIONS.intensity.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.intensity.subtext}</div>
         </>
       )}
 
       {TRN.dailyActivity.stepsTrend.length > 0 && (
         <>
-          <Rail label="DAILY STEPS" accent={A} right="7 DAYS" />
+          <Rail label={TREND_SECTIONS.steps.railLabel} accent={A} right={TREND_SECTIONS.steps.period} />
           <TrendRow
             label="Steps"
             value={TRN.dailyActivity.steps != null ? TRN.dailyActivity.steps.toLocaleString() : 0}
             data={TRN.dailyActivity.stepsTrend}
             accent={A} kind="bars" avg
             fmt={v => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v)}
-            info={STEPS_INFO}
+            info={TREND_SECTIONS.steps.info}
           />
+          <div style={SUBTEXT}>{TREND_SECTIONS.steps.subtext}</div>
         </>
       )}
 
       {TRN.dailyActivity.calTrend.length > 0 && (
         <>
-          <Rail label="TOTAL CALORIES" accent={A} right="7 DAYS" />
-          <TrendRow label="Calories" value={TRN.dailyActivity.caloriesTotal ?? 0} unit="kcal" data={TRN.dailyActivity.calTrend} accent={A} kind="bars" avg info={CALORIES_TREND_INFO} />
+          <Rail label={TREND_SECTIONS.calories.railLabel} accent={A} right={TREND_SECTIONS.calories.period} />
+          <TrendRow label="Calories" value={TRN.dailyActivity.caloriesTotal ?? 0} unit="kcal" data={TRN.dailyActivity.calTrend} accent={A} kind="bars" avg info={TREND_SECTIONS.calories.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.calories.subtext}</div>
         </>
       )}
 

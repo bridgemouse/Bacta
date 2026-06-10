@@ -92,7 +92,7 @@ function TrainingOverview() {
 
       {/* Fitness Age + Acute Load pair */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 9 }}>
-        <HeadlineCard accent={A} label="Fitness Age" info={FITNESS_AGE_INFO}
+        <HeadlineCard accent={A} label="Fitness Age" info={FITNESS_AGE_INFO} compact
           foot={
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>VO2MAX</span>
@@ -114,7 +114,7 @@ function TrainingOverview() {
           )}
         </HeadlineCard>
 
-        <HeadlineCard accent={A} label="Acute Load" info={ACUTE_LOAD_INFO}
+        <HeadlineCard accent={A} label="Acute Load" info={ACUTE_LOAD_INFO} compact
           foot={<LoadBand value={TRN.load.value} low={TRN.load.low} high={TRN.load.high} accent={A} />}
         >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, paddingLeft: 3 }}>

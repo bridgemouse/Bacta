@@ -9,11 +9,13 @@ interface Bars7Props {
   h?: number
   goal?: number
   fmt?: (v: number) => string
+  avg?: boolean
 }
 
 /** 7-day bar chart, today (last bar) highlighted, optional goal line + value fmt. */
-export function Bars7({ data, accent, labels = DAY, h = 70, goal, fmt }: Bars7Props) {
-  const max = Math.max(...data, goal ?? 0) * 1.12 || 1
+export function Bars7({ data, accent, labels = DAY, h = 70, goal, fmt, avg }: Bars7Props) {
+  const avgVal = avg && data.length > 0 ? data.reduce((s, v) => s + v, 0) / data.length : null
+  const max = Math.max(...data, goal ?? 0, avgVal ?? 0) * 1.12 || 1
   const min = 0
 
   return (
@@ -54,6 +56,23 @@ export function Bars7({ data, accent, labels = DAY, h = 70, goal, fmt }: Bars7Pr
           bottom: `${((goal - min) / (max - min)) * h + 18}px`,
           borderTop: `1px dashed ${hexA(COLORS.textSecondary, 0.45)}`,
         }} />
+      )}
+
+      {avgVal != null && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0,
+          bottom: `${((avgVal - min) / (max - min)) * h + 18}px`,
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
+          borderTop: `1px solid ${hexA(COLORS.textMuted, 0.3)}`,
+          pointerEvents: 'none',
+        }}>
+          <span style={{
+            fontFamily: FONT_MONO, fontSize: 6.5, color: COLORS.textMuted,
+            lineHeight: 1, paddingBottom: 2, paddingRight: 1,
+          }}>
+            AVG
+          </span>
+        </div>
       )}
 
       <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>

@@ -137,6 +137,7 @@ function TrainingOverview() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           minHeight: CARD_SIZES.row, marginBottom: 9, cursor: 'pointer',
         }}>
+          <Bracket color={A} inset={6} op={0.35} radius={4} />
           <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary, letterSpacing: '0.12em', fontWeight: 600 }}>LOAD RATIO (ACWR)</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: COLORS.text }}>{TRN.loadRatio.value.toFixed(2)}</span>

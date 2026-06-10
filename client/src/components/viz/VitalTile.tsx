@@ -1,4 +1,5 @@
 import { COLORS, FONT_MONO, type CardInfo } from '../../theme'
+import { Bracket } from '../primitives/Bracket'
 import { Sparkline } from '../primitives/Sparkline'
 import { Delta } from './Delta'
 import { useCardInfoOverlay, InfoOverlay } from '../../lib/InfoCardContext'
@@ -31,6 +32,7 @@ export function VitalTile({ label, value, unit, sub, data, accent, delta, lowerB
         cursor: info ? 'pointer' : 'default',
       }}
     >
+      <Bracket color={accent} size={9} inset={5} op={0.35} radius={3} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
           fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em',

@@ -229,8 +229,8 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
   const stats = [
     fmtDist(a.distance_m),
     fmtDur(a.duration_s),
-    a.calories != null ? `${a.calories} kcal` : null,
-    a.avg_hr != null ? `${a.avg_hr} bpm` : null,
+    a.calories != null ? `${Math.round(a.calories)} kcal` : null,
+    a.avg_hr != null ? `${Math.round(a.avg_hr)} bpm` : null,
   ].filter(Boolean)
 
   const benefit = aerobicBenefit(a.aerobic_te)

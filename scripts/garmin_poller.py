@@ -322,18 +322,20 @@ def sync_range(db, c, start, end):
             anaerobic_te    = safe(act, 'anaerobicTrainingEffect')
             recovery_time_h = safe(act, 'recoveryTime')  # Garmin returns hours
 
-            # Per-activity HR zones (skip multi_sport containers — they return empty)
+            # Per-activity HR zones — multi_sport containers return empty; use child IDs instead
             zone1_s = zone2_s = zone3_s = zone4_s = zone5_s = None
-            if type_key != 'multi_sport' and act_id:
+            if act_id:
                 try:
-                    for z in (c.get_activity_hr_in_timezones(act_id) or []):
-                        n = z.get('zoneNumber')
-                        secs = int(z.get('secsInZone') or 0)
-                        if   n == 1: zone1_s = secs
-                        elif n == 2: zone2_s = secs
-                        elif n == 3: zone3_s = secs
-                        elif n == 4: zone4_s = secs
-                        elif n == 5: zone5_s = secs
+                    query_ids = _child_activity_ids(c, act_id) if type_key == 'multi_sport' else [act_id]
+                    for qid in query_ids:
+                        for z in (c.get_activity_hr_in_timezones(qid) or []):
+                            n = z.get('zoneNumber')
+                            secs = int(z.get('secsInZone') or 0)
+                            if   n == 1: zone1_s = (zone1_s or 0) + secs
+                            elif n == 2: zone2_s = (zone2_s or 0) + secs
+                            elif n == 3: zone3_s = (zone3_s or 0) + secs
+                            elif n == 4: zone4_s = (zone4_s or 0) + secs
+                            elif n == 5: zone5_s = (zone5_s or 0) + secs
                     time.sleep(SLEEP_BETWEEN)
                 except Exception:
                     pass

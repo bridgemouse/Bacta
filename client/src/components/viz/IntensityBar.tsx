@@ -42,9 +42,6 @@ export function IntensityBar({ moderate, vigorous, goal, accent }: IntensityBarP
             </span>
           </span>
         ))}
-        <span style={{ marginLeft: 'auto', fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>
-          GOAL {goal}
-        </span>
       </div>
     </div>
   )

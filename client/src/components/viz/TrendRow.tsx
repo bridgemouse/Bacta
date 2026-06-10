@@ -1,8 +1,9 @@
-import { COLORS, FONT_MONO } from '../../theme'
+import { COLORS, FONT_MONO, type CardInfo } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { Sparkline } from '../primitives/Sparkline'
 import { Bars7 } from './Bars7'
 import { Delta } from './Delta'
+import { useCardInfoOverlay, InfoOverlay } from '../../lib/InfoCardContext'
 
 interface TrendRowProps {
   label: string
@@ -15,16 +16,25 @@ interface TrendRowProps {
   lowerBetter?: boolean
   kind?: 'spark' | 'bars'
   fmt?: (v: number) => string
+  avg?: boolean
+  info?: CardInfo
 }
 
 /** Trends-tab row: label/value/delta left, sparkline or bar chart right. */
-export function TrendRow({ label, value, unit, sub, data, accent, delta, lowerBetter, kind = 'spark', fmt }: TrendRowProps) {
+export function TrendRow({ label, value, unit, sub, data, accent, delta, lowerBetter, kind = 'spark', fmt, avg, info }: TrendRowProps) {
+  const cardId = `tr-${label.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+  const { isOpen, handleTap } = useCardInfoOverlay(cardId, info, accent)
+
   return (
-    <div style={{
-      position: 'relative', display: 'flex', alignItems: 'center', gap: 12,
-      background: COLORS.surface, border: `1px solid ${COLORS.line}`,
-      borderRadius: 9, padding: '11px 13px', overflow: 'hidden',
-    }}>
+    <div
+      onClick={info ? handleTap : undefined}
+      style={{
+        position: 'relative', display: 'flex', alignItems: 'center', gap: 12,
+        background: COLORS.surface, border: `1px solid ${COLORS.line}`,
+        borderRadius: 9, padding: '11px 13px', overflow: 'hidden',
+        cursor: info ? 'pointer' : 'default',
+      }}
+    >
       <span style={{
         position: 'absolute', top: 0, bottom: 0, left: 0,
         width: 2, background: accent, opacity: 0.7,
@@ -54,9 +64,10 @@ export function TrendRow({ label, value, unit, sub, data, accent, delta, lowerBe
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         {kind === 'bars'
-          ? <Bars7 data={data} accent={accent} h={42} fmt={fmt} />
+          ? <Bars7 data={data} accent={accent} h={42} fmt={fmt} avg={avg} />
           : <Sparkline data={data} accent={accent} w={180} h={42} sw={1.8} />}
       </div>
+      {isOpen && info && <InfoOverlay info={info} accent={accent} radius={9} compact onClick={handleTap} />}
     </div>
   )
 }

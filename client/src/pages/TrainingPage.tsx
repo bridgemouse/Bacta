@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
 import { useTab } from '../lib/TabContext'
@@ -16,6 +17,7 @@ import { LogEntry } from '../components/viz/LogEntry'
 import { Bars7 } from '../components/viz/Bars7'
 import { ZoneDistribution } from '../components/viz/ZoneDistribution'
 import { Bracket } from '../components/primitives/Bracket'
+import { Sparkline } from '../components/primitives/Sparkline'
 import { hexA } from '../lib/hexA'
 
 const A = SECTION_ACCENTS.training
@@ -53,6 +55,41 @@ const ZONES_INFO: CardInfo = {
 const STEPS_INFO: CardInfo = {
   title: 'Daily Steps',
   description: '8,000–10,000 steps/day is associated with significantly reduced all-cause mortality, independent of structured exercise.',
+  source: 'Garmin Venu 4 · accelerometer',
+}
+const LOAD_TREND_INFO: CardInfo = {
+  title: 'Training Load · 7 Days',
+  description: 'Weighted training stress over the past 7 days. Staying within your optimal band builds fitness without raising injury risk.',
+  source: 'Garmin Venu 4 · activity import',
+}
+const VOL_INFO: CardInfo = {
+  title: 'Weekly Training Volume',
+  description: 'Total training hours per calendar week across all activity types. Look for planned step-backs (deload weeks) and progressive overload cycles.',
+  source: 'Garmin Venu 4 · all activity types',
+}
+const FA_TREND_INFO: CardInfo = {
+  title: 'Fitness Age · 30 Days',
+  description: 'Your physiological age estimated from VO2 Max relative to your demographic. A downward trend means aerobic capacity is improving. A rising trend signals detraining.',
+  source: 'Garmin Venu 4 · VO2 Max algorithm',
+}
+const ACTHR_INFO: CardInfo = {
+  title: 'Avg Activity Heart Rate',
+  description: 'Weekly avg HR across all workout sessions. A declining trend at the same effort signals improving cardiovascular efficiency — the hallmark of aerobic adaptation.',
+  source: 'Garmin Venu 4 · optical HR',
+}
+const VO2MAX_TREND_INFO: CardInfo = {
+  title: 'VO2 Max · 30 Days',
+  description: 'Aerobic capacity in mL O₂/kg/min. Builds with consistent zone 2–4 training. 30-day view shows the trajectory as new workouts register.',
+  source: 'Garmin Venu 4 · VO2 Max algorithm',
+}
+const INTENSITY_TREND_INFO: CardInfo = {
+  title: 'Intensity Minutes · 7 Days',
+  description: 'Daily vigorous intensity minutes. Garmin weights vigorous at 2× toward the 150-min weekly goal. Track daily input to manage your weekly total.',
+  source: 'Garmin Venu 4 · HR zone detection',
+}
+const CALORIES_TREND_INFO: CardInfo = {
+  title: 'Total Calories · 7 Days',
+  description: 'Total daily calorie burn: resting metabolism plus active calories. Useful for tracking energy trend — not clinical precision.',
   source: 'Garmin Venu 4 · accelerometer',
 }
 
@@ -234,22 +271,83 @@ function TrainingOverview() {
   )
 }
 
+const BESPOKE_CARD: CSSProperties = {
+  position: 'relative', background: COLORS.surface,
+  border: `1px solid ${COLORS.line}`, borderRadius: 10,
+  padding: '13px 14px 11px', marginBottom: 9, overflow: 'hidden', cursor: 'pointer',
+}
+
 function TrainingTrends() {
   const { data: TRN } = useTrainingData()
+  const { isOpen: loadOpen, handleTap: loadTap } = useCardInfoOverlay('trn-load-trend', LOAD_TREND_INFO, A)
+  const { isOpen: volOpen, handleTap: volTap } = useCardInfoOverlay('trn-volume', VOL_INFO, A)
+  const { isOpen: faOpen, handleTap: faTap } = useCardInfoOverlay('trn-fitnessage-trend', FA_TREND_INFO, A)
+
+  const optBand = TRN.load.low && TRN.load.high ? `OPTIMAL ${TRN.load.low}–${TRN.load.high}` : '7 DAYS'
+  const faValue = typeof TRN.vo2max.fitnessAge === 'number' ? TRN.vo2max.fitnessAge.toFixed(1) : TRN.vo2max.fitnessAge
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-      {TRN.weeklyVolume && TRN.weeklyVolume.length > 0 && (
+
+      {TRN.load.trend.length > 0 && (
         <>
-          <Rail label="WEEKLY VOLUME" accent={A} right="6 WEEKS · HOURS" />
-          <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '13px 14px 11px', marginBottom: 9 }}>
+          <Rail label="TRAINING LOAD" accent={A} right={optBand} />
+          <div onClick={loadTap} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
-            <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 10 }}>HOURS / WEEK</div>
-            <Bars7 data={TRN.weeklyVolume.map(w => w.hours)} accent={A} h={70}
-              labels={TRN.weeklyVolume.map(w => `W${parseInt(w.week.split('-')[1], 10)}`)}
-              fmt={v => v.toFixed(1)} />
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ACUTE LOAD · 7 DAYS</span>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text }}>{TRN.load.value}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: A }}>{TRN.load.state.toUpperCase()}</span>
+              </span>
+            </div>
+            <Bars7 data={TRN.load.trend} accent={A} h={80} avg />
+            {loadOpen && <InfoOverlay info={LOAD_TREND_INFO} accent={A} radius={10} compact onClick={loadTap} />}
           </div>
         </>
       )}
+
+      {TRN.weeklyVolume && TRN.weeklyVolume.length > 0 && (
+        <>
+          <Rail label="WEEKLY VOLUME" accent={A} right="6 WEEKS · HOURS" />
+          <div onClick={volTap} style={BESPOKE_CARD}>
+            <Bracket color={A} inset={6} op={0.28} />
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 10 }}>HOURS / WEEK</div>
+            <Bars7
+              data={TRN.weeklyVolume.map(w => w.hours)}
+              accent={A} h={70}
+              labels={TRN.weeklyVolume.map(w => `W${parseInt(w.week.split('-')[1], 10)}`)}
+              fmt={v => v.toFixed(1)}
+              avg
+            />
+            <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, marginTop: 7 }}>most recent week may be partial</div>
+            {volOpen && <InfoOverlay info={VOL_INFO} accent={A} radius={10} compact onClick={volTap} />}
+          </div>
+        </>
+      )}
+
+      {TRN.vo2max.fitnessAgeTrend.length > 0 && (
+        <>
+          <Rail label="FITNESS AGE · 30 DAYS" accent={A} right={typeof TRN.vo2max.fitnessAge === 'number' ? `${faValue} YR NOW` : ''} />
+          <div onClick={faTap} style={BESPOKE_CARD}>
+            <Bracket color={A} inset={6} op={0.28} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>IMPROVING ↓</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>
+                  {TRN.vo2max.fitnessAgeTrend[0].toFixed(1)} →
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: COLORS.green }}>{faValue}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>yr</span>
+              </div>
+            </div>
+            <Sparkline data={TRN.vo2max.fitnessAgeTrend} accent={A} w={350} h={50} sw={1.8} />
+            <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, marginTop: 5 }}>lower = better · descending = improving aerobic capacity</div>
+            {faOpen && <InfoOverlay info={FA_TREND_INFO} accent={A} radius={10} compact onClick={faTap} />}
+          </div>
+        </>
+      )}
+
       {TRN.activityHrByWeek && TRN.activityHrByWeek.length > 0 && (
         <>
           <Rail label="AVG ACTIVITY HR · 6 WEEKS" accent={A} right="DECLINING = IMPROVING" />
@@ -260,26 +358,48 @@ function TrainingTrends() {
             data={TRN.activityHrByWeek.map(w => w.avg_hr)}
             accent={A}
             delta={TRN.activityHrByWeek[TRN.activityHrByWeek.length - 1].avg_hr - TRN.activityHrByWeek[0].avg_hr}
-            lowerBetter
-            kind="bars"
+            lowerBetter kind="bars" avg
+            info={ACTHR_INFO}
+          />
+          <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, padding: '0 4px', marginTop: -4 }}>same effort, lower HR = aerobic adaptation</div>
+        </>
+      )}
+
+      {TRN.vo2max.trend.length > 0 && (
+        <>
+          <Rail label="VO2 MAX · 30 DAYS" accent={A} right="HIGHER = BETTER" />
+          <TrendRow label="VO2 Max" value={TRN.vo2max.value} unit="mL/kg" data={TRN.vo2max.trend} accent={A} delta={TRN.vo2max.delta} info={VO2MAX_TREND_INFO} />
+        </>
+      )}
+
+      {TRN.intensity.trend.length > 0 && (
+        <>
+          <Rail label="INTENSITY MINUTES" accent={A} right="7 DAYS" />
+          <TrendRow label="Intensity" value={`${TRN.intensity.moderate + TRN.intensity.vigorous * 2}`} unit="pts" data={TRN.intensity.trend} accent={A} kind="bars" avg info={INTENSITY_TREND_INFO} />
+        </>
+      )}
+
+      {TRN.dailyActivity.stepsTrend.length > 0 && (
+        <>
+          <Rail label="DAILY STEPS" accent={A} right="7 DAYS" />
+          <TrendRow
+            label="Steps"
+            value={TRN.dailyActivity.steps != null ? TRN.dailyActivity.steps.toLocaleString() : 0}
+            data={TRN.dailyActivity.stepsTrend}
+            accent={A} kind="bars" avg
+            fmt={v => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v)}
+            info={STEPS_INFO}
           />
         </>
       )}
-      {TRN.load.trend.length > 0 && (
-        <TrendRow label="Load" value={TRN.load.value} data={TRN.load.trend} accent={A} kind="bars" />
-      )}
-      {TRN.vo2max.trend.length > 0 && (
-        <TrendRow label="VO2 Max" value={TRN.vo2max.value} unit="mL/kg" data={TRN.vo2max.trend} accent={A} delta={TRN.vo2max.delta} />
-      )}
-      {TRN.intensity.trend.length > 0 && (
-        <TrendRow label="Intensity" value={`${TRN.intensity.moderate + TRN.intensity.vigorous * 2}`} unit="pts" data={TRN.intensity.trend} accent={A} kind="bars" />
-      )}
-      {TRN.dailyActivity.stepsTrend.length > 0 && (
-        <TrendRow label="Steps" value={TRN.dailyActivity.steps != null ? TRN.dailyActivity.steps.toLocaleString() : 0} data={TRN.dailyActivity.stepsTrend} accent={A} kind="bars" />
-      )}
+
       {TRN.dailyActivity.calTrend.length > 0 && (
-        <TrendRow label="Calories" value={TRN.dailyActivity.caloriesTotal ?? 0} unit="kcal" data={TRN.dailyActivity.calTrend} accent={A} kind="bars" />
+        <>
+          <Rail label="TOTAL CALORIES" accent={A} right="7 DAYS" />
+          <TrendRow label="Calories" value={TRN.dailyActivity.caloriesTotal ?? 0} unit="kcal" data={TRN.dailyActivity.calTrend} accent={A} kind="bars" avg info={CALORIES_TREND_INFO} />
+        </>
       )}
+
     </div>
   )
 }

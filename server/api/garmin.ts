@@ -35,6 +35,8 @@ const VALID_METRICS = [
   'bp_systolic', 'bp_diastolic',
   // Intensity
   'intensity_mod_min', 'intensity_vig_min',
+  // Daily goals
+  'steps_goal', 'floors_goal',
   // HR zones
   'hrzone_1_min', 'hrzone_2_min', 'hrzone_3_min', 'hrzone_4_min', 'hrzone_5_min',
   // Activities (legacy EAV — kept for backwards compat)

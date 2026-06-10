@@ -151,6 +151,7 @@ function ActivityZoneBar({ zoneSecs }: { zoneSecs: [number, number, number, numb
   if (total === 0) return null
   const zones = zoneSecs.map((s, i) => ({
     zone: i + 1,
+    secs: s,
     pct: Math.round((s / total) * 100),
     color: ZONE_COLORS[i],
   })).filter(z => z.pct > 0)
@@ -169,12 +170,14 @@ function ActivityZoneBar({ zoneSecs }: { zoneSecs: [number, number, number, numb
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 10px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
         {zones.map(z => (
-          <span key={z.zone} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <span key={z.zone} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 6, height: 6, borderRadius: 1, background: z.color, flexShrink: 0 }} />
             <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textSecondary }}>
-              Z{z.zone} {z.pct}%
+              Z{z.zone}{' '}
+              <span style={{ color: COLORS.text, fontWeight: 600 }}>{z.pct}%</span>
+              <span style={{ color: COLORS.textMuted }}> · {Math.round(z.secs / 60)}m</span>
             </span>
           </span>
         ))}

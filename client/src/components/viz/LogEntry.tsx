@@ -236,7 +236,7 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
   const benefit = aerobicBenefit(a.aerobic_te)
 
   const hasZones = (a.zone1_s ?? 0) + (a.zone2_s ?? 0) + (a.zone3_s ?? 0) + (a.zone4_s ?? 0) + (a.zone5_s ?? 0) > 0
-  const hasTrainingEffect = a.aerobic_te != null
+  const hasTrainingEffect = a.aerobic_te != null && a.aerobic_te >= 1.0
   const hasRunDynamics = isRun && a.run_cadence != null
   const hasContent = hasTrainingEffect || hasZones || hasRunDynamics
 

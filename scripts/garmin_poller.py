@@ -51,14 +51,13 @@ def safe(obj, *keys, default=None):
 
 def _child_activity_ids(c, act_id):
     """Return child activity IDs for a multi_sport container, or [] if unavailable."""
-    for getter in [c.get_activity, c.get_activity_details]:
-        try:
-            data = getter(act_id) or {}
-            ids = safe(data, 'metaData', 'childActivityIdList') or []
-            if ids:
-                return [int(i) for i in ids]
-        except Exception:
-            pass
+    try:
+        data = c.get_activity(act_id) or {}
+        ids = (data.get('metadataDTO') or {}).get('childIds') or []
+        if ids:
+            return [int(i) for i in ids]
+    except Exception:
+        pass
     return []
 
 
@@ -340,19 +339,19 @@ def sync_range(db, c, start, end):
                 except Exception:
                     pass
 
-            # Run dynamics — requires get_activity_details(), run-type only
+            # Run dynamics — from get_activity() summaryDTO, run-type only
             run_cadence = run_stride_cm = run_vert_osc_cm = run_gct_ms = None
             if is_run and act_id:
                 try:
-                    details = c.get_activity_details(act_id) or {}
-                    dto = details.get('summaryDTO') or {}
-                    cadence  = dto.get('averageRunningCadenceInStepsPerMinute')
-                    stride_m = dto.get('avgStrideLength')
-                    vert_mm  = dto.get('avgVerticalOscillation')
-                    gct_ms   = dto.get('avgGroundContactTime')
+                    act_data = c.get_activity(act_id) or {}
+                    dto = act_data.get('summaryDTO') or {}
+                    cadence  = dto.get('averageRunCadence')
+                    stride   = dto.get('strideLength')         # returned in cm
+                    vert_osc = dto.get('verticalOscillation')  # returned in cm
+                    gct_ms   = dto.get('groundContactTime')
                     run_cadence     = round(cadence) if cadence is not None else None
-                    run_stride_cm   = round(stride_m * 100, 1) if stride_m is not None else None
-                    run_vert_osc_cm = round(vert_mm / 10, 1) if vert_mm is not None else None
+                    run_stride_cm   = round(stride, 1) if stride is not None else None
+                    run_vert_osc_cm = round(vert_osc, 1) if vert_osc is not None else None
                     run_gct_ms      = round(gct_ms) if gct_ms is not None else None
                     time.sleep(SLEEP_BETWEEN)
                 except Exception:

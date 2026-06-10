@@ -56,7 +56,6 @@ const STEPS_INFO: CardInfo = {
   source: 'Garmin Venu 4 · accelerometer',
 }
 
-const STEPS_GOAL = 10000
 
 function TrainingOverview() {
   const { data: TRN } = useTrainingData()
@@ -183,15 +182,15 @@ function TrainingOverview() {
           <Bracket color={A} inset={6} op={0.28} />
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>STEPS · 7 DAYS</span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TRN.dailyActivity.steps != null && TRN.dailyActivity.steps >= STEPS_GOAL ? COLORS.green : COLORS.textMuted }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: TRN.dailyActivity.steps != null && TRN.dailyActivity.steps >= TRN.dailyActivity.stepsGoal ? COLORS.green : COLORS.textMuted }}>
               {TRN.dailyActivity.steps != null
-                ? TRN.dailyActivity.steps >= STEPS_GOAL ? 'GOAL MET ◆' : `${(STEPS_GOAL - TRN.dailyActivity.steps).toLocaleString()} TO GO`
+                ? TRN.dailyActivity.steps >= TRN.dailyActivity.stepsGoal ? 'GOAL MET ◆' : `${(TRN.dailyActivity.stepsGoal - TRN.dailyActivity.steps).toLocaleString()} TO GO`
                 : '—'}
             </span>
           </div>
           <Bars7 data={TRN.dailyActivity.stepsTrend} accent={A} h={80}
             fmt={v => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)}
-            goal={STEPS_GOAL} />
+            goal={TRN.dailyActivity.stepsGoal} />
           {stepsOpen && <InfoOverlay info={STEPS_INFO} accent={A} radius={10} onClick={stepsTap} />}
         </div>
       )}
@@ -211,7 +210,7 @@ function TrainingOverview() {
             info={{ description: 'Calories from activity only, excluding resting metabolism. More directly reflects workout intensity.' }} />
         )}
         {TRN.dailyActivity.floors != null && (
-          <VitalTile label="Floors" value={Math.round(TRN.dailyActivity.floors)} unit="fl" accent={A} goal={10}
+          <VitalTile label="Floors" value={Math.round(TRN.dailyActivity.floors)} unit="fl" accent={A} goal={TRN.dailyActivity.floorsGoal}
             info={{ description: 'Elevation gained via barometric altimeter. Tracks incidental vertical movement beyond step count.' }} />
         )}
       </div>

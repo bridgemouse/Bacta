@@ -85,6 +85,8 @@ def sync_day(db, c, d):
             store(db, d, 'intensity_vig_min',    safe(s, 'vigorousIntensityMinutes'), 'min',   s)
             store(db, d, 'body_battery_current', safe(s, 'bodyBatteryMostRecentValue'), '%',   s)
             store(db, d, 'body_battery_wake',    safe(s, 'bodyBatteryAtWakeTime'),    '%',     s)
+            store(db, d, 'steps_goal',           safe(s, 'dailyStepGoal'),            'steps')
+            store(db, d, 'floors_goal',          safe(s, 'userFloorsAscendedGoal'),   'floors')
         ok.append('stats')
     except Exception as e:
         err.append(f'stats({e})')

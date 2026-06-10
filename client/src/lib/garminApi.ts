@@ -41,6 +41,8 @@ export interface GarminSummary {
   hrzone_3_min?: number
   hrzone_4_min?: number
   hrzone_5_min?: number
+  steps_goal?: number
+  floors_goal?: number
 }
 
 /** Latest values for every metric — one DB call. */

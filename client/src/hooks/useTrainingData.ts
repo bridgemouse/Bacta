@@ -18,6 +18,8 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
     caloriesTotal: number | null
     caloriesActive: number | null
     floors: number | null
+    stepsGoal: number
+    floorsGoal: number
     stepsTrend: number[]
     calTrend: number[]
   }
@@ -52,7 +54,7 @@ const INITIAL: TrainingData = {
   vo2max: { ...TRAINING.vo2max, trend: [], fitnessAgeTrend: [] },
   dailyActivity: {
     steps: null, distanceKm: null, caloriesTotal: null,
-    caloriesActive: null, floors: null, stepsTrend: [], calTrend: [],
+    caloriesActive: null, floors: null, stepsGoal: 10000, floorsGoal: 10, stepsTrend: [], calTrend: [],
   },
   hrZones: [],
   loadRatio: null,
@@ -176,6 +178,8 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             caloriesTotal:  summary.calories_total  ?? null,
             caloriesActive: summary.calories_active ?? null,
             floors:         summary.floors_up        ?? null,
+            stepsGoal:      summary.steps_goal      ?? 10000,
+            floorsGoal:     summary.floors_goal     ?? 10,
             stepsTrend,
             calTrend,
           },

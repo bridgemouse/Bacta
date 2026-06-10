@@ -37,12 +37,12 @@ const ACUTE_LOAD_INFO: CardInfo = {
 }
 const LOAD_RATIO_INFO: CardInfo = {
   title: 'Load Ratio (ACWR)',
-  description: 'Acute ÷ Chronic workload ratio. Optimal band 0.8–1.3. Above 1.5 is associated with 2–3× elevated injury risk in endurance athletes.',
+  description: 'Acute ÷ Chronic workload ratio. Optimal 0.8–1.3. Above 1.5 raises injury risk 2–3×.',
   source: 'Bacta-computed · Garmin load data',
 }
 const INTENSITY_INFO: CardInfo = {
   title: 'Weekly Intensity Minutes',
-  description: 'Moderate and vigorous minutes combined at 1:2 ratio. WHO recommends 150+ moderate or 75+ vigorous minutes weekly.',
+  description: 'Moderate + vigorous at 1:2 ratio. WHO recommends 150+ moderate or 75+ vigorous weekly.',
   source: 'Garmin Venu 4 · HR zone detection',
 }
 const ZONES_INFO: CardInfo = {
@@ -150,7 +150,12 @@ function TrainingOverview() {
       )}
 
       <Rail label="INTENSITY THIS WEEK" accent={A} right={`GOAL ${TRN.intensity.goal} MIN`} />
-      <div onClick={intensityTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 9, minHeight: CARD_SIZES.row }}>
+      <div onClick={intensityTap} style={{
+        position: 'relative', background: COLORS.surface, border: `1px solid ${COLORS.line}`,
+        borderRadius: 9, padding: '11px 14px 12px', overflow: 'hidden',
+        marginBottom: 9, cursor: 'pointer',
+      }}>
+        <Bracket color={A} inset={6} op={0.28} radius={4} />
         <IntensityBar moderate={TRN.intensity.moderate} vigorous={TRN.intensity.vigorous} goal={TRN.intensity.goal} accent={A} />
         {intensityOpen && <InfoOverlay info={INTENSITY_INFO} accent={A} radius={9} compact onClick={intensityTap} />}
       </div>
@@ -203,15 +208,15 @@ function TrainingOverview() {
         )}
         {TRN.dailyActivity.caloriesTotal != null && (
           <VitalTile label="Calories" value={TRN.dailyActivity.caloriesTotal} unit="kcal" accent={A} goal={2500}
-            info={{ description: 'Basal metabolic rate plus active calories. Useful for tracking trends, not clinical precision.' }} />
+            info={{ description: 'Resting + active calories. Good for trends.' }} />
         )}
         {TRN.dailyActivity.caloriesActive != null && (
           <VitalTile label="Active Cal" value={TRN.dailyActivity.caloriesActive} unit="kcal" accent={A} goal={600}
-            info={{ description: 'Calories from activity only, excluding resting metabolism. More directly reflects workout intensity.' }} />
+            info={{ description: 'Activity-only calories. Reflects workout output.' }} />
         )}
         {TRN.dailyActivity.floors != null && (
           <VitalTile label="Floors" value={Math.round(TRN.dailyActivity.floors)} unit="fl" accent={A} goal={TRN.dailyActivity.floorsGoal}
-            info={{ description: 'Elevation gained via barometric altimeter. Tracks incidental vertical movement beyond step count.' }} />
+            info={{ description: 'Barometric altimeter. Vertical gain beyond steps.' }} />
         )}
       </div>
 

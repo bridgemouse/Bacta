@@ -71,6 +71,19 @@ export interface GarminActivity {
   calories: number | null
   avg_hr: number | null
   elevation_m: number | null
+  // Expand panel data — null means not yet fetched / not applicable
+  aerobic_te: number | null
+  anaerobic_te: number | null
+  recovery_time_h: number | null
+  zone1_s: number | null
+  zone2_s: number | null
+  zone3_s: number | null
+  zone4_s: number | null
+  zone5_s: number | null
+  run_cadence: number | null
+  run_stride_cm: number | null
+  run_vert_osc_cm: number | null
+  run_gct_ms: number | null
 }
 
 export async function fetchActivities(days = 7): Promise<GarminActivity[]> {

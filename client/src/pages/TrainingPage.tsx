@@ -199,19 +199,19 @@ function TrainingOverview() {
       {/* Daily tiles */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 9 }}>
         {TRN.dailyActivity.distanceKm != null && (
-          <VitalTile label="Distance" value={TRN.dailyActivity.distanceKm} unit="km" accent={A}
+          <VitalTile label="Distance" value={TRN.dailyActivity.distanceKm} unit="km" accent={A} goal={8}
             info={{ description: 'GPS-tracked distance today across all activities.' }} />
         )}
         {TRN.dailyActivity.caloriesTotal != null && (
-          <VitalTile label="Calories" value={TRN.dailyActivity.caloriesTotal} unit="kcal" accent={A}
+          <VitalTile label="Calories" value={TRN.dailyActivity.caloriesTotal} unit="kcal" accent={A} goal={2500}
             info={{ description: 'Basal metabolic rate plus active calories. Useful for tracking trends, not clinical precision.' }} />
         )}
         {TRN.dailyActivity.caloriesActive != null && (
-          <VitalTile label="Active Cal" value={TRN.dailyActivity.caloriesActive} unit="kcal" accent={A}
+          <VitalTile label="Active Cal" value={TRN.dailyActivity.caloriesActive} unit="kcal" accent={A} goal={600}
             info={{ description: 'Calories from activity only, excluding resting metabolism. More directly reflects workout intensity.' }} />
         )}
         {TRN.dailyActivity.floors != null && (
-          <VitalTile label="Floors" value={Math.round(TRN.dailyActivity.floors)} unit="fl" accent={A}
+          <VitalTile label="Floors" value={Math.round(TRN.dailyActivity.floors)} unit="fl" accent={A} goal={10}
             info={{ description: 'Elevation gained via barometric altimeter. Tracks incidental vertical movement beyond step count.' }} />
         )}
       </div>

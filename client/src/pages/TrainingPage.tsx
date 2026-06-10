@@ -23,17 +23,17 @@ const A = SECTION_ACCENTS.training
 const STATUS_INFO: CardInfo = {
   title: 'Training Status',
   description: "Garmin's classification of your recent load trajectory relative to your fitness trend. 'Productive' means load is building fitness. Updated after each workout.",
-  source: 'Garmin Fenix 7X · Training Readiness',
+  source: 'Garmin Venu 4 · Training Readiness',
 }
 const FITNESS_AGE_INFO: CardInfo = {
   title: 'Fitness Age',
   description: 'Your physiological age from VO2 Max compared to your demographic. Lower is better and can be decades below chronological age with consistent aerobic training.',
-  source: 'Garmin Fenix 7X · VO2 Max algorithm',
+  source: 'Garmin Venu 4 · VO2 Max algorithm',
 }
 const ACUTE_LOAD_INFO: CardInfo = {
   title: 'Acute Training Load',
   description: 'Weighted sum of training stress over the past 7 days. Staying within your optimal band builds fitness without raising injury risk.',
-  source: 'Garmin Fenix 7X · activity import',
+  source: 'Garmin Venu 4 · activity import',
 }
 const LOAD_RATIO_INFO: CardInfo = {
   title: 'Load Ratio (ACWR)',
@@ -43,17 +43,17 @@ const LOAD_RATIO_INFO: CardInfo = {
 const INTENSITY_INFO: CardInfo = {
   title: 'Weekly Intensity Minutes',
   description: 'Moderate and vigorous minutes combined at 1:2 ratio. WHO recommends 150+ moderate or 75+ vigorous minutes weekly.',
-  source: 'Garmin Fenix 7X · HR zone detection',
+  source: 'Garmin Venu 4 · HR zone detection',
 }
 const ZONES_INFO: CardInfo = {
   title: 'HR Zone Distribution',
   description: 'Time in each intensity zone. Zone 2 builds aerobic base. Zone 4–5 builds threshold and VO2 Max. Most programs target 80% Z1-2 and 20% Z3-5 over a week.',
-  source: 'Garmin Fenix 7X · optical HR + zones',
+  source: 'Garmin Venu 4 · optical HR + zones',
 }
 const STEPS_INFO: CardInfo = {
   title: 'Daily Steps',
   description: '8,000–10,000 steps/day is associated with significantly reduced all-cause mortality, independent of structured exercise.',
-  source: 'Garmin Fenix 7X · accelerometer',
+  source: 'Garmin Venu 4 · accelerometer',
 }
 
 const STEPS_GOAL = 10000

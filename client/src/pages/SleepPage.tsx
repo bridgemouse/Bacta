@@ -20,12 +20,12 @@ const A = SECTION_ACCENTS.sleep
 const HERO_INFO: CardInfo = {
   title: 'Sleep Score & Duration',
   description: "Your Sleep Score (0–100) is Garmin's composite of duration, stage quality, and recovery value. Duration shown is time actually asleep — not time in bed.",
-  source: 'Garmin Fenix 7X · accelerometer + HRV',
+  source: 'Garmin Venu 4 · accelerometer + HRV',
 }
 const ARCH_INFO: CardInfo = {
   title: 'Sleep Architecture',
   description: 'How your sleep distributes across Deep, Light, REM, and Awake. Ideal: ~20% deep, ~22% REM, <5% awake. The Architecture Score is Bacta-computed from how close your night matches these ideals.',
-  source: 'Garmin Fenix 7X · accelerometer + HRV',
+  source: 'Garmin Venu 4 · accelerometer + HRV',
 }
 
 function SleepOverview() {

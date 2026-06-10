@@ -21,12 +21,12 @@ const A = SECTION_ACCENTS.recovery
 const SCORE_INFO: CardInfo = {
   title: 'Recovery Score',
   description: "Garmin's composite daily readiness index (0–100). Synthesizes overnight HRV, resting HR, sleep quality, and recent training load. 70+ = cleared for intensity.",
-  source: 'Garmin Fenix 7X · nightly compute',
+  source: 'Garmin Venu 4 · nightly compute',
 }
 const HRV_INFO: CardInfo = {
   title: 'Heart Rate Variability',
   description: 'Millisecond variation between heartbeats measured overnight. Higher vs your baseline = better recovered. Trend direction shows 7-day slope.',
-  source: 'Garmin Fenix 7X · overnight RMSSD',
+  source: 'Garmin Venu 4 · overnight RMSSD',
 }
 
 function RecoveryOverview() {
@@ -149,7 +149,7 @@ function RecoveryOverview() {
       {/* RHR + Stress pair */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 9 }}>
         <HeadlineCard accent={A} label="Resting HR"
-          info={{ title: 'Resting Heart Rate', description: 'Measured during your deepest sleep. A downward trend over weeks is a reliable signal of growing cardiovascular fitness.', source: 'Garmin Fenix 7X · sleep detection' }}
+          info={{ title: 'Resting Heart Rate', description: 'Measured during your deepest sleep. A downward trend over weeks is a reliable signal of growing cardiovascular fitness.', source: 'Garmin Venu 4 · sleep detection' }}
           foot={<Delta value={rec.rhr.value - (rec.rhr.avg ?? rec.rhr.value)} unit=" bpm" lowerBetter size={9.5} />}
         >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, paddingLeft: 3 }}>
@@ -159,7 +159,7 @@ function RecoveryOverview() {
           <Sparkline data={rec.rhr.trend} accent={A} h={20} sw={1.5} />
         </HeadlineCard>
         <HeadlineCard accent={A} label="Stress"
-          info={{ title: 'Stress Score', description: '0–25 rest, 26–50 low, 51–75 medium, 76–100 high. Consistently low overnight is one of the strongest recovery signals.', source: 'Garmin Fenix 7X · HRV-derived' }}
+          info={{ title: 'Stress Score', description: '0–25 rest, 26–50 low, 51–75 medium, 76–100 high. Consistently low overnight is one of the strongest recovery signals.', source: 'Garmin Venu 4 · HRV-derived' }}
           foot={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {rec.stress.avg != null && <Delta value={rec.stress.value - rec.stress.avg} lowerBetter size={9.5} />}

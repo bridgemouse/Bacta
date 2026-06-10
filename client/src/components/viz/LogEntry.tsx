@@ -52,7 +52,7 @@ function fmtWhen(startTime: string): string {
   const yestKey = toKey(yest.getFullYear(), yest.getMonth() + 1, yest.getDate())
   const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
   if (actKey === todKey)  return `TODAY · ${time}`
-  if (actKey === yestKey) return `YESTERDAY · ${time}`
+  if (actKey === yestKey) return `YDAY · ${time}`
   const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
   return `${dayName} · ${time}`
 }
@@ -276,11 +276,10 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
             {label}
           </span>
           <div style={{
-            fontFamily: FONT_MONO, fontSize: 9.5, color: COLORS.textSecondary,
+            fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary,
             marginTop: 3, letterSpacing: '0.02em',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
-            {stats.join('  ·  ')}
+            {stats.join(' · ')}
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>

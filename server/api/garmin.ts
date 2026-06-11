@@ -141,6 +141,25 @@ garminRouter.get('/weekly-avg-hr', (req, res) => {
   res.json({ weeks: rows.reverse() })
 })
 
+// GET /api/garmin/activities/:id/legs — legs for a multisport activity
+garminRouter.get('/activities/:id/legs', (req, res) => {
+  const activityId = Number(req.params.id)
+  if (!Number.isFinite(activityId)) {
+    res.status(400).json({ error: 'Invalid activity ID' })
+    return
+  }
+  const legs = db.prepare(
+    `SELECT leg_id, activity_id, leg_index, type_key, start_time,
+            duration_s, distance_m, calories, avg_hr, max_hr,
+            aerobic_te, anaerobic_te, training_load, body_battery_diff,
+            zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+            run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, run_power_w,
+            row_stroke_rate, row_power_w, row_strokes
+     FROM garmin_activity_legs WHERE activity_id = ? ORDER BY leg_index`
+  ).all(activityId)
+  res.json({ legs })
+})
+
 // GET /api/garmin/:metric — single metric, optional date range
 garminRouter.get('/:metric', (req, res) => {
   const { metric } = req.params

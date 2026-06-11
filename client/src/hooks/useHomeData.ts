@@ -27,7 +27,8 @@ export function useHomeData(): { data: HomeTileData; loading: boolean } {
         const deepS  = s.sleep_deep_s  ?? 0
         const lightS = s.sleep_light_s ?? 0
         const remS   = s.sleep_rem_s   ?? 0
-        const totalMins = Math.round((deepS + lightS + remS) / 60)
+        const sleepS = s.sleep_s ?? (deepS + lightS + remS)
+        const totalMins = Math.round(sleepS / 60)
         const sleepH = Math.floor(totalMins / 60)
         const sleepM = totalMins % 60
         const sleepStr = totalMins > 0

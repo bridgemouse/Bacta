@@ -9,6 +9,7 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
     unit: string
     delta: number
     fitnessAge: number | string
+    fitnessAgeAchievable: number | null
     trend: number[]
     fitnessAgeTrend: number[]
   }
@@ -51,7 +52,7 @@ const ZONE_META = [
 const INITIAL: TrainingData = {
   ...TRAINING,
   activities: [],
-  vo2max: { ...TRAINING.vo2max, trend: [], fitnessAgeTrend: [] },
+  vo2max: { ...TRAINING.vo2max, fitnessAgeAchievable: null, trend: [], fitnessAgeTrend: [] },
   dailyActivity: {
     steps: null, distanceKm: null, caloriesTotal: null,
     caloriesActive: null, floors: null, stepsGoal: 10000, floorsGoal: 10, stepsTrend: [], calTrend: [],
@@ -151,11 +152,12 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             trend: TRAINING.status.trend,
           },
           vo2max: {
-            value:          summary.vo2max      ?? TRAINING.vo2max.value,
-            unit:           'mL/kg/min',
-            delta:          TRAINING.vo2max.delta,
-            fitnessAge:     summary.fitness_age ?? TRAINING.vo2max.fitnessAge,
-            trend:          vo2maxTrend,
+            value:                summary.vo2max                ?? TRAINING.vo2max.value,
+            unit:                 'mL/kg/min',
+            delta:                TRAINING.vo2max.delta,
+            fitnessAge:           summary.fitness_age           ?? TRAINING.vo2max.fitnessAge,
+            fitnessAgeAchievable: summary.fitness_age_achievable ?? null,
+            trend:                vo2maxTrend,
             fitnessAgeTrend,
           },
           load: {

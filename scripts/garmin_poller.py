@@ -169,17 +169,6 @@ def sync_day(db, c, d):
         err.append(f'stats({e})')
     time.sleep(SLEEP_BETWEEN)
 
-    # RHR (dedicated endpoint, more precise than stats)
-    try:
-        s = c.get_rhr_day(d)
-        if s:
-            rhr = safe(s, 'restingHeartRate') or safe(s, 'value')
-            store(db, d, 'resting_hr', rhr, 'bpm', s)
-        ok.append('rhr')
-    except Exception as e:
-        err.append(f'rhr({e})')
-    time.sleep(SLEEP_BETWEEN)
-
     # Sleep for date d = the night ending on d morning (prev→d)
     try:
         s = c.get_sleep_data(d)
@@ -227,10 +216,8 @@ def sync_day(db, c, d):
         bb = c.get_body_battery(d, d)
         if bb and isinstance(bb, list) and len(bb) > 0:
             item = bb[0]
-            store(db, d, 'body_battery_max', (safe(item, 'maxBatteryValue') or
-                                               safe(item, 'charged')), '%', bb)
-            store(db, d, 'body_battery_min', (safe(item, 'minBatteryValue') or
-                                               safe(item, 'drained')), '%', bb)
+            store(db, d, 'body_battery_charged', safe(item, 'charged'), '%', bb)
+            store(db, d, 'body_battery_drained', safe(item, 'drained'), '%', bb)
         ok.append('body_battery')
     except Exception as e:
         err.append(f'body_battery({e})')
@@ -278,7 +265,8 @@ def sync_day(db, c, d):
         s = c.get_training_readiness(d)
         if s and isinstance(s, list) and len(s) > 0:
             item = s[0]
-            store(db, d, 'recovery_score', safe(item, 'score'), '', s)
+            store(db, d, 'recovery_score',    safe(item, 'score'),        '', s)
+            store(db, d, 'recovery_time_h',   safe(item, 'recoveryTime'), 'h', s)
         ok.append('training_readiness')
     except Exception as e:
         err.append(f'training_readiness({e})')
@@ -320,7 +308,8 @@ def sync_day(db, c, d):
     try:
         s = c.get_fitnessage_data(d)
         if s:
-            store(db, d, 'fitness_age', safe(s, 'fitnessAge'), 'years', s)
+            store(db, d, 'fitness_age',           safe(s, 'fitnessAge'),           'years', s)
+            store(db, d, 'fitness_age_achievable', safe(s, 'achievableFitnessAge'), 'years', s)
         ok.append('fitness_age')
     except Exception as e:
         err.append(f'fitness_age({e})')

@@ -113,7 +113,7 @@ garminRouter.get('/weekly-volume', (req, res) => {
   res.json({ weeks: rows.reverse() })
 })
 
-// GET /api/garmin/weekly-intensity — sum mod+vig intensity mins over rolling 7 days
+// GET /api/garmin/weekly-intensity — sum mod+vig intensity mins since Monday (Garmin's week boundary)
 garminRouter.get('/weekly-intensity', (_req, res) => {
   const row = db.prepare(
     `SELECT
@@ -121,7 +121,7 @@ garminRouter.get('/weekly-intensity', (_req, res) => {
        COALESCE(SUM(CASE WHEN metric = 'intensity_vig_min' THEN value ELSE 0 END), 0) AS vigorous
      FROM garmin_snapshots
      WHERE metric IN ('intensity_mod_min', 'intensity_vig_min')
-       AND date >= date('now', '-6 days')`
+       AND date >= date('now', '-' || CAST((CAST(strftime('%w', 'now') AS INTEGER) + 6) % 7 AS TEXT) || ' days')`
   ).get() as { moderate: number; vigorous: number }
   res.json({ moderate: row.moderate, vigorous: row.vigorous })
 })

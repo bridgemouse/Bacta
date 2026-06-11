@@ -9,7 +9,7 @@
 
 - **Package:** `garminconnect` v0.3.5 (`pip install garminconnect==0.3.5 --break-system-packages`)
 - **Repo:** https://github.com/cyberjunky/python-garminconnect
-- **Auth:** Token-file login: `c = Garmin(); c.login('~/.garminconnect')`
+- **Auth:** Token-file login: `c = Garmin(); c.login(os.path.expanduser('~/.garminconnect'))`
 - **Rate limiting:** Sleep 0.4–0.5s between calls; Garmin will throttle aggressive clients
 
 ```python
@@ -34,14 +34,19 @@ c.get_daily_weigh_ins(cdate)        # ← single date only; (start, end) raises 
 **Fix:** Use `get_weigh_ins(start, end)` for range fetches. Response structure differs:
 ```python
 # get_weigh_ins response
-{ 'dailyWeightSummaries': [{'summaryDate': '...', 'allWeightMetrics': [...]}] }
+{
+  'dailyWeightSummaries': [{
+    'summaryDate': '2026-06-01',
+    'latestWeight': {'weight': ..., 'bmi': ..., 'bodyFatPercent': ..., 'muscleMass': ...},
+    'allWeightMetrics': [...],   # fallback if latestWeight absent
+  }]
+}
 
-# get_daily_weigh_ins response (single date)
+# get_daily_weigh_ins response (single date only in v0.3.5)
 { 'dateWeightList': [...], 'totalAverage': {...} }
 ```
 
-**Status:** Bug exists in both `garmin_poller.py` and `garmin_ingest.py` — calls silently fail
-because the TypeError is caught in the `except` block. Weight data is not being stored.
+**Status:** Fixed in commit b356428 — both scripts updated to use `get_weigh_ins`.
 
 ---
 
@@ -105,7 +110,7 @@ sleepScores               # Dict with per-component scores:
 sleepAlignment            # Sleep timing vs circadian rhythm (if available)
 ```
 
-🔴 **Bug:** `garmin_poller.py` and `garmin_ingest.py` both call `safe(dto, 'durationInSeconds')` for `sleep_s`, but the correct field is `sleepTimeSeconds`. As a result, `sleep_s` is never stored in the DB. The UI works around this by summing deep+light+REM seconds.
+**Fixed (commit b356428):** Both scripts previously called `safe(dto, 'durationInSeconds')` for `sleep_s`, but the correct field is `sleepTimeSeconds`. The field was never stored. Fixed with a fallback: `sleepTimeSeconds or durationInSeconds`. The UI works around the gap by summing deep+light+REM seconds.
 
 ### HRV
 
@@ -125,7 +130,7 @@ baseline.balancedUpper  # Upper bound of personal baseline
 
 | Method | Args | Returns | Status | Notes |
 |--------|------|---------|--------|-------|
-| `get_weigh_ins(startdate, enddate)` | date, date | dict | ✅ | Range; `dailyWeightSummaries[].allWeightMetrics` |
+| `get_weigh_ins(startdate, enddate)` | date, date | dict | ✅ | Range; `dailyWeightSummaries[].latestWeight` for actual values |
 | `get_daily_weigh_ins(cdate)` | date | dict | ✅ | Single day only in v0.3.5; `dateWeightList` |
 | `get_blood_pressure(startdate, enddate)` | date, date | dict | ✅ | `measurementSummaries[].systolic/.diastolic` |
 | `get_body_composition(startdate, enddate)` | date, date | dict | ✅ | Same structure as `get_weigh_ins` |
@@ -192,8 +197,10 @@ calendarDate    # Date of prediction
 **`get_lactate_threshold` fields:**
 ```python
 speed_and_heart_rate:
-  heartRate     # Lactate threshold HR in bpm (184 bpm)
-  speed         # LT pace in m/s (0.364 m/s ≈ 4:35/km)
+  heartRate     # Lactate threshold HR in bpm (184 bpm on 2026-04-27)
+  speed         # LT speed in m/s — live value 0.364 m/s = 45:48/km (implausible;
+                # likely a failed auto-detection; valid LT ~5:15/km = 3.17 m/s)
+                # Requires an official LT test on the device to get real data
   calendarDate  # When this was calculated
 
 power:
@@ -203,22 +210,19 @@ power:
   calendarDate              # Date of power reading
 ```
 
-**Personal record type IDs:**
+**Personal record type IDs** (inferred from live data — not officially documented by Garmin):
 ```
-typeId 1  = 400m fastest
-typeId 2  = ~500m (1/4 mile)
-typeId 3  = 1km fastest
-typeId 4  = 1 mile fastest
-typeId 5  = 5km fastest
-typeId 6  = 10km fastest
-typeId 7  = longest run distance
-typeId 8  = marathon (if run)
-typeId 9  = longest bike ride (if applicable)
-typeId 10 = longest swim (if applicable)
-typeId 12 = fastest mile or similar
+typeId 1  = fastest short segment (~400m) — value observed: 324.4
+typeId 2  = fastest mid segment (~800m)   — value observed: 522.8
+typeId 3  = fastest 1km segment           — value observed: 1896.3
+typeId 7  = longest run distance          — value observed: 8033.5m (confirmed = 5.0mi)
+typeId 12 = (unknown distance PR)
 ```
-**Value field** is in meters for distance PRs (typeId 7 = 8033.5m = 5.0mi longest run).
-Activity `typeId` 1 value = 324.4 → 324m at 400m distance ≈ fastest 400m segment.
+**Value field semantics are unclear.** typeId=7 is confirmed meters (8033.5m = 5.0mi longest run).
+For typeId=1–3, the values (324, 522, 1896) don't cleanly parse as seconds (too slow) or
+meters (too short for named distances). May be distance in meters of the best segment found
+during the qualifying activity, or time in a non-obvious unit. Do not rely on these values
+without cross-referencing against the linked `activityId` to verify.
 
 ### Per-Activity
 
@@ -245,7 +249,7 @@ activityTrainingLoad       # Load contribution of this activity
 differenceBodyBattery      # Body battery delta (negative = drained)
 
 # Running only
-averageRunCadence          # spm (steps per minute — one foot)
+averageRunCadence          # steps per minute total (both feet combined)
 strideLength               # cm
 verticalOscillation        # cm
 groundContactTime          # ms
@@ -268,7 +272,7 @@ distance           # meters
 duration           # seconds
 averageSpeed       # m/s
 averageHR, maxHR
-averageRunCadence  # spm
+averageRunCadence  # steps per minute (both feet)
 averagePower       # watts (may be null for walking)
 calories
 ```
@@ -319,18 +323,12 @@ endurance_score (0 rows — not supported on Venu 4)
 hill_score (0 rows — no hill data)
 ```
 
-### 🔴 Broken — never stored
+### ✅ Fixed in commit b356428
 ```
-sleep_s   # poller reads 'durationInSeconds' but field is 'sleepTimeSeconds'
-          # UI works around this by summing stage seconds (deep+light+REM)
-```
-
-### 🔴 Broken — fails silently since v0.3.5
-```
-weight_kg, bmi, body_fat_pct, muscle_mass_kg (poller)
-           # garmin_poller.py calls get_daily_weigh_ins(start, end) → TypeError
-           # garmin_ingest.py same bug
-           # Fix: use get_weigh_ins(start, end) + navigate dailyWeightSummaries
+sleep_s           # Was reading 'durationInSeconds' (absent); fixed to 'sleepTimeSeconds'
+weight_kg, bmi,   # Were calling get_daily_weigh_ins(start, end) → TypeError in v0.3.5
+body_fat_pct,     # Fixed to use get_weigh_ins(start, end) + navigate dailyWeightSummaries
+muscle_mass_kg    # Note: no weigh-in data currently in DB; will populate once logged
 ```
 
 ---
@@ -406,11 +404,12 @@ CREATE TABLE garmin_personal_records (
 ## Data Collection Notes
 
 ### Ingest vs Poller divergence
-`garmin_ingest.py` (historical) and `garmin_poller.py` (nightly) have diverged:
-- Ingest does NOT handle multi_sport child zones (uses parent activity ID → returns empty zones)
-- Poller correctly routes multi_sport through `_child_activity_ids()`
-- Result: historical data for OTF class days may have wrong/empty HR zone aggregates
-- Poller also stores run dynamics (cadence/stride/vert_osc/GCT) per activity; ingest does not
+`garmin_ingest.py` (historical) and `garmin_poller.py` (nightly) differ in scope:
+- ✅ Fixed (b356428): Ingest now handles multi_sport child zone resolution, matching poller
+- Remaining gap: Poller stores per-activity run dynamics (cadence/stride/vert_osc/GCT) and
+  aerobic_te/anaerobic_te/recovery_time_h; ingest stores only basic activity fields
+- OTF class days in historical data still have empty HR zones — would need a targeted
+  re-ingest of those specific dates to backfill (run `garmin_ingest.py --days N --replace`)
 
 ### Training readiness timing
 `get_training_readiness(today)` returns empty — Garmin computes this overnight.
@@ -454,7 +453,7 @@ Store the Local version for `start_time` fields; use the first 10 chars to extra
 | `sleep_resp` | `useSleepData` | SleepPage | HealthStatusTile |
 | `sleep_hr` | `useSleepData` | SleepPage | HealthStatusTile |
 | `sleep_stress` | `useSleepData` | SleepPage | HealthStatusTile |
-| `sleep_s` | — | NOT USED (empty) | Bug: field name wrong in poller |
+| `sleep_s` | `useSleepData` (unused) | NOT displayed | Was broken; fixed b356428. UI still computes duration from stages |
 | `vo2max` | `useTrainingData` | TrainingPage | VO2max bespoke card |
 | `fitness_age` | `useTrainingData` | TrainingPage | VO2max card subtext |
 | `training_load` | `useTrainingData` | TrainingPage | LoadBand + Trends |

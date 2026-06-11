@@ -42,7 +42,7 @@
 
 **MX-4 system (infrastructure only):**
 - `mx4/orchestrator.py` — complete, never run
-- `mx4/system-prompt.md` — **rewritten Jun 11, 2026** (replaced AZ-3 fabrication with correct identity)
+- `mx4/system-prompt.md` — **rewritten Jun 11, 2026** (replaced AZI-3 fabrication with correct identity)
 - `mx4/sections.py` — defined but has stale metric names
 - `mx4/data_fetcher.py`, `mx4/db_query_server.py`, `mx4/vault_query_server.py` — complete
 - `mx4/check_signal.py` — signal file watcher complete

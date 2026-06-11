@@ -358,7 +358,7 @@ function TrainingTrends() {
                 <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>
                   {TRN.vo2max.fitnessAgeTrend[0].toFixed(1)} →
                 </span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: COLORS.green }}>{faValue}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: COLORS.text }}>{faValue}</span>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>yr</span>
               </div>
             </div>

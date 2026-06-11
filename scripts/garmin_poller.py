@@ -185,7 +185,8 @@ def sync_day(db, c, d):
         s = c.get_sleep_data(d)
         dto = safe(s, 'dailySleepDTO') or {}
         if dto:
-            store(db, d, 'sleep_s',         safe(dto, 'durationInSeconds'),      's',    s)
+            store(db, d, 'sleep_s',         (safe(dto, 'sleepTimeSeconds') or
+                                          safe(dto, 'durationInSeconds')),    's',    s)
             store(db, d, 'sleep_deep_s',    safe(dto, 'deepSleepSeconds'),       's',    s)
             store(db, d, 'sleep_light_s',   safe(dto, 'lightSleepSeconds'),      's',    s)
             store(db, d, 'sleep_rem_s',     safe(dto, 'remSleepSeconds'),        's',    s)
@@ -367,17 +368,28 @@ def sync_range(db, c, start, end):
     """Fetch metrics that use a date range API (past week)."""
 
     # Weigh-ins / body composition
+    # NOTE: get_daily_weigh_ins(cdate) in v0.3.5 only accepts a single date.
+    # Use get_weigh_ins(start, end) for range fetches → returns dailyWeightSummaries[].
     try:
-        rows = c.get_daily_weigh_ins(start, end)
-        for row in (rows or []):
-            d = safe(row, 'summaryDate') or safe(row, 'calendarDate')
-            if d:
-                store(db, d, 'weight_kg',     safe(row, 'weight'),          'kg', row)
-                store(db, d, 'bmi',            safe(row, 'bmi'),             '',   row)
-                store(db, d, 'body_fat_pct',   safe(row, 'bodyFatPercent'), '%',  row)
-                store(db, d, 'muscle_mass_kg', safe(row, 'muscleMass'),     'kg', row)
+        resp = c.get_weigh_ins(start, end)
+        daily_summaries = safe(resp, 'dailyWeightSummaries') or []
+        stored = 0
+        for day in daily_summaries:
+            d = safe(day, 'summaryDate')
+            if not d:
+                continue
+            # Weight fields live inside latestWeight (or allWeightMetrics[0])
+            latest = safe(day, 'latestWeight') or {}
+            if not latest and safe(day, 'allWeightMetrics'):
+                latest = safe(day, 'allWeightMetrics', 0) or {}
+            if safe(latest, 'weight'):
+                store(db, d, 'weight_kg',     safe(latest, 'weight'),          'kg', day)
+                store(db, d, 'bmi',            safe(latest, 'bmi'),             '',   day)
+                store(db, d, 'body_fat_pct',   safe(latest, 'bodyFatPercent'), '%',  day)
+                store(db, d, 'muscle_mass_kg', safe(latest, 'muscleMass'),     'kg', day)
+                stored += 1
         db.commit()
-        print(f'  weigh-ins: {len(rows or [])} rows')
+        print(f'  weigh-ins: {stored} rows with data (of {len(daily_summaries)} days)')
     except Exception as e:
         print(f'  weigh-ins error: {e}')
     time.sleep(SLEEP_BETWEEN)

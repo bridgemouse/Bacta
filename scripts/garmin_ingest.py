@@ -98,7 +98,8 @@ def sync_day(db, store, c, d):
         s = c.get_sleep_data(d)
         dto = safe(s, 'dailySleepDTO') or {}
         if dto:
-            store(db, d, 'sleep_s',       safe(dto, 'durationInSeconds'),      's',    s)
+            store(db, d, 'sleep_s',       (safe(dto, 'sleepTimeSeconds') or
+                                      safe(dto, 'durationInSeconds')),    's',    s)
             store(db, d, 'sleep_deep_s',  safe(dto, 'deepSleepSeconds'),       's',    s)
             store(db, d, 'sleep_light_s', safe(dto, 'lightSleepSeconds'),      's',    s)
             store(db, d, 'sleep_rem_s',   safe(dto, 'remSleepSeconds'),        's',    s)
@@ -223,14 +224,28 @@ def sync_day(db, store, c, d):
     time.sleep(SLEEP_PER_CALL)
 
     # Heart rate zones — aggregate secsInZone across all activities for the day
+    # multi_sport containers return empty zones; query child activity IDs instead
     try:
         acts = c.get_activities_by_date(d, d) or []
         zone_secs = {}
         for act in acts:
             act_id = act.get('activityId')
-            if act_id:
+            if not act_id:
+                continue
+            type_key = safe(act, 'activityType', 'typeKey') or ''
+            if type_key == 'multi_sport':
+                ids = []
                 try:
-                    for z in (c.get_activity_hr_in_timezones(act_id) or []):
+                    data = c.get_activity(act_id) or {}
+                    ids = [int(i) for i in ((data.get('metadataDTO') or {}).get('childIds') or [])]
+                except Exception:
+                    pass
+                query_ids = ids or [act_id]
+            else:
+                query_ids = [act_id]
+            for qid in query_ids:
+                try:
+                    for z in (c.get_activity_hr_in_timezones(qid) or []):
                         n = z.get('zoneNumber')
                         if n and 1 <= n <= 5:
                             zone_secs[n] = zone_secs.get(n, 0) + (z.get('secsInZone') or 0)
@@ -251,18 +266,26 @@ def sync_day(db, store, c, d):
 def sync_range_bulk(db, store, c, start, end):
     print(f'\nFetching range metrics ({start} → {end})...')
 
-    # Weigh-ins
+    # Weigh-ins — v0.3.5: get_daily_weigh_ins only takes one date; use get_weigh_ins for range
     try:
-        rows = c.get_daily_weigh_ins(start, end)
-        for row in (rows or []):
-            d = safe(row, 'summaryDate') or safe(row, 'calendarDate')
-            if d:
-                store(db, d, 'weight_kg',     safe(row, 'weight'),          'kg', row)
-                store(db, d, 'bmi',            safe(row, 'bmi'),             '',   row)
-                store(db, d, 'body_fat_pct',   safe(row, 'bodyFatPercent'), '%',  row)
-                store(db, d, 'muscle_mass_kg', safe(row, 'muscleMass'),     'kg', row)
+        resp = c.get_weigh_ins(start, end)
+        daily_summaries = safe(resp, 'dailyWeightSummaries') or []
+        stored = 0
+        for day in daily_summaries:
+            d = safe(day, 'summaryDate')
+            if not d:
+                continue
+            latest = safe(day, 'latestWeight') or {}
+            if not latest and safe(day, 'allWeightMetrics'):
+                latest = safe(day, 'allWeightMetrics', 0) or {}
+            if safe(latest, 'weight'):
+                store(db, d, 'weight_kg',     safe(latest, 'weight'),          'kg', day)
+                store(db, d, 'bmi',            safe(latest, 'bmi'),             '',   day)
+                store(db, d, 'body_fat_pct',   safe(latest, 'bodyFatPercent'), '%',  day)
+                store(db, d, 'muscle_mass_kg', safe(latest, 'muscleMass'),     'kg', day)
+                stored += 1
         db.commit()
-        print(f'  weigh-ins:          {len(rows or []):4d} rows')
+        print(f'  weigh-ins:          {stored:4d} rows with data (of {len(daily_summaries)} days)')
     except Exception as e:
         print(f'  weigh-ins error: {e}')
     time.sleep(SLEEP_PER_CALL)

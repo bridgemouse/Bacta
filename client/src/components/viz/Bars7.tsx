@@ -66,12 +66,14 @@ export function Bars7({ data, accent, labels = DAY, h = 70, goal, fmt, avg }: Ba
           borderTop: `1px solid ${hexA(COLORS.textMuted, 0.3)}`,
           pointerEvents: 'none',
         }}>
-          <span style={{
-            fontFamily: FONT_MONO, fontSize: 6.5, color: COLORS.textMuted,
-            lineHeight: 1, paddingBottom: 2, paddingRight: 1,
-          }}>
-            AVG
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', paddingBottom: 2, paddingRight: 1 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7, color: COLORS.textMuted, lineHeight: 1 }}>
+              {fmt ? fmt(avgVal) : Math.round(avgVal)}
+            </span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 6, color: COLORS.textMuted, lineHeight: 1.2, opacity: 0.65 }}>
+              AVG
+            </span>
+          </div>
         </div>
       )}
 

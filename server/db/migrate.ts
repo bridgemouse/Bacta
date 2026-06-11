@@ -34,5 +34,8 @@ export function migrate() {
     }
   }
 
+  // garmin_activity_legs is a new table — CREATE TABLE IF NOT EXISTS handles idempotency
+  // (schema.sql already ran above via db.exec(schema))
+
   console.log('[db] migrations complete')
 }

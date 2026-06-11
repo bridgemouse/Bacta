@@ -56,6 +56,39 @@ CREATE TABLE IF NOT EXISTS garmin_activities (
 );
 CREATE INDEX IF NOT EXISTS idx_garmin_activities_date ON garmin_activities(date);
 
+CREATE TABLE IF NOT EXISTS garmin_activity_legs (
+  leg_id            INTEGER PRIMARY KEY,
+  activity_id       INTEGER NOT NULL,
+  leg_index         INTEGER NOT NULL,
+  type_key          TEXT NOT NULL,
+  start_time        TEXT NOT NULL,
+  duration_s        REAL,
+  distance_m        REAL,
+  calories          INTEGER,
+  avg_hr            INTEGER,
+  max_hr            INTEGER,
+  aerobic_te        REAL,
+  anaerobic_te      REAL,
+  training_load     REAL,
+  body_battery_diff INTEGER,
+  zone1_s           INTEGER,
+  zone2_s           INTEGER,
+  zone3_s           INTEGER,
+  zone4_s           INTEGER,
+  zone5_s           INTEGER,
+  run_cadence       INTEGER,
+  run_stride_cm     REAL,
+  run_vert_osc_cm   REAL,
+  run_gct_ms        INTEGER,
+  run_power_w       INTEGER,
+  row_stroke_rate   INTEGER,
+  row_power_w       INTEGER,
+  row_strokes       INTEGER,
+  created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(activity_id, leg_index)
+);
+CREATE INDEX IF NOT EXISTS idx_garmin_activity_legs_activity ON garmin_activity_legs(activity_id);
+
 CREATE TABLE IF NOT EXISTS blood_work (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   date            TEXT NOT NULL,

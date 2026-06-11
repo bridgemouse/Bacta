@@ -61,6 +61,83 @@ def _child_activity_ids(c, act_id):
     return []
 
 
+def store_legs(db, c, parent_id, child_ids):
+    """Fetch and store per-leg data for each child of a multi_sport activity."""
+    RUN_TYPES = {'running', 'trail_running', 'treadmill_running'}
+    ROW_TYPES = {'indoor_rowing', 'rowing'}
+    for idx, child_id in enumerate(child_ids, 1):
+        try:
+            cdata = c.get_activity(child_id) or {}
+            dtype = (cdata.get('activityTypeDTO') or {}).get('typeKey', 'other')
+            dto   = cdata.get('summaryDTO') or {}
+            is_run = dtype in RUN_TYPES
+            is_row = dtype in ROW_TYPES
+
+            zone1_s = zone2_s = zone3_s = zone4_s = zone5_s = None
+            try:
+                for z in (c.get_activity_hr_in_timezones(child_id) or []):
+                    n = z.get('zoneNumber')
+                    secs = int(z.get('secsInZone') or 0)
+                    if   n == 1: zone1_s = (zone1_s or 0) + secs
+                    elif n == 2: zone2_s = (zone2_s or 0) + secs
+                    elif n == 3: zone3_s = (zone3_s or 0) + secs
+                    elif n == 4: zone4_s = (zone4_s or 0) + secs
+                    elif n == 5: zone5_s = (zone5_s or 0) + secs
+                time.sleep(SLEEP_BETWEEN)
+            except Exception:
+                pass
+
+            cadence  = dto.get('averageRunCadence') if is_run else None
+            stride   = dto.get('strideLength')      if is_run else None
+            vert_osc = dto.get('verticalOscillation') if is_run else None
+            gct      = dto.get('groundContactTime') if is_run else None
+            run_pwr  = dto.get('averagePower')      if is_run else None
+
+            row_rate    = dto.get('averageStrokeCadence') if is_row else None
+            row_pwr     = dto.get('averagePower')         if is_row else None
+            row_strokes = dto.get('totalNumberOfStrokes') if is_row else None
+
+            start_raw = (dto.get('startTimeLocal') or '')[:19].replace('T', ' ')
+            cal = dto.get('calories')
+            avg_hr = dto.get('averageHR')
+            max_hr = dto.get('maxHR')
+
+            db.execute(
+                'INSERT OR REPLACE INTO garmin_activity_legs '
+                '(leg_id, activity_id, leg_index, type_key, start_time, duration_s, distance_m, '
+                'calories, avg_hr, max_hr, aerobic_te, anaerobic_te, training_load, body_battery_diff, '
+                'zone1_s, zone2_s, zone3_s, zone4_s, zone5_s, '
+                'run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, run_power_w, '
+                'row_stroke_rate, row_power_w, row_strokes) VALUES '
+                '(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (
+                    child_id, parent_id, idx, dtype, start_raw,
+                    dto.get('duration'),
+                    dto.get('distance'),
+                    round(cal) if cal else None,
+                    round(avg_hr) if avg_hr else None,
+                    round(max_hr) if max_hr else None,
+                    dto.get('trainingEffect'),
+                    dto.get('anaerobicTrainingEffect'),
+                    dto.get('activityTrainingLoad'),
+                    dto.get('differenceBodyBattery'),
+                    zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+                    round(cadence)       if cadence   else None,
+                    round(stride, 1)     if stride    else None,
+                    round(vert_osc, 1)   if vert_osc  else None,
+                    round(gct)           if gct       else None,
+                    round(run_pwr)       if run_pwr   else None,
+                    round(row_rate)      if row_rate  else None,
+                    round(row_pwr)       if row_pwr   else None,
+                    round(row_strokes)   if row_strokes else None,
+                )
+            )
+            time.sleep(SLEEP_BETWEEN)
+        except Exception as e:
+            print(f'    leg {child_id} error: {e}')
+    db.commit()
+
+
 # ─── Per-day sync ──────────────────────────────────────────────────────────────
 
 def sync_day(db, c, d):
@@ -375,6 +452,16 @@ def sync_range(db, c, start, end):
                  zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
                  run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms)
             )
+
+            # For multisport containers, fetch and store per-leg data
+            if type_key == 'multi_sport' and act_id:
+                try:
+                    child_ids = _child_activity_ids(c, act_id)
+                    if child_ids:
+                        store_legs(db, c, act_id, child_ids)
+                except Exception as e:
+                    print(f'    legs error for {act_id}: {e}')
+
         db.commit()
         print(f'  activities: {len(acts or [])} rows')
     except Exception as e:

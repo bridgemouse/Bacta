@@ -1,15 +1,18 @@
 import { useState } from 'react'
 import { COLORS, FONT_MONO, FONT_UI } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import type { GarminActivity } from '../../lib/garminApi'
+import { fetchActivityLegs, type ActivityLeg, type GarminActivity } from '../../lib/garminApi'
 
-type Sigil = 'run' | 'strength' | 'walk' | 'cycle'
+type Sigil = 'run' | 'strength' | 'walk' | 'cycle' | 'cardio' | 'row' | 'multi'
 
 const TYPE_SIGIL: Record<string, Sigil> = {
   running: 'run', trail_running: 'run', treadmill_running: 'run',
   walking: 'walk', hiking: 'walk', indoor_walking: 'walk',
   cycling: 'cycle', road_biking: 'cycle', mountain_biking: 'cycle', indoor_cycling: 'cycle',
   strength_training: 'strength', indoor_weightlifting: 'strength', gym_and_fitness_equipment: 'strength',
+  indoor_cardio: 'cardio',
+  indoor_rowing: 'row', rowing: 'row',
+  multi_sport: 'multi',
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -17,6 +20,8 @@ const TYPE_LABEL: Record<string, string> = {
   walking: 'Walk', hiking: 'Hike', indoor_walking: 'Walk',
   cycling: 'Ride', road_biking: 'Ride', mountain_biking: 'MTB', indoor_cycling: 'Cycling',
   strength_training: 'Strength', indoor_weightlifting: 'Weights', gym_and_fitness_equipment: 'Gym',
+  indoor_cardio: 'Cardio', indoor_rowing: 'Rowing', rowing: 'Rowing',
+  mobility: 'Mobility', multi_sport: 'Multisport',
 }
 
 const SIGIL_COLOR: Record<Sigil, string | null> = {
@@ -24,9 +29,14 @@ const SIGIL_COLOR: Record<Sigil, string | null> = {
   strength: '#fb923c',
   walk: '#4ade80',
   cycle: '#fbbf24',
+  cardio: '#fb923c',
+  row: '#60a5fa',
+  multi: null,
 }
 
 const RUN_TYPES = new Set(['running', 'trail_running', 'treadmill_running'])
+const LEG_RUN_TYPES = new Set(['running', 'trail_running', 'treadmill_running'])
+const LEG_ROW_TYPES = new Set(['indoor_rowing', 'rowing'])
 
 function fmtDist(m: number | null): string | null {
   if (!m || m < 100) return null
@@ -103,6 +113,32 @@ function ActivityGlyph({ sigil, color, size = 16 }: { sigil: Sigil; color: strin
           <line x1="7" y1="7" x2="7" y2="17" />
           <line x1="17" y1="7" x2="17" y2="17" />
           <line x1="7" y1="12" x2="17" y2="12" />
+        </g>
+      )}
+      {sigil === 'cardio' && (
+        <g {...p}>
+          <polyline points="2,12 6,12 8,6 10,18 12,10 14,14 16,12 22,12" />
+        </g>
+      )}
+      {sigil === 'row' && (
+        <g {...p}>
+          <circle cx="12" cy="4.5" r="1.8" />
+          <path d="M12 6.5 L10 10 L8 12" />
+          <path d="M10 10 L14 11 L18 9" />
+          <line x1="4" y1="16" x2="20" y2="16" strokeWidth={1.4} />
+          <path d="M6 16 L5 19" />
+          <path d="M10 16 L9 19" />
+          <path d="M14 16 L15 19" />
+          <path d="M18 16 L19 19" />
+        </g>
+      )}
+      {(sigil === 'multi') && (
+        <g {...p}>
+          <circle cx="7" cy="12" r="3" />
+          <circle cx="17" cy="12" r="3" />
+          <line x1="10" y1="12" x2="14" y2="12" />
+          <line x1="7" y1="9" x2="7" y2="6" />
+          <line x1="17" y1="9" x2="17" y2="6" />
         </g>
       )}
     </svg>
@@ -216,6 +252,81 @@ function RunDynamicsGrid({ dyn, accent }: { dyn: RunDynamics; accent: string }) 
   )
 }
 
+// ── Leg Card (used in multisport expand) ──────────────────────────────────────
+function LegCard({ leg, accent }: { leg: ActivityLeg; accent: string }) {
+  const sigil = TYPE_SIGIL[leg.type_key] ?? 'run'
+  const label = TYPE_LABEL[leg.type_key] ?? leg.type_key.replace(/_/g, ' ')
+  const color = SIGIL_COLOR[sigil] ?? accent
+  const isRun = LEG_RUN_TYPES.has(leg.type_key)
+  const isRow = LEG_ROW_TYPES.has(leg.type_key)
+  const hasZones = (leg.zone1_s ?? 0) + (leg.zone2_s ?? 0) + (leg.zone3_s ?? 0) + (leg.zone4_s ?? 0) + (leg.zone5_s ?? 0) > 0
+  const battDiff = leg.body_battery_diff != null && leg.body_battery_diff < 0 ? leg.body_battery_diff : null
+
+  const extras: string[] = []
+  if (isRun && leg.run_cadence != null) {
+    extras.push(`${leg.run_cadence} spm`)
+    if (leg.run_gct_ms != null) extras.push(`${leg.run_gct_ms}ms GCT`)
+    if (leg.run_stride_cm != null) extras.push(`${leg.run_stride_cm}cm stride`)
+    if (leg.run_power_w != null) extras.push(`${leg.run_power_w}W`)
+  }
+  if (isRow) {
+    if (leg.distance_m != null && leg.distance_m > 0) extras.push(fmtDist(leg.distance_m) ?? '')
+    if (leg.row_stroke_rate != null) extras.push(`${leg.row_stroke_rate} spm`)
+    if (leg.row_power_w != null) extras.push(`${leg.row_power_w}W avg`)
+  }
+
+  return (
+    <div style={{ padding: '10px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: hasZones || extras.length > 0 ? 8 : 0 }}>
+        <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 6,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: hexA(color, 0.12), border: `1px solid ${hexA(color, 0.28)}` }}>
+          <ActivityGlyph sigil={sigil} color={color} size={14} />
+        </span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em',
+            color: COLORS.textSecondary, fontWeight: 600, textTransform: 'uppercase' }}>
+            {label}
+          </div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, marginTop: 1 }}>
+            {fmtDur(leg.duration_s)}
+            {leg.calories != null && ` · ${leg.calories} kcal`}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          {leg.avg_hr != null && (
+            <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
+              {leg.avg_hr}
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, fontWeight: 400 }}> avg bpm</span>
+            </div>
+          )}
+          <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginTop: 2 }}>
+            {[
+              leg.max_hr != null && `max ${leg.max_hr}`,
+              battDiff != null && `${battDiff}🔋`,
+            ].filter(Boolean).join(' · ')}
+          </div>
+        </div>
+      </div>
+
+      {hasZones && (
+        <div style={{ marginBottom: extras.length > 0 ? 6 : 0 }}>
+          <ActivityZoneBar zoneSecs={[
+            leg.zone1_s ?? 0, leg.zone2_s ?? 0, leg.zone3_s ?? 0,
+            leg.zone4_s ?? 0, leg.zone5_s ?? 0,
+          ]} />
+        </div>
+      )}
+
+      {extras.length > 0 && (
+        <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginTop: 2 }}>
+          {extras.join(' · ')}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── LogEntry ──────────────────────────────────────────────────────────────────
 interface LogEntryProps {
   activity: GarminActivity
@@ -224,10 +335,14 @@ interface LogEntryProps {
 
 export function LogEntry({ activity: a, accent }: LogEntryProps) {
   const [open, setOpen] = useState(false)
+  const [legs, setLegs] = useState<ActivityLeg[] | null>(null)
+  const [legsLoading, setLegsLoading] = useState(false)
+
   const sigil = TYPE_SIGIL[a.type_key] ?? 'run'
   const label = TYPE_LABEL[a.type_key] ?? a.name
   const sigilColor = SIGIL_COLOR[sigil] ?? accent
   const isRun = RUN_TYPES.has(a.type_key)
+  const isMultiSport = a.type_key === 'multi_sport'
 
   const stats = [
     fmtDist(a.distance_m),
@@ -238,10 +353,21 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
 
   const benefit = aerobicBenefit(a.aerobic_te)
 
-  const hasZones = (a.zone1_s ?? 0) + (a.zone2_s ?? 0) + (a.zone3_s ?? 0) + (a.zone4_s ?? 0) + (a.zone5_s ?? 0) > 0
-  const hasTrainingEffect = a.aerobic_te != null && a.aerobic_te >= 1.0
-  const hasRunDynamics = isRun && a.run_cadence != null
-  const hasContent = hasTrainingEffect || hasZones || hasRunDynamics
+  const hasZones = !isMultiSport && ((a.zone1_s ?? 0) + (a.zone2_s ?? 0) + (a.zone3_s ?? 0) + (a.zone4_s ?? 0) + (a.zone5_s ?? 0) > 0)
+  const hasTrainingEffect = !isMultiSport && a.aerobic_te != null && a.aerobic_te >= 1.0
+  const hasRunDynamics = !isMultiSport && isRun && a.run_cadence != null
+  const hasContent = isMultiSport || hasTrainingEffect || hasZones || hasRunDynamics
+
+  const handleToggle = () => {
+    if (!open && isMultiSport && legs === null && !legsLoading) {
+      setLegsLoading(true)
+      fetchActivityLegs(a.activity_id).then(data => {
+        setLegs(data)
+        setLegsLoading(false)
+      })
+    }
+    setOpen(o => !o)
+  }
 
   return (
     <div style={{
@@ -251,7 +377,7 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
       transition: 'border-color 0.18s ease',
     }}>
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={handleToggle}
         aria-expanded={open}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 11,
@@ -307,6 +433,31 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
           padding: '12px 13px 13px',
           display: 'flex', flexDirection: 'column', gap: 12,
         }}>
+          {/* Multisport: per-leg breakdown */}
+          {isMultiSport && (
+            <div>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em',
+                color: COLORS.textSecondary, fontWeight: 600, display: 'block', marginBottom: 2 }}>
+                WORKOUT LEGS
+              </span>
+              {legsLoading && (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>Loading…</span>
+              )}
+              {legs != null && legs.length === 0 && (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>No leg data available</span>
+              )}
+              {legs != null && legs.length > 0 && legs.map((leg, i) => (
+                <div key={leg.leg_id}>
+                  {i > 0 && (
+                    <div style={{ height: 1, background: hexA(accent, 0.12), margin: '0 0 0 0' }} />
+                  )}
+                  <LegCard leg={leg} accent={accent} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Single-sport: training effect */}
           {hasTrainingEffect && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center',

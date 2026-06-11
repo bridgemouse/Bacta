@@ -95,6 +95,43 @@ export async function fetchActivities(days = 7): Promise<GarminActivity[]> {
   return activities
 }
 
+export interface ActivityLeg {
+  leg_id: number
+  activity_id: number
+  leg_index: number
+  type_key: string
+  start_time: string
+  duration_s: number | null
+  distance_m: number | null
+  calories: number | null
+  avg_hr: number | null
+  max_hr: number | null
+  aerobic_te: number | null
+  anaerobic_te: number | null
+  training_load: number | null
+  body_battery_diff: number | null
+  zone1_s: number | null
+  zone2_s: number | null
+  zone3_s: number | null
+  zone4_s: number | null
+  zone5_s: number | null
+  run_cadence: number | null
+  run_stride_cm: number | null
+  run_vert_osc_cm: number | null
+  run_gct_ms: number | null
+  run_power_w: number | null
+  row_stroke_rate: number | null
+  row_power_w: number | null
+  row_strokes: number | null
+}
+
+export async function fetchActivityLegs(activityId: number): Promise<ActivityLeg[]> {
+  const res = await fetch(`/api/garmin/activities/${activityId}/legs`)
+  if (!res.ok) return []
+  const { legs } = await res.json() as { legs: ActivityLeg[] }
+  return legs
+}
+
 export const TRAINING_STATUS: Record<number, string> = {
   0: 'No Data', 1: 'No Data', 2: 'Detraining', 3: 'Recovery',
   4: 'Maintaining', 5: 'Productive', 6: 'Productive', 7: 'Productive',

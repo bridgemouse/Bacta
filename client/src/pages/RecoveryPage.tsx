@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
 import { useTab } from '../lib/TabContext'
@@ -8,6 +9,7 @@ import { InfoCardProvider, useCardInfoOverlay, InfoOverlay } from '../lib/InfoCa
 import { Gauge } from '../components/viz/Gauge'
 import { HeadlineCard } from '../components/viz/HeadlineCard'
 import { HealthStatusTile } from '../components/viz/HealthStatusTile'
+import { BodyBattery } from '../components/viz/BodyBattery'
 import { Delta } from '../components/viz/Delta'
 import { Rail } from '../components/viz/Rail'
 import { TrendRow } from '../components/viz/TrendRow'
@@ -28,11 +30,38 @@ const HRV_INFO: CardInfo = {
   description: 'Millisecond variation between heartbeats measured overnight. Higher vs your baseline = better recovered. Trend direction shows 7-day slope.',
   source: 'Garmin Venu 4 · overnight RMSSD',
 }
+const BATTERY_INFO: CardInfo = {
+  title: 'Body Battery',
+  description: "Garmin's energy reserve model computed from HRV, stress, and activity. Charges during deep low-stress sleep; depletes with physical and mental exertion.",
+  source: 'Garmin Venu 4 · continuous HRV + stress',
+}
+
+type TrendSection = { railLabel: string; period: string; subtext: string; info: CardInfo }
+
+const TREND_SECTIONS: Record<string, TrendSection> = {
+  score:  { railLabel: 'RECOVERY SCORE', period: '7 DAYS', subtext: '70+ = cleared for intensity · 50–70 = moderate · below 50 = recovery day', info: SCORE_INFO },
+  hrv:    { railLabel: 'HRV',            period: '7 DAYS', subtext: 'higher vs your baseline = better recovered · trend direction shows adaptation', info: HRV_INFO },
+  battery:{ railLabel: 'BODY BATTERY',   period: '7 DAYS', subtext: 'wake-up value — how fully recharged sleep restored your energy reserve', info: BATTERY_INFO },
+  rhr:    { railLabel: 'RESTING HR',     period: '7 DAYS', subtext: 'lower = better · measured during deepest sleep · downward trend = improving fitness', info: { title: 'Resting Heart Rate', description: 'Measured during your deepest sleep. A downward trend over weeks is a reliable signal of growing cardiovascular fitness.', source: 'Garmin Venu 4 · sleep detection' } },
+  stress: { railLabel: 'OVERNIGHT STRESS', period: '7 DAYS', subtext: 'below 26 = rest zone · consistently low = strongest recovery signal', info: { title: 'Stress Score', description: '0–25 rest, 26–50 low, 51–75 medium, 76–100 high. Consistently low overnight stress is one of the strongest recovery signals.', source: 'Garmin Venu 4 · HRV-derived' } },
+  resp:   { railLabel: 'RESPIRATION',    period: '7 DAYS', subtext: '12–20 br/m normal · a rise of 1–2 above baseline often signals illness early', info: { title: 'Respiration Rate', description: 'Breaths per minute at rest. A rise of 1–2 above your baseline often signals illness before other symptoms appear.', source: 'Garmin Venu 4 · optical sensor' } },
+}
+
+const BESPOKE_CARD: CSSProperties = {
+  position: 'relative', background: COLORS.surface,
+  border: `1px solid ${COLORS.line}`, borderRadius: 11,
+  padding: '13px 14px 11px', overflow: 'hidden', cursor: 'pointer',
+}
+
+const SUBTEXT: CSSProperties = {
+  fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, padding: '0 4px',
+}
 
 function RecoveryOverview() {
   const { data: rec } = useRecoveryData()
   const { isOpen: scoreOpen, handleTap: scoreTap } = useCardInfoOverlay('rec-score', SCORE_INFO, A)
   const { isOpen: hrvOpen, handleTap: hrvTap } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
+  const { isOpen: battOpen, handleTap: battTap } = useCardInfoOverlay('rec-battery', BATTERY_INFO, A)
 
   const inHRVRange = rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null
     ? rec.hrv.value >= rec.hrvBaselineLow && rec.hrv.value <= rec.hrvBaselineHigh
@@ -146,6 +175,29 @@ function RecoveryOverview() {
         {hrvOpen && <InfoOverlay info={HRV_INFO} accent={A} radius={11} onClick={hrvTap} />}
       </div>
 
+      {/* Body Battery */}
+      {rec.battery.max != null && rec.battery.max > 0 && (
+        <div onClick={battTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
+          <Bracket color={A} inset={6} op={0.28} radius={4} />
+          <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9, paddingLeft: 3 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>BODY BATTERY · TODAY</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text }}>{rec.battery.now}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>now</span>
+              {rec.batteryConsumed != null && (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.amber }}>−{rec.batteryConsumed}</span>
+              )}
+            </div>
+          </div>
+          <BodyBattery now={rec.battery.now} max={rec.battery.max} min={rec.battery.min} accent={A} height={15} />
+          <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, marginTop: 7, paddingLeft: 2 }}>
+            wake {rec.battery.max}% → now {rec.battery.now}%
+          </div>
+          {battOpen && <InfoOverlay info={BATTERY_INFO} accent={A} radius={11} compact onClick={battTap} />}
+        </div>
+      )}
+
       {/* RHR + Stress pair */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 9 }}>
         <HeadlineCard accent={A} label="Resting HR"
@@ -206,24 +258,55 @@ function RecoveryTrends() {
   const { data: rec } = useRecoveryData()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+
       {rec.score.trend.length > 0 && (
-        <TrendRow label="Score" value={rec.score.value} data={rec.score.trend} accent={A} />
+        <>
+          <Rail label={TREND_SECTIONS.score.railLabel} accent={A} right={TREND_SECTIONS.score.period} />
+          <TrendRow label="Score" value={rec.score.value} data={rec.score.trend} accent={A} info={TREND_SECTIONS.score.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.score.subtext}</div>
+        </>
       )}
+
       {rec.hrv.trend.length > 0 && (
-        <TrendRow label="HRV" value={rec.hrv.value} unit="ms" data={rec.hrv.trend} accent={A} delta={rec.hrv.avg != null ? rec.hrv.value - rec.hrv.avg : undefined} />
+        <>
+          <Rail label={TREND_SECTIONS.hrv.railLabel} accent={A} right={TREND_SECTIONS.hrv.period} />
+          <TrendRow label="HRV" value={rec.hrv.value} unit="ms" data={rec.hrv.trend} accent={A} delta={rec.hrv.avg != null ? rec.hrv.value - rec.hrv.avg : undefined} info={TREND_SECTIONS.hrv.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.hrv.subtext}</div>
+        </>
       )}
+
       {rec.battery.trend.length > 0 && (
-        <TrendRow label="Body Battery" value={rec.battery.now} data={rec.battery.trend} accent={A} kind="bars" />
+        <>
+          <Rail label={TREND_SECTIONS.battery.railLabel} accent={A} right={TREND_SECTIONS.battery.period} />
+          <TrendRow label="Body Battery" value={rec.battery.now} data={rec.battery.trend} accent={A} kind="bars" avg info={TREND_SECTIONS.battery.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.battery.subtext}</div>
+        </>
       )}
+
       {rec.rhr.trend.length > 0 && (
-        <TrendRow label="Resting HR" value={rec.rhr.value} unit="bpm" data={rec.rhr.trend} accent={A} delta={rec.rhr.avg != null ? rec.rhr.value - rec.rhr.avg : undefined} lowerBetter />
+        <>
+          <Rail label={TREND_SECTIONS.rhr.railLabel} accent={A} right={TREND_SECTIONS.rhr.period} />
+          <TrendRow label="Resting HR" value={rec.rhr.value} unit="bpm" data={rec.rhr.trend} accent={A} delta={rec.rhr.avg != null ? rec.rhr.value - rec.rhr.avg : undefined} lowerBetter info={TREND_SECTIONS.rhr.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.rhr.subtext}</div>
+        </>
       )}
+
       {rec.stress.trend.length > 0 && (
-        <TrendRow label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.avg != null ? rec.stress.value - rec.stress.avg : undefined} lowerBetter />
+        <>
+          <Rail label={TREND_SECTIONS.stress.railLabel} accent={A} right={TREND_SECTIONS.stress.period} />
+          <TrendRow label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.avg != null ? rec.stress.value - rec.stress.avg : undefined} lowerBetter info={TREND_SECTIONS.stress.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.stress.subtext}</div>
+        </>
       )}
+
       {rec.resp.trend.length > 0 && (
-        <TrendRow label="Respiration" value={rec.resp.value} unit="br/m" data={rec.resp.trend} accent={A} lowerBetter />
+        <>
+          <Rail label={TREND_SECTIONS.resp.railLabel} accent={A} right={TREND_SECTIONS.resp.period} />
+          <TrendRow label="Respiration" value={rec.resp.value} unit="br/m" data={rec.resp.trend} accent={A} lowerBetter info={TREND_SECTIONS.resp.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.resp.subtext}</div>
+        </>
       )}
+
     </div>
   )
 }

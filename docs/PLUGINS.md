@@ -64,7 +64,7 @@ Installed globally and active in this project.
 **Purpose:** Cross-session memory and codebase search. Indexes this project's code and maintains observations across sessions.  
 **Invocation:** Skills like `/mem-search`, `/smart-explore`, `/smart-search`.
 
-**Important caveat for this project:** Claude Mem may have indexed AZ-3 content from before MX-4 was established as the canonical persona. Cached observations may refer to AZ-3 behavior or the old system prompt. If MX-4 character drift occurs in a session, do not trust Claude Mem's cached context about MX-4's identity — re-read `mx4/mx4_personal_identity_record.md` directly from the filesystem.
+**Important caveat for this project:** Claude Mem may have indexed AZI-3 content from before MX-4 was established as the canonical persona. Cached observations may refer to AZI-3 behavior or the old system prompt. If MX-4 character drift occurs in a session, do not trust Claude Mem's cached context about MX-4's identity — re-read `mx4/mx4_personal_identity_record.md` directly from the filesystem.
 
 **Useful for:** Finding where a specific API is called, tracing data flow through the codebase, understanding what was changed in past sessions. The observation timeline in Claude Mem is useful for understanding what changed and when.
 

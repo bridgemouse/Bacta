@@ -1,5 +1,22 @@
 # Bacta — Developer Guide
 
+## Documentation
+
+Full reference documentation is in `docs/`. Each file is standalone — start with whichever matches your task.
+
+| File | Contents |
+|---|---|
+| `docs/PROJECT.md` | Project overview, what Bacta is and isn't, MX-4 full character overview, section system, design origin |
+| `docs/ARCHITECTURE.md` | System diagram, stack, full component tree, all API routes, data flow, infrastructure |
+| `docs/DATA.md` | Full DB schema, complete metric inventory with counts, Garmin API gotchas, stub vs. live boundary |
+| `docs/DESIGN_SYSTEM.md` | Color tokens, typography, component catalog, MX-4 sigil mood map, inline styles rule |
+| `docs/DEVELOPMENT.md` | Setup, dev commands, coding standards, adding sections/components/metrics, all known gotchas |
+| `docs/MX4.md` | MX-4 complete character, three matrices, orchestrator pipeline, identity integrity section |
+| `docs/PLUGINS.md` | MCP servers, Claude Code plugins, Claude Design workflow |
+| `docs/ROADMAP.md` | Feature inventory, priorities, open questions, technical debt |
+
+---
+
 ## What This Is
 
 Bacta is a private health dashboard iOS PWA for one user: **Ethan**. It pulls biometrics nightly from Garmin Connect. An AI companion named **MX-4** (Star Wars-inspired droid, bacta-cyan identity `#2bc4e8`) narrates the data. The aesthetic is a dark sci-fi instrument console — not a health app, not a wellness product.
@@ -65,15 +82,15 @@ COLORS.mx4Red          = '#f87171'   // FLAG tone only
 ### Section Accents (locked — do not change)
 ```ts
 home:      '#2bc4e8'   // MX-4 cyan — his own surface
-recovery:  '#7c9af8'   // periwinkle
-training:  '#f5853a'   // ember
-sleep:     '#b08cf0'   // lilac
-nutrition: '#3ecf8e'
-bloodwork: '#ef6f6c'
-dailylog:  '#f5cf5e'
+recovery:  '#64b5f6'   // sky blue
+training:  '#fb923c'   // ember
+sleep:     '#a78bfa'   // violet
+nutrition: '#3ecf8e'   // clinical green
+bloodwork: '#ef6f6c'   // coral
+dailylog:  '#f5cf5e'   // gold
 ```
 
-> **Note:** The `design_handoff_bacta_sections` README uses slightly different section accent values — use the values from `client/src/theme.ts` (above), which are authoritative for the codebase.
+> **`client/src/theme.ts` is authoritative.** These are the Round 2 values from `design_handoff_bacta_sections/`. Earlier versions of this file had wrong Round 1 values (`#7c9af8`, `#f5853a`, `#b08cf0`) — those are incorrect.
 
 ### Fonts
 - **UI / body:** `'Hanken Grotesk', system-ui, sans-serif` — narrative prose, headlines
@@ -117,7 +134,9 @@ client/src/
 │   ├── hexA.ts
 │   ├── bactaTexture.ts
 │   ├── TabContext.ts                  # Tab state context (overview/trends)
-│   └── stubData.ts                   # Mock metric data
+│   ├── InfoCardContext.tsx            # InfoCard overlay context (metric explanations)
+│   ├── garminApi.ts                  # Client-side Garmin API fetch helpers
+│   └── stubData.ts                   # Mock metric data (BRIEFS still in use for MX-4 text)
 ├── components/
 │   ├── AppShell.tsx                  # Fixed iOS shell — top/content/bottom
 │   ├── TopBar.tsx                    # BactaStatusBar
@@ -125,7 +144,7 @@ client/src/
 │   ├── BottomSheet.tsx               # NavSheet (All Systems)
 │   ├── AskSheet.tsx                  # Ask MX-4 sheet
 │   ├── Sheet.tsx                     # Animated bottom-sheet wrapper
-│   ├── MX4Card.tsx                   # TransmissionPanel (MX4Briefing deprecated, still used for briefing text stub)
+│   ├── MX4Card.tsx                   # TransmissionPanel + MX4Briefing (live); MX4Card is deprecated/returns null
 │   ├── MetricTile.tsx                # SystemCard + MetricTile
 │   ├── SectionShell.tsx              # Calibrating skeleton for unbuilt sections
 │   └── primitives/
@@ -151,6 +170,8 @@ client/src/
 │       ├── HealthStatusTile.tsx       # Overnight vitals tile — accent chrome, StatusCore dot badge for inRange
 │       ├── SleepDepth.tsx            # Topographic sleep depth chart
 │       ├── StageDistribution.tsx     # Sleep stage bar (pct labels) + breakdown rows + footer
+│       ├── StageLegend.tsx           # Stage swatch + name + duration + % legend
+│       ├── StageSplit.tsx            # Proportional horizontal stage bar
 │       ├── StatusBanner.tsx          # Training status hero panel
 │       ├── TrendRow.tsx              # Trends-tab row
 │       ├── VitalTile.tsx             # Compact secondary metric tile
@@ -200,26 +221,30 @@ client/src/
 **Data stubs still in use:** `client/src/lib/stubData.ts` → `BRIEFS` (MX-4 briefing text). All metric data is live; only the AI narrative text is still stubbed.
 
 ### What's Next (in priority order)
-1. **MX-4 orchestrator** — `mx4/orchestrator.py` has **never been run**. `insights/` is empty. All sections show static stub briefing text from May 29. Run manually to test, then schedule. This is the highest-impact remaining work.
+1. **MX-4 orchestrator — first run** — `mx4/orchestrator.py` has **never been run**. Fix stale metric names in `mx4/sections.py` first (see `docs/ROADMAP.md`), then run manually and verify. This is the highest-impact remaining work.
 2. **Body Battery in Recovery Overview** — `useRecoveryData` already fetches `body_battery_wake`/`body_battery_current` into `rec.battery`, but `RecoveryPage` never renders it. Add a `HeadlineCard` with the `BodyBattery` component between the HRV card and RHR/Stress row.
 3. **LogEntry Phase C** — expand panel content (training effect, HR zones per activity) currently behind `hasContent = false` flag in `LogEntry.tsx`
 
-**Deferred:** MacroFactor/Nutrition (no account), Blood Work (waiting on lab results), Daily Log (no data source)
+**Deferred:** MacroFactor/Nutrition (no account), Blood Work (waiting on lab results), Daily Log (no data source defined)
+
+**Known open issues:** `mx4/sections.py` has stale metric names; `HEARTBEAT.md` does not exist; `insights.ts` reads `.json` but orchestrator writes `.html` (format mismatch to resolve before MX-4 UI wiring). Full list in `docs/ROADMAP.md`.
 
 ---
 
 ## MX-4
 
-MX-4 is the AI companion embedded in Bacta. He is a Cybot Galactica droid (not production line) with three personality matrices: TC-series baseline (cool, unflappable), Nines/TC-99 (intellectual, pushes back), Two-Boots/2B0T (protocol-transparent, Richard Ayoade deadpan). **Does not serve — collaborates.**
+MX-4 is the AI companion embedded in Bacta. He is a Cybot Galactica MX-series multi-system interface droid — commissioned as a single unit at the Affa orbital assembly platform, built to see across domains and surface what matters. He has three loaded matrices: TC-series baseline (composure under all conditions), Nines/TC-99 (intellectual curiosity, tells you when you're wrong), Two-Boots/2B0T (protocol-transparent, clarity over deference). **Does not serve — collaborates.** Full character: `docs/MX4.md`.
 
 - `mx4/orchestrator.py` — scheduled Claude Code CLI job. Reads Garmin data + vault notes, writes HTML briefings to `insights/`
-- `mx4/system-prompt.md` — health-scoped persona definition
-- `HEARTBEAT.md` — standing orders (edit file, takes effect next run)
+- `mx4/system-prompt.md` — MX-4 identity and output quality standards (rewritten Jun 11, 2026)
+- `mx4/mx4_personal_identity_record.md` — canonical character definition; read this if MX-4 ever sounds wrong
 - Signal: `POST /api/mx4/run` triggers a run
 
 His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil stays cyan; the section accent colors the frame/chrome around him.
 
 **MX-4 Sigil moods:** `transmit` (Home, Training), `pleased` (Recovery), `alert` (Sleep), `listen` (Ask sheet), `idle` (nav/status), `think` (processing)
+
+**Character preservation:** The character in `mx4/mx4_personal_identity_record.md` and `docs/MX4.md` is the product's identity layer. Future sessions that need to adjust his behavior should do so through a `HEARTBEAT.md` standing orders file (file does not yet exist — create it when ready). If MX-4 ever sounds like a medical droid, references Kamino, uses "I have always wanted to have human feelings," or refers to Ethan as "the patient," AZ-3 contamination has occurred — re-read the identity record. Do not compromise between the two identities.
 
 ---
 
@@ -280,6 +305,8 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - `docs/superpowers/plans/` — Superpowers implementation plans from each build session
 
 **Prototype:** `design_handoff_bacta_sections/design/Bacta - Prototype.html` — open in browser to see full live prototype.
+
+**Design workflow:** The Bacta visual system was designed in Claude Design (Anthropic Labs, April 2026, Claude Opus 4.7) before a line of production code was written. For new sections (Nutrition, Blood Work, Daily Log), use the same workflow: design in Claude Design with the existing system as reference → get a handoff package → implement from the handoff. Do not build section UIs by extending existing source code without a design reference — the visual system is precise and should be maintained through Claude Design.
 
 ---
 

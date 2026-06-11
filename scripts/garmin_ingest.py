@@ -137,10 +137,8 @@ def sync_day(db, store, c, d):
         bb = c.get_body_battery(d, d)
         if bb and isinstance(bb, list) and len(bb) > 0:
             item = bb[0]
-            store(db, d, 'body_battery_max', (safe(item, 'maxBatteryValue') or
-                                               safe(item, 'charged')), '%', bb)
-            store(db, d, 'body_battery_min', (safe(item, 'minBatteryValue') or
-                                               safe(item, 'drained')), '%', bb)
+            store(db, d, 'body_battery_charged', safe(item, 'charged'), '%', bb)
+            store(db, d, 'body_battery_drained', safe(item, 'drained'), '%', bb)
     except Exception as e:
         errors.append(f'body_battery({e})')
     time.sleep(SLEEP_PER_CALL)

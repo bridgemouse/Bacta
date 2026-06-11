@@ -9,11 +9,14 @@ export interface GarminSummary {
   resp_avg?: number
   resp_max?: number
   recovery_score?: number
+  recovery_time_h?: number
   body_battery_wake?: number
   body_battery_current?: number
-  body_battery_min?: number
+  body_battery_charged?: number
+  body_battery_drained?: number
   spo2_avg?: number
   spo2_min?: number
+  sleep_s?: number
   sleep_score?: number
   sleep_deep_s?: number
   sleep_light_s?: number
@@ -31,6 +34,7 @@ export interface GarminSummary {
   intensity_vig_min?: number
   vo2max?: number
   fitness_age?: number
+  fitness_age_achievable?: number
   steps?: number
   distance_m?: number
   calories_total?: number

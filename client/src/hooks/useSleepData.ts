@@ -47,7 +47,8 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
         const lightS = summary.sleep_light_s ?? 0
         const remS   = summary.sleep_rem_s   ?? 0
         const awakeS = summary.sleep_awake_s ?? 0
-        const totalMins = Math.round((deepS + lightS + remS) / 60)
+        const sleepS = summary.sleep_s ?? (deepS + lightS + remS)
+        const totalMins = Math.round(sleepS / 60)
         const deepMins  = Math.round(deepS  / 60)
         const lightMins = Math.round(lightS / 60)
         const remMins   = Math.round(remS   / 60)

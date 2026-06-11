@@ -22,7 +22,7 @@ const A = SECTION_ACCENTS.recovery
 
 const SCORE_INFO: CardInfo = {
   title: 'Recovery Score',
-  description: "Garmin's composite daily readiness index (0–100). Synthesizes overnight HRV, resting HR, sleep quality, and recent training load. 70+ = cleared for intensity.",
+  description: "Garmin's Training Readiness index (0–100). Synthesizes overnight HRV, sleep quality, Body Battery, acute load, and stress history. 60+ = ready for hard work · 40–59 = moderate effort · below 40 = rest or light activity.",
   source: 'Garmin Venu 4 · nightly compute',
 }
 const HRV_INFO: CardInfo = {
@@ -35,16 +35,28 @@ const BATTERY_INFO: CardInfo = {
   description: "Garmin's energy reserve model computed from HRV, stress, and activity. Charges during deep low-stress sleep; depletes with physical and mental exertion.",
   source: 'Garmin Venu 4 · continuous HRV + stress',
 }
+const RECOVERY_TIME_INFO: CardInfo = {
+  title: 'Recovery Time',
+  description: "Garmin's estimate of hours until you're fully recovered from accumulated training stress. Appears after workouts; resets as you recover. A shorter window = ready sooner.",
+  source: 'Garmin Venu 4 · Training Readiness algorithm',
+}
+const SLEEP_STRESS_INFO: CardInfo = {
+  title: 'Sleep Stress',
+  description: 'HRV-derived stress score measured only during the sleep window. Below 26 is the Rest zone — the strongest signal that overnight recovery is working.',
+  source: 'Garmin Venu 4 · overnight HRV',
+}
 
 type TrendSection = { railLabel: string; period: string; subtext: string; info: CardInfo }
 
 const TREND_SECTIONS: Record<string, TrendSection> = {
-  score:  { railLabel: 'RECOVERY SCORE', period: '7 DAYS', subtext: '70+ = cleared for intensity · 50–70 = moderate · below 50 = recovery day', info: SCORE_INFO },
+  score:  { railLabel: 'RECOVERY SCORE', period: '7 DAYS', subtext: '60+ = cleared for intensity · 40–59 = moderate · below 40 = recovery day', info: SCORE_INFO },
   hrv:    { railLabel: 'HRV',            period: '7 DAYS', subtext: 'higher vs your baseline = better recovered · trend direction shows adaptation', info: HRV_INFO },
   battery:{ railLabel: 'BODY BATTERY',   period: '7 DAYS', subtext: 'wake-up value — how fully recharged sleep restored your energy reserve', info: BATTERY_INFO },
   rhr:    { railLabel: 'RESTING HR',     period: '7 DAYS', subtext: 'lower = better · measured during deepest sleep · downward trend = improving fitness', info: { title: 'Resting Heart Rate', description: 'Measured during your deepest sleep. A downward trend over weeks is a reliable signal of growing cardiovascular fitness.', source: 'Garmin Venu 4 · sleep detection' } },
-  stress: { railLabel: 'OVERNIGHT STRESS', period: '7 DAYS', subtext: 'below 26 = rest zone · consistently low = strongest recovery signal', info: { title: 'Stress Score', description: '0–25 rest, 26–50 low, 51–75 medium, 76–100 high. Consistently low overnight stress is one of the strongest recovery signals.', source: 'Garmin Venu 4 · HRV-derived' } },
-  resp:   { railLabel: 'RESPIRATION',    period: '7 DAYS', subtext: '12–20 br/m normal · a rise of 1–2 above baseline often signals illness early', info: { title: 'Respiration Rate', description: 'Breaths per minute at rest. A rise of 1–2 above your baseline often signals illness before other symptoms appear.', source: 'Garmin Venu 4 · optical sensor' } },
+  stress:      { railLabel: 'OVERNIGHT STRESS', period: '7 DAYS', subtext: 'below 26 = rest zone · consistently low = strongest recovery signal', info: { title: 'Stress Score', description: '0–25 rest, 26–50 low, 51–75 medium, 76–100 high. Consistently low overnight stress is one of the strongest recovery signals.', source: 'Garmin Venu 4 · HRV-derived' } },
+  sleepStress: { railLabel: 'SLEEP STRESS',     period: '7 DAYS', subtext: 'HRV-derived during sleep only · below 26 = rest zone · best overnight recovery signal', info: SLEEP_STRESS_INFO },
+  resp:        { railLabel: 'RESPIRATION',       period: '7 DAYS', subtext: '12–20 br/m normal · a rise of 1–2 above baseline often signals illness early', info: { title: 'Respiration Rate', description: 'Breaths per minute at rest. A rise of 1–2 above your baseline often signals illness before other symptoms appear.', source: 'Garmin Venu 4 · optical sensor' } },
+  recovTime:   { railLabel: 'RECOVERY TIME',     period: '7 DAYS', subtext: 'hours until fully recovered · 0 = ready now · drops as you rest', info: RECOVERY_TIME_INFO },
 }
 
 const BESPOKE_CARD: CSSProperties = {
@@ -62,6 +74,7 @@ function RecoveryOverview() {
   const { isOpen: scoreOpen, handleTap: scoreTap } = useCardInfoOverlay('rec-score', SCORE_INFO, A)
   const { isOpen: hrvOpen, handleTap: hrvTap } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
   const { isOpen: battOpen, handleTap: battTap } = useCardInfoOverlay('rec-battery', BATTERY_INFO, A)
+  const { isOpen: recovTimeOpen, handleTap: recovTimeTap } = useCardInfoOverlay('rec-recov-time', RECOVERY_TIME_INFO, A)
 
   const inHRVRange = rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null
     ? rec.hrv.value >= rec.hrvBaselineLow && rec.hrv.value <= rec.hrvBaselineHigh
@@ -198,6 +211,29 @@ function RecoveryOverview() {
         </div>
       )}
 
+      {/* Recovery Time */}
+      {rec.recoveryTimeH != null && (
+        <div onClick={recovTimeTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
+          <Bracket color={A} inset={6} op={0.28} radius={4} />
+          <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 3 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>RECOVERY TIME</span>
+            {rec.recoveryTimeH === 0 ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 5, background: hexA(COLORS.green, 0.12), border: `1px solid ${hexA(COLORS.green, 0.42)}` }}>
+                <StatusCore accent={COLORS.green} size={5} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: COLORS.green }}>READY NOW</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 700, color: COLORS.text }}>{rec.recoveryTimeH}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: COLORS.textMuted }}>h to full recovery</span>
+              </div>
+            )}
+          </div>
+          {recovTimeOpen && <InfoOverlay info={RECOVERY_TIME_INFO} accent={A} radius={11} compact onClick={recovTimeTap} />}
+        </div>
+      )}
+
       {/* RHR + Stress pair */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 9 }}>
         <HeadlineCard accent={A} label="Resting HR"
@@ -230,15 +266,13 @@ function RecoveryOverview() {
       <Rail label="OVERNIGHT VITALS" accent={A} right="HEALTH STATUS" />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-        <HealthStatusTile label="Stress avg" value={rec.stress.value} unit="avg" accent={A}
-          inRange={rec.stress.value < 51}
-          sub={rec.stress.value < 26 ? 'LOW · rest zone' : 'LOW–MODERATE'}
-          info={{ description: 'HRV-derived stress while asleep. Below 26 is the Rest zone — staying calm directly supports HRV recovery.' }} />
-        <HealthStatusTile label="Peak Stress" value={rec.stressMax ?? '—'} unit="max" accent={A}
-          inRange={rec.stressMax != null ? rec.stressMax < 60 : undefined}
-          sub={rec.stressMax != null && rec.stressMax >= 60 ? 'elevated' : 'within range'}
-          data={rec.stressMaxTrend}
-          info={{ description: 'Highest single stress reading in 24h. Peaks above 60 during sleep fragment recovery and suppress next-morning HRV.' }} />
+        {rec.sleepStress != null && (
+          <HealthStatusTile label="Sleep Stress" value={rec.sleepStress} unit="avg" accent={A}
+            inRange={rec.sleepStress < 26}
+            sub={rec.sleepStress < 26 ? 'LOW · rest zone' : rec.sleepStress < 51 ? 'LOW–MODERATE' : 'ELEVATED'}
+            data={rec.sleepStressTrend}
+            info={SLEEP_STRESS_INFO} />
+        )}
         <HealthStatusTile label="Respiration" value={rec.resp.value} unit="br/m" accent={A}
           inRange={rec.resp.value >= 12 && rec.resp.value <= 20}
           sub="12–20 normal"
@@ -296,6 +330,22 @@ function RecoveryTrends() {
           <Rail label={TREND_SECTIONS.stress.railLabel} accent={A} right={TREND_SECTIONS.stress.period} />
           <TrendRow label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.avg != null ? rec.stress.value - rec.stress.avg : undefined} lowerBetter info={TREND_SECTIONS.stress.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.stress.subtext}</div>
+        </>
+      )}
+
+      {rec.sleepStressTrend.length > 0 && rec.sleepStress != null && (
+        <>
+          <Rail label={TREND_SECTIONS.sleepStress.railLabel} accent={A} right={TREND_SECTIONS.sleepStress.period} />
+          <TrendRow label="Sleep Stress" value={rec.sleepStress} unit="avg" data={rec.sleepStressTrend} accent={A} lowerBetter info={TREND_SECTIONS.sleepStress.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.sleepStress.subtext}</div>
+        </>
+      )}
+
+      {rec.recoveryTimeTrend.length > 0 && rec.recoveryTimeH != null && (
+        <>
+          <Rail label={TREND_SECTIONS.recovTime.railLabel} accent={A} right={TREND_SECTIONS.recovTime.period} />
+          <TrendRow label="Recov. Time" value={`${rec.recoveryTimeH}h`} data={rec.recoveryTimeTrend} accent={A} lowerBetter info={TREND_SECTIONS.recovTime.info} />
+          <div style={SUBTEXT}>{TREND_SECTIONS.recovTime.subtext}</div>
         </>
       )}
 

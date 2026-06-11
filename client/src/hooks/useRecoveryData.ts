@@ -38,6 +38,10 @@ export type RecoveryData = Omit<typeof RECOVERY, 'spo2' | 'hrv'> & {
   stressMaxTrend: number[]
   respMax?: number
   batteryConsumed?: number
+  sleepStress?: number | null
+  sleepStressTrend: number[]
+  recoveryTimeH?: number | null
+  recoveryTimeTrend: number[]
 }
 
 const INITIAL: RecoveryData = {
@@ -45,6 +49,10 @@ const INITIAL: RecoveryData = {
   hrv: { ...RECOVERY.hrv, direction: null },
   spo2: { value: null, unit: '%', avg: null, trend: [] },
   stressMaxTrend: [],
+  sleepStress: null,
+  sleepStressTrend: [],
+  recoveryTimeH: null,
+  recoveryTimeTrend: [],
 }
 
 export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
@@ -55,7 +63,7 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
     let cancelled = false
     async function load() {
       try {
-        const [summary, hrvTrend, rhrTrend, battTrend, stressTrend, respTrend, scoreTrend, stressMaxTrend] =
+        const [summary, hrvTrend, rhrTrend, battTrend, stressTrend, respTrend, scoreTrend, stressMaxTrend, sleepStressTrend, recoveryTimeTrend] =
           await Promise.all([
             fetchSummary(),
             fetchTrend('hrv'),
@@ -65,6 +73,8 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
             fetchTrend('resp_avg'),
             fetchTrend('recovery_score'),
             fetchTrend('stress_max'),
+            fetchTrend('sleep_stress'),
+            fetchTrend('recovery_time_h'),
           ])
         if (cancelled) return
 
@@ -141,10 +151,14 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
           hrvBaselineLow:  summary.hrv_baseline_low,
           hrvBaselineHigh: summary.hrv_baseline_high,
           stressLabel,
-          stressMax:      summary.stress_max,
-          stressMaxTrend: stressMaxTrend.length ? stressMaxTrend : [],
-          respMax:        summary.resp_max,
+          stressMax:        summary.stress_max,
+          stressMaxTrend:   stressMaxTrend.length ? stressMaxTrend : [],
+          respMax:          summary.resp_max,
           batteryConsumed,
+          sleepStress:      summary.sleep_stress ?? null,
+          sleepStressTrend: sleepStressTrend.length ? sleepStressTrend : [],
+          recoveryTimeH:    summary.recovery_time_h ?? null,
+          recoveryTimeTrend: recoveryTimeTrend.length ? recoveryTimeTrend : [],
         })
       } catch {
         // keep stub data on error

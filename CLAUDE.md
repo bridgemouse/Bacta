@@ -127,99 +127,13 @@ dailylog:  '#f5cf5e'   // gold
 
 **BottomBar:** Ask MX-4 circle (left) + Overview/Trends toggle (center, built sections only) + Nav circle (right). **Always MX-4 cyan.**
 
-### Component Tree
-```
-client/src/
-├── theme.ts                          # Design tokens
-├── lib/
-│   ├── hexA.ts
-│   ├── bactaTexture.ts
-│   ├── TabContext.ts                  # Tab state context (overview/trends)
-│   ├── InfoCardContext.tsx            # InfoCard overlay context (metric explanations)
-│   ├── garminApi.ts                  # Client-side Garmin API fetch helpers
-│   └── stubData.ts                   # Mock metric data (BRIEFS still in use for MX-4 text)
-├── components/
-│   ├── AppShell.tsx                  # Fixed iOS shell — top/content/bottom
-│   ├── TopBar.tsx                    # BactaStatusBar
-│   ├── BottomBar.tsx                 # BactaDock
-│   ├── BottomSheet.tsx               # NavSheet (All Systems)
-│   ├── AskSheet.tsx                  # Ask MX-4 sheet
-│   ├── Sheet.tsx                     # Animated bottom-sheet wrapper
-│   ├── MX4Card.tsx                   # TransmissionPanel + MX4Briefing (live); MX4Card is deprecated/returns null
-│   ├── MetricTile.tsx                # SystemCard + MetricTile
-│   ├── SectionShell.tsx              # Calibrating skeleton for unbuilt sections
-│   └── primitives/
-│       ├── MX4Sigil.tsx              # 6 moods: transmit/idle/listen/think/alert/pleased
-│       ├── Sigil.tsx                 # Per-section geometric icons
-│       ├── NavIcon.tsx               # Hex menu icon
-│       ├── Ring.tsx                  # Circular progress ring
-│       ├── Sparkline.tsx             # Area sparkline
-│       ├── StatusCore.tsx            # Breathing status dot
-│       ├── ReadinessDots.tsx         # 1–5 dot readiness
-│       ├── Bracket.tsx               # Four-corner console bracket ticks
-│       └── FTelemetry.tsx            # Animated telemetry bars
-│   └── viz/
-│       ├── Bars7.tsx                 # 7-bar chart
-│       ├── BodyBattery.tsx           # Charge-cell bar
-│       ├── Delta.tsx                 # ▲/▼ change badge
-│       ├── Gauge.tsx                 # 270° arc gauge
-│       ├── HeadlineCard.tsx          # Two-up headliner card shell
-│       ├── IntensityBar.tsx          # Stacked moderate/vigorous
-│       ├── LoadBand.tsx              # Horizontal load band
-│       ├── LogEntry.tsx              # Activity log line
-│       ├── Rail.tsx                  # Section divider rail
-│       ├── HealthStatusTile.tsx       # Overnight vitals tile — accent chrome, StatusCore dot badge for inRange
-│       ├── SleepDepth.tsx            # Topographic sleep depth chart
-│       ├── StageDistribution.tsx     # Sleep stage bar (pct labels) + breakdown rows + footer
-│       ├── StageLegend.tsx           # Stage swatch + name + duration + % legend
-│       ├── StageSplit.tsx            # Proportional horizontal stage bar
-│       ├── StatusBanner.tsx          # Training status hero panel
-│       ├── TrendRow.tsx              # Trends-tab row
-│       ├── VitalTile.tsx             # Compact secondary metric tile
-│       └── ZoneDistribution.tsx      # HR zone vertical list with bars + summary footer
-├── hooks/
-│   ├── useHomeData.ts                # Home SystemCard live data
-│   ├── useRecoveryData.ts            # Recovery live data (fetches from /api/garmin)
-│   ├── useSleepData.ts               # Sleep live data
-│   ├── useTrainingData.ts            # Training live data (incl. HR zones, activities)
-│   └── useSyncState.ts              # Sync button state
-└── pages/
-    ├── HomePage.tsx                  # Overview: MX4Briefing + SystemCard grid; Trends: cross-channel week
-    ├── RecoveryPage.tsx              # COMPLETE: briefing + gauge + HRV + vitals; Trends: 6 metric rows
-    ├── SleepPage.tsx                 # COMPLETE: briefing + duration + SleepDepth + StageSplit; Trends
-    ├── TrainingPage.tsx              # COMPLETE (v3): briefing + status + zones + log; Trends
-    ├── NutritionPage.tsx             # SectionShell (calibrating)
-    ├── BloodWorkPage.tsx             # SectionShell (calibrating)
-    └── DailyLogPage.tsx              # SectionShell (calibrating)
-```
+Full component tree: `docs/ARCHITECTURE.md`
 
 ---
 
 ## Current State & Pending Work
 
-### What's Complete (as of Jun 2026)
-
-**Frontend:**
-- App shell, TopBar, BottomBar, NavSheet, AskSheet, tab toggle — all complete
-- All viz components in `components/viz/` including `ZoneDistribution` (Jun 2026)
-- Home Overview + Trends: live data via `useHomeData` + cross-section `TrendRow` week view
-- Recovery Overview + Trends: live data, all viz wired — **missing Body Battery HeadlineCard**
-- Sleep Overview + Trends: live data, `SleepDepth` + `StageDistribution` (pct labels in top bar, per-stage rows) all wired
-- Training Overview + Trends: live data, v3 layout (fitness age, ACWR, HR zones, activity log)
-- Nutrition, BloodWork, DailyLog: `SectionShell` calibrating placeholders (correct — no data yet)
-
-**Backend:**
-- All API endpoints live: `/api/garmin/summary`, `/api/garmin/:metric`, `/api/garmin/activities`, `/api/garmin/weekly-volume`, `/api/garmin/weekly-avg-hr`, `/api/garmin/sync`
-- DB healthy: ~4,500 garmin_snapshots (47 metrics), 64 garmin_activities, current through today
-- Sparse metrics: `vo2max` (10 days), `spo2_avg` (5 days), `endurance_score` (0 days — not collected)
-- `macrofactor_snapshots`, `blood_work`, `manual_inputs` tables exist but are empty
-
-**Data pipeline:**
-- `scripts/garmin_ingest.py` — historical import (365 days, ~35 min)
-- `scripts/garmin_poller.py` — nightly 3AM via `bacta-garmin.timer` systemd unit
-- Garmin tokens at `~/.garminconnect` on LXC 109
-
-**Data stubs still in use:** `client/src/lib/stubData.ts` → `BRIEFS` (MX-4 briefing text). All metric data is live; only the AI narrative text is still stubbed.
+Full completion status: `docs/ROADMAP.md`
 
 ### What's Next (in priority order)
 1. **MX-4 orchestrator — first run** — `mx4/orchestrator.py` has **never been run**. Fix stale metric names in `mx4/sections.py` first (see `docs/ROADMAP.md`), then run manually and verify. This is the highest-impact remaining work.

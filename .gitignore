@@ -12,3 +12,6 @@ claude-design-prompt*.md
 __pycache__/
 *.pyc
 .venv/
+.playwright-mcp/
+*.png
+.vscode/

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { COLORS, FONT_MONO, FONT_UI } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { fetchActivityLegs, type ActivityLeg, type GarminActivity } from '../../lib/garminApi'
+import { useCardInfoOverlay, InfoOverlay } from '../../lib/InfoCardContext'
 
 type Sigil = 'run' | 'strength' | 'walk' | 'cycle' | 'cardio' | 'row' | 'multi'
 
@@ -225,18 +226,35 @@ function ActivityZoneBar({ zoneSecs }: { zoneSecs: [number, number, number, numb
 // ── Run Dynamics Grid ─────────────────────────────────────────────────────────
 interface RunDynamics { cadence: number; strideCm: number; vertOscCm: number; gctMs: number }
 
-function RunDynamicsGrid({ dyn, accent }: { dyn: RunDynamics; accent: string }) {
+const RUN_DYN_INFO = {
+  cadence:  { title: 'Cadence', description: 'Steps per minute. Optimal range is 170–185 spm for most runners. Low cadence usually means overstriding — each footfall lands ahead of your center of mass, increasing braking force and injury risk. A 5–10% increase reduces loading substantially.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  stride:   { title: 'Stride Length', description: 'Distance covered per full stride cycle (both feet). Stride length × cadence = pace. Longer isn\'t always better — optimal stride length minimizes braking and maximizes energy return from the ground.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  vertOsc:  { title: 'Vertical Oscillation', description: 'How far your center of mass bobs up and down each stride, in cm. Lower is more efficient — vertical movement is wasted energy. Elite runners stay under 8 cm. Values above 10 cm suggest you\'re pushing off too hard vertically rather than forward.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  gct:      { title: 'Ground Contact Time', description: 'How long each foot stays on the ground per stride, in milliseconds. Shorter means faster turnover and better running economy. Sub-200 ms is elite territory. Higher values can indicate fatigue, heavy footfall, or low aerobic fitness.', source: 'Garmin Venu 4 · HRM-Run pod' },
+}
+
+function RunDynamicsGrid({ dyn, accent, activityId }: { dyn: RunDynamics; accent: string; activityId: number }) {
+  const id = `rdyn-${activityId}`
+  const { isOpen: cadOpen, handleTap: cadTap } = useCardInfoOverlay(`${id}-cad`, RUN_DYN_INFO.cadence, accent)
+  const { isOpen: strOpen, handleTap: strTap } = useCardInfoOverlay(`${id}-str`, RUN_DYN_INFO.stride, accent)
+  const { isOpen: vocOpen, handleTap: vocTap } = useCardInfoOverlay(`${id}-voc`, RUN_DYN_INFO.vertOsc, accent)
+  const { isOpen: gctOpen, handleTap: gctTap } = useCardInfoOverlay(`${id}-gct`, RUN_DYN_INFO.gct, accent)
+
   const stats = [
-    { label: 'CADENCE',  val: dyn.cadence,   unit: 'spm', ideal: '170–185' },
-    { label: 'STRIDE',   val: dyn.strideCm,  unit: 'cm',  ideal: '100–130' },
-    { label: 'VERT OSC', val: dyn.vertOscCm, unit: 'cm',  ideal: '6–10' },
-    { label: 'GCT',      val: dyn.gctMs,     unit: 'ms',  ideal: '<250' },
+    { key: 'cad', label: 'CADENCE',  val: dyn.cadence,   unit: 'spm', ideal: '170–185', isOpen: cadOpen, onTap: cadTap },
+    { key: 'str', label: 'STRIDE',   val: dyn.strideCm,  unit: 'cm',  ideal: '100–130', isOpen: strOpen, onTap: strTap },
+    { key: 'voc', label: 'VERT OSC', val: dyn.vertOscCm, unit: 'cm',  ideal: '6–10',    isOpen: vocOpen, onTap: vocTap },
+    { key: 'gct', label: 'GCT',      val: dyn.gctMs,     unit: 'ms',  ideal: '<250',    isOpen: gctOpen, onTap: gctTap },
   ]
+
+  const infoForKey = { cad: RUN_DYN_INFO.cadence, str: RUN_DYN_INFO.stride, voc: RUN_DYN_INFO.vertOsc, gct: RUN_DYN_INFO.gct }
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
       {stats.map(s => (
-        <div key={s.label} style={{ background: hexA(accent, 0.05),
-          border: `1px solid ${hexA(accent, 0.18)}`, borderRadius: 7, padding: '8px 10px' }}>
+        <div key={s.key} onClick={s.onTap} style={{ position: 'relative', overflow: 'hidden',
+          background: hexA(accent, 0.05), border: `1px solid ${hexA(accent, 0.18)}`,
+          borderRadius: 7, padding: '8px 10px', cursor: 'pointer' }}>
           <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, letterSpacing: '0.1em',
             color: COLORS.textMuted, marginBottom: 2 }}>{s.label}</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
@@ -246,6 +264,7 @@ function RunDynamicsGrid({ dyn, accent }: { dyn: RunDynamics; accent: string }) 
           </div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(COLORS.textMuted, 0.7),
             marginTop: 1 }}>ideal {s.ideal}</div>
+          {s.isOpen && <InfoOverlay info={infoForKey[s.key as keyof typeof infoForKey]} accent={accent} radius={7} compact onClick={s.onTap} />}
         </div>
       ))}
     </div>
@@ -515,6 +534,7 @@ export function LogEntry({ activity: a, accent }: LogEntryProps) {
                   gctMs:     a.run_gct_ms ?? 0,
                 }}
                 accent={accent}
+                activityId={a.activity_id}
               />
             </div>
           )}

@@ -1,7 +1,9 @@
 // Stub data — same shape as the live Garmin API will produce.
 // Replace individual fields with real API calls as sections are wired.
 
-export const DAY = ['Tu', 'We', 'Th', 'Fr', 'Sa', 'Su', 'Mo'] as const
+const DAY_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const _today = new Date().getDay()
+export const DAY = Array.from({ length: 7 }, (_, i) => DAY_ABBR[(_today - 6 + i + 7) % 7])
 
 export type Tone = 'positive' | 'caution' | 'flag'
 export type MX4Mood = 'transmit' | 'idle' | 'listen' | 'think' | 'alert' | 'pleased'

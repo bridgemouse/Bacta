@@ -39,12 +39,12 @@ const ACUTE_LOAD_INFO: CardInfo = {
 }
 const LOAD_RATIO_INFO: CardInfo = {
   title: 'Load Ratio (ACWR)',
-  description: 'Acute ÷ Chronic workload ratio. Optimal 0.8–1.3 — the sweet spot for building fitness without overload. Below 0.8 = undertraining. Above 1.5 = elevated injury risk.',
+  description: 'Acute ÷ Chronic workload ratio. Optimal 0.8-1.3. Above 1.5 raises injury risk 2 - 3x.',
   source: 'Bacta-computed · Garmin load data',
 }
 const INTENSITY_INFO: CardInfo = {
   title: 'Weekly Intensity Minutes',
-  description: 'Moderate + vigorous intensity minutes (vigorous counts 2×). WHO recommends 150–300 min moderate or 75–150 min vigorous per week, or an equivalent combination.',
+  description: 'Moderate + vigorous at 1:2 ratio. WHO recommends 150+ moderate or 75+ vigorous weekly.',
   source: 'Garmin Venu 4 · HR zone detection',
 }
 const ZONES_INFO: CardInfo = {
@@ -146,11 +146,6 @@ function TrainingOverview() {
           {fitnessAgeLabel && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 5, padding: '2px 7px', borderRadius: 4, background: hexA(A, 0.1), border: `1px solid ${hexA(A, 0.35)}` }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: A, fontWeight: 700, letterSpacing: '0.06em' }}>{fitnessAgeLabel}</span>
-            </div>
-          )}
-          {TRN.vo2max.fitnessAgeAchievable != null && (
-            <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginTop: 5 }}>
-              goal <span style={{ color: COLORS.green, fontWeight: 600 }}>{TRN.vo2max.fitnessAgeAchievable.toFixed(1)} yr</span>
             </div>
           )}
         </HeadlineCard>
@@ -363,7 +358,7 @@ function TrainingTrends() {
                 <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>
                   {TRN.vo2max.fitnessAgeTrend[0].toFixed(1)} →
                 </span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: COLORS.text }}>{faValue}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: COLORS.green }}>{faValue}</span>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>yr</span>
               </div>
             </div>

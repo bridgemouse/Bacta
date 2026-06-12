@@ -36,9 +36,9 @@ const SCORE_INFO: CardInfo = {
   source: 'Garmin Venu 4 · accelerometer + HRV',
 }
 const DURATION_INFO: CardInfo = {
-  title: 'Sleep Duration',
-  description: 'Total time actually asleep — not time in bed. Target 7–9 hours. Under 7h for 3+ consecutive nights compounds cognitive and metabolic deficits.',
-  source: 'Garmin Venu 4 · accelerometer',
+  title: 'Deep Sleep',
+  description: 'Deepest, most restorative sleep stage. Target ~20% of total sleep (~90–100 min for a 7–8h night). Supports physical recovery, memory consolidation, and growth hormone release.',
+  source: 'Garmin Venu 4 · accelerometer + HRV',
 }
 const EFFICIENCY_INFO: CardInfo = {
   title: 'Sleep Efficiency',
@@ -75,7 +75,7 @@ type TrendSection = { railLabel: string; period: string; subtext: string; info: 
 
 const TREND_SECTIONS: Record<string, TrendSection> = {
   score:    { railLabel: 'SLEEP SCORE',      period: '7 DAYS', subtext: '85+ excellent · 70–84 good · 60–69 fair · below 60 · address recovery deficits', info: SCORE_INFO },
-  duration: { railLabel: 'SLEEP DURATION',   period: '7 DAYS', subtext: 'target 7–9 hours · under 7h for 3+ nights compounds cognitive and metabolic debt', info: DURATION_INFO },
+  duration: { railLabel: 'DEEP SLEEP',       period: '7 DAYS', subtext: '~20% of total sleep · foundation for physical recovery, memory consolidation, and hormone regulation', info: DURATION_INFO },
   hr:       { railLabel: 'SLEEP HEART RATE', period: '7 DAYS', subtext: 'lower = better · elevation above your norm often flags alcohol, illness, or overtraining', info: SLEEP_HR_INFO },
   resp:     { railLabel: 'RESPIRATION',      period: '7 DAYS', subtext: '12–20 br/m normal · a rise of 1–2 above baseline often precedes illness by 12–24h', info: RESP_INFO },
   stress:   { railLabel: 'SLEEP STRESS',     period: '7 DAYS', subtext: 'below 26 = rest zone · consistently low = strongest overnight recovery signal', info: SLEEP_STRESS_INFO },
@@ -263,7 +263,7 @@ function SleepTrends() {
   const last = slp.score.trend[slp.score.trend.length - 1]
   const first = slp.score.trend[0]
   const scoreTrendDir = slp.score.trend.length > 1
-    ? last > first ? '↑' : last < first ? '↓' : null
+    ? last - first > 3 ? '↑' : first - last > 3 ? '↓' : null
     : null
 
   return (
@@ -275,7 +275,7 @@ function SleepTrends() {
           <div onClick={durTap} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>HOURS ASLEEP</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>DEEP SLEEP · MINS</span>
               <span style={{ fontFamily: FONT_MONO, fontSize: 18, fontWeight: 700, color: COLORS.text }}>
                 {slp.duration.h}h {String(slp.duration.m).padStart(2, '0')}m
               </span>

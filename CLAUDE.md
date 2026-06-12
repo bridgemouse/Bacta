@@ -244,7 +244,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 **MX-4 Sigil moods:** `transmit` (Home, Training), `pleased` (Recovery), `alert` (Sleep), `listen` (Ask sheet), `idle` (nav/status), `think` (processing)
 
-**Character preservation:** The character in `mx4/mx4_personal_identity_record.md` and `docs/MX4.md` is the product's identity layer. Future sessions that need to adjust his behavior should do so through a `HEARTBEAT.md` standing orders file (file does not yet exist — create it when ready). If MX-4 ever sounds like a medical droid, references Kamino, uses "I have always wanted to have human feelings," or refers to Ethan as "the patient," AZ-3 contamination has occurred — re-read the identity record. Do not compromise between the two identities.
+**Character preservation:** The character in `mx4/mx4_personal_identity_record.md` and `docs/MX4.md` is the product's identity layer. Future sessions that need to adjust his behavior should do so through a `HEARTBEAT.md` standing orders file (file does not yet exist — create it when ready). If MX-4 ever sounds like a medical droid, references Kamino, uses "I have always wanted to have human feelings," or refers to Ethan as "the patient," AZI-3 contamination has occurred — re-read the identity record. Do not compromise between the two identities.
 
 ---
 

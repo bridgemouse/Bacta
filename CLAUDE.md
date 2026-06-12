@@ -14,6 +14,7 @@ Full reference documentation is in `docs/`. Each file is standalone — start wi
 | `docs/MX4.md` | MX-4 complete character, three matrices, orchestrator pipeline, identity integrity section |
 | `docs/PLUGINS.md` | MCP servers, Claude Code plugins, Claude Design workflow |
 | `docs/ROADMAP.md` | Feature inventory, priorities, open questions, technical debt |
+| `docs/GARMIN.md` | Garmin API endpoint catalog (audited v0.3.5), field names, DB metric inventory, data opportunities |
 
 ---
 
@@ -274,7 +275,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - Use `INSERT OR REPLACE` (not `INSERT OR IGNORE`) for activity rows so re-syncs overwrite stale data
 - Common Garmin `typeKey` values: `running`, `trail_running`, `walking`, `hiking`, `cycling`, `strength_training`, `multi_sport`
 - `get_heart_rates(d)` returns minute-by-minute HR values — NOT zone minutes. For HR zone data use `get_activity_hr_in_timezones(activityId)` → field `secsInZone` per zone; aggregate across all activities for the day and divide by 60 for minutes
-- `multi_sport` activities are containers — `get_activity_hr_in_timezones(parent_id)` returns empty. Use `_child_activity_ids(c, act_id)` (defined in `garmin_poller.py`) which checks `metaData.childActivityIdList` via `get_activity` then `get_activity_details`; query zones on each child instead
+- `multi_sport` activities are containers — `get_activity_hr_in_timezones(parent_id)` returns empty. Use `_child_activity_ids(c, act_id)` (defined in `garmin_poller.py`) which reads `metadataDTO.childIds` from the activity summary; query zones on each child instead
 
 ## Server & DB Gotchas
 

@@ -185,6 +185,7 @@ As of 2026-06-11 (live recon from database). All metrics are in `garmin_snapshot
 | `calories_total` | 377 | 2025-05-31 → 2026-06-11 | kcal | |
 | `calories_active` | 377 | 2025-05-31 → 2026-06-11 | kcal | |
 | `fitness_age` | 377 | 2025-05-31 → 2026-06-11 | years | Garmin-computed fitness age |
+| `fitness_age_achievable` | 0 | — | years | Best attainable fitness age; newly added Jun 11, 2026 |
 | `act_duration_s` | 205 | 2025-10-30 → 2026-06-01 | s | Legacy EAV activity duration |
 | `act_distance_m` | 205 | 2025-10-30 → 2026-06-01 | m | Legacy EAV |
 | `act_calories` | 205 | 2025-10-30 → 2026-06-01 | kcal | Legacy EAV |
@@ -213,6 +214,7 @@ As of 2026-06-11 (live recon from database). All metrics are in `garmin_snapshot
 | `sleep_stress` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Overnight stress level |
 | `sleep_hr` | 41 | 2026-05-02 → 2026-06-11 | bpm | Average overnight heart rate |
 | `recovery_score` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Garmin Training Readiness |
+| `recovery_time_h` | 0 | — | h | Hours until full recovery; newly added Jun 11, 2026 |
 | `intensity_vig_min` | 41 | 2026-05-02 → 2026-06-11 | min | Vigorous intensity minutes |
 | `intensity_mod_min` | 41 | 2026-05-02 → 2026-06-11 | min | Moderate intensity minutes |
 | `hrv_baseline_low` | 41 | 2026-05-02 → 2026-06-11 | ms | Personal HRV baseline lower bound |
@@ -248,7 +250,7 @@ Every entry here represents a real bug that was introduced and fixed. Read these
 
 **HR zone data source.** `get_heart_rates(d)` returns minute-by-minute HR values, not zone minutes. To get zone minutes, use `get_activity_hr_in_timezones(activityId)` — the field is `secsInZone` per zone. Divide by 60 to get minutes. Aggregate across all activities for the day to get daily totals.
 
-**Multi-sport containers.** Multi-sport activities are parent containers — calling `get_activity_hr_in_timezones(parent_id)` returns empty. Use `_child_activity_ids(conn, activity_id)` defined in `garmin_poller.py`, which checks `metaData.childActivityIdList` via `get_activity` then `get_activity_details`. Query zones on each child activity individually.
+**Multi-sport containers.** Multi-sport activities are parent containers — calling `get_activity_hr_in_timezones(parent_id)` returns empty. Use `_child_activity_ids(conn, activity_id)` defined in `garmin_poller.py`, which reads `metadataDTO.childIds` from the activity summary. Query zones on each child activity individually.
 
 **Summary queries use per-metric MAX(date).** See the EAV section above. Hardcoding `today` breaks when metrics arrive at different times during the day.
 

@@ -103,8 +103,9 @@ function TrainingOverview() {
   const { isOpen: stepsOpen, handleTap: stepsTap } = useCardInfoOverlay('trn-steps', STEPS_INFO, A)
 
   const totalZoneMins = TRN.hrZones.reduce((s, z) => s + z.mins, 0)
-  const ratioColor = TRN.loadRatio?.state === 'Optimal' ? COLORS.green
-    : TRN.loadRatio?.state === 'High' ? COLORS.amber : COLORS.textMuted
+  const ratioColor = TRN.loadRatio?.state === 'Optimal' ? A
+    : TRN.loadRatio?.state === 'High' ? COLORS.mx4Red : COLORS.mx4Amber
+  const ratioPos = TRN.loadRatio ? Math.max(0, Math.min(1, (TRN.loadRatio.value - 0.5) / 1.0)) : 0
 
   const FA = typeof TRN.vo2max.fitnessAge === 'number' ? TRN.vo2max.fitnessAge : null
   const fitnessAgeLabel = FA == null ? null
@@ -164,25 +165,29 @@ function TrainingOverview() {
         </HeadlineCard>
       </div>
 
-      {/* Load Ratio row */}
+      {/* Load Ratio card with range track */}
       {TRN.loadRatio && (
-        <div onClick={ratioTap} style={{
-          position: 'relative', background: COLORS.surface,
-          border: `1px solid ${COLORS.line}`, borderRadius: 8,
-          padding: '10px 14px', overflow: 'hidden',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          minHeight: CARD_SIZES.row, marginBottom: 9, cursor: 'pointer',
-        }}>
-          <Bracket color={A} inset={6} op={0.35} radius={4} />
-          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary, letterSpacing: '0.12em', fontWeight: 600 }}>LOAD RATIO (ACWR)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: COLORS.text }}>{TRN.loadRatio.value.toFixed(2)}</span>
-            <div style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 4, background: hexA(ratioColor, 0.12), border: `1px solid ${hexA(ratioColor, 0.4)}` }}>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: ratioColor }}>{TRN.loadRatio.state.toUpperCase()}</span>
+        <div onClick={ratioTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 8 }}>
+          <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '11px 13px 12px' }}>
+            <Bracket color={A} inset={6} op={0.28} radius={4} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>LOAD RATIO · ACUTE : CHRONIC</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{TRN.loadRatio.value.toFixed(2)}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: ratioColor }}>{TRN.loadRatio.state.toUpperCase()}</span>
+              </div>
             </div>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>{TRN.loadRatio.acute} ÷ {Math.round(TRN.loadRatio.chronic)}</span>
+            {/* Range track: 0.5 → 1.5, optimal band 0.8–1.3 */}
+            <div style={{ position: 'relative', height: 8, borderRadius: 4, background: hexA(COLORS.textMuted, 0.12), marginBottom: 6 }}>
+              <div style={{ position: 'absolute', left: '30%', width: '50%', height: '100%', background: hexA(A, 0.2), borderRadius: 2 }} />
+              <div style={{ position: 'absolute', top: -2, left: `calc(${ratioPos * 100}% - 6px)`, width: 12, height: 12, borderRadius: '50%', background: ratioColor, boxShadow: `0 0 6px ${hexA(ratioColor, 0.5)}` }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{TRN.loadRatio.acute} acute · {Math.round(TRN.loadRatio.chronic)} chronic (28d)</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: hexA(COLORS.mx4Green, 0.7) }}>optimal 0.8–1.3</span>
+            </div>
           </div>
-          {ratioOpen && <InfoOverlay info={LOAD_RATIO_INFO} accent={A} radius={8} compact onClick={ratioTap} />}
+          {ratioOpen && <InfoOverlay info={LOAD_RATIO_INFO} accent={A} radius={8} onClick={ratioTap} />}
         </div>
       )}
 

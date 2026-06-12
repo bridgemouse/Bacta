@@ -15,7 +15,8 @@ python3 scripts/garmin_auth.py
 # Tokens stored at ~/.garminconnect — re-run if sync fails with auth errors
 
 # Verify database exists (populated by poller or ingest script)
-python3 -c "import sqlite3; db=sqlite3.connect('data/bacta.db'); print(db.execute('SELECT COUNT(*) FROM garmin_snapshots').fetchone())"
+ls -lh data/bacta.db
+# Query row counts via the bacta-sqlite MCP: ask Claude to SELECT COUNT(*) FROM garmin_snapshots
 
 # Start dev servers (two terminals)
 npm run dev:server   # Express on :3001
@@ -152,10 +153,7 @@ sudo chown wheat:wheat client/src/components/viz/{ComponentName}.tsx
 
 ## Adding a New Garmin Metric
 
-1. **Find the field:** Query `source_json` from `garmin_snapshots` for a related metric to see the raw API response structure. Example:
-   ```bash
-   python3 -c "import sqlite3,json; db=sqlite3.connect('data/bacta.db'); rows=db.execute(\"SELECT source_json FROM garmin_snapshots WHERE metric='hrv' LIMIT 1\").fetchall(); print(json.dumps(json.loads(rows[0][0]), indent=2))"
-   ```
+1. **Find the field:** Query `source_json` from `garmin_snapshots` for a related metric to see the raw API response structure. Use the `bacta-sqlite` MCP — ask Claude: *"Show me the source_json for metric 'hrv', one row."*
 
 2. **Add to poller:** In `scripts/garmin_poller.py`, extract the field in the relevant daily sync section. Follow the existing pattern — see how `recovery_time_h` or `fitness_age_achievable` are extracted.
 
@@ -174,10 +172,7 @@ sudo chown wheat:wheat client/src/components/viz/{ComponentName}.tsx
 
 ## Server & DB Gotchas
 
-**sqlite3 CLI is not installed.** Query the database with Python:
-```bash
-python3 -c "import sqlite3,json; db=sqlite3.connect('/opt/bacta/data/bacta.db'); [print(json.dumps(dict(r))) for r in db.execute('SELECT metric, COUNT(*) FROM garmin_snapshots GROUP BY metric').fetchall()]"
-```
+**DB queries:** Use the `bacta-sqlite` MCP — ask Claude to run any SQL directly against `/opt/bacta/data/bacta.db`. The `sqlite3` CLI is not installed on LXC 109 and the Python one-liner wrapper is no longer needed.
 
 **Express wildcard swallowing.** Define specific routes before `/:param` wildcards in the same router. The specific routes `/activities`, `/sync/status`, `/weekly-volume`, `/weekly-intensity`, `/weekly-avg-hr`, `/activities/:id/legs` in `garmin.ts` must appear before `/:metric`. This caused a real bug when a route was added after the wildcard.
 

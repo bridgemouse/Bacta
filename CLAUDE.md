@@ -193,7 +193,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 ## Server & DB Gotchas
 
-- `sqlite3` CLI not installed — query DB with Python: `python3 -c "import sqlite3,json; db=sqlite3.connect('/opt/bacta/data/bacta.db'); [print(json.dumps(dict(r))) for r in db.execute('SELECT ...').fetchall()]"` (the `node -e` / better-sqlite3 approach can fail if native bindings aren't compiled in the current shell)
+- Query the DB via the `bacta-sqlite` MCP — ask Claude to run any SQL against `garmin_snapshots`, `garmin_activities`, etc. directly. No Python wrapper needed. (`sqlite3` CLI is not installed on LXC 109.)
 - Express: define specific routes (`/activities`, `/sync/status`) **before** `/:param` wildcards or they get swallowed
 - Some files in `client/src/components/viz/` are owned by root from initial scaffold — run `sudo chown wheat:wheat <file>` if Edit fails with EACCES
 - `mx4spin` keyframe is global (defined in `client/index.css`) — use as `animation: 'mx4spin 1s linear infinite'` in inline styles

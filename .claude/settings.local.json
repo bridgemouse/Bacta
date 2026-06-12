@@ -20,7 +20,9 @@
       "mcp__vault-query__read_wiki_page",
       "WebFetch(domain:dev.to)",
       "WebFetch(domain:marketur.net)",
-      "WebFetch(domain:gist.github.com)"
+      "WebFetch(domain:gist.github.com)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

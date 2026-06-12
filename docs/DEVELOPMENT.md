@@ -106,7 +106,7 @@ Do not create new components if an existing one can be extended. Do not create n
 
 When a new data source becomes available (MacroFactor, Blood Work, Daily Log):
 
-1. **Design first.** Use Claude Design with `design_handoff_bacta_sections/` as the visual reference. Get a handoff package before writing code.
+1. **Design first.** Use Claude Design with `design_bacta-handoff-package/` as the visual baseline reference (open `Bacta - Prototype v3.html`). Get a new handoff package before writing code.
 
 2. **Backend — data pipeline:**
    - Add metric extraction to `scripts/garmin_poller.py` (or the relevant poller for the data source)

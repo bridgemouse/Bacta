@@ -91,7 +91,7 @@ bloodwork: '#ef6f6c'   // coral
 dailylog:  '#f5cf5e'   // gold
 ```
 
-> **`client/src/theme.ts` is authoritative.** These are the Round 2 values from `design_handoff_bacta_sections/`. Earlier versions of this file had wrong Round 1 values (`#7c9af8`, `#f5853a`, `#b08cf0`) — those are incorrect.
+> **`client/src/theme.ts` is authoritative.** These values match `design_bacta-handoff-package/` (v3 design baseline). Earlier versions of this file had wrong Round 1 values (`#7c9af8`, `#f5853a`, `#b08cf0`) — those are incorrect.
 
 ### Fonts
 - **UI / body:** `'Hanken Grotesk', system-ui, sans-serif` — narrative prose, headlines
@@ -301,11 +301,10 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 ## Design References (in repo)
 
-- `design_handoff_mx4_home/` — Claude Design handoff after skeleton build; prototype HTML + screenshots
-- `design_handoff_bacta_sections/` — Claude Design handoff for section content (Recovery/Sleep/Training/Home); prototype HTML + screenshots. **Primary reference for implementing section pages.**
+- `design_bacta-handoff-package/` — Claude Design v3 handoff (Jun 4, 2026). The design baseline from which the production UI was built. Production has since iterated to ~v3.5; the handoff is a reference, not the live spec.
 - `docs/superpowers/plans/` — Superpowers implementation plans from each build session
 
-**Prototype:** `design_handoff_bacta_sections/design/Bacta - Prototype.html` — open in browser to see full live prototype.
+**Prototype:** `design_bacta-handoff-package/Bacta - Prototype v3.html` — open in browser to see the v3 interactive reference (all 6 sections).
 
 **Design workflow:** The Bacta visual system was designed in Claude Design (Anthropic Labs, April 2026, Claude Opus 4.7) before a line of production code was written. For new sections (Nutrition, Blood Work, Daily Log), use the same workflow: design in Claude Design with the existing system as reference → get a handoff package → implement from the handoff. Do not build section UIs by extending existing source code without a design reference — the visual system is precise and should be maintained through Claude Design.
 

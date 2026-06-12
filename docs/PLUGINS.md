@@ -100,19 +100,18 @@ Claude Design is an Anthropic Labs product (launched April 17, 2026, powered by 
 
 **Bacta's Claude Design artifacts:**
 
-| Session | Directory | Contents |
+| Package | Directory | Contents |
 |---|---|---|
-| Round 1 — Shell + Nav | `design_handoff_mx4_home/` | App shell, MX-4 sigil system, System Card grid, nav/ask sheets |
-| Round 2 — Section Content | `design_handoff_bacta_sections/` | Recovery, Sleep, Training, Home section content; all viz components |
+| v3 design baseline (Jun 4, 2026) | `design_bacta-handoff-package/` | Full interactive prototype (all 6 sections), implementation spec (`bacta-handoff-v3.md`), Garmin data reference, all component source files |
 
-The interactive prototype at `design_handoff_bacta_sections/design/Bacta - Prototype.html` is the canonical visual reference. Open it in a browser to see the intended design for all four built sections in both Overview and Trends tabs.
+The interactive prototype at `design_bacta-handoff-package/Bacta - Prototype v3.html` is the v3 design reference. Production has since iterated to ~v3.5 — the handoff captures the design intent but the live codebase is ahead of it on some components.
 
 **How to use Claude Design for new sections:**
 
 When Nutrition, Blood Work, or Daily Log are ready to implement:
 
 1. Open a Claude Design session (claude.ai or Claude Code with Claude Design)
-2. Reference the existing `design_handoff_bacta_sections/` for the design system — provide the section accent color, the data types available, and the section's character
+2. Reference the existing `design_bacta-handoff-package/` for the design system — provide the section accent color, the data types available, and the section's character
 3. Claude Design generates an interactive prototype and handoff package
 4. The handoff package pushes to Claude Code
 5. Implement from the handoff in the existing codebase using `docs/DEVELOPMENT.md` patterns

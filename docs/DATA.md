@@ -4,8 +4,7 @@
 
 **Path:** `/opt/bacta/data/bacta.db`  
 **Engine:** SQLite via better-sqlite3  
-**Query from shell:** `python3 -c "import sqlite3,json; db=sqlite3.connect('/opt/bacta/data/bacta.db'); [print(json.dumps(dict(r))) for r in db.execute('SELECT ...').fetchall()"`  
-(The `sqlite3` CLI is not installed on LXC 109. The `node -e` / better-sqlite3 approach can fail if native bindings aren't compiled in the current shell. Use Python.)
+**Query:** Use the `bacta-sqlite` MCP — ask Claude to run any SQL against the DB directly. The `sqlite3` CLI is not installed on LXC 109; the MCP replaces all Python wrapper one-liners.
 
 ---
 

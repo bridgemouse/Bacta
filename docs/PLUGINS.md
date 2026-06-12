@@ -24,6 +24,14 @@ Configured in `mx4/mcp-config.json` (for the MX-4 orchestrator) and `.claude/set
 
 **Used by:** MX-4 orchestrator for deeper history beyond the pre-fetched 30-day window (e.g., 90 days of VO2max for trend projection).
 
+### bacta-sqlite
+
+**Purpose:** Full arbitrary SQL access to `bacta.db` for Claude Code development sessions.  
+**Implementation:** `mcp-server-sqlite-npx` — installed at user scope via `claude mcp add`.  
+**DB path:** `/opt/bacta/data/bacta.db`  
+**Used by:** Claude Code — replaces all Python one-liner DB queries. Ask Claude to run any SQL directly: inspect metrics, audit source_json fields, verify poller output, etc.  
+**Note:** Distinct from `bacta-db` (MX-4 orchestrator, restricted tools). This one is for dev use and has no write restrictions enforced at the MCP level — use with care.
+
 ---
 
 ## Claude Code Plugins

@@ -149,7 +149,7 @@ drained    # How much battery was consumed during the day (NOT the overnight low
 bodyBatteryAtWakeTime       # Level when alarm/wake triggered → store as body_battery_wake
 bodyBatteryMostRecentValue  # Current level → store as body_battery_current
 ```
-The DB fields `body_battery_max` and `body_battery_min` currently store `charged`/`drained` which are semantically misleading. The UI correctly uses `body_battery_wake` and `body_battery_current` for display. The `max`/`min` fields could be renamed `body_battery_charged`/`body_battery_drained` for clarity.
+**Renamed Jun 11, 2026:** `body_battery_max`/`body_battery_min` were renamed to `body_battery_charged`/`body_battery_drained` in the database to reflect their actual semantics (delta amounts, not level readings).
 
 ### Training & Fitness
 
@@ -304,8 +304,8 @@ calories_total, calories_active
 distance_m
 intensity_mod_min, intensity_vig_min
 body_battery_current, body_battery_wake
-body_battery_max (= charged, NOT max level — see semantics note above)
-body_battery_min (= drained, NOT min level — see semantics note above)
+body_battery_charged (how much battery charged during sleep — NOT the wake level)
+body_battery_drained (how much battery consumed during the day — NOT the overnight low)
 spo2_avg, spo2_min
 resp_avg, resp_max
 sleep_deep_s, sleep_light_s, sleep_rem_s, sleep_awake_s
@@ -316,6 +316,8 @@ training_status_n
 training_load, training_load_min, training_load_max
 vo2max
 fitness_age
+fitness_age_achievable (sparse — newly added; populates from next poller run)
+recovery_time_h (sparse — newly added; populates from next poller run)
 hrzone_1_min … hrzone_5_min
 weight_kg, bmi, body_fat_pct, muscle_mass_kg (sparse — no recent weigh-ins)
 bp_systolic, bp_diastolic (sparse — no recent readings)
@@ -346,7 +348,7 @@ store(db, today, 'race_hm_s',       r['timeHalfMarathon'],  's')
 store(db, today, 'race_marathon_s', r['timeMarathon'],       's')
 ```
 
-**Achievable Fitness Age** (motivational goal metric):
+**Achievable Fitness Age** ✅ implemented Jun 11, 2026:
 ```python
 r = c.get_fitnessage_data(today)
 store(db, today, 'fitness_age_achievable', safe(r, 'achievableFitnessAge'), 'years')

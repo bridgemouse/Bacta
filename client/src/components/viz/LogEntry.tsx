@@ -227,10 +227,10 @@ function ActivityZoneBar({ zoneSecs }: { zoneSecs: [number, number, number, numb
 interface RunDynamics { cadence: number; strideCm: number; vertOscCm: number; gctMs: number }
 
 const RUN_DYN_INFO = {
-  cadence:  { title: 'Cadence', description: 'Steps per minute. Optimal 170–185 spm — lower usually means overstriding.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  cadence:  { title: 'Cadence', description: 'Steps per minute. Optimal range: 170–185 spm.', source: 'Garmin Venu 4 · HRM-Run pod' },
   stride:   { title: 'Stride Length', description: 'Distance per full stride cycle. Longer isn\'t always more efficient.', source: 'Garmin Venu 4 · HRM-Run pod' },
   vertOsc:  { title: 'Vertical Oscillation', description: 'Vertical bounce per stride in cm. Less wasted energy = more efficient running.', source: 'Garmin Venu 4 · HRM-Run pod' },
-  gct:      { title: 'Ground Contact Time', description: 'Foot-ground contact per stride in ms. Shorter = faster turnover and better economy.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  gct:      { title: 'Ground Contact Time', description: 'Foot contact per step in ms. Shorter = more efficient.', source: 'Garmin Venu 4 · HRM-Run pod' },
 }
 
 function RunDynamicsGrid({ dyn, accent, activityId }: { dyn: RunDynamics; accent: string; activityId: number }) {

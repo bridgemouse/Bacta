@@ -2,19 +2,19 @@
 
 ## Documentation
 
-Full reference documentation is in `docs/`. Each file is standalone — start with whichever matches your task.
+**Read the relevant doc before starting any domain work.** The `docs/` files are comprehensive, authoritative, and standalone. CLAUDE.md is quick-reference only — the docs go deeper on everything.
 
-| File | Contents |
+| File | Read when… |
 |---|---|
-| `docs/PROJECT.md` | Project overview, what Bacta is and isn't, MX-4 full character overview, section system, design origin |
-| `docs/ARCHITECTURE.md` | System diagram, stack, full component tree, all API routes, data flow, infrastructure |
-| `docs/DATA.md` | Full DB schema, complete metric inventory with counts, Garmin API gotchas, stub vs. live boundary |
-| `docs/DESIGN_SYSTEM.md` | Color tokens, typography, component catalog, MX-4 sigil mood map, inline styles rule |
-| `docs/DEVELOPMENT.md` | Setup, dev commands, coding standards, adding sections/components/metrics, all known gotchas |
-| `docs/MX4.md` | MX-4 complete character, three matrices, orchestrator pipeline, identity integrity section |
-| `docs/PLUGINS.md` | MCP servers, Claude Code plugins, Claude Design workflow |
-| `docs/ROADMAP.md` | Feature inventory, priorities, open questions, technical debt |
-| `docs/GARMIN.md` | Garmin API endpoint catalog (audited v0.3.5), field names, DB metric inventory, data opportunities |
+| `docs/PROJECT.md` | You need context on what Bacta is, MX-4's character, or the section system |
+| `docs/ARCHITECTURE.md` | You're navigating the component tree, API routes, or data flow |
+| `docs/DATA.md` | You're touching the DB schema, metrics, or Garmin API gotchas |
+| `docs/DESIGN_SYSTEM.md` | You're building or changing any UI component |
+| `docs/DEVELOPMENT.md` | You're setting up, adding a section/component/metric, or hitting a gotcha |
+| `docs/MX4.md` | You're working on MX-4 — orchestrator, briefings, identity, or sigil moods |
+| `docs/GARMIN.md` | You're touching the poller, ingest scripts, or any Garmin API call |
+| `docs/PLUGINS.md` | You need to use an MCP server, Claude Design, or a slash command |
+| `docs/ROADMAP.md` | You need to understand what's built, what's pending, and what's blocked |
 
 ---
 

@@ -13,6 +13,7 @@ import { BodyBattery } from '../components/viz/BodyBattery'
 import { Delta } from '../components/viz/Delta'
 import { Rail } from '../components/viz/Rail'
 import { TrendRow } from '../components/viz/TrendRow'
+import { Bars7 } from '../components/viz/Bars7'
 import { Sparkline } from '../components/primitives/Sparkline'
 import { Bracket } from '../components/primitives/Bracket'
 import { StatusCore } from '../components/primitives/StatusCore'
@@ -61,7 +62,7 @@ const TREND_SECTIONS: Record<string, TrendSection> = {
 
 const BESPOKE_CARD: CSSProperties = {
   position: 'relative', background: COLORS.surface,
-  border: `1px solid ${COLORS.line}`, borderRadius: 11,
+  border: `1px solid ${COLORS.line}`, borderRadius: 10,
   padding: '13px 14px 11px', overflow: 'hidden', cursor: 'pointer',
 }
 
@@ -290,13 +291,27 @@ function RecoveryOverview() {
 
 function RecoveryTrends() {
   const { data: rec } = useRecoveryData()
+  const { isOpen: scoreTrendOpen, handleTap: scoreTrendTap } = useCardInfoOverlay('rec-score-trend', TREND_SECTIONS.score.info, A)
+  const { isOpen: hrvTrendOpen, handleTap: hrvTrendTap } = useCardInfoOverlay('rec-hrv-trend', TREND_SECTIONS.hrv.info, A)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
 
       {rec.score.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.score.railLabel} accent={A} right={TREND_SECTIONS.score.period} />
-          <TrendRow label="Score" value={rec.score.value} data={rec.score.trend} accent={A} info={TREND_SECTIONS.score.info} />
+          <div onClick={scoreTrendTap} style={BESPOKE_CARD}>
+            <Bracket color={A} inset={6} op={0.28} />
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>TRAINING READINESS · 7 DAYS</span>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text }}>{rec.score.value}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: A }}>{rec.score.state.toUpperCase()}</span>
+              </span>
+            </div>
+            <Bars7 data={rec.score.trend} accent={A} h={80} avg />
+            {scoreTrendOpen && <InfoOverlay info={TREND_SECTIONS.score.info} accent={A} radius={10} compact onClick={scoreTrendTap} />}
+          </div>
           <div style={SUBTEXT}>{TREND_SECTIONS.score.subtext}</div>
         </>
       )}
@@ -304,7 +319,35 @@ function RecoveryTrends() {
       {rec.hrv.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.hrv.railLabel} accent={A} right={TREND_SECTIONS.hrv.period} />
-          <TrendRow label="HRV" value={rec.hrv.value} unit="ms" data={rec.hrv.trend} accent={A} delta={rec.hrv.avg != null ? rec.hrv.value - rec.hrv.avg : undefined} info={TREND_SECTIONS.hrv.info} />
+          <div onClick={hrvTrendTap} style={BESPOKE_CARD}>
+            <Bracket color={A} inset={6} op={0.28} />
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>MS · OVERNIGHT RMSSD</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text }}>{rec.hrv.value}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>ms</span>
+                {rec.hrv.avg != null && (
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: rec.hrv.value >= rec.hrv.avg ? COLORS.green : COLORS.red }}>
+                    {rec.hrv.value >= rec.hrv.avg ? '+' : ''}{(rec.hrv.value - rec.hrv.avg).toFixed(0)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <Sparkline data={rec.hrv.trend} accent={A} w={350} h={50} sw={1.8} />
+            {rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8, paddingLeft: 2 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ display: 'inline-block', width: 14, height: 7, background: hexA(A, 0.13), border: `1px dashed ${hexA(A, 0.42)}`, borderRadius: 1 }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>baseline {rec.hrvBaselineLow}–{rec.hrvBaselineHigh}ms</span>
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ display: 'inline-block', width: 14, borderTop: `1px dashed ${hexA(COLORS.textSecondary, 0.35)}` }} />
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>7d avg {rec.hrv.avg}ms</span>
+                </span>
+              </div>
+            )}
+            {hrvTrendOpen && <InfoOverlay info={TREND_SECTIONS.hrv.info} accent={A} radius={10} compact onClick={hrvTrendTap} />}
+          </div>
           <div style={SUBTEXT}>{TREND_SECTIONS.hrv.subtext}</div>
         </>
       )}

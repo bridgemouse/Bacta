@@ -80,13 +80,15 @@ The three unbuilt sections display a `SectionShell` placeholder — a shimmer sk
 
 The visual system was designed in **Claude Design** before a line of production code was written. Claude Design is an Anthropic Labs product (launched April 2026, powered by Claude Opus 4.7) that generates interactive prototypes, design systems, and handoff packages that push directly to Claude Code.
 
-Two Claude Design sessions produced the canonical visual artifacts:
+Three Claude Design sessions produced the visual system:
 
-**Round 1 — Shell and navigation** (`design_handoff_mx4_home/`): Established the app shell, TopBar, BottomBar, NavSheet, AskSheet, MX-4 sigil system, System Card grid, and the core design language. The concept was named "MX-4 OS" — the app reads as an instrument MX-4 operates.
+**Round 1 — Shell and navigation:** Established the app shell, TopBar, BottomBar, NavSheet, AskSheet, MX-4 sigil system, System Card grid, and the core design language. The concept was named "MX-4 OS" — the app reads as an instrument MX-4 operates.
 
-**Round 2 — Section content** (`design_handoff_bacta_sections/`): Added the full content of Recovery, Sleep, and Training sections, plus the Home Overview/Trends split. Established the Briefing Card, Gauge, SleepDepth, StageDistribution, ZoneDistribution, and all the section-specific visualization components. The interactive prototype (`design_handoff_bacta_sections/design/Bacta - Prototype.html`) remains the canonical visual reference.
+**Round 2 — Section content:** Added the full content of Recovery, Sleep, and Training sections, plus the Home Overview/Trends split. Established the Briefing Card, Gauge, SleepDepth, StageDistribution, ZoneDistribution, and all section-specific visualization components.
 
-When implementing new sections, start from the Claude Design workflow: design the section in Claude Design with the existing design system as reference, get a handoff package, then implement from that handoff in the codebase.
+**v3 — Full system (Jun 4, 2026)** (`design_bacta-handoff-package/`): Comprehensive handoff covering all six sections (including the unbuilt Labs and Daily Log), updated component library, and InfoCard system. The interactive prototype is at `design_bacta-handoff-package/Bacta - Prototype v3.html`. Production has since iterated to ~v3.5 — the handoff is a design baseline, not a live spec.
+
+When implementing new sections, start from the Claude Design workflow: design the section in Claude Design with the existing system as reference, get a handoff package, then implement from that handoff in the codebase.
 
 ---
 

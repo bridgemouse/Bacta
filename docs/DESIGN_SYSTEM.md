@@ -49,7 +49,7 @@ export const COLORS = {
 
 ### Section Accent Colors
 
-These are locked. Do not change them. `theme.ts` is authoritative — CLAUDE.md had stale Round 1 values; these are the correct Round 2 values confirmed in `design_handoff_bacta_sections/README.md`.
+These are locked. Do not change them. `theme.ts` is authoritative — confirmed against `design_bacta-handoff-package/` (v3 design baseline; production has since iterated but accent values are unchanged).
 
 ```typescript
 export const SECTION_ACCENTS: Record<SectionKey, string> = {

@@ -144,19 +144,12 @@ The standing orders mechanism is documented and referenced in multiple places bu
 
 ## Open Questions & Observed Inconsistencies
 
-**CLAUDE.md accent colors are wrong.** CLAUDE.md lists `recovery: '#7c9af8'`, `training: '#f5853a'`, `sleep: '#b08cf0'` (Round 1 values from `design_handoff_mx4_home/`). The correct Round 2 values (from `theme.ts` and `design_handoff_bacta_sections/`) are `recovery: '#64b5f6'`, `training: '#fb923c'`, `sleep: '#a78bfa'`. This is corrected in `docs/DESIGN_SYSTEM.md` and will be fixed in `CLAUDE.md`.
-
 **insights.ts / orchestrator format mismatch.** `server/api/insights.ts` reads `{section}.json`. The orchestrator writes `{section}.html`. The mock fallback returns JSON with `summary/tone/flags` shape. The frontend does not use the insights API at all currently — it uses stub text from `stubData.ts`. The entire insights delivery pipeline needs design decisions before the orchestrator's output can reach the UI.
 
 **`HEARTBEAT.md` referenced but absent.** Multiple places in docs and CLAUDE.md reference this file. It does not exist. See Roadmap near-term items.
 
 **`sections.py` metric names are stale.** Documented in Immediate Priorities above.
 
-**`StageLegend.tsx` and `StageSplit.tsx` exist but are not in CLAUDE.md component tree.** These are real components used in `SleepPage.tsx`. CLAUDE.md's component list is incomplete — `docs/ARCHITECTURE.md` has the correct full list.
-
-**`garminApi.ts` exists but is undocumented.** `client/src/lib/garminApi.ts` contains client-side Garmin API fetch helpers. It's imported by the section hooks but not mentioned in CLAUDE.md.
-
-**`InfoCardContext.tsx` exists but is undocumented.** This provides InfoCard overlay context for metric explanations. It's used in the Training section for inline educational overlays.
 
 **Spec files reference LXC 107 and Docker.** Early design specs (`docs/superpowers/specs/2026-04-25-bacta-design.md`) targeted LXC 107 with Docker Compose. The actual deployment is LXC 109 with no Docker. The specs are historical documents — do not treat them as authoritative for infrastructure.
 

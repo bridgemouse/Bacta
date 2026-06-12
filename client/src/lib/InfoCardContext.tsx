@@ -81,8 +81,6 @@ export function InfoOverlay({ info, accent, radius = 10, compact = false, onClic
         fontSize: compact ? 11.5 : 12,
         fontStyle: 'italic', lineHeight: compact ? 1.45 : 1.5,
         color: 'rgba(255,255,255,0.90)', textAlign: 'center',
-        overflow: 'hidden', flex: 1,
-        display: 'flex', alignItems: 'center',
       }}>
         {info.description}
       </p>

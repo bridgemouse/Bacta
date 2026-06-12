@@ -22,7 +22,17 @@
       "WebFetch(domain:marketur.net)",
       "WebFetch(domain:gist.github.com)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npx tsc *)",
+      "Bash(./node_modules/.bin/tsc *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(grep -n \"[Ll]oad.{0,15}[Rr]atio\\\\|ACWR\\\\|loadRatio\" /opt/bacta/design_bacta-handoff-package/bacta-v3-training.jsx)",
+      "mcp__playwright__browser_navigate",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_click"
     ]
   }
 }

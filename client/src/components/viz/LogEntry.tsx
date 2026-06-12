@@ -227,10 +227,10 @@ function ActivityZoneBar({ zoneSecs }: { zoneSecs: [number, number, number, numb
 interface RunDynamics { cadence: number; strideCm: number; vertOscCm: number; gctMs: number }
 
 const RUN_DYN_INFO = {
-  cadence:  { title: 'Cadence', description: 'Steps per minute. Optimal range is 170–185 spm for most runners. Low cadence usually means overstriding — each footfall lands ahead of your center of mass, increasing braking force and injury risk. A 5–10% increase reduces loading substantially.', source: 'Garmin Venu 4 · HRM-Run pod' },
-  stride:   { title: 'Stride Length', description: 'Distance covered per full stride cycle (both feet). Stride length × cadence = pace. Longer isn\'t always better — optimal stride length minimizes braking and maximizes energy return from the ground.', source: 'Garmin Venu 4 · HRM-Run pod' },
-  vertOsc:  { title: 'Vertical Oscillation', description: 'How far your center of mass bobs up and down each stride, in cm. Lower is more efficient — vertical movement is wasted energy. Elite runners stay under 8 cm. Values above 10 cm suggest you\'re pushing off too hard vertically rather than forward.', source: 'Garmin Venu 4 · HRM-Run pod' },
-  gct:      { title: 'Ground Contact Time', description: 'How long each foot stays on the ground per stride, in milliseconds. Shorter means faster turnover and better running economy. Sub-200 ms is elite territory. Higher values can indicate fatigue, heavy footfall, or low aerobic fitness.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  cadence:  { title: 'Cadence', description: 'Steps per minute. Optimal 170–185 spm — lower usually means overstriding.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  stride:   { title: 'Stride Length', description: 'Distance per full stride cycle. Longer isn\'t always more efficient.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  vertOsc:  { title: 'Vertical Oscillation', description: 'Vertical bounce per stride in cm. Less wasted energy = more efficient running.', source: 'Garmin Venu 4 · HRM-Run pod' },
+  gct:      { title: 'Ground Contact Time', description: 'Foot-ground contact per stride in ms. Shorter = faster turnover and better economy.', source: 'Garmin Venu 4 · HRM-Run pod' },
 }
 
 function RunDynamicsGrid({ dyn, accent, activityId }: { dyn: RunDynamics; accent: string; activityId: number }) {

@@ -29,8 +29,10 @@
 - Live data via `useSleepData` hook
 
 **Training section (v3 layout):**
-- Overview: Training Status banner, VO2max/Fitness Age headline, ACWR/Load band with optimal zone, Intensity bar, ZoneDistribution, Activity log with LogEntry per activity
+- Overview: Training Status banner, VO2max/Fitness Age headline, Load Ratio card with range slider (optimal band 0.8–1.3, position dot), Intensity bar, ZoneDistribution, Activity log with LogEntry per activity
+- LogEntry expand panel: Training Effect bars, HR zone distribution, Running Dynamics grid (Cadence/Stride/Vert Osc/GCT) — all four dynamics tiles have tappable info overlays (added Jun 12)
 - Trends: Intensity bars, Training Load, VO2max, ACWR trend rows; Fitness Age annotation with achievable goal target (added Jun 11)
+- Bars7 day labels computed dynamically from today — last bar always shows current day (fixed Jun 12)
 - Live data via `useTrainingData` hook
 
 **Data pipeline:**
@@ -50,7 +52,7 @@
 - `insights/` — directory exists with `.gitkeep`; no actual insight files
 
 **Tests:**
-- 180+ tests passing (last verified Jun 11, 2026)
+- 180 tests passing (last verified Jun 12, 2026)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes
 
 ### Present but Untested (Never Run)
@@ -93,13 +95,6 @@
 
 **Where:** `client/src/pages/RecoveryPage.tsx`  
 **What:** Add a `HeadlineCard` using `rec.battery.wake` (PEAK) and `rec.battery.current` (NOW), with a `BodyBattery` component in the card footer.
-
-### 3. LogEntry Phase C — Expand Panel Content
-
-`LogEntry.tsx` has an expand panel that currently renders nothing because `hasContent = false`. The intention was to show training effect (aerobic/anaerobic TE) and HR zones per activity in the expanded view. The activity data already includes `aerobic_te`, `anaerobic_te`, `zone1_s` through `zone5_s` from the API.
-
-**Where:** `client/src/components/viz/LogEntry.tsx`  
-**What:** Set `hasContent` based on whether the activity has non-null TE values, and render TE + zone distribution in the expand panel.
 
 ---
 

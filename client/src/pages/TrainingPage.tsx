@@ -407,7 +407,11 @@ function TrainingTrends() {
                 )}
               </div>
             </div>
-            <Sparkline data={TRN.vo2max.trend} accent={A} w={350} h={50} sw={1.8} />
+            <Sparkline data={TRN.vo2max.trend} accent={A} w={350} h={50} sw={1.8}
+              avgLine={TRN.vo2max.trend.length > 1
+                ? Math.round(TRN.vo2max.trend.reduce((s, v) => s + v, 0) / TRN.vo2max.trend.length * 10) / 10
+                : undefined}
+            />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted }}>30d ago</span>
               <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: A, fontWeight: 600 }}>today</span>

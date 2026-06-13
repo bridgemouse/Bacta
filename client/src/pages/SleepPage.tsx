@@ -70,6 +70,11 @@ const SPO2_INFO: CardInfo = {
   description: 'Oxygen saturation while asleep. Above 95% normal, 97%+ excellent. Repeated drops below 90% may indicate sleep apnea.',
   source: 'Garmin Venu 4 · optical sensor',
 }
+const ARCH_SCORE_INFO: CardInfo = {
+  title: 'Architecture Score',
+  description: 'Bacta-computed composite of how well your sleep stages matched clinical targets: 40% weight on deep sleep (target ≥20% of total), 40% on REM (target ≥22%), 20% on time-awake penalty (target <5%). 80+ optimal · 60–79 good · below 60 needs attention.',
+  source: 'Bacta-computed · Garmin Venu 4 stage data',
+}
 
 type TrendSection = { railLabel: string; period: string; subtext: string; info: CardInfo }
 
@@ -97,6 +102,7 @@ function SleepOverview() {
   const { isOpen: archOpen, handleTap: archTap } = useCardInfoOverlay('slp-arch', ARCH_INFO, A)
   const { isOpen: effOpen, handleTap: effTap } = useCardInfoOverlay('slp-efficiency', EFFICIENCY_INFO, A)
   const { isOpen: debtOpen, handleTap: debtTap } = useCardInfoOverlay('slp-debt', DEBT_INFO, A)
+  const { isOpen: archScoreOpen, handleTap: archScoreTap } = useCardInfoOverlay('slp-arch-score', ARCH_SCORE_INFO, A)
 
   const efficiencyPct = slp.duration.inBed > 0
     ? Math.min(100, Math.round((slp.duration.mins / slp.duration.inBed) * 100)) : 0
@@ -209,23 +215,87 @@ function SleepOverview() {
           <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: COLORS.textSecondary, fontWeight: 600 }}>Sleep Architecture</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>{fmtDur(totalMins)} cycled</span>
-            {slp.archScore != null && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 5, background: hexA(archColor, 0.12), border: `1px solid ${hexA(archColor, 0.42)}` }}>
-                <StatusCore accent={archColor} size={5} />
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: archColor }}>ARCH {slp.archScore}</span>
-              </div>
-            )}
           </div>
         </div>
         <SleepDepth hypno={slp.hypno} accent={A} h={80} />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: 12 }}>
-          {['23:00', '01:00', '03:00', '05:00', '07:00'].map(t => (
-            <span key={t} style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{t}</span>
-          ))}
+          {(() => {
+            const fallback = ['23:00', '01:00', '03:00', '05:00', '07:00']
+            if (!slp.hypnoStartLocal || !slp.hypnoEndLocal) {
+              return fallback.map(t => (
+                <span key={t} style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{t}</span>
+              ))
+            }
+            const startMs = new Date(slp.hypnoStartLocal).getTime()
+            const endMs = new Date(slp.hypnoEndLocal).getTime()
+            const labels = [0, 1, 2, 3, 4].map(i => {
+              const ms = startMs + (i / 4) * (endMs - startMs)
+              const d = new Date(ms)
+              return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+            })
+            return labels.map(t => (
+              <span key={t} style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{t}</span>
+            ))
+          })()}
         </div>
         <StageDistribution stages={slp.stages} />
         {archOpen && <InfoOverlay info={ARCH_INFO} accent={A} radius={12} onClick={archTap} />}
       </div>
+
+      {slp.archScore != null && (
+        <div onClick={archScoreTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
+          <Bracket color={A} inset={6} op={0.32} radius={4} />
+          <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 3 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ARCHITECTURE SCORE</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{slp.archScore}</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 5, background: hexA(archColor, 0.12), border: `1px solid ${hexA(archColor, 0.42)}` }}>
+                <StatusCore accent={archColor} size={5} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: archColor }}>
+                  {slp.archScore >= 80 ? 'GOOD' : slp.archScore >= 60 ? 'FAIR' : 'NEEDS WORK'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 3 }}>
+            {slp.archDeepScore != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>DEEP</span>
+                <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(slp.archDeepScore * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 60, textAlign: 'right', flexShrink: 0 }}>
+                  {Math.round(slp.archDeepScore * 100)}% of target
+                </span>
+              </div>
+            )}
+            {slp.archRemScore != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>REM</span>
+                <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(slp.archRemScore * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 60, textAlign: 'right', flexShrink: 0 }}>
+                  {Math.round(slp.archRemScore * 100)}% of target
+                </span>
+              </div>
+            )}
+            {slp.archAwakePenalty != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>AWAKE</span>
+                <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(slp.archAwakePenalty * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 60, textAlign: 'right', flexShrink: 0 }}>
+                  {Math.round(slp.archAwakePenalty * 100)}% penalty free
+                </span>
+              </div>
+            )}
+          </div>
+          {archScoreOpen && <InfoOverlay info={ARCH_SCORE_INFO} accent={A} radius={10} compact onClick={archScoreTap} />}
+        </div>
+      )}
 
       <Rail label="OVERNIGHT VITALS" accent={A} right="WHILE ASLEEP" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
@@ -248,6 +318,7 @@ function SleepOverview() {
           <HealthStatusTile label="SpO₂" value={slp.spo2.avg} unit="%" accent={A}
             inRange={slp.spo2.avg >= 95}
             sub={slp.spo2.avg >= 97 ? 'excellent' : 'normal'}
+            data={slp.sleepSpo2Trend}
             info={SPO2_INFO} />
         )}
       </div>
@@ -312,7 +383,13 @@ function SleepTrends() {
                 </span>
               </div>
             </div>
-            <Sparkline data={slp.score.trend} accent={A} w={350} h={50} sw={1.8} />
+            <Sparkline
+              data={slp.score.trend}
+              accent={A} w={350} h={50} sw={1.8}
+              avgLine={slp.score.trend.length > 1
+                ? Math.round(slp.score.trend.reduce((s, v) => s + v, 0) / slp.score.trend.length)
+                : undefined}
+            />
             {scoreTrendOpen && <InfoOverlay info={TREND_SECTIONS.score.info} accent={A} radius={10} compact onClick={scoreTrendTap} />}
           </div>
           <div style={SUBTEXT}>{TREND_SECTIONS.score.subtext}</div>
@@ -322,7 +399,7 @@ function SleepTrends() {
       {slp.sleepHrTrend.length > 0 && slp.sleepHr != null && (
         <>
           <Rail label={TREND_SECTIONS.hr.railLabel} accent={A} right={TREND_SECTIONS.hr.period} />
-          <TrendRow label="Sleep HR" value={slp.sleepHr} unit="bpm" data={slp.sleepHrTrend} accent={A} lowerBetter info={TREND_SECTIONS.hr.info} />
+          <TrendRow label="Sleep HR" value={slp.sleepHr} unit="bpm" data={slp.sleepHrTrend} accent={A} lowerBetter avg info={TREND_SECTIONS.hr.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.hr.subtext}</div>
         </>
       )}
@@ -330,7 +407,7 @@ function SleepTrends() {
       {slp.sleepRespTrend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.resp.railLabel} accent={A} right={TREND_SECTIONS.resp.period} />
-          <TrendRow label="Respiration" value={slp.resp.avg} unit="br/m" data={slp.sleepRespTrend} accent={A} lowerBetter info={TREND_SECTIONS.resp.info} />
+          <TrendRow label="Respiration" value={slp.resp.avg} unit="br/m" data={slp.sleepRespTrend} accent={A} lowerBetter avg info={TREND_SECTIONS.resp.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.resp.subtext}</div>
         </>
       )}
@@ -338,7 +415,7 @@ function SleepTrends() {
       {slp.sleepStressTrend.length > 0 && slp.sleepStress != null && (
         <>
           <Rail label={TREND_SECTIONS.stress.railLabel} accent={A} right={TREND_SECTIONS.stress.period} />
-          <TrendRow label="Sleep Stress" value={slp.sleepStress} unit="avg" data={slp.sleepStressTrend} accent={A} lowerBetter info={TREND_SECTIONS.stress.info} />
+          <TrendRow label="Sleep Stress" value={slp.sleepStress} unit="avg" data={slp.sleepStressTrend} accent={A} lowerBetter avg info={TREND_SECTIONS.stress.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.stress.subtext}</div>
         </>
       )}

@@ -111,6 +111,61 @@ describe('Activities endpoint — expand fields', () => {
   })
 })
 
+describe('sleep-hypno endpoint', () => {
+  it('returns empty on no data', async () => {
+    // fresh in-memory DB has no sleep_score row
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/sleep-hypno')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ hypno: [], startLocal: null, endLocal: null })
+  })
+
+  it('returns 24-element hypno array on valid source_json', async () => {
+    const { default: db } = await import('../../server/db/client')
+    const startMs = new Date('2026-06-12T23:14:00Z').getTime()
+    const endMs = new Date('2026-06-13T07:22:00Z').getTime()
+    const midMs = (startMs + endMs) / 2
+    const midStr = new Date(midMs).toISOString().replace('T', ' ').slice(0, 19)
+    const sourceJson = JSON.stringify({
+      dailySleepDTO: {
+        sleepStartTimestampGMT: startMs,
+        sleepEndTimestampGMT: endMs,
+        sleepStartTimestampLocal: '2026-06-12T23:14:00',
+        sleepEndTimestampLocal: '2026-06-13T07:22:00',
+      },
+      sleepLevels: [
+        { startGMT: new Date(startMs).toISOString().replace('T', ' ').slice(0, 19), endGMT: new Date(midMs).toISOString().replace('T', ' ').slice(0, 19), activityLevel: 0 },
+        { startGMT: midStr, endGMT: new Date(endMs).toISOString().replace('T', ' ').slice(0, 19), activityLevel: 2 },
+      ],
+    })
+    db.prepare(
+      `INSERT OR REPLACE INTO garmin_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
+    ).run('2026-06-13', 'sleep_score', 82, 'score', sourceJson)
+
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/sleep-hypno')
+    expect(res.status).toBe(200)
+    expect(res.body.hypno).toHaveLength(24)
+    expect(res.body.startLocal).toBe('2026-06-12T23:14:00')
+    expect(res.body.endLocal).toBe('2026-06-13T07:22:00')
+    for (const v of res.body.hypno) {
+      expect([0, 1, 2, 3]).toContain(v)
+    }
+  })
+
+  it('handles parse failure gracefully', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare(
+      `INSERT OR REPLACE INTO garmin_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
+    ).run('2026-06-14', 'sleep_score', 0, 'score', 'not valid json {{{')
+
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/sleep-hypno')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ hypno: [], startLocal: null, endLocal: null })
+  })
+})
+
 describe('Phase B endpoints', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')

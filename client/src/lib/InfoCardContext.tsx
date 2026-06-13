@@ -76,14 +76,16 @@ export function InfoOverlay({ info, accent, radius = 10, compact = false, onClic
           {info.title.toUpperCase()}
         </span>
       )}
-      <p style={{
-        margin: 0, fontFamily: FONT_UI,
-        fontSize: compact ? 11.5 : 12,
-        fontStyle: 'italic', lineHeight: compact ? 1.45 : 1.5,
-        color: 'rgba(255,255,255,0.90)', textAlign: 'center',
-      }}>
-        {info.description}
-      </p>
+      {info.content ? info.content() : (
+        <p style={{
+          margin: 0, fontFamily: FONT_UI,
+          fontSize: compact ? 11.5 : 12,
+          fontStyle: 'italic', lineHeight: compact ? 1.45 : 1.5,
+          color: 'rgba(255,255,255,0.90)', textAlign: 'center',
+        }}>
+          {info.description}
+        </p>
+      )}
       {!compact && info.source && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ fontFamily: FONT_MONO, fontSize: 7, letterSpacing: '0.08em', color: hexA(accent, 0.5) }}>SOURCE</span>

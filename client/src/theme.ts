@@ -73,4 +73,5 @@ export interface CardInfo {
   description: string
   title?: string
   source?: string
+  content?: () => import('react').ReactNode
 }

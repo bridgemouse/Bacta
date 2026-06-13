@@ -12,7 +12,13 @@ export type SleepData = Omit<typeof SLEEP, 'spo2'> & {
   sleepRespTrend: number[]
   sleepHrTrend: number[]
   sleepStressTrend: number[]
+  sleepSpo2Trend: number[]
   archScore: number | undefined
+  archDeepScore?: number
+  archRemScore?: number
+  archAwakePenalty?: number
+  hypnoStartLocal: string | null
+  hypnoEndLocal: string | null
 }
 
 const INITIAL: SleepData = {
@@ -21,7 +27,13 @@ const INITIAL: SleepData = {
   sleepRespTrend: [],
   sleepHrTrend: [],
   sleepStressTrend: [],
+  sleepSpo2Trend: [],
   archScore: undefined,
+  archDeepScore: undefined,
+  archRemScore: undefined,
+  archAwakePenalty: undefined,
+  hypnoStartLocal: null,
+  hypnoEndLocal: null,
 }
 
 export function useSleepData(): { data: SleepData; loading: boolean } {
@@ -32,7 +44,7 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
     let cancelled = false
     async function load() {
       try {
-        const [summary, scoreTrend, deepTrend, respTrend, hrTrend, stressTrend] =
+        const [summary, scoreTrend, deepTrend, respTrend, hrTrend, stressTrend, spo2Trend] =
           await Promise.all([
             fetchSummary(),
             fetchTrend('sleep_score'),
@@ -40,8 +52,22 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
             fetchTrend('sleep_resp'),
             fetchTrend('sleep_hr'),
             fetchTrend('sleep_stress'),
+            fetchTrend('sleep_spo2'),
           ])
         if (cancelled) return
+
+        let hypnoData = { hypno: [] as number[], startLocal: null as string | null, endLocal: null as string | null }
+        try {
+          const hypnoRes = await fetch('/api/garmin/sleep-hypno')
+          if (hypnoRes.ok) {
+            const json = await hypnoRes.json() as { hypno: number[]; startLocal: string | null; endLocal: string | null }
+            if (json.hypno && json.hypno.length === 24) {
+              hypnoData = json
+            }
+          }
+        } catch {
+          // use stub on error
+        }
 
         const deepS  = summary.sleep_deep_s  ?? 0
         const lightS = summary.sleep_light_s ?? 0
@@ -59,15 +85,22 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
         const sleepDebt = totalMins > 0 ? Math.max(0, 480 - totalMins) : undefined
         const deepRatio = totalMins > 0 ? Math.round(deepMins / totalMins * 100) : undefined
         const remRatio  = totalMins > 0 ? Math.round(remMins  / totalMins * 100) : undefined
-        const archScore = totalMins > 0 ? (() => {
-          const deepScore = Math.min(deepMins / (totalMins * 0.20), 1)
-          const remScore  = Math.min(remMins  / (totalMins * 0.22), 1)
-          const awakePen  = Math.max(0, 1 - awakeMins / (totalMins * 0.05))
-          return Math.round((deepScore * 0.4 + remScore * 0.4 + awakePen * 0.2) * 100)
-        })() : undefined
+
+        let archScore: number | undefined
+        let archDeepScore: number | undefined
+        let archRemScore: number | undefined
+        let archAwakePenalty: number | undefined
+
+        if (totalMins > 0) {
+          archDeepScore = Math.min(deepMins / (totalMins * 0.20), 1)
+          archRemScore  = Math.min(remMins  / (totalMins * 0.22), 1)
+          archAwakePenalty  = Math.max(0, 1 - awakeMins / (totalMins * 0.05))
+          archScore = Math.round((archDeepScore * 0.4 + archRemScore * 0.4 + archAwakePenalty * 0.2) * 100)
+        }
 
         setData({
           ...SLEEP,
+          hypno: hypnoData.hypno.length === 24 ? hypnoData.hypno : SLEEP.hypno,
           duration: {
             h:     Math.floor(totalMins / 60),
             m:     totalMins % 60,
@@ -98,9 +131,15 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
           deepRatio,
           remRatio,
           archScore,
+          archDeepScore,
+          archRemScore,
+          archAwakePenalty,
           sleepRespTrend:   respTrend,
           sleepHrTrend:     hrTrend,
           sleepStressTrend: stressTrend,
+          sleepSpo2Trend:   spo2Trend,
+          hypnoStartLocal:  hypnoData.startLocal,
+          hypnoEndLocal:    hypnoData.endLocal,
         })
       } catch {
         // keep stub on error

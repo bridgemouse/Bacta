@@ -114,8 +114,6 @@ function SleepOverview() {
   const remMins = slp.stages.find(s => s.key === 'rem')?.mins ?? 0
   const awakeStageMins = slp.stages.find(s => s.key === 'awake')?.mins ?? 0
   const awakeTargetMins = Math.round(totalMins * 0.05)
-  const awakeUsedPct = Math.min(100, Math.round((awakeStageMins / Math.max(1, awakeTargetMins)) * 100))
-  const awakeBarColor = awakeStageMins > awakeTargetMins ? COLORS.mx4Red : COLORS.green
   const archColor = slp.archScore != null
     ? slp.archScore >= 80 ? COLORS.green : slp.archScore >= 60 ? COLORS.amber : COLORS.mx4Red
     : COLORS.textMuted
@@ -133,7 +131,7 @@ function SleepOverview() {
           background: `linear-gradient(150deg, ${hexA(A, 0.1)}, ${COLORS.surface} 60%)`,
           border: `1px solid ${hexA(A, 0.32)}`, borderRadius: 13,
           padding: '15px 16px', overflow: 'hidden',
-          minHeight: CARD_SIZES.hero, marginBottom: 9, cursor: 'pointer',
+          marginBottom: 9, cursor: 'pointer',
         }}
       >
         <Bracket color={A} inset={7} op={0.4} />
@@ -173,7 +171,7 @@ function SleepOverview() {
         <div onClick={effTap} style={{
           flex: 1, position: 'relative', background: COLORS.surface,
           border: `1px solid ${COLORS.line}`, borderRadius: 10,
-          padding: '12px 13px 11px', minHeight: CARD_SIZES.pair,
+          padding: '12px 13px 11px',
           cursor: 'pointer', overflow: 'hidden',
         }}>
           <Bracket color={A} inset={6} op={0.35} radius={4} />
@@ -189,7 +187,7 @@ function SleepOverview() {
         <div onClick={debtTap} style={{
           flex: 1, position: 'relative', background: COLORS.surface,
           border: `1px solid ${COLORS.line}`, borderRadius: 10,
-          padding: '12px 13px 11px', minHeight: CARD_SIZES.pair,
+          padding: '12px 13px 11px',
           cursor: 'pointer', overflow: 'hidden',
         }}>
           <Bracket color={A} inset={6} op={0.35} radius={4} />
@@ -294,7 +292,7 @@ function SleepOverview() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>AWAKE</span>
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
-                  <div style={{ width: `${awakeUsedPct}%`, height: '100%', background: awakeBarColor, borderRadius: 3 }} />
+                  <div style={{ width: `${Math.round(slp.archAwakePenalty! * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
                 </div>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 68, textAlign: 'right', flexShrink: 0 }}>
                   {awakeStageMins}m / {awakeTargetMins}m

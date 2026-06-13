@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
 import { useTab } from '../lib/TabContext'
-import { COLORS, FONT_MONO, SECTION_ACCENTS, CARD_SIZES, type CardInfo } from '../theme'
+import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS, CARD_SIZES, type CardInfo } from '../theme'
 import { BRIEFS, fmtDur } from '../lib/stubData'
 import { useSleepData } from '../hooks/useSleepData'
 import { InfoCardProvider, useCardInfoOverlay, InfoOverlay } from '../lib/InfoCardContext'
@@ -72,8 +72,43 @@ const SPO2_INFO: CardInfo = {
 }
 const ARCH_SCORE_INFO: CardInfo = {
   title: 'Architecture Score',
-  description: 'Three arcs: outer = Deep, middle = REM, inner = Awake. Fuller arc = closer to target. Deep and REM are "more is better." Awake arc shows time-efficiency — a short arc means too much time in bed awake. Light sleep has no clinical target and is excluded. Weights: Deep 40% · REM 40% · Awake 20%.',
+  description: 'Bacta-computed index scoring Deep (40%), REM (40%), and Awake efficiency (20%). Outer arc = Deep, middle = REM, inner = Awake. Fuller arc = closer to target.',
   source: 'Bacta-computed · Garmin Venu 4 stage data',
+  content: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 11, fontStyle: 'italic', lineHeight: 1.45, color: 'rgba(255,255,255,0.88)', textAlign: 'center' }}>
+        Bacta's own quality index — independent of Garmin's sleep score. Scores the three stages that have evidence-based clinical targets.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '7px 0' }}>
+        {([
+          { pos: 'OUTER',  stage: 'DEEP',  target: '≥ 20%', note: '~90m for 8h · physical recovery, growth hormone release' },
+          { pos: 'MIDDLE', stage: 'REM',   target: '≥ 22%', note: '~105m for 8h · memory consolidation, emotional regulation' },
+          { pos: 'INNER',  stage: 'AWAKE', target: '< 5%',  note: 'in bed awake · fuller arc = more time-efficient' },
+        ] as const).map(({ pos, stage, target, note }) => (
+          <div key={stage} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(A, 0.5), width: 36, flexShrink: 0 }}>{pos}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.95)', width: 38, flexShrink: 0 }}>{stage}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: A, width: 34, flexShrink: 0 }}>{target}</span>
+            <span style={{ fontFamily: FONT_UI, fontSize: 10, color: 'rgba(255,255,255,0.72)', lineHeight: 1.25 }}>{note}</span>
+          </div>
+        ))}
+      </div>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 9.5, fontStyle: 'italic', color: 'rgba(255,255,255,0.48)', textAlign: 'center', lineHeight: 1.35 }}>
+        Light sleep has no fixed clinical target — it fills the remainder naturally and is excluded from scoring.
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 14 }}>
+        {([['80+', 'OPTIMAL'], ['60–79', 'FAIR'], ['<60', 'NEEDS WORK']] as const).map(([range, tier]) => (
+          <div key={range} style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.92)' }}>{range}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(A, 0.7), letterSpacing: '0.05em' }}>{tier}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 7, color: 'rgba(255,255,255,0.32)', textAlign: 'center', letterSpacing: '0.07em' }}>
+        WEIGHTS · DEEP 40% · REM 40% · AWAKE 20%
+      </div>
+    </div>
+  ),
 }
 
 type TrendSection = { railLabel: string; period: string; subtext: string; info: CardInfo }
@@ -286,7 +321,7 @@ function SleepOverview() {
               {slp.archScore >= 80 ? 'OPTIMAL' : slp.archScore >= 60 ? 'FAIR' : 'NEEDS WORK'}
             </text>
           </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-around', padding: '2px 6px 4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-around', padding: '2px 0 4px' }}>
             {[
               { label: 'DEEP', color: A, actual: deepMins, goal: Math.round(totalMins * 0.20), limit: false },
               { label: 'REM', color: hexA(A, 0.72), actual: remMins, goal: Math.round(totalMins * 0.22), limit: false },
@@ -301,7 +336,7 @@ function SleepOverview() {
               </div>
             ))}
           </div>
-          {archScoreOpen && <InfoOverlay info={ARCH_SCORE_INFO} accent={A} radius={10} compact onClick={archScoreTap} />}
+          {archScoreOpen && <InfoOverlay info={ARCH_SCORE_INFO} accent={A} radius={10} onClick={archScoreTap} />}
         </div>
       )}
 

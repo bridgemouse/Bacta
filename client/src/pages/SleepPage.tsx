@@ -15,7 +15,7 @@ import { HealthStatusTile } from '../components/viz/HealthStatusTile'
 import { Bars7 } from '../components/viz/Bars7'
 import { Bracket } from '../components/primitives/Bracket'
 import { Sparkline } from '../components/primitives/Sparkline'
-import { StatusCore } from '../components/primitives/StatusCore'
+
 import { hexA } from '../lib/hexA'
 
 const A = SECTION_ACCENTS.sleep
@@ -72,7 +72,7 @@ const SPO2_INFO: CardInfo = {
 }
 const ARCH_SCORE_INFO: CardInfo = {
   title: 'Architecture Score',
-  description: 'Bacta-computed composite of how well your sleep stages matched clinical targets: 40% weight on deep sleep (target ≥20% of total), 40% on REM (target ≥22%), 20% on time-awake penalty (target <5%). 80+ optimal · 60–79 good · below 60 needs attention.',
+  description: 'Three arcs: outer = Deep, middle = REM, inner = Awake. Fuller arc = closer to target. Deep and REM are "more is better." Awake arc shows time-efficiency — a short arc means too much time in bed awake. Light sleep has no clinical target and is excluded. Weights: Deep 40% · REM 40% · Awake 20%.',
   source: 'Bacta-computed · Garmin Venu 4 stage data',
 }
 
@@ -117,6 +117,15 @@ function SleepOverview() {
   const archColor = slp.archScore != null
     ? slp.archScore >= 80 ? COLORS.green : slp.archScore >= 60 ? COLORS.amber : COLORS.mx4Red
     : COLORS.textMuted
+  const archCx = 150, archCy = 150
+  const archArc = (r: number, pct: number) => {
+    const p = Math.max(0.001, Math.min(0.999, pct))
+    const ex = archCx - r * Math.cos(p * Math.PI)
+    const ey = archCy - r * Math.sin(p * Math.PI)
+    return `M ${archCx - r} ${archCy} A ${r} ${r} 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`
+  }
+  const awakeArcOk = (slp.archAwakePenalty ?? 1) >= 0.8
+  const awakeArcColor = awakeArcOk ? hexA(A, 0.48) : hexA(COLORS.mx4Red, 0.55)
 
   return (
     <>
@@ -253,52 +262,44 @@ function SleepOverview() {
         <div onClick={archScoreTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
           <Bracket color={A} inset={6} op={0.32} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, paddingLeft: 3 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ARCHITECTURE SCORE</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{slp.archScore}</span>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 5, background: hexA(archColor, 0.12), border: `1px solid ${hexA(archColor, 0.42)}` }}>
-                <StatusCore accent={archColor} size={5} />
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: archColor }}>
-                  {slp.archScore >= 80 ? 'GOOD' : slp.archScore >= 60 ? 'FAIR' : 'NEEDS WORK'}
-                </span>
-              </div>
-            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 3 }}>
+          <svg viewBox="0 0 300 158" width="100%" style={{ display: 'block' }}>
+            {/* Tracks */}
+            <path d={archArc(130, 0.999)} fill="none" stroke={hexA(A, 0.1)} strokeWidth={11} strokeLinecap="round" />
+            <path d={archArc(108, 0.999)} fill="none" stroke={hexA(A, 0.1)} strokeWidth={11} strokeLinecap="round" />
+            <path d={archArc(86, 0.999)} fill="none" stroke={hexA(A, 0.1)} strokeWidth={11} strokeLinecap="round" />
+            {/* Fills */}
             {slp.archDeepScore != null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>DEEP</span>
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.round(slp.archDeepScore * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
-                </div>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 68, textAlign: 'right', flexShrink: 0 }}>
-                  {deepMins}m / {Math.round(totalMins * 0.20)}m
-                </span>
-              </div>
+              <path d={archArc(130, slp.archDeepScore)} fill="none" stroke={A} strokeWidth={11} strokeLinecap="round" />
             )}
             {slp.archRemScore != null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>REM</span>
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.round(slp.archRemScore * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
-                </div>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 68, textAlign: 'right', flexShrink: 0 }}>
-                  {remMins}m / {Math.round(totalMins * 0.22)}m
-                </span>
-              </div>
+              <path d={archArc(108, slp.archRemScore)} fill="none" stroke={hexA(A, 0.72)} strokeWidth={11} strokeLinecap="round" />
             )}
             {slp.archAwakePenalty != null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>AWAKE</span>
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.round(slp.archAwakePenalty! * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
-                </div>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 68, textAlign: 'right', flexShrink: 0 }}>
-                  {awakeStageMins}m / {awakeTargetMins}m
+              <path d={archArc(86, slp.archAwakePenalty)} fill="none" stroke={awakeArcColor} strokeWidth={11} strokeLinecap="round" />
+            )}
+            {/* Score */}
+            <text x={150} y={108} textAnchor="middle" fontFamily={FONT_MONO} fontSize={36} fontWeight={700} fill={COLORS.text}>{slp.archScore}</text>
+            <text x={150} y={124} textAnchor="middle" fontFamily={FONT_MONO} fontSize={8} fontWeight={600} fill={archColor}>
+              {slp.archScore >= 80 ? 'OPTIMAL' : slp.archScore >= 60 ? 'FAIR' : 'NEEDS WORK'}
+            </text>
+          </svg>
+          <div style={{ display: 'flex', justifyContent: 'space-around', padding: '2px 6px 4px' }}>
+            {[
+              { label: 'DEEP', color: A, actual: deepMins, goal: Math.round(totalMins * 0.20), limit: false },
+              { label: 'REM', color: hexA(A, 0.72), actual: remMins, goal: Math.round(totalMins * 0.22), limit: false },
+              { label: 'AWAKE', color: awakeArcColor, actual: awakeStageMins, goal: awakeTargetMins, limit: true },
+            ].map(({ label, color, actual, goal, limit }) => (
+              <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <div style={{ width: 22, height: 3, borderRadius: 2, background: color }} />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, letterSpacing: '0.06em' }}>{label}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary }}>
+                  {actual}m <span style={{ color: COLORS.textMuted }}>/ {goal}m{limit ? ' lim' : ''}</span>
                 </span>
               </div>
-            )}
+            ))}
           </div>
           {archScoreOpen && <InfoOverlay info={ARCH_SCORE_INFO} accent={A} radius={10} compact onClick={archScoreTap} />}
         </div>

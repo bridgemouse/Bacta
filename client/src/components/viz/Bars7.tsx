@@ -62,11 +62,11 @@ export function Bars7({ data, accent, labels = DAY, h = 70, goal, fmt, avg }: Ba
         <div style={{
           position: 'absolute', left: 0, right: 0,
           bottom: `${((avgVal - min) / (max - min)) * h + 18}px`,
-          display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start',
           borderTop: `1px solid ${hexA(COLORS.textMuted, 0.3)}`,
           pointerEvents: 'none',
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', paddingBottom: 2, paddingRight: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingBottom: 2, paddingLeft: 2 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 7, color: COLORS.textMuted, lineHeight: 1 }}>
               {fmt ? fmt(avgVal) : Math.round(avgVal)}
             </span>

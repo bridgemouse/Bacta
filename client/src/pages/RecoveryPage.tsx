@@ -106,7 +106,7 @@ function RecoveryOverview() {
           background: `linear-gradient(150deg, ${hexA(A, 0.1)}, ${COLORS.surface} 60%)`,
           border: `1px solid ${hexA(A, 0.32)}`, borderRadius: 13,
           padding: '15px 16px', overflow: 'hidden',
-          minHeight: CARD_SIZES.hero, marginBottom: 9, cursor: 'pointer',
+          marginBottom: 9, cursor: 'pointer',
         }}
       >
         <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.85 }} />
@@ -125,9 +125,11 @@ function RecoveryOverview() {
             <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: A }}>{rec.score.state.toUpperCase()}</span>
           </div>
           <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 13.5, lineHeight: 1.5, color: COLORS.textSecondary }}>
-            Systems restored. Cleared for a{' '}
-            <strong style={{ color: COLORS.text, fontWeight: 700 }}>high-intensity</strong>{' '}
-            session today.
+            {rec.score.value >= 60
+              ? <><strong style={{ color: COLORS.text, fontWeight: 700 }}>Systems restored.</strong> Cleared for a high-intensity session today.</>
+              : rec.score.value >= 40
+              ? <>Partially recovered. <strong style={{ color: COLORS.text, fontWeight: 700 }}>Moderate</strong> effort recommended today.</>
+              : <>Recovery incomplete. Prioritize <strong style={{ color: COLORS.text, fontWeight: 700 }}>rest</strong> or light activity today.</>}
           </p>
         </div>
         {scoreOpen && <InfoOverlay info={SCORE_INFO} accent={A} radius={13} onClick={scoreTap} />}
@@ -283,6 +285,7 @@ function RecoveryOverview() {
         <HealthStatusTile label="Respiration" value={rec.resp.value} unit="br/m" accent={A}
           inRange={rec.resp.value >= 12 && rec.resp.value <= 20}
           sub="12–20 normal"
+          data={rec.resp.trend}
           info={{ description: 'Breaths per minute at rest. A rise of 1–2 above your baseline often signals illness before other symptoms appear.' }} />
         {rec.spo2.value != null && (
           <HealthStatusTile label="SpO₂" value={rec.spo2.value} unit="%" accent={A}

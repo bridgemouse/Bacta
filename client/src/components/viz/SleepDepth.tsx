@@ -1,4 +1,5 @@
 import { hexA } from '../../lib/hexA'
+import { COLORS, FONT_MONO } from '../../theme'
 
 interface SleepDepthProps {
   hypno: number[]
@@ -34,6 +35,12 @@ export function SleepDepth({ hypno, accent, w = 334, h = 86 }: SleepDepthProps) 
       {[0, 1, 2, 3].map(lv => (
         <line key={lv} x1="0" y1={y(lv)} x2={w} y2={y(lv)}
           stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+      ))}
+      {(['AWAKE', 'REM', 'LIGHT', 'DEEP'] as const).map((label, lv) => (
+        <text key={label} x={2} y={lv === 0 ? y(0) + 8 : y(lv) - 2}
+          fontSize={6} fontFamily={FONT_MONO} fill={COLORS.textMuted} opacity={0.55}>
+          {label}
+        </text>
       ))}
       <path d={area} fill={`url(#${gradId})`} />
       <path d={line} fill="none" stroke={accent} strokeWidth="1.8" strokeLinejoin="round"

@@ -110,6 +110,12 @@ function SleepOverview() {
   const debtH = slp.sleepDebt != null ? Math.floor(slp.sleepDebt / 60) : 0
   const debtM = slp.sleepDebt != null ? slp.sleepDebt % 60 : 0
   const totalMins = slp.stages.reduce((s, st) => s + st.mins, 0) || slp.duration.mins
+  const deepMins = slp.stages.find(s => s.key === 'deep')?.mins ?? 0
+  const remMins = slp.stages.find(s => s.key === 'rem')?.mins ?? 0
+  const awakeStageMins = slp.stages.find(s => s.key === 'awake')?.mins ?? 0
+  const awakeTargetMins = Math.round(totalMins * 0.05)
+  const awakeUsedPct = Math.min(100, Math.round((awakeStageMins / Math.max(1, awakeTargetMins)) * 100))
+  const awakeBarColor = awakeStageMins > awakeTargetMins ? COLORS.mx4Red : COLORS.green
   const archColor = slp.archScore != null
     ? slp.archScore >= 80 ? COLORS.green : slp.archScore >= 60 ? COLORS.amber : COLORS.mx4Red
     : COLORS.textMuted
@@ -189,8 +195,11 @@ function SleepOverview() {
           <Bracket color={A} inset={6} op={0.35} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
           <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 5, paddingLeft: 3 }}>Sleep Debt</div>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: COLORS.text, lineHeight: 1, marginBottom: 5, paddingLeft: 3 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: COLORS.text, lineHeight: 1, marginBottom: 4, paddingLeft: 3 }}>
             {slp.sleepDebt == null || slp.sleepDebt === 0 ? '0 min' : debtH > 0 ? `${debtH}h ${String(debtM).padStart(2, '0')}m` : `${debtM}m`}
+          </div>
+          <div style={{ width: '100%', height: 4, borderRadius: 2, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden', marginBottom: 4 }}>
+            <div style={{ width: `${Math.min(100, Math.round((slp.duration.mins / 480) * 100))}%`, height: '100%', background: slp.sleepDebt === 0 ? COLORS.green : COLORS.amber, borderRadius: 2 }} />
           </div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: slp.sleepDebt === 0 ? COLORS.green : COLORS.amber, fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 3 }}>
             {slp.sleepDebt == null || slp.sleepDebt === 0 ? 'FULLY RESTORED' : 'BELOW 8H GOAL'}
@@ -265,8 +274,8 @@ function SleepOverview() {
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
                   <div style={{ width: `${Math.round(slp.archDeepScore * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 60, textAlign: 'right', flexShrink: 0 }}>
-                  {Math.round(slp.archDeepScore * 100)}% of target
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 68, textAlign: 'right', flexShrink: 0 }}>
+                  {deepMins}m / {Math.round(totalMins * 0.20)}m
                 </span>
               </div>
             )}
@@ -276,8 +285,8 @@ function SleepOverview() {
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
                   <div style={{ width: `${Math.round(slp.archRemScore * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 60, textAlign: 'right', flexShrink: 0 }}>
-                  {Math.round(slp.archRemScore * 100)}% of target
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 68, textAlign: 'right', flexShrink: 0 }}>
+                  {remMins}m / {Math.round(totalMins * 0.22)}m
                 </span>
               </div>
             )}
@@ -285,10 +294,10 @@ function SleepOverview() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textSecondary, width: 60, flexShrink: 0 }}>AWAKE</span>
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.round(slp.archAwakePenalty * 100)}%`, height: '100%', background: archColor, borderRadius: 3 }} />
+                  <div style={{ width: `${awakeUsedPct}%`, height: '100%', background: awakeBarColor, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 60, textAlign: 'right', flexShrink: 0 }}>
-                  {Math.round(slp.archAwakePenalty * 100)}% penalty free
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textSecondary, width: 68, textAlign: 'right', flexShrink: 0 }}>
+                  {awakeStageMins}m / {awakeTargetMins}m
                 </span>
               </div>
             )}

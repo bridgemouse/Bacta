@@ -47,7 +47,12 @@ export function Sparkline({ data, accent, w = 92, h = 30, sw = 1.8, fill = true,
         <>
           <line x1={0} y1={avgY} x2={w} y2={avgY}
             stroke={COLORS.textMuted} strokeWidth={1} strokeDasharray="3 3" opacity={0.4} />
-          <text x={2} y={avgY - 2} fontSize={6} fontFamily={FONT_MONO} fill={COLORS.textMuted} opacity={0.65}>AVG</text>
+          <text x={2} y={avgY > 16 ? avgY - 8 : avgY + 8}
+            fontSize={6} fontFamily={FONT_MONO} fill={COLORS.textMuted} opacity={0.65}>
+            {Math.round(avgLine!)}
+          </text>
+          <text x={2} y={avgY > 16 ? avgY - 2 : avgY + 14}
+            fontSize={6} fontFamily={FONT_MONO} fill={COLORS.textMuted} opacity={0.65}>AVG</text>
         </>
       )}
     </svg>

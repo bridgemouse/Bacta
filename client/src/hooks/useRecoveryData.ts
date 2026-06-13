@@ -31,6 +31,7 @@ export type RecoveryData = Omit<typeof RECOVERY, 'spo2' | 'hrv'> & {
     direction: HrvDirection | null
   }
   spo2: { value: number | null; unit: string; avg: number | null; trend: number[] }
+  spo2Trend: number[]
   hrvBaselineLow?: number
   hrvBaselineHigh?: number
   stressLabel?: string
@@ -40,6 +41,8 @@ export type RecoveryData = Omit<typeof RECOVERY, 'spo2' | 'hrv'> & {
   batteryConsumed?: number
   sleepStress?: number | null
   sleepStressTrend: number[]
+  sleepHrNight: number | null
+  sleepHrTrend: number[]
   recoveryTimeH?: number | null
   recoveryTimeTrend: number[]
 }
@@ -48,9 +51,12 @@ const INITIAL: RecoveryData = {
   ...RECOVERY,
   hrv: { ...RECOVERY.hrv, direction: null },
   spo2: { value: null, unit: '%', avg: null, trend: [] },
+  spo2Trend: [],
   stressMaxTrend: [],
   sleepStress: null,
   sleepStressTrend: [],
+  sleepHrNight: null,
+  sleepHrTrend: [],
   recoveryTimeH: null,
   recoveryTimeTrend: [],
 }
@@ -63,7 +69,7 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
     let cancelled = false
     async function load() {
       try {
-        const [summary, hrvTrend, rhrTrend, battTrend, stressTrend, respTrend, scoreTrend, stressMaxTrend, sleepStressTrend, recoveryTimeTrend] =
+        const [summary, hrvTrend, rhrTrend, battTrend, stressTrend, respTrend, scoreTrend, stressMaxTrend, sleepStressTrend, recoveryTimeTrend, spo2TrendData, sleepHrTrendData] =
           await Promise.all([
             fetchSummary(),
             fetchTrend('hrv'),
@@ -75,6 +81,8 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
             fetchTrend('stress_max'),
             fetchTrend('sleep_stress'),
             fetchTrend('recovery_time_h'),
+            fetchTrend('spo2_avg'),
+            fetchTrend('sleep_hr'),
           ])
         if (cancelled) return
 
@@ -89,6 +97,17 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
         const batteryConsumed = wake != null && current != null
           ? Math.max(0, wake - current)
           : undefined
+
+        const convertMinutesToHours = (v: number) =>
+          Math.round((v / 60) * 10) / 10
+
+        const recoveryTimeHConverted = summary.recovery_time_h != null
+          ? convertMinutesToHours(summary.recovery_time_h)
+          : null
+
+        const recoveryTimeTrendConverted = recoveryTimeTrend.length
+          ? recoveryTimeTrend.map(convertMinutesToHours)
+          : []
 
         const trendForDir = hrvTrend.length ? hrvTrend : RECOVERY.hrv.trend
         const slope = linearRegressionSlope(trendForDir)
@@ -139,8 +158,9 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
             value: summary.spo2_avg ?? null,
             unit:  '%',
             avg:   summary.spo2_avg ?? null,
-            trend: [],
+            trend: spo2TrendData.length ? spo2TrendData : [],
           },
+          spo2Trend: spo2TrendData.length ? spo2TrendData : [],
           resp: {
             value: summary.resp_avg ?? RECOVERY.resp.value,
             unit:  'br/min',
@@ -157,8 +177,10 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
           batteryConsumed,
           sleepStress:      summary.sleep_stress ?? null,
           sleepStressTrend: sleepStressTrend.length ? sleepStressTrend : [],
-          recoveryTimeH:    summary.recovery_time_h ?? null,
-          recoveryTimeTrend: recoveryTimeTrend.length ? recoveryTimeTrend : [],
+          sleepHrNight:     sleepHrTrendData.length ? sleepHrTrendData[0] : null,
+          sleepHrTrend:     sleepHrTrendData.length ? sleepHrTrendData : [],
+          recoveryTimeH:    recoveryTimeHConverted,
+          recoveryTimeTrend: recoveryTimeTrendConverted,
         })
       } catch {
         // keep stub data on error

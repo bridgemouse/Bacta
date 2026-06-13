@@ -141,6 +141,43 @@ garminRouter.get('/weekly-avg-hr', (req, res) => {
   res.json({ weeks: rows.reverse() })
 })
 
+// GET /api/garmin/sleep-hypno — 24-block hypnogram resampled from latest sleep_score source_json
+garminRouter.get('/sleep-hypno', (_req, res) => {
+  const EMPTY = { hypno: [], startLocal: null, endLocal: null }
+  try {
+    const row = db.prepare(
+      `SELECT source_json FROM garmin_snapshots WHERE metric = 'sleep_score' ORDER BY date DESC LIMIT 1`
+    ).get() as { source_json: string } | undefined
+
+    if (!row) { res.json(EMPTY); return }
+
+    const obj = JSON.parse(row.source_json)
+    const dto = obj.dailySleepDTO
+    const startMs: number = dto.sleepStartTimestampGMT
+    const endMs: number = dto.sleepEndTimestampGMT
+    const startLocal: string | null = dto.sleepStartTimestampLocal ?? null
+    const endLocal: string | null = dto.sleepEndTimestampLocal ?? null
+    const levels: Array<{ startGMT: string; endGMT: string; activityLevel: number }> = obj.sleepLevels
+
+    if (!startMs || !endMs || !Array.isArray(levels)) { res.json(EMPTY); return }
+
+    const blockMs = (endMs - startMs) / 24
+    const hypno: number[] = []
+    for (let i = 0; i < 24; i++) {
+      const midMs = startMs + (i + 0.5) * blockMs
+      const seg = levels.find(s =>
+        new Date(s.startGMT).getTime() <= midMs && midMs < new Date(s.endGMT).getTime()
+      )
+      const garminLevel = seg !== undefined ? seg.activityLevel : 3
+      hypno.push(3 - garminLevel)
+    }
+
+    res.json({ hypno, startLocal, endLocal })
+  } catch {
+    res.json(EMPTY)
+  }
+})
+
 // GET /api/garmin/activities/:id/legs — legs for a multisport activity
 garminRouter.get('/activities/:id/legs', (req, res) => {
   const activityId = Number(req.params.id)

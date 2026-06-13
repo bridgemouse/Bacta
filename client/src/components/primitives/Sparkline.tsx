@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { COLORS, FONT_MONO } from '../../theme'
 
 interface SparklineProps {
   data: number[]
@@ -8,9 +9,10 @@ interface SparklineProps {
   sw?: number
   fill?: boolean
   dot?: boolean
+  avgLine?: number
 }
 
-export function Sparkline({ data, accent, w = 92, h = 30, sw = 1.8, fill = true, dot = true }: SparklineProps) {
+export function Sparkline({ data, accent, w = 92, h = 30, sw = 1.8, fill = true, dot = true, avgLine }: SparklineProps) {
   if (data.length === 0) {
     return <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block' }} />
   }
@@ -25,6 +27,11 @@ export function Sparkline({ data, accent, w = 92, h = 30, sw = 1.8, fill = true,
   const area = `${line} L${w} ${h} L0 ${h} Z`
   const id = 'sg' + useId().replace(/:/g, '')
   const last = pts[pts.length - 1]
+
+  const avgY = avgLine != null
+    ? h - 3 - ((Math.max(min, Math.min(max, avgLine)) - min) / rng) * (h - 6)
+    : null
+
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', overflow: 'visible' }}>
       <defs>
@@ -36,6 +43,13 @@ export function Sparkline({ data, accent, w = 92, h = 30, sw = 1.8, fill = true,
       {fill && <path d={area} fill={`url(#${id})`} />}
       <path d={line} fill="none" stroke={accent} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
       {dot && <circle cx={last[0]} cy={last[1]} r={2.4} fill={accent} />}
+      {avgY != null && (
+        <>
+          <line x1={0} y1={avgY} x2={w} y2={avgY}
+            stroke={COLORS.textMuted} strokeWidth={1} strokeDasharray="3 3" opacity={0.4} />
+          <text x={2} y={avgY - 2} fontSize={6} fontFamily={FONT_MONO} fill={COLORS.textMuted} opacity={0.65}>AVG</text>
+        </>
+      )}
     </svg>
   )
 }

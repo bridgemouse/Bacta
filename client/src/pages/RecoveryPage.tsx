@@ -46,6 +46,11 @@ const SLEEP_STRESS_INFO: CardInfo = {
   description: 'HRV-derived stress score measured only during the sleep window. Below 26 is the Rest zone — the strongest signal that overnight recovery is working.',
   source: 'Garmin Venu 4 · overnight HRV',
 }
+const SLEEP_HR_INFO: CardInfo = {
+  title: 'Sleep Heart Rate',
+  description: 'Average heart rate during the sleep window. Lower signals better cardiovascular efficiency at rest. Elevation above your norm often flags alcohol, illness, or overtraining stress.',
+  source: 'Garmin Venu 4 · optical HR',
+}
 
 type TrendSection = { railLabel: string; period: string; subtext: string; info: CardInfo }
 
@@ -76,6 +81,7 @@ function RecoveryOverview() {
   const { isOpen: hrvOpen, handleTap: hrvTap } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
   const { isOpen: battOpen, handleTap: battTap } = useCardInfoOverlay('rec-battery', BATTERY_INFO, A)
   const { isOpen: recovTimeOpen, handleTap: recovTimeTap } = useCardInfoOverlay('rec-recov-time', RECOVERY_TIME_INFO, A)
+  const { isOpen: sleepHrOpen, handleTap: sleepHrTap } = useCardInfoOverlay('rec-sleep-hr', SLEEP_HR_INFO, A)
 
   const inHRVRange = rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null
     ? rec.hrv.value >= rec.hrvBaselineLow && rec.hrv.value <= rec.hrvBaselineHigh
@@ -173,7 +179,7 @@ function RecoveryOverview() {
             )}
           </div>
         </div>
-        <Sparkline data={rec.hrv.trend} accent={A} w={280} h={36} />
+        <Sparkline data={rec.hrv.trend} accent={A} w={280} h={36} avgLine={rec.hrv.avg ?? undefined} />
         {rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8, paddingLeft: 2 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -282,7 +288,12 @@ function RecoveryOverview() {
           <HealthStatusTile label="SpO₂" value={rec.spo2.value} unit="%" accent={A}
             inRange={rec.spo2.value >= 95}
             sub={rec.spo2.value >= 97 ? 'excellent' : 'normal'}
+            data={rec.spo2Trend}
             info={{ description: 'Percentage of hemoglobin carrying oxygen. Above 95% normal, 97%+ excellent. Drops below 90% may indicate sleep-disordered breathing.' }} />
+        )}
+        {rec.sleepHrNight != null && (
+          <HealthStatusTile label="Sleep HR" value={rec.sleepHrNight} unit="bpm" accent={A}
+            data={rec.sleepHrTrend} info={SLEEP_HR_INFO} />
         )}
       </div>
     </>
@@ -333,7 +344,7 @@ function RecoveryTrends() {
                 )}
               </div>
             </div>
-            <Sparkline data={rec.hrv.trend} accent={A} w={350} h={50} sw={1.8} />
+            <Sparkline data={rec.hrv.trend} accent={A} w={350} h={50} sw={1.8} avgLine={rec.hrv.avg ?? undefined} />
             {rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8, paddingLeft: 2 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -363,7 +374,7 @@ function RecoveryTrends() {
       {rec.rhr.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.rhr.railLabel} accent={A} right={TREND_SECTIONS.rhr.period} />
-          <TrendRow label="Resting HR" value={rec.rhr.value} unit="bpm" data={rec.rhr.trend} accent={A} delta={rec.rhr.avg != null ? rec.rhr.value - rec.rhr.avg : undefined} lowerBetter info={TREND_SECTIONS.rhr.info} />
+          <TrendRow label="Resting HR" value={rec.rhr.value} unit="bpm" data={rec.rhr.trend} accent={A} delta={rec.rhr.avg != null ? rec.rhr.value - rec.rhr.avg : undefined} lowerBetter avg info={TREND_SECTIONS.rhr.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.rhr.subtext}</div>
         </>
       )}
@@ -371,7 +382,7 @@ function RecoveryTrends() {
       {rec.stress.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.stress.railLabel} accent={A} right={TREND_SECTIONS.stress.period} />
-          <TrendRow label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.avg != null ? rec.stress.value - rec.stress.avg : undefined} lowerBetter info={TREND_SECTIONS.stress.info} />
+          <TrendRow label="Stress" value={rec.stress.value} unit="avg" data={rec.stress.trend} accent={A} delta={rec.stress.avg != null ? rec.stress.value - rec.stress.avg : undefined} lowerBetter avg info={TREND_SECTIONS.stress.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.stress.subtext}</div>
         </>
       )}
@@ -379,7 +390,7 @@ function RecoveryTrends() {
       {rec.sleepStressTrend.length > 0 && rec.sleepStress != null && (
         <>
           <Rail label={TREND_SECTIONS.sleepStress.railLabel} accent={A} right={TREND_SECTIONS.sleepStress.period} />
-          <TrendRow label="Sleep Stress" value={rec.sleepStress} unit="avg" data={rec.sleepStressTrend} accent={A} lowerBetter info={TREND_SECTIONS.sleepStress.info} />
+          <TrendRow label="Sleep Stress" value={rec.sleepStress} unit="avg" data={rec.sleepStressTrend} accent={A} lowerBetter avg info={TREND_SECTIONS.sleepStress.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.sleepStress.subtext}</div>
         </>
       )}
@@ -387,7 +398,7 @@ function RecoveryTrends() {
       {rec.recoveryTimeTrend.length > 0 && rec.recoveryTimeH != null && (
         <>
           <Rail label={TREND_SECTIONS.recovTime.railLabel} accent={A} right={TREND_SECTIONS.recovTime.period} />
-          <TrendRow label="Recov. Time" value={`${rec.recoveryTimeH}h`} data={rec.recoveryTimeTrend} accent={A} lowerBetter info={TREND_SECTIONS.recovTime.info} />
+          <TrendRow label="Recov. Time" value={`${rec.recoveryTimeH}h`} data={rec.recoveryTimeTrend} accent={A} lowerBetter avg info={TREND_SECTIONS.recovTime.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.recovTime.subtext}</div>
         </>
       )}
@@ -395,7 +406,7 @@ function RecoveryTrends() {
       {rec.resp.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.resp.railLabel} accent={A} right={TREND_SECTIONS.resp.period} />
-          <TrendRow label="Respiration" value={rec.resp.value} unit="br/m" data={rec.resp.trend} accent={A} lowerBetter info={TREND_SECTIONS.resp.info} />
+          <TrendRow label="Respiration" value={rec.resp.value} unit="br/m" data={rec.resp.trend} accent={A} lowerBetter avg info={TREND_SECTIONS.resp.info} />
           <div style={SUBTEXT}>{TREND_SECTIONS.resp.subtext}</div>
         </>
       )}

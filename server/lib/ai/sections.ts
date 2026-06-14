@@ -7,7 +7,7 @@ export const SECTIONS: SectionDef[] = [
     metrics: [
       'hrv', 'hrv_baseline_high', 'recovery_score', 'recovery_time_h',
       'stress_avg', 'body_battery_charged', 'body_battery_drained',
-      'body_battery_wake', 'body_battery_current', 'resting_hr', 'sleep_duration',
+      'body_battery_wake', 'body_battery_current', 'resting_hr', 'sleep_s',
     ],
     includeManual: false,
     promptAddendum: `Focus: overall recovery status — is Ethan ready to train hard today or should he pull back?
@@ -21,10 +21,10 @@ Do not reference clinical framing — this is Ethan's data, analyzed for his use
     id: 'sleep',
     name: 'Sleep',
     metrics: [
-      'sleep_duration', 'sleep_score',
-      'sleep_deep_minutes', 'sleep_rem_minutes',
-      'sleep_light_minutes', 'sleep_awake_minutes',
-      'sleep_stress', 'sleep_spo2', 'respiration_avg',
+      'sleep_s', 'sleep_score',
+      'sleep_deep_s', 'sleep_rem_s',
+      'sleep_light_s', 'sleep_awake_s',
+      'sleep_stress', 'sleep_spo2', 'resp_avg',
     ],
     includeManual: false,
     promptAddendum: `Focus: sleep architecture and quality — not just duration but composition.
@@ -37,16 +37,16 @@ sleep_stress is Garmin's overnight autonomic stress estimate — lower is better
     id: 'training',
     name: 'Training',
     metrics: [
-      'steps', 'intensity_minutes', 'training_load',
-      'recovery_time_h', 'vo2max', 'training_status',
-      'acwr', 'fitness_age', 'fitness_age_achievable',
+      'steps', 'intensity_mod_min', 'intensity_vig_min', 'training_load',
+      'recovery_time_h', 'vo2max', 'training_status_n',
+      'fitness_age', 'fitness_age_achievable',
     ],
     includeManual: true,
     promptAddendum: `Focus: training stimulus and load management — is Ethan building fitness or accumulating excessive stress?
 Ethan's declared goal: VO2 max 52–55 ml/kg/min ('Excellent' for age 26 male) by late July/pre-wedding.
 Use queryDb to pull 90 days of vo2max history to project current trajectory toward that target.
-training_load is Garmin's 4-week weighted EPOC-based load score; acwr is acute:chronic workload ratio.
-Optimal ACWR band is 0.8–1.3. Flag if above 1.5 (injury risk) or below 0.6 (detraining).
+training_load is Garmin's 4-week weighted EPOC-based load score.
+intensity_mod_min and intensity_vig_min are weekly moderate and vigorous intensity minutes.
 Use readVault to check the summer running plan and current training block targets if available.
 If manual inputs are included, look for correlations: high caffeine + low readiness on the same day is worth noting.`,
   },

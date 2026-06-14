@@ -40,5 +40,8 @@ describe('wrapSession', () => {
     const archiveDir = path.join(dir, 'archive')
     const files = fs.existsSync(archiveDir) ? fs.readdirSync(archiveDir) : []
     expect(files.some(f => f.includes('oversized-page'))).toBe(true)
+
+    const rewritten = fs.readFileSync(path.join(dir, 'oversized-page.md'), 'utf-8')
+    expect(rewritten).toBe('Synthesized content: patterns observed across 14 days.')
   })
 })

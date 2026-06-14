@@ -187,8 +187,7 @@ function SleepOverview() {
   const deepStageColor = slp.stages.find(s => s.key === 'deep')?.color ?? '#7c5cff'
   const remStageColor = slp.stages.find(s => s.key === 'rem')?.color ?? '#c4b5fd'
   const awakeStageColor = slp.stages.find(s => s.key === 'awake')?.color ?? COLORS.textMuted
-  const awakeArcOk = (slp.archAwakePenalty ?? 1) >= 0.8
-  const awakeArcColor = awakeArcOk ? awakeStageColor : hexA(COLORS.mx4Red, 0.55)
+  const awakeArcColor = awakeStageColor
 
   return (
     <>

@@ -9,7 +9,6 @@ import { InfoCardProvider, useCardInfoOverlay, InfoOverlay } from '../lib/InfoCa
 import { Gauge } from '../components/viz/Gauge'
 import { HeadlineCard } from '../components/viz/HeadlineCard'
 import { HealthStatusTile } from '../components/viz/HealthStatusTile'
-import { BodyBattery } from '../components/viz/BodyBattery'
 import { Delta } from '../components/viz/Delta'
 import { Rail } from '../components/viz/Rail'
 import { TrendRow } from '../components/viz/TrendRow'
@@ -92,6 +91,34 @@ function RecoveryOverview() {
     rec.stress.value < 26 ? COLORS.green :
     rec.stress.value < 51 ? COLORS.amber :
     COLORS.mx4Red
+
+  const battCx = 150, battCy = 150, battR = 120
+  const battArc = (pct: number) => {
+    const p = Math.max(0.001, Math.min(0.999, pct))
+    const ex = battCx - battR * Math.cos(p * Math.PI)
+    const ey = battCy - battR * Math.sin(p * Math.PI)
+    return `M ${battCx - battR} ${battCy} A ${battR} ${battR} 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`
+  }
+  const battNowPct = (rec.battery.now ?? 0) / 100
+  const battWakePct = (rec.battery.max ?? 0) / 100
+  const battColor = (rec.battery.now ?? 0) >= 75 ? COLORS.green
+    : (rec.battery.now ?? 0) >= 25 ? COLORS.amber : COLORS.mx4Red
+  const battState = (rec.battery.now ?? 0) >= 75 ? 'HIGH'
+    : (rec.battery.now ?? 0) >= 50 ? 'MODERATE'
+    : (rec.battery.now ?? 0) >= 25 ? 'LOW' : 'CRITICAL'
+  const wakeAngle = battWakePct * Math.PI
+  const wakeTickOx = battCx - (battR + 9) * Math.cos(wakeAngle)
+  const wakeTickOy = battCy - (battR + 9) * Math.sin(wakeAngle)
+  const wakeTickIx = battCx - (battR - 9) * Math.cos(wakeAngle)
+  const wakeTickIy = battCy - (battR - 9) * Math.sin(wakeAngle)
+
+  const recovPos = Math.max(0, Math.min(1, (rec.recoveryTimeH ?? 0) / 72))
+  const recovColor = (rec.recoveryTimeH ?? 0) === 0 ? COLORS.green
+    : (rec.recoveryTimeH ?? 0) <= 24 ? A
+    : (rec.recoveryTimeH ?? 0) <= 48 ? COLORS.amber : COLORS.mx4Red
+  const recovState = (rec.recoveryTimeH ?? 0) === 0 ? 'READY NOW'
+    : (rec.recoveryTimeH ?? 0) <= 24 ? 'FRESH'
+    : (rec.recoveryTimeH ?? 0) <= 48 ? 'RECOVERING' : 'HEAVY LOAD'
 
   return (
     <>
@@ -202,21 +229,30 @@ function RecoveryOverview() {
         <div onClick={battTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
           <Bracket color={A} inset={6} op={0.28} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9, paddingLeft: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, paddingLeft: 3 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>BODY BATTERY · TODAY</span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text }}>{rec.battery.now}</span>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>now</span>
-              {rec.batteryConsumed != null && (
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.amber }}>−{rec.batteryConsumed}</span>
-              )}
-            </div>
+            {rec.batteryConsumed != null && (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.amber }}>−{rec.batteryConsumed} used</span>
+            )}
           </div>
-          <BodyBattery now={rec.battery.now} max={rec.battery.max} min={rec.battery.min} accent={A} height={15} />
-          <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, marginTop: 7, paddingLeft: 2 }}>
-            wake {rec.battery.max}% → now {rec.battery.now}%
+          <svg viewBox="0 0 300 158" width="100%" style={{ display: 'block' }}>
+            <path d={battArc(0.999)} fill="none" stroke={hexA(A, 0.1)} strokeWidth={14} strokeLinecap="round" />
+            <path d={battArc(battNowPct)} fill="none" stroke={battColor} strokeWidth={14} strokeLinecap="round" />
+            {battWakePct - battNowPct > 0.04 && (
+              <line
+                x1={wakeTickIx.toFixed(1)} y1={wakeTickIy.toFixed(1)}
+                x2={wakeTickOx.toFixed(1)} y2={wakeTickOy.toFixed(1)}
+                stroke={hexA(COLORS.textMuted, 0.7)} strokeWidth={2} strokeLinecap="round"
+              />
+            )}
+            <text x={150} y={108} textAnchor="middle" fontFamily={FONT_MONO} fontSize={40} fontWeight={700} fill={COLORS.text}>{rec.battery.now}</text>
+            <text x={150} y={124} textAnchor="middle" fontFamily={FONT_MONO} fontSize={8} fontWeight={600} fill={battColor}>{battState}</text>
+          </svg>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px 2px', marginTop: -6 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>wake {rec.battery.max}%</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>now {rec.battery.now}%</span>
           </div>
-          {battOpen && <InfoOverlay info={BATTERY_INFO} accent={A} radius={11} compact onClick={battTap} />}
+          {battOpen && <InfoOverlay info={BATTERY_INFO} accent={A} radius={11} onClick={battTap} />}
         </div>
       )}
 
@@ -225,19 +261,22 @@ function RecoveryOverview() {
         <div onClick={recovTimeTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
           <Bracket color={A} inset={6} op={0.28} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 3 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>RECOVERY TIME</span>
-            {rec.recoveryTimeH === 0 ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 5, background: hexA(COLORS.green, 0.12), border: `1px solid ${hexA(COLORS.green, 0.42)}` }}>
-                <StatusCore accent={COLORS.green} size={5} />
-                <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: COLORS.green }}>READY NOW</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 700, color: COLORS.text }}>{rec.recoveryTimeH}</span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: COLORS.textMuted }}>h to full recovery</span>
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{rec.recoveryTimeH}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>h</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: recovColor }}>{recovState}</span>
+            </div>
+          </div>
+          <div style={{ position: 'relative', height: 8, borderRadius: 4, background: hexA(COLORS.textMuted, 0.12), marginBottom: 6 }}>
+            <div style={{ position: 'absolute', left: 0, width: `${(24 / 72) * 100}%`, height: '100%', background: hexA(COLORS.green, 0.18), borderRadius: '4px 2px 2px 4px' }} />
+            <div style={{ position: 'absolute', top: -2, left: `calc(${recovPos * 100}% - 6px)`, width: 12, height: 12, borderRadius: '50%', background: recovColor, boxShadow: `0 0 6px ${hexA(recovColor, 0.5)}` }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>0h</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: hexA(COLORS.green, 0.7) }}>ready zone 0–24h</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>72h</span>
           </div>
           {recovTimeOpen && <InfoOverlay info={RECOVERY_TIME_INFO} accent={A} radius={11} compact onClick={recovTimeTap} />}
         </div>

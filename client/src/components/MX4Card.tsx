@@ -1,4 +1,5 @@
 // All imports at top
+import ReactMarkdown from 'react-markdown'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import type { MX4Mood } from './primitives/MX4Sigil'
 import { FTelemetry } from './primitives/FTelemetry'
@@ -6,6 +7,7 @@ import { StatusCore } from './primitives/StatusCore'
 import { hexA } from '../lib/hexA'
 import { COLORS, FONT_MONO, FONT_UI, toneColor } from '../theme'
 import type { Brief } from '../lib/stubData'
+import type { BriefingResult } from '../lib/briefing'
 
 // ─── Temporary compatibility stub — removed in Task 3 / Task 5 ───
 export interface MX4Insight {
@@ -39,13 +41,25 @@ const DEFAULT_CHIPS: [string, string][] = [
 
 // ─── MX4Briefing — section accent card with verdict badge ────────────────────
 interface MX4BriefingProps {
-  accent: string
-  brief: Brief
+  accent:    string
+  brief:     Brief
+  liveData?: BriefingResult
 }
 
-export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
-  const tc = toneColor(brief.tone)
-  const verdictLabel = brief.tone === 'flag' ? 'FLAG' : brief.tone === 'caution' ? 'CAUTION' : 'POSITIVE'
+export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
+  const rawTone    = liveData ? liveData.tone.toLowerCase() as 'positive' | 'caution' | 'flag' : brief.tone
+  const activeMood: MX4Mood = liveData
+    ? (liveData.tone === 'POSITIVE' ? 'pleased' : 'alert')
+    : brief.mood
+  const activeMeta = liveData?.generated_at
+    ? (() => {
+        const d = new Date(liveData.generated_at)
+        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()} · ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`
+      })()
+    : brief.meta
+
+  const tc = toneColor(rawTone)
+  const verdictLabel = rawTone === 'flag' ? 'FLAG' : rawTone === 'caution' ? 'CAUTION' : 'POSITIVE'
 
   return (
     <div
@@ -61,7 +75,7 @@ export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 15px 11px' }}>
-        <MX4Sigil color={accent} size={19} spin mood={brief.mood} />
+        <MX4Sigil color={accent} size={19} spin mood={activeMood} />
         <span
           style={{
             fontFamily: FONT_MONO,
@@ -75,12 +89,11 @@ export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
         >
           INCOMING // MX-4
         </span>
-        {brief.meta && (
+        {activeMeta && (
           <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em', color: COLORS.textMuted, flexShrink: 0 }}>
-            {brief.meta}
+            {activeMeta}
           </span>
         )}
-        {/* Verdict badge — tone color only appears here */}
         <span
           style={{
             display: 'inline-flex',
@@ -104,26 +117,69 @@ export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
         </span>
       </div>
 
-      {/* Body */}
+      {/* Body — live markdown or stub text */}
       <div style={{ padding: '0 15px 13px' }}>
-        <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 16, lineHeight: 1.55, color: '#eef4fb' }}>
-          {brief.line}
-          <span
-            aria-hidden
-            style={{
-              display: 'inline-block',
-              width: 7,
-              height: '0.9em',
-              background: accent,
-              marginLeft: 3,
-              verticalAlign: 'middle',
-              animation: 'mx4blink 1.1s step-end infinite',
-            }}
-          />
-        </p>
+        {liveData ? (
+          <>
+            <p style={{ margin: '0 0 7px 0', fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: accent }}>
+              {liveData.headline}
+            </p>
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => (
+                  <p style={{ margin: '0 0 8px 0', fontFamily: FONT_UI, fontSize: 15, lineHeight: 1.55, color: '#eef4fb' }}>
+                    {children}
+                  </p>
+                ),
+                strong: ({ children }) => (
+                  <strong style={{ color: accent, fontWeight: 600 }}>{children}</strong>
+                ),
+                em: ({ children }) => (
+                  <em style={{ color: COLORS.textSecondary, fontStyle: 'italic' }}>{children}</em>
+                ),
+                ul: ({ children }) => (
+                  <ul style={{ margin: '0 0 8px 0', paddingLeft: 18 }}>{children}</ul>
+                ),
+                li: ({ children }) => (
+                  <li style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: '#eef4fb', marginBottom: 3 }}>{children}</li>
+                ),
+              }}
+            >
+              {liveData.body}
+            </ReactMarkdown>
+            <div
+              style={{
+                marginTop: 8,
+                padding: '7px 10px',
+                background: hexA(accent, 0.07),
+                borderLeft: `2px solid ${hexA(accent, 0.5)}`,
+                borderRadius: '0 6px 6px 0',
+              }}
+            >
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.12em', color: accent, fontWeight: 700 }}>DIRECTIVE · </span>
+              <span style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text, lineHeight: 1.4 }}>{liveData.recommendation}</span>
+            </div>
+          </>
+        ) : (
+          <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 16, lineHeight: 1.55, color: '#eef4fb' }}>
+            {brief.line}
+            <span
+              aria-hidden
+              style={{
+                display: 'inline-block',
+                width: 7,
+                height: '0.9em',
+                background: accent,
+                marginLeft: 3,
+                verticalAlign: 'middle',
+                animation: 'mx4blink 1.1s step-end infinite',
+              }}
+            />
+          </p>
+        )}
       </div>
 
-      {/* Chips */}
+      {/* Footer chips */}
       <div
         style={{
           display: 'flex',
@@ -133,12 +189,25 @@ export function MX4Briefing({ accent, brief }: MX4BriefingProps) {
           borderTop: `1px solid ${hexA(accent, 0.18)}`,
         }}
       >
-        {brief.chips.map(([key, val]) => (
-          <span key={key} style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
-            {key}{' '}
-            <span style={{ color: accent }}>{val}</span>
-          </span>
-        ))}
+        {liveData ? (
+          <>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
+              FLAGS <span style={{ color: liveData.flags.length > 0 ? tc : accent }}>{liveData.flags.length}</span>
+            </span>
+            {liveData.flags.slice(0, 2).map((flag, i) => (
+              <span key={i} style={{ fontFamily: FONT_MONO, fontSize: 8, letterSpacing: '0.08em', color: COLORS.textMuted }}>
+                · {flag.toUpperCase()}
+              </span>
+            ))}
+          </>
+        ) : (
+          brief.chips.map(([key, val]) => (
+            <span key={key} style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
+              {key}{' '}
+              <span style={{ color: accent }}>{val}</span>
+            </span>
+          ))
+        )}
         <span style={{ marginLeft: 'auto' }}>
           <FTelemetry color={accent} bars={4} />
         </span>

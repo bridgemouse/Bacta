@@ -1,59 +1,62 @@
 import { Router } from 'express'
-import fs from 'fs'
-import path from 'path'
+import db from '../db/client'
 
 const insightsRouter = Router()
 
-const INSIGHTS_DIR = process.env.INSIGHTS_DIR ?? path.join(process.cwd(), 'insights')
-
 const VALID_SECTIONS = ['home', 'recovery', 'training', 'sleep', 'nutrition', 'bloodwork', 'dailylog']
 
-const MOCK_INSIGHTS: Record<string, object> = {
+const STUB_BRIEFINGS: Record<string, object> = {
   home: {
-    generated_at: new Date().toISOString(),
-    summary: 'Recovery solid. Training on track. Nutrition close — protein slightly under. MX-4 standing by.',
-    tone: 'positive',
+    tone: 'POSITIVE',
+    headline: 'Systems nominal. MX-4 standing by.',
+    body: 'Recovery is charged. Training is on track. MX-4 has not yet generated a live briefing for this section.',
+    recommendation: 'Configure an AI provider in Settings to enable live briefings.',
     flags: [],
   },
   recovery: {
-    generated_at: new Date().toISOString(),
-    summary: 'HRV up 4ms. Body battery at 74. Green for tomorrow.',
-    tone: 'positive',
+    tone: 'POSITIVE',
+    headline: 'HRV up 4ms. Body battery at 74.',
+    body: 'Recovery metrics are within normal range. No live briefing has been generated yet — configure an AI provider in Settings.',
+    recommendation: 'Run the orchestrator to generate a live assessment.',
     flags: [],
   },
   training: {
-    generated_at: new Date().toISOString(),
-    summary: 'Load moderate. Week 4 of 8. Thursday tempo is the key session.',
-    tone: 'positive',
+    tone: 'POSITIVE',
+    headline: 'Training load moderate. VO2 trajectory on target.',
+    body: 'Training status nominal. No live briefing has been generated yet — configure an AI provider in Settings.',
+    recommendation: 'Run the orchestrator to generate a live assessment.',
     flags: [],
   },
   sleep: {
-    generated_at: new Date().toISOString(),
-    summary: '8.1h, score 82. Deep sleep slightly low but consistent with mileage spike.',
-    tone: 'positive',
+    tone: 'CAUTION',
+    headline: 'Sleep score 82. Architecture review pending.',
+    body: 'Sleep data is available but no live briefing has been generated yet — configure an AI provider in Settings.',
+    recommendation: 'Run the orchestrator to generate a live assessment.',
     flags: [],
   },
   nutrition: {
-    generated_at: new Date().toISOString(),
-    summary: 'Calories on target. Protein under by 18g — close the gap at dinner.',
-    tone: 'caution',
-    flags: ['protein under target'],
+    tone: 'CAUTION',
+    headline: 'No nutrition data source configured.',
+    body: 'MacroFactor integration is pending. No data available.',
+    recommendation: 'Set up a nutrition tracking source.',
+    flags: ['no data source'],
   },
   bloodwork: {
-    generated_at: new Date().toISOString(),
-    summary: 'No panels uploaded yet.',
-    tone: 'caution',
+    tone: 'CAUTION',
+    headline: 'No lab panels uploaded.',
+    body: 'Blood work section is ready but no panels have been uploaded yet.',
+    recommendation: 'Upload lab results when available.',
     flags: [],
   },
   dailylog: {
-    generated_at: new Date().toISOString(),
-    summary: 'Daily log ready.',
-    tone: 'positive',
+    tone: 'POSITIVE',
+    headline: 'Daily log ready.',
+    body: 'Daily log section is ready.',
+    recommendation: 'Start logging daily inputs.',
     flags: [],
   },
 }
 
-// Get insight for a section — reads JSON from insights dir if available, falls back to mock
 insightsRouter.get('/:section', (req, res) => {
   const { section } = req.params
 
@@ -62,18 +65,21 @@ insightsRouter.get('/:section', (req, res) => {
     return
   }
 
-  const filePath = path.join(INSIGHTS_DIR, `${section}.json`)
-  if (fs.existsSync(filePath)) {
+  const row = db.prepare(
+    'SELECT content_json, generated_at, model FROM mx4_briefings WHERE section = ?'
+  ).get(section) as { content_json: string; generated_at: string; model: string } | undefined
+
+  if (row) {
     try {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-      res.json(data)
+      const content = JSON.parse(row.content_json)
+      res.json({ ...content, generated_at: row.generated_at, model: row.model })
       return
     } catch {
-      // Fall through to mock
+      // fall through to stub
     }
   }
 
-  res.json(MOCK_INSIGHTS[section])
+  res.json(STUB_BRIEFINGS[section] ?? STUB_BRIEFINGS.home)
 })
 
 export default insightsRouter

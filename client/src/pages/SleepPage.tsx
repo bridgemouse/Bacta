@@ -27,8 +27,33 @@ const HERO_INFO: CardInfo = {
 }
 const ARCH_INFO: CardInfo = {
   title: 'Sleep Architecture',
-  description: 'How your sleep distributes across Deep, Light, REM, and Awake. Ideal: ~20% deep, ~22% REM, <5% awake. The Architecture Score is Bacta-computed from how close your night matches these ideals.',
+  description: 'The hypnogram traces your journey through sleep stages across the night. Lower on the chart = deeper sleep. Bars above show time distribution across stages.',
   source: 'Garmin Venu 4 · accelerometer + HRV',
+  content: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 11, fontStyle: 'italic', lineHeight: 1.45, color: 'rgba(255,255,255,0.88)', textAlign: 'center' }}>
+        The hypnogram traces your journey through sleep stages across the night. Lower on the chart = deeper sleep.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '6px 0' }}>
+        {([
+          { pos: 'TOP',    stage: 'AWAKE', target: '< 5%',  note: 'Brief awakenings are normal. Excessive waking fragments recovery and suppresses restoration.' },
+          { pos: 'UPPER',  stage: 'REM',   target: '~22%',  note: 'Dreaming, memory consolidation, emotional regulation. Increases in later sleep cycles.' },
+          { pos: 'LOWER',  stage: 'LIGHT', target: '~50%',  note: 'Transitional stage. Normal to spend the majority of the night here.' },
+          { pos: 'BOTTOM', stage: 'DEEP',  target: '~20%',  note: 'Most restorative. Growth hormone release, physical repair. Peaks in early sleep cycles.' },
+        ] as const).map(({ pos, stage, target, note }) => (
+          <div key={stage} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(A, 0.5), width: 36, flexShrink: 0 }}>{pos}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.95)', width: 38, flexShrink: 0 }}>{stage}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: A, width: 34, flexShrink: 0 }}>{target}</span>
+            <span style={{ fontFamily: FONT_UI, fontSize: 9.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.25 }}>{note}</span>
+          </div>
+        ))}
+      </div>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 9.5, fontStyle: 'italic', color: 'rgba(255,255,255,0.48)', textAlign: 'center', lineHeight: 1.35 }}>
+        The bars above show total time per stage. The Architecture Score card below grades how closely your night matched these targets.
+      </p>
+    </div>
+  ),
 }
 const SCORE_INFO: CardInfo = {
   title: 'Sleep Score',

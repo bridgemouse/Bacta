@@ -281,11 +281,8 @@ function RecoveryOverview() {
             )}
             <text x={150} y={108} textAnchor="middle" fontFamily={FONT_MONO} fontSize={40} fontWeight={700} fill={COLORS.text}>{rec.battery.now}</text>
             <text x={150} y={124} textAnchor="middle" fontFamily={FONT_MONO} fontSize={8} fontWeight={600} fill={battColor}>{battState}</text>
+            <text x={150} y={138} textAnchor="middle" fontFamily={FONT_MONO} fontSize={7.5} fill={hexA(COLORS.textMuted, 0.65)}>WAKE {rec.battery.max}%</text>
           </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px 2px', marginTop: -6 }}>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>wake {rec.battery.max}%</span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>now {rec.battery.now}%</span>
-          </div>
           {battOpen && <InfoOverlay info={BATTERY_INFO} accent={A} radius={11} onClick={battTap} />}
         </div>
       )}

@@ -51,12 +51,24 @@
 - `SettingsPage.tsx` — 3-rail settings UI (AI PROVIDER, MX-4 INTELLIGENCE, GARMIN placeholder); accessible from NavSheet under SYSTEM divider
 - `mx4/system-prompt.md` — rewritten Jun 11, 2026 (replaced AZI-3 fabrication with correct identity)
 - `server/api/mx4.ts` — `POST /api/mx4/run` signal endpoint live
-- `insights/` — directory exists with `.gitkeep`; no actual insight files
 - **Superseded:** `mx4/orchestrator.py` (Python/`claude -p` approach) replaced by TypeScript/Vercel AI SDK pipeline
 
+**MX-4 system — Phase 2 complete (Jun 14, 2026):**
+- `server/lib/ai/sections.ts` — metric definitions per section with corrected Garmin schema names
+- `server/lib/ai/wiki.ts` — sync wiki utilities (read all pages, write page, list with sizes)
+- `server/lib/ai/wrap.ts` — post-session wiki maintenance: oversized page detection → AI synthesis → archive + rewrite
+- `server/lib/ai/orchestrator.ts` — two-step pipeline: `generateText` with all 6 tools → `generateObject` for structured briefing JSON; writes to `mx4_briefings` table; triggered via `POST /api/mx4/run`
+- `server/lib/ai/chat.ts` — `loadChatHistory(sessionId)` → `CoreMessage[]` for chat context
+- `server/api/mx4.ts` — `GET /api/chat/:sessionId` (history), `POST /api/chat` (SSE streaming with all 6 tools available)
+- `client/src/hooks/useChat.ts` — session state, streaming fetch via `ReadableStream`, history restore on open
+- `AskSheet.tsx` — live chat UI: user/MX-4 message bubbles, streaming token-by-token rendering, date-based session IDs, history persists across opens; error event on empty stream
+- Section pages (Recovery, Sleep, Training) wired to `useBriefing` hook — live `MX4Briefing` data replaces stubs
+- `node-cron` scheduler in `server/index.ts` — nightly run at configured time (default 04:00)
+- `mx4/wiki/` — wiki directory initialized; pages written by MX-4 on first orchestrator run
+
 **Tests:**
-- 213 tests passing (55 server + 158 client, last verified Jun 14, 2026)
-- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, all 6 MX-4 tools
+- 241 tests passing (83 server + 158 client, last verified Jun 14, 2026)
+- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, all 6 MX-4 tools, chat API, wiki module, orchestrator, wrap session
 
 ### Present but Untested (Never Run)
 
@@ -74,29 +86,29 @@
 
 ## Immediate Priorities
 
-### 1. MX-4 Phase 2 — Orchestrator + Wiki + Briefing Delivery
+### 1. MX-4 First Orchestrator Run
 
-**Why this is next:** Phase 1 built the AI provider layer and settings. Phase 2 wires it all together into a working nightly briefing pipeline — replacing the static stub text with live, data-grounded MX-4 voice across all sections.
+**Why this is next:** The full Phase 2 pipeline is implemented and tested but has never executed. A single manual `POST /api/mx4/run` with a real API key configured in SettingsPage will populate `mx4_briefings` and seed the wiki. Sections are already wired to display live briefings — they just need data.
 
-**What Phase 2 builds:**
-- `mx4/wiki/` — initial wiki pages: `ethan-profile.md`, `hrv-patterns.md`, `sleep-patterns.md`, `training-patterns.md`, `weekly-observations.md`, `correlations.md`, `SCHEMA.md`
-- `server/lib/ai/sections.ts` — metric definitions per section (port from `mx4/sections.py` with corrected metric names)
-- `server/lib/ai/orchestrator.ts` — two-step: `generateText` with tools → `generateObject` for structured briefing JSON; writes to `mx4_briefings` table
-- `server/lib/ai/wrap.ts` — post-session wiki maintenance (list pages → archive + rewrite if over token limit)
-- `server/lib/ai/wiki.ts` — wiki utilities (read all, write page, list with sizes)
-- `mx4/HEARTBEAT.md` — standing orders file (create now even if minimal)
-- `node-cron` scheduler in `server/index.ts` — nightly at configured time + stale-detection on sync
-- `GET /api/insights/:section` — serve briefings from `mx4_briefings` table
-- Section pages wired to briefing API (replace stub text with live `MX4Briefing` data)
+**Steps:**
+1. Add a Google AI API key in SettingsPage (SYSTEM → Settings)
+2. `curl -X POST http://localhost:3001/api/mx4/run` and tail server logs
+3. Verify `mx4_briefings` rows exist: `SELECT section, created_at FROM mx4_briefings ORDER BY created_at DESC LIMIT 10`
+4. Check that Recovery, Training, Sleep sections show live MX-4 text (not stub)
+5. Install the nightly cron (see server logs for scheduler status)
 
-**Spec:** `docs/superpowers/specs/2026-06-14-mx4-intelligence-design.md`
+### 2. HEARTBEAT.md — Standing Orders File
 
-### 2. Body Battery in Recovery Overview
+Create `mx4/HEARTBEAT.md` — even a minimal stub. Referenced in docs and CLAUDE.md but doesn't exist. Enables behavioral adjustments to MX-4 without touching his system prompt.
+
+### 3. Body Battery in Recovery Overview
 
 `useRecoveryData` fetches `body_battery_wake` and `body_battery_current` into `rec.battery`, but `RecoveryPage` never renders it. The `HeadlineCard` and `BodyBattery` components are both built and available. Adding a Body Battery card beside the HRV HeadlineCard completes the Recovery Overview's data density.
 
 **Where:** `client/src/pages/RecoveryPage.tsx`  
 **What:** Add a `HeadlineCard` using `rec.battery.wake` (PEAK) and `rec.battery.current` (NOW), with a `BodyBattery` component in the card footer.
+
+---
 
 ---
 
@@ -141,9 +153,7 @@ The standing orders mechanism is documented and referenced in multiple places bu
 
 ## Open Questions & Observed Inconsistencies
 
-**insights.ts serves files; briefings now live in DB.** `server/api/insights.ts` reads from flat files in `insights/`. The new pipeline writes briefings to the `mx4_briefings` SQLite table. Phase 2 will add `GET /api/insights/:section` that reads from the table. The old file-based endpoint is not broken but is no longer the target delivery path.
-
-**`HEARTBEAT.md` referenced but absent.** Multiple places in docs and CLAUDE.md reference this file. It does not exist. Phase 2 will create it.
+**`HEARTBEAT.md` referenced but absent.** Multiple places in docs and CLAUDE.md reference this file. It does not exist. Immediate priority — see above.
 
 **`sections.py` metric names are stale.** The Python orchestrator (`mx4/sections.py`) has stale metric names. The TypeScript replacement (`server/lib/ai/sections.ts`) will be written with correct names in Phase 2 — `sections.py` can be left as-is (it's superseded).
 

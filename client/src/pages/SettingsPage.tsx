@@ -140,7 +140,7 @@ export function SettingsPage() {
       </span>
     ) : null
 
-  const currentProvider = settings['ai_provider'] ?? 'anthropic'
+  const currentProvider = settings['ai_provider'] ?? 'google'
   const models = MODELS_BY_PROVIDER[currentProvider] ?? []
 
   const handleProviderChange = (p: string) => {
@@ -150,8 +150,8 @@ export function SettingsPage() {
     save('mx4_chat_model', firstModel)
   }
 
-  const nightlySyncOn = settings['mx4_nightly_sync'] === 'true'
-  const syncOnGarminOn = settings['mx4_sync_on_garmin'] === 'true'
+  const nightlySyncOn = settings['mx4_nightly_enabled'] === 'true'
+  const syncOnGarminOn = settings['mx4_on_sync_enabled'] === 'true'
 
   const testButtonLabel =
     testStatus === 'testing' ? 'TESTING…' :
@@ -308,14 +308,14 @@ export function SettingsPage() {
         <div style={rowStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={labelStyle}>Nightly sync</span>
-            {savedBadge('mx4_nightly_sync')}
+            {savedBadge('mx4_nightly_enabled')}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {nightlySyncOn && (
               <input
                 type="time"
-                value={settings['mx4_nightly_sync_time'] ?? '03:00'}
-                onChange={e => save('mx4_nightly_sync_time', e.target.value)}
+                value={settings['mx4_nightly_time'] ?? '04:00'}
+                onChange={e => save('mx4_nightly_time', e.target.value)}
                 style={{
                   fontFamily: FONT_MONO,
                   fontSize: 11,
@@ -330,7 +330,7 @@ export function SettingsPage() {
             )}
             <Toggle
               on={nightlySyncOn}
-              onChange={v => save('mx4_nightly_sync', String(v))}
+              onChange={v => save('mx4_nightly_enabled', String(v))}
             />
           </div>
         </div>
@@ -339,11 +339,11 @@ export function SettingsPage() {
         <div style={rowStyleLast}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={labelStyle}>Sync on Garmin</span>
-            {savedBadge('mx4_sync_on_garmin')}
+            {savedBadge('mx4_on_sync_enabled')}
           </div>
           <Toggle
             on={syncOnGarminOn}
-            onChange={v => save('mx4_sync_on_garmin', String(v))}
+            onChange={v => save('mx4_on_sync_enabled', String(v))}
           />
         </div>
       </div>

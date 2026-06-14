@@ -175,7 +175,7 @@ function SleepOverview() {
   const awakeStageMins = slp.stages.find(s => s.key === 'awake')?.mins ?? 0
   const awakeTargetMins = Math.round(totalMins * 0.05)
   const archColor = slp.archScore != null
-    ? slp.archScore >= 80 ? COLORS.green : slp.archScore >= 60 ? COLORS.amber : COLORS.mx4Red
+    ? slp.archScore >= 80 ? A : slp.archScore >= 60 ? hexA(A, 0.70) : COLORS.textMuted
     : COLORS.textMuted
   const archCx = 150, archCy = 150
   const archArc = (r: number, pct: number) => {
@@ -268,9 +268,9 @@ function SleepOverview() {
             {slp.sleepDebt == null || slp.sleepDebt === 0 ? '0 min' : debtH > 0 ? `${debtH}h ${String(debtM).padStart(2, '0')}m` : `${debtM}m`}
           </div>
           <div style={{ width: '100%', height: 4, borderRadius: 2, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden', marginBottom: 4 }}>
-            <div style={{ width: `${Math.min(100, Math.round((slp.duration.mins / 480) * 100))}%`, height: '100%', background: slp.sleepDebt === 0 ? COLORS.green : COLORS.amber, borderRadius: 2 }} />
+            <div style={{ width: `${Math.min(100, Math.round((slp.duration.mins / 480) * 100))}%`, height: '100%', background: slp.sleepDebt === 0 ? COLORS.green : A, borderRadius: 2 }} />
           </div>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: slp.sleepDebt === 0 ? COLORS.green : COLORS.amber, fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 3 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: slp.sleepDebt === 0 ? COLORS.green : A, fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 3 }}>
             {slp.sleepDebt == null || slp.sleepDebt === 0 ? 'FULLY RESTORED' : 'BELOW 8H GOAL'}
           </div>
           {debtOpen && <InfoOverlay info={DEBT_INFO} accent={A} radius={10} compact onClick={debtTap} />}

@@ -94,7 +94,7 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
         if (totalMins > 0) {
           archDeepScore = Math.min(deepMins / (totalMins * 0.20), 1)
           archRemScore  = Math.min(remMins  / (totalMins * 0.22), 1)
-          archAwakePenalty  = Math.max(0, 1 - awakeMins / (totalMins * 0.05))
+          archAwakePenalty  = Math.max(0, Math.min(1, 2 - awakeMins / (totalMins * 0.05)))
           archScore = Math.round((archDeepScore * 0.4 + archRemScore * 0.4 + archAwakePenalty * 0.2) * 100)
         }
 

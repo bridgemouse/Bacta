@@ -9,6 +9,7 @@ import insightsRouter from './api/insights'
 import bloodworkRouter from './api/bloodwork'
 import pollRouter from './api/poll'
 import mx4Router from './api/mx4'
+import settingsRouter from './api/settings'
 
 migrate()
 
@@ -22,6 +23,7 @@ app.use('/api/insights', insightsRouter)
 app.use('/api/bloodwork', bloodworkRouter)
 app.use('/api/poll', pollRouter)
 app.use('/api/mx4', mx4Router)
+app.use('/api/settings', settingsRouter)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {

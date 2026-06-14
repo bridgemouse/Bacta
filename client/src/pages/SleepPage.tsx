@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
+import { useBriefing } from '../hooks/useBriefing'
 import { useTab } from '../lib/TabContext'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS, CARD_SIZES, type CardInfo } from '../theme'
 import { BRIEFS, fmtDur } from '../lib/stubData'
@@ -158,6 +159,7 @@ const SUBTEXT: CSSProperties = {
 
 function SleepOverview() {
   const { data: slp } = useSleepData()
+  const liveBriefing = useBriefing('sleep')
   const { isOpen: heroOpen, handleTap: heroTap } = useCardInfoOverlay('slp-hero', HERO_INFO, A)
   const { isOpen: archOpen, handleTap: archTap } = useCardInfoOverlay('slp-arch', ARCH_INFO, A)
   const { isOpen: effOpen, handleTap: effTap } = useCardInfoOverlay('slp-efficiency', EFFICIENCY_INFO, A)
@@ -191,7 +193,7 @@ function SleepOverview() {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.sleep} />
+      <MX4Briefing accent={A} brief={BRIEFS.sleep} liveData={liveBriefing ?? undefined} />
       <Rail label="LAST NIGHT" accent={A} right="SYNTHESIZED" />
 
       {/* Hero */}

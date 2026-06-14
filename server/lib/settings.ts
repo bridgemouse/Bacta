@@ -1,0 +1,31 @@
+import db from '../db/client'
+
+export const SETTING_DEFAULTS: Record<string, string> = {
+  ai_provider:           'google',
+  ai_api_key:            '',
+  mx4_briefing_model:    'gemini-2.5-flash',
+  mx4_chat_model:        'gemini-2.5-flash',
+  mx4_nightly_enabled:   'true',
+  mx4_nightly_time:      '04:00',
+  mx4_on_sync_enabled:   'true',
+}
+
+export function initSettings(): void {
+  const insert = db.prepare(
+    'INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)'
+  )
+  for (const [key, value] of Object.entries(SETTING_DEFAULTS)) {
+    insert.run(key, value)
+  }
+}
+
+export function getSetting(key: string): string | undefined {
+  const row = db.prepare('SELECT value FROM app_settings WHERE key = ?')
+    .get(key) as { value: string } | undefined
+  return row?.value
+}
+
+export function setSetting(key: string, value: string): void {
+  db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)')
+    .run(key, value)
+}

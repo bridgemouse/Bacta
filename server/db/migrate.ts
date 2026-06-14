@@ -1,6 +1,7 @@
 import db from './client'
 import fs from 'fs'
 import path from 'path'
+import { initSettings } from '../lib/settings'
 
 const NEW_ACTIVITY_COLS = [
   'aerobic_te REAL',
@@ -36,6 +37,8 @@ export function migrate() {
 
   // garmin_activity_legs is a new table — CREATE TABLE IF NOT EXISTS handles idempotency
   // (schema.sql already ran above via db.exec(schema))
+
+  initSettings()
 
   console.log('[db] migrations complete')
 }

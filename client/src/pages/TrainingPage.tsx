@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
+import { useBriefing } from '../hooks/useBriefing'
 import { useTab } from '../lib/TabContext'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS, CARD_SIZES, type CardInfo } from '../theme'
 import { BRIEFS } from '../lib/stubData'
@@ -119,6 +120,7 @@ const CALORIES_TREND_INFO: CardInfo = {
 
 function TrainingOverview() {
   const { data: TRN } = useTrainingData()
+  const liveBriefing = useBriefing('training')
   const { isOpen: statusOpen, handleTap: statusTap } = useCardInfoOverlay('trn-status', STATUS_INFO, A)
   const { isOpen: ratioOpen, handleTap: ratioTap } = useCardInfoOverlay('trn-loadratio', LOAD_RATIO_INFO, A)
   const { isOpen: intensityOpen, handleTap: intensityTap } = useCardInfoOverlay('trn-intensity', INTENSITY_INFO, A)
@@ -140,7 +142,7 @@ function TrainingOverview() {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.training} />
+      <MX4Briefing accent={A} brief={BRIEFS.training} liveData={liveBriefing ?? undefined} />
 
       {/* Status banner */}
       <div onClick={statusTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 9, minHeight: CARD_SIZES.row }}>

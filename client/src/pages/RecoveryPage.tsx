@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
+import { useBriefing } from '../hooks/useBriefing'
 import { useTab } from '../lib/TabContext'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS, CARD_SIZES, type CardInfo } from '../theme'
 import { BRIEFS } from '../lib/stubData'
@@ -110,6 +111,7 @@ const SUBTEXT: CSSProperties = {
 
 function RecoveryOverview() {
   const { data: rec } = useRecoveryData()
+  const liveBriefing = useBriefing('recovery')
   const { isOpen: scoreOpen, handleTap: scoreTap } = useCardInfoOverlay('rec-score', SCORE_INFO, A)
   const { isOpen: hrvOpen, handleTap: hrvTap } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
   const { isOpen: battOpen, handleTap: battTap } = useCardInfoOverlay('rec-battery', BATTERY_INFO, A)
@@ -156,7 +158,7 @@ function RecoveryOverview() {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.recovery} />
+      <MX4Briefing accent={A} brief={BRIEFS.recovery} liveData={liveBriefing ?? undefined} />
       <Rail label="READINESS" accent={A} right="SYNTHESIZED" />
 
       {/* Recovery Score hero */}

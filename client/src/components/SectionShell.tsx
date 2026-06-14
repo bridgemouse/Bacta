@@ -17,6 +17,7 @@ const GREETINGS: Record<NonHomeSectionKey, string> = {
   nutrition: 'Nutrition channel online. Intake, macros, and targets will surface here.',
   bloodwork: 'Blood Work channel online. Panels, biomarkers, and flags will populate here.',
   dailylog:  'Daily Log channel online. Your entries and check-ins will live here.',
+  settings:  'Configuration channel online. System preferences and integrations will surface here.',
 }
 
 export function SectionShell({ section }: SectionShellProps) {

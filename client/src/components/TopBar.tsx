@@ -1,8 +1,8 @@
 import { COLORS, FONT_MONO, MX4_COLOR, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
+import type { SectionKey } from '../theme'
 
 const oct = (c: number) =>
   `polygon(${c}px 0, calc(100% - ${c}px) 0, 100% ${c}px, 100% calc(100% - ${c}px), calc(100% - ${c}px) 100%, ${c}px 100%, 0 calc(100% - ${c}px), 0 ${c}px)`
-import type { SectionKey } from '../theme'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import { Sigil } from './primitives/Sigil'
 import { StatusCore } from './primitives/StatusCore'
@@ -86,7 +86,7 @@ export function TopBar({ section, onBack }: TopBarProps) {
       {/* Right side */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {showSync && (
-          <div style={{ clipPath: oct(5), background: hexA(syncColor, status === 'idle' ? 0.28 : 0.55), padding: 1, flexShrink: 0 }}>
+          <div style={{ clipPath: oct(5), background: hexA(syncColor, status === 'idle' ? 0.3 : 0.55), padding: 1, flexShrink: 0 }}>
             <button
               onClick={startSync}
               aria-label="Sync Garmin data"
@@ -94,24 +94,23 @@ export function TopBar({ section, onBack }: TopBarProps) {
               style={{
                 clipPath: oct(4),
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: hexA(syncColor, status === 'idle' ? 0.07 : 0.14),
+                background: status === 'idle' ? COLORS.surface : hexA(syncColor, 0.12),
                 border: 'none', padding: '4px 9px 4px 6px',
                 cursor: status === 'running' ? 'default' : 'pointer',
               }}
             >
-              <svg
-                width="11" height="11" viewBox="0 0 24 24" fill="none"
-                stroke={syncColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-                style={{
-                  flexShrink: 0,
-                  transformOrigin: 'center',
-                  animation: status === 'running' ? 'mx4spin 1s linear infinite' : 'none',
-                }}
-              >
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
+              <div style={{
+                width: 11, height: 11, flexShrink: 0,
+                animation: status === 'running' ? 'mx4spin 1s linear infinite' : 'none',
+              }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                  stroke={syncColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+              </div>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.1em', color: syncColor, whiteSpace: 'nowrap' }}>
                 {syncLabel}
               </span>

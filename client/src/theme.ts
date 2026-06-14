@@ -1,4 +1,4 @@
-export type SectionKey = 'home' | 'recovery' | 'training' | 'sleep' | 'nutrition' | 'bloodwork' | 'dailylog'
+export type SectionKey = 'home' | 'recovery' | 'training' | 'sleep' | 'nutrition' | 'bloodwork' | 'dailylog' | 'settings'
 
 export const MX4_COLOR = '#2bc4e8'   // bacta-cyan — MX-4 identity
 
@@ -27,6 +27,7 @@ export const SECTION_ACCENTS: Record<SectionKey, string> = {
   nutrition: '#3ecf8e',
   bloodwork: '#ef6f6c',
   dailylog:  '#f5cf5e',
+  settings:  MX4_COLOR,
 }
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
@@ -37,6 +38,7 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   nutrition: 'Nutrition',
   bloodwork: 'Blood Work',
   dailylog:  'Daily Log',
+  settings:  'CONFIGURATION',
 }
 
 export const SECTION_ICONS: Record<SectionKey, string> = {
@@ -47,6 +49,7 @@ export const SECTION_ICONS: Record<SectionKey, string> = {
   nutrition: '🥗',
   bloodwork: '🩸',
   dailylog:  '📋',
+  settings:  '⚙️',
 }
 
 export const FONT_UI   = "'Hanken Grotesk', system-ui, sans-serif"

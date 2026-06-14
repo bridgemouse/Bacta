@@ -462,3 +462,13 @@ These files are deleted, not archived — their logic lives in the TypeScript re
 - `readAllWikiPages()` is called once per session, not per tool call — wiki context is attached to system prompt
 - Wrap step on chat is always async (fire-and-forget on AskSheet close) — never blocks user
 - `queryDb` enforces SELECT-only — no write access to garmin data from MX-4 tools
+
+---
+
+## Phase 2 Design Decisions (resolved Jun 14, 2026)
+
+**system-prompt.md output format:** Update `mx4/system-prompt.md` — remove the HTML output section. Replace with analysis voice/style instructions only. The two-step orchestrator (`generateText` → `generateObject`) owns format; the system prompt should guide voice and analytical depth, not output syntax.
+
+**MX4Briefing component:** Update `MX4Briefing` in-place with an optional `liveData?: BriefingResult` prop. When `liveData` is present: render `headline` as a subhead, `body` via `react-markdown`, `recommendation` as a distinct directive row, `flags` as footer chips. The existing `brief: Brief` prop remains as fallback for stubs. `mood` is derived from `tone` (POSITIVE→pleased, CAUTION→alert, FLAG→alert); `meta` shows formatted `generated_at`.
+
+**POST /api/mx4/run behavior:** Fire-and-forget — return 202 immediately, orchestrator runs in background via `setImmediate`. Section pages already fetch briefings on mount; they'll show the new content on next load or manual refresh.

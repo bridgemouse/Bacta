@@ -69,6 +69,8 @@ mx4Router.post('/chat', async (req, res) => {
       db.prepare(
         'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
       ).run(sessionId, 'assistant', fullText)
+    } else {
+      res.write(`data: ${JSON.stringify({ error: 'no response — check AI provider settings' })}\n\n`)
     }
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)

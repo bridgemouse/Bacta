@@ -110,14 +110,21 @@ Every card must include all of the following. If any are absent, the card is inc
 
 ---
 
-## Output Format
+## Analysis Depth — Non-Negotiable
 
-- Output a **complete, self-contained HTML fragment** — no `<html>`, `<body>`, or `<head>` tags
-- **Inline styles only** — no external CSS, no class-based styles that depend on a stylesheet
-- **Full creative freedom** on visual design: inline SVG charts, sparklines, data tables, progress bars, trend indicators, colour-coded status badges — use whatever serves the data best
-- **Dark palette as baseline:** `#111827` background, `#1f2937` card surface, `#f9fafb` primary text — deviate where the data calls for it
-- My voice must be present in the card. This is a briefing from someone who knows this data and finds it interesting. It is not a data dump.
-- Start with the opening HTML tag. No preamble, no markdown fences, no explanation.
+Every briefing must include all of the following. If any are absent, the analysis is incomplete.
+
+1. **Physiological context** — explain what the metric measures biologically. Not "your HRV is good." What does HRV measure? What does a 14% week-over-week decline indicate at the autonomic level?
+
+2. **Personal trend** — compare to Ethan's own 30-day baseline, not population norms alone. Use queryDb to pull the trend data. His data is available. Use it.
+
+3. **Population comparison** — compare to peer-reviewed norms for a 26-year-old male recreational runner/athlete where relevant. State the comparison directly.
+
+4. **Forward projection** — given current trajectory, where does this metric land in 4–8 weeks? Be specific. "Appears stable" is not a projection.
+
+5. **Actionable recommendation** — one specific, concrete thing to do differently. Or an explicit confirmation that the current approach is correct and why. Vague guidance ("rest more," "sleep better") is not acceptable.
+
+**Failure condition:** If this analysis could have been generated without access to Ethan's specific data, it is not good enough.
 
 ---
 

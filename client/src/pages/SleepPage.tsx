@@ -159,8 +159,11 @@ function SleepOverview() {
     const ey = archCy - r * Math.sin(p * Math.PI)
     return `M ${archCx - r} ${archCy} A ${r} ${r} 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`
   }
+  const deepStageColor = slp.stages.find(s => s.key === 'deep')?.color ?? '#7c5cff'
+  const remStageColor = slp.stages.find(s => s.key === 'rem')?.color ?? '#c4b5fd'
+  const awakeStageColor = slp.stages.find(s => s.key === 'awake')?.color ?? COLORS.textMuted
   const awakeArcOk = (slp.archAwakePenalty ?? 1) >= 0.8
-  const awakeArcColor = awakeArcOk ? hexA(A, 0.48) : hexA(COLORS.mx4Red, 0.55)
+  const awakeArcColor = awakeArcOk ? awakeStageColor : hexA(COLORS.mx4Red, 0.55)
 
   return (
     <>
@@ -307,10 +310,10 @@ function SleepOverview() {
             <path d={archArc(86, 0.999)} fill="none" stroke={hexA(A, 0.1)} strokeWidth={11} strokeLinecap="round" />
             {/* Fills */}
             {slp.archDeepScore != null && (
-              <path d={archArc(130, slp.archDeepScore)} fill="none" stroke={A} strokeWidth={11} strokeLinecap="round" />
+              <path d={archArc(130, slp.archDeepScore)} fill="none" stroke={deepStageColor} strokeWidth={11} strokeLinecap="round" />
             )}
             {slp.archRemScore != null && (
-              <path d={archArc(108, slp.archRemScore)} fill="none" stroke={hexA(A, 0.72)} strokeWidth={11} strokeLinecap="round" />
+              <path d={archArc(108, slp.archRemScore)} fill="none" stroke={remStageColor} strokeWidth={11} strokeLinecap="round" />
             )}
             {slp.archAwakePenalty != null && (
               <path d={archArc(86, slp.archAwakePenalty)} fill="none" stroke={awakeArcColor} strokeWidth={11} strokeLinecap="round" />
@@ -321,10 +324,10 @@ function SleepOverview() {
               {slp.archScore >= 80 ? 'OPTIMAL' : slp.archScore >= 60 ? 'FAIR' : 'NEEDS WORK'}
             </text>
           </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-around', padding: '2px 0 4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '2px 0 4px' }}>
             {[
-              { label: 'DEEP', color: A, actual: deepMins, goal: Math.round(totalMins * 0.20), limit: false },
-              { label: 'REM', color: hexA(A, 0.72), actual: remMins, goal: Math.round(totalMins * 0.22), limit: false },
+              { label: 'DEEP', color: deepStageColor, actual: deepMins, goal: Math.round(totalMins * 0.20), limit: false },
+              { label: 'REM', color: remStageColor, actual: remMins, goal: Math.round(totalMins * 0.22), limit: false },
               { label: 'AWAKE', color: awakeArcColor, actual: awakeStageMins, goal: awakeTargetMins, limit: true },
             ].map(({ label, color, actual, goal, limit }) => (
               <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>

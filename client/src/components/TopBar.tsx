@@ -89,16 +89,21 @@ export function TopBar({ section, onBack }: TopBarProps) {
             disabled={status === 'running'}
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
-              background: hexA(syncColor, status === 'idle' ? 0.08 : 0.15),
-              border: `1px solid ${hexA(syncColor, status === 'idle' ? 0.2 : 0.45)}`,
-              borderRadius: 20, padding: '3px 8px 3px 6px',
+              background: hexA(syncColor, status === 'idle' ? 0.07 : 0.14),
+              border: `1px solid ${hexA(syncColor, status === 'idle' ? 0.22 : 0.5)}`,
+              borderRadius: 3, padding: '4px 8px 4px 6px',
               cursor: status === 'running' ? 'default' : 'pointer',
             }}
           >
             <svg
               width="11" height="11" viewBox="0 0 24 24" fill="none"
               stroke={syncColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ animation: status === 'running' ? 'mx4spin 1s linear infinite' : 'none', flexShrink: 0 }}
+              style={{
+                flexShrink: 0,
+                transformBox: 'fill-box', transformOrigin: 'center',
+                animation: status === 'running' ? 'mx4spin 1s linear infinite' : 'none',
+                animationDirection: status === 'running' ? 'reverse' : 'normal',
+              }}
             >
               <polyline points="1 4 1 10 7 10" />
               <path d="M3.51 15a9 9 0 1 0 .49-3.51" />

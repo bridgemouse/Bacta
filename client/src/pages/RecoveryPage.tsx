@@ -34,6 +34,40 @@ const BATTERY_INFO: CardInfo = {
   title: 'Body Battery',
   description: "Garmin's energy reserve model computed from HRV, stress, and activity. Charges during deep low-stress sleep; depletes with physical and mental exertion.",
   source: 'Garmin Venu 4 · continuous HRV + stress',
+  content: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 11, fontStyle: 'italic', lineHeight: 1.45, color: 'rgba(255,255,255,0.88)', textAlign: 'center' }}>
+        Garmin's energy reserve model — computed continuously from HRV, stress, and activity.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '6px 0' }}>
+        {([
+          { range: '75–100', label: 'HIGH',     color: COLORS.green,              note: 'Fully recharged. Primed for demanding effort.' },
+          { range: '50–74',  label: 'MODERATE', color: A,                          note: 'Functional range. Moderate-to-hard effort is fine.' },
+          { range: '25–49',  label: 'LOW',      color: COLORS.amber,              note: 'Depleted. Keep activity light — hard sessions compound fatigue.' },
+          { range: '0–24',   label: 'CRITICAL', color: COLORS.mx4Red,             note: 'Recovery urgent. Rest and sleep before any training.' },
+        ]).map(({ range, label, color, note }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(A, 0.5), width: 32, flexShrink: 0 }}>{range}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, color, width: 52, flexShrink: 0 }}>{label}</span>
+            <span style={{ fontFamily: FONT_UI, fontSize: 9.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.25 }}>{note}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(A, 0.6), letterSpacing: '0.08em', marginBottom: 2 }}>CHARGES</div>
+          <div style={{ fontFamily: FONT_UI, fontSize: 9, color: 'rgba(255,255,255,0.72)' }}>Deep sleep · Rest · Low stress</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(A, 0.6), letterSpacing: '0.08em', marginBottom: 2 }}>DEPLETES</div>
+          <div style={{ fontFamily: FONT_UI, fontSize: 9, color: 'rgba(255,255,255,0.72)' }}>Training · Stress · Heat · Illness</div>
+        </div>
+      </div>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 9.5, fontStyle: 'italic', color: 'rgba(255,255,255,0.48)', textAlign: 'center', lineHeight: 1.35 }}>
+        Wake value is most diagnostic — it tells you how fully sleep recharged you overnight.
+      </p>
+    </div>
+  ),
 }
 const RECOVERY_TIME_INFO: CardInfo = {
   title: 'Recovery Time',

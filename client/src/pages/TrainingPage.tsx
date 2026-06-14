@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
 import { useTab } from '../lib/TabContext'
-import { COLORS, FONT_MONO, SECTION_ACCENTS, CARD_SIZES, type CardInfo } from '../theme'
+import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS, CARD_SIZES, type CardInfo } from '../theme'
 import { BRIEFS } from '../lib/stubData'
 import { useTrainingData } from '../hooks/useTrainingData'
 import { InfoCardProvider, useCardInfoOverlay, InfoOverlay } from '../lib/InfoCardContext'
@@ -51,6 +51,32 @@ const ZONES_INFO: CardInfo = {
   title: 'HR Zone Distribution',
   description: 'Time in each intensity zone. Zone 2 builds aerobic base. Zone 4–5 builds threshold and VO2 Max. Most programs target 80% Z1-2 and 20% Z3-5 over a week.',
   source: 'Garmin Venu 4 · optical HR + zones',
+  content: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 11, fontStyle: 'italic', lineHeight: 1.45, color: 'rgba(255,255,255,0.88)', textAlign: 'center' }}>
+        Time in each heart rate zone tracks how your training stimulus is distributed across intensity.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '6px 0' }}>
+        {([
+          { zone: 'Z1', range: '<60%',   label: 'EASY',      color: COLORS.textMuted,           note: 'Active recovery. No adaptation but preserves readiness and aids repair.' },
+          { zone: 'Z2', range: '60–70%', label: 'AEROBIC',   color: A,                           note: 'Aerobic base. Mitochondrial growth, fat oxidation. Most valuable long-term zone.' },
+          { zone: 'Z3', range: '70–80%', label: 'TEMPO',     color: COLORS.amber,               note: 'Aerobic/anaerobic crossover. Useful but accumulates fatigue quickly.' },
+          { zone: 'Z4', range: '80–90%', label: 'THRESHOLD', color: hexA(COLORS.mx4Red, 0.85),  note: 'Lactate threshold work. Short, powerful sessions raise your ceiling fast.' },
+          { zone: 'Z5', range: '90–100%',label: 'VO₂ MAX',   color: COLORS.mx4Red,              note: 'Peak output. Maximum cardio adaptation. Brief intervals only — very fatiguing.' },
+        ]).map(({ zone, range, label, color, note }) => (
+          <div key={zone} style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, fontWeight: 700, color, width: 18, flexShrink: 0 }}>{zone}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 7, color: hexA(A, 0.5), width: 34, flexShrink: 0 }}>{range}</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, color, width: 54, flexShrink: 0 }}>{label}</span>
+            <span style={{ fontFamily: FONT_UI, fontSize: 9.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.25 }}>{note}</span>
+          </div>
+        ))}
+      </div>
+      <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 9.5, fontStyle: 'italic', color: 'rgba(255,255,255,0.48)', textAlign: 'center', lineHeight: 1.35 }}>
+        80/20 rule — target ~80% Z1–2 and ~20% Z3–5 each week for sustainable gains.
+      </p>
+    </div>
+  ),
 }
 const STEPS_INFO: CardInfo = {
   title: 'Daily Steps',

@@ -21,9 +21,7 @@ settingsRouter.get('/', (_req, res) => {
 
 settingsRouter.post('/test-connection', async (_req, res) => {
   try {
-    // provider.ts is implemented in Task 5 — lazy import so missing module is runtime-caught
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    // lazy import so we don't force server startup to fail if provider isn't configured
     const { testConnection } = await import('../lib/ai/provider')
     const result = await testConnection()
     res.json(result)

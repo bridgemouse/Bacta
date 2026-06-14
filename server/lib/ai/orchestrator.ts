@@ -11,7 +11,7 @@ import path from 'path'
 
 const SYSTEM_PROMPT_PATH = path.join(process.cwd(), 'mx4', 'system-prompt.md')
 
-function loadSystemPrompt(): string {
+export function loadSystemPrompt(): string {
   try {
     return fs.readFileSync(SYSTEM_PROMPT_PATH, 'utf-8')
   } catch {

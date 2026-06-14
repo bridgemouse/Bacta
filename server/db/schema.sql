@@ -100,3 +100,24 @@ CREATE TABLE IF NOT EXISTS blood_work (
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(date, marker)
 );
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mx4_briefings (
+  section      TEXT PRIMARY KEY,
+  content_json TEXT NOT NULL,
+  generated_at TEXT NOT NULL,
+  model        TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mx4_chat_messages (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id  TEXT NOT NULL,
+  role        TEXT NOT NULL,
+  content     TEXT NOT NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_chat_session ON mx4_chat_messages(session_id, created_at);

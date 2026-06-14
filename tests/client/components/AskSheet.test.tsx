@@ -31,7 +31,7 @@ describe('AskSheet', () => {
 
   it('renders the input placeholder', () => {
     renderAsk(true)
-    expect(screen.getByText('Message MX-4')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Message MX-4')).toBeInTheDocument()
   })
 
   it('calls onClose when × button is clicked', () => {

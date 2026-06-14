@@ -1,31 +1,27 @@
-// tests/server/mx4.test.ts
-import { afterEach, describe, expect, it } from 'vitest'
-import fs from 'fs'
-import path from 'path'
+import { describe, it, expect, vi } from 'vitest'
 import request from 'supertest'
 
 process.env.DB_PATH = ':memory:'
 
-const SIGNAL_PATH = path.join(process.cwd(), 'data', 'test_mx4_signal')
-process.env.MX4_SIGNAL_PATH = SIGNAL_PATH
+// Mock the orchestrator so /run doesn't make real AI calls in tests
+vi.mock('../../server/lib/ai/orchestrator', () => ({
+  runOrchestrator: vi.fn().mockResolvedValue(undefined),
+}))
 
 describe('MX-4 API', () => {
-  afterEach(() => {
-    if (fs.existsSync(SIGNAL_PATH)) fs.rmSync(SIGNAL_PATH)
-  })
-
-  it('POST /api/mx4/run writes signal file and returns 202 with ok:true', async () => {
+  it('POST /api/mx4/run returns 202 with ok:true', async () => {
     const { app } = await import('../../server/index')
     const res = await request(app).post('/api/mx4/run')
     expect(res.status).toBe(202)
     expect(res.body.ok).toBe(true)
-    expect(fs.existsSync(SIGNAL_PATH)).toBe(true)
   })
 
-  it('POST /api/mx4/run signal file contains a timestamp string', async () => {
+  it('POST /api/mx4/run response arrives before orchestrator completes', async () => {
     const { app } = await import('../../server/index')
+    const start = Date.now()
     await request(app).post('/api/mx4/run')
-    const content = fs.readFileSync(SIGNAL_PATH, 'utf-8')
-    expect(new Date(content).getTime()).toBeGreaterThan(0)
+    const elapsed = Date.now() - start
+    // Should return almost immediately (fire-and-forget), not block
+    expect(elapsed).toBeLessThan(500)
   })
 })

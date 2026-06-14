@@ -154,6 +154,58 @@ export function BottomSheet({ open, onClose, currentSection }: BottomSheetProps)
               )
             })}
           </div>
+
+          {/* SYSTEM divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 14, marginBottom: 10 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.18em', color: COLORS.textMuted }}>
+              SYSTEM
+            </span>
+            <span style={{ flex: 1, height: 1, background: COLORS.line }} />
+          </div>
+
+          {/* Settings / Configuration */}
+          <button
+            onClick={() => { navigate('/settings'); onClose() }}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              font: 'inherit',
+              color: 'inherit',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              background: COLORS.surface,
+              border: `1px solid ${COLORS.line}`,
+              borderRadius: 10,
+              padding: '11px 14px',
+              marginBottom: 4,
+            }}
+          >
+            <span style={{
+              flexShrink: 0,
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: hexA(MX4_COLOR, 0.1),
+              border: `1px solid ${hexA(MX4_COLOR, 0.25)}`,
+            }}>
+              <Sigil name="settings" color={MX4_COLOR} size={16} />
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 650, color: COLORS.text }}>Configuration</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, color: COLORS.textSecondary, marginTop: 2 }}>
+                API KEYS · MODELS · SCHEDULE
+              </div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke={COLORS.textMuted} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9,5 16,12 9,19" />
+            </svg>
+          </button>
         </div>
 
         {/* Footer */}

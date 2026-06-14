@@ -6,6 +6,7 @@ import { SleepPage } from './pages/SleepPage'
 import { NutritionPage } from './pages/NutritionPage'
 import { BloodWorkPage } from './pages/BloodWorkPage'
 import { DailyLogPage } from './pages/DailyLogPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/nutrition" element={<NutritionPage />} />
       <Route path="/bloodwork" element={<BloodWorkPage />} />
       <Route path="/dailylog"  element={<DailyLogPage />} />
+      <Route path="/settings"  element={<SettingsPage />} />
     </Routes>
   )
 }

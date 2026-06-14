@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -33,6 +33,10 @@ describe('runOrchestrator', () => {
     fs.mkdirSync(testWikiDir, { recursive: true })
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('writes a briefing row to mx4_briefings for each section', async () => {
     const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
     await runOrchestrator()
@@ -57,5 +61,44 @@ describe('runOrchestrator', () => {
     const row = db.prepare('SELECT generated_at, model FROM mx4_briefings WHERE section = ?').get('recovery') as { generated_at: string; model: string }
     expect(new Date(row.generated_at).getTime()).toBeGreaterThan(0)
     expect(row.model.length).toBeGreaterThan(0)
+  })
+
+  describe('retry and error handling', () => {
+    it('retries a failing section and succeeds on second attempt', async () => {
+      vi.useFakeTimers()
+
+      const { generateText } = await import('ai')
+      const mockGenerateText = vi.mocked(generateText)
+
+      vi.clearAllMocks()
+      // First call throws a transient error; all subsequent calls succeed
+      mockGenerateText.mockRejectedValueOnce(new Error('temporary failure'))
+      mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+
+      // Start run, advance fake timers past the 30s retry delay, then await completion
+      const runPromise = runOrchestrator()
+      await vi.runAllTimersAsync()
+      await runPromise
+
+      vi.useRealTimers()
+    })
+
+    it('aborts the full run on a rate-limit error', async () => {
+      const { generateText } = await import('ai')
+      const mockGenerateText = vi.mocked(generateText)
+
+      vi.clearAllMocks()
+      // First call hits rate limit; remaining calls would succeed but should never be reached
+      mockGenerateText.mockRejectedValueOnce(new Error('quota exceeded: 429'))
+      mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+      await runOrchestrator()
+
+      // Only one call should have been made — the rate-limit aborts the entire run
+      expect(mockGenerateText).toHaveBeenCalledTimes(1)
+    })
   })
 })

@@ -25,8 +25,8 @@ async function runSection(
   promptAddendum: string,
   wikiContext: string,
   heartbeat: string,
+  systemPrompt: string,
 ): Promise<BriefingResult> {
-  const systemPrompt = loadSystemPrompt()
   const model = getModel('briefing')
   const modelId = (model as unknown as { modelId?: string }).modelId ?? getSetting('mx4_briefing_model') ?? 'unknown'
 
@@ -52,6 +52,7 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     stopWhen: stepCountIs(8),
   })
 
+  // No tools — avoids Gemini structured-output + tools conflict
   const { object } = await generateObject({
     model,
     schema: BriefingResultSchema,
@@ -70,16 +71,18 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
 export async function runOrchestrator(): Promise<void> {
   console.log('[mx4] orchestrator run started', new Date().toISOString())
 
-  const wikiContext = readAllWikiPagesSync()
-  const heartbeat   = loadHeartbeat()
+  const systemPrompt = loadSystemPrompt()
+  const wikiContext  = readAllWikiPagesSync()
+  const heartbeat    = loadHeartbeat()
 
   const errors: { section: string; error: string }[] = []
+  let rateLimitHit = false
 
   for (const section of SECTIONS) {
     let attempts = 0
     while (attempts < 3) {
       try {
-        await runSection(section.id, section.name, section.promptAddendum, wikiContext, heartbeat)
+        await runSection(section.id, section.name, section.promptAddendum, wikiContext, heartbeat, systemPrompt)
         console.log(`[mx4] ${section.id} briefing written`)
         break
       } catch (e: unknown) {
@@ -88,6 +91,7 @@ export async function runOrchestrator(): Promise<void> {
         if (message.includes('quota') || message.includes('rate') || message.includes('429')) {
           console.error(`[mx4] ${section.id} usage limit error — aborting run`)
           errors.push({ section: section.id, error: message })
+          rateLimitHit = true
           break
         }
         if (attempts >= 3) {
@@ -98,6 +102,7 @@ export async function runOrchestrator(): Promise<void> {
         }
       }
     }
+    if (rateLimitHit) break
   }
 
   if (errors.length > 0) {

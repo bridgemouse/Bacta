@@ -10,8 +10,10 @@ import bloodworkRouter from './api/bloodwork'
 import pollRouter from './api/poll'
 import mx4Router from './api/mx4'
 import settingsRouter from './api/settings'
+import { scheduleNightly } from './lib/ai/scheduler'
 
 migrate()
+scheduleNightly()
 
 export const app = express()
 app.use(express.json())

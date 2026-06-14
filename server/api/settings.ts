@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import db from '../db/client'
 import { setSetting } from '../lib/settings'
+import { scheduleNightly } from '../lib/ai/scheduler'
 
 const settingsRouter = Router()
 
@@ -37,6 +38,9 @@ settingsRouter.put('/:key', (req, res) => {
     return res.status(400).json({ error: 'value must be a string' })
   }
   setSetting(key, value)
+  if (key === 'mx4_nightly_time' || key === 'mx4_nightly_enabled') {
+    scheduleNightly()
+  }
   res.json({ ok: true })
 })
 

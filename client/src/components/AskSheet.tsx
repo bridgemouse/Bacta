@@ -46,6 +46,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
   useEffect(() => {
     if (open) {
       loadMessages()
+      if (textareaRef.current) autoResize(textareaRef.current)
       const t = setTimeout(() => textareaRef.current?.focus(), 400)
       return () => clearTimeout(t)
     }
@@ -124,7 +125,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
                 maxWidth: '85%',
               }}
             >
-              <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: '#eef4fb', fontFamily: FONT_UI }}>
+              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: COLORS.text, fontFamily: FONT_MONO }}>
                 Standing by, Commander. Ask me about any system, or I can walk your latest readouts. What do you need?
               </p>
             </div>
@@ -144,7 +145,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
                     maxWidth: '80%',
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: '#eef4fb', fontFamily: FONT_UI }}>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: COLORS.text, fontFamily: FONT_MONO }}>
                     {msg.content}
                   </p>
                 </div>
@@ -170,7 +171,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
                   <ReactMarkdown
                     components={{
                       p: ({ children }) => (
-                        <p style={{ margin: '0 0 6px 0', fontSize: 14.5, lineHeight: 1.55, color: '#eef4fb', fontFamily: FONT_UI }}>
+                        <p style={{ margin: '0 0 6px 0', fontSize: 13, lineHeight: 1.6, color: COLORS.text, fontFamily: FONT_MONO }}>
                           {children}
                         </p>
                       ),
@@ -184,7 +185,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
                         <ul style={{ margin: '0 0 6px 0', paddingLeft: 16 }}>{children}</ul>
                       ),
                       li: ({ children }) => (
-                        <li style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: COLORS.text, marginBottom: 2 }}>{children}</li>
+                        <li style={{ fontFamily: FONT_MONO, fontSize: 13, lineHeight: 1.6, color: COLORS.text, marginBottom: 2 }}>{children}</li>
                       ),
                       h2: ({ children }) => (
                         <h2 style={{ margin: '10px 0 4px', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color, textTransform: 'uppercase' as const }}>
@@ -288,6 +289,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
         >
           <textarea
             ref={textareaRef}
+            rows={1}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -297,15 +299,14 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
               background: COLORS.surface,
               border: `1px solid ${COLORS.line}`,
               borderRadius: 11,
-              padding: '11px 13px',
-              fontFamily: FONT_MONO,
+              padding: '10px 13px',
+              fontFamily: FONT_UI,
               fontSize: 16,
               color: COLORS.text,
-              letterSpacing: '0.02em',
               resize: 'none',
               outline: 'none',
-              lineHeight: 1.5,
-              minHeight: 44,
+              lineHeight: 1.4,
+              minHeight: 40,
               maxHeight: 120,
               overflowY: 'auto',
             }}

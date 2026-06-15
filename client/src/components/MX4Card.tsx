@@ -50,6 +50,13 @@ interface MX4BriefingProps {
   onRefresh?:  () => void
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  home:     'HOME',
+  recovery: 'RECOVERY',
+  sleep:    'SLEEP',
+  training: 'TRAINING',
+}
+
 export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4BriefingProps) {
   const rawTone    = liveData ? liveData.tone.toLowerCase() as 'positive' | 'caution' | 'flag' : brief.tone
   const activeMood: MX4Mood = liveData
@@ -139,7 +146,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
             minWidth: 0,
           }}
         >
-          INCOMING // MX-4
+          MX-4 // {section ? SECTION_LABELS[section] ?? section.toUpperCase() : 'INTEL'}
         </span>
         {activeMeta && (
           <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em', color: COLORS.textMuted, flexShrink: 0 }}>

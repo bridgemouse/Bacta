@@ -64,4 +64,25 @@ body: Use ## VO2 MAX TRAJECTORY, ## LOAD ANALYSIS, ## INTENSITY PATTERN, ## DIRE
 
 After writing: update the vo2max-trajectory wiki page with the current projection and date.`,
   },
+  {
+    id: 'home',
+    name: 'Home',
+    metrics: [],
+    includeManual: false,
+    promptAddendum: `Query your three completed section analyses:
+SELECT section, content_json FROM mx4_briefings WHERE section IN ('recovery', 'sleep', 'training')
+
+Parse the summary field from each content_json result. You have already run three independent analyses — this briefing is your integrated read across all channels.
+
+Do not restate each section in sequence. Synthesize: what is the dominant signal across the system today? Where do the channels agree, and where do they create tension? A strong recovery reading means little if sleep architecture was poor — surface the interaction.
+
+Lead with the cross-channel verdict: primed, nominal, or under strain. Then the most significant tension or confirmation across domains. Close with one directive that accounts for all three channels.
+
+Do not attempt readVault — vault is inaccessible per standing orders.
+
+summary: 3–5 sentences. Cross-channel verdict, the most significant interaction between domains, the directive. No headers.
+body: Use ## SYSTEM STATE, ## CHANNEL SYNTHESIS, ## TENSIONS & CONFIRMATIONS, ## DIRECTIVE. Bold all metric values referenced. Bullets for multi-point cross-channel findings.
+
+After writing: no wiki update — home synthesis does not generate new standing knowledge.`,
+  },
 ]

@@ -5,6 +5,7 @@ import { SystemCard } from '../components/MetricTile'
 import type { SystemCardTile } from '../components/MetricTile'
 import { useTab } from '../lib/TabContext'
 import { BRIEFS } from '../lib/stubData'
+import { useBriefing } from '../hooks/useBriefing'
 import { MX4_COLOR, SECTION_ACCENTS } from '../theme'
 import { TrendRow } from '../components/viz/TrendRow'
 import { Rail } from '../components/viz/Rail'
@@ -21,7 +22,7 @@ const CALIBRATING_TILES: SystemCardTile[] = [
 
 const A = MX4_COLOR
 
-function HomeOverview({ onNavigate }: { onNavigate: (path: string) => void }) {
+function HomeOverview({ onNavigate, liveData }: { onNavigate: (path: string) => void; liveData?: import('../lib/briefing').BriefingResult }) {
   const { data: home } = useHomeData()
 
   const LIVE_TILES: SystemCardTile[] = [
@@ -57,7 +58,7 @@ function HomeOverview({ onNavigate }: { onNavigate: (path: string) => void }) {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.home} />
+      <MX4Briefing accent={A} brief={BRIEFS.home} liveData={liveData} />
 
       <Rail label="SYSTEMS" accent={A} right="3 ONLINE · 3 CALIBRATING" />
 
@@ -75,7 +76,7 @@ function HomeOverview({ onNavigate }: { onNavigate: (path: string) => void }) {
   )
 }
 
-function HomeTrends() {
+function HomeTrends({ liveData }: { liveData?: import('../lib/briefing').BriefingResult }) {
   const REC  = SECTION_ACCENTS.recovery
   const SLP  = SECTION_ACCENTS.sleep
   const TRN  = SECTION_ACCENTS.training
@@ -86,7 +87,7 @@ function HomeTrends() {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.home} />
+      <MX4Briefing accent={A} brief={BRIEFS.home} liveData={liveData} />
       <Rail label="WEEK IN REVIEW" accent={A} right="3 CHANNELS" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         <TrendRow
@@ -120,9 +121,10 @@ function HomeTrends() {
 
 function HomeContent({ onNavigate }: { onNavigate: (path: string) => void }) {
   const tab = useTab()
+  const liveBriefing = useBriefing('home')
   return tab === 'overview'
-    ? <HomeOverview onNavigate={onNavigate} />
-    : <HomeTrends />
+    ? <HomeOverview onNavigate={onNavigate} liveData={liveBriefing ?? undefined} />
+    : <HomeTrends liveData={liveBriefing ?? undefined} />
 }
 
 export function HomePage() {

@@ -51,6 +51,31 @@ export function archiveWikiPageSync(name: string): void {
   fs.copyFileSync(srcPath, path.join(archiveDir, `${date}-${name}.md`))
 }
 
+const PATTERN_PAGES: Record<string, string> = {
+  'hrv-patterns':        '# HRV Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
+  'sleep-patterns':      '# Sleep Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
+  'training-patterns':   '# Training Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
+  'correlations':        '# Correlations\n_(MX-4 will populate this as cross-domain patterns are identified)_\n',
+  'weekly-observations': '# Weekly Observations\n_(MX-4 will populate this on first run)_\n',
+}
+
+const ETHAN_PROFILE_BLANK = '# Ethan Profile\n_(MX-4 will rebuild this from Obsidian vault and sessions)_\n'
+
+export function resetWikiPatternPages(): void {
+  const dir = WIKI_DIR()
+  for (const [name, content] of Object.entries(PATTERN_PAGES)) {
+    fs.writeFileSync(path.join(dir, `${name}.md`), content, 'utf-8')
+  }
+}
+
+export function resetAllWikiPages(): void {
+  const dir = WIKI_DIR()
+  for (const [name, content] of Object.entries(PATTERN_PAGES)) {
+    fs.writeFileSync(path.join(dir, `${name}.md`), content, 'utf-8')
+  }
+  fs.writeFileSync(path.join(dir, 'ethan-profile.md'), ETHAN_PROFILE_BLANK, 'utf-8')
+}
+
 export function loadHeartbeat(): string {
   try {
     return fs.readFileSync(HEARTBEAT_PATH(), 'utf-8')

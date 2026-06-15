@@ -88,6 +88,7 @@ export function AppShell({ section, hasTabs = false, children }: AppShellProps) 
           open={askOpen}
           onClose={() => setAskOpen(false)}
           accent={accent}
+          section={section}
         />
       </div>
     </AskSheetContext.Provider>

@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { COLORS, FONT_MONO, FONT_UI } from '../theme'
 import { Sheet, SheetShell, SheetHeader } from './Sheet'
 import { MX4Sigil } from './primitives/MX4Sigil'
@@ -129,23 +130,53 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
                     maxWidth: '85%',
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: '#eef4fb', fontFamily: FONT_UI }}>
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => (
+                        <p style={{ margin: '0 0 6px 0', fontSize: 14.5, lineHeight: 1.55, color: '#eef4fb', fontFamily: FONT_UI }}>
+                          {children}
+                        </p>
+                      ),
+                      strong: ({ children }) => (
+                        <strong style={{ color: accent, fontWeight: 600 }}>{children}</strong>
+                      ),
+                      em: ({ children }) => (
+                        <em style={{ color: COLORS.textSecondary, fontStyle: 'italic' }}>{children}</em>
+                      ),
+                      ul: ({ children }) => (
+                        <ul style={{ margin: '0 0 6px 0', paddingLeft: 16 }}>{children}</ul>
+                      ),
+                      li: ({ children }) => (
+                        <li style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: '#eef4fb', marginBottom: 2 }}>{children}</li>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 style={{ margin: '10px 0 4px', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: accent, textTransform: 'uppercase' as const }}>
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 style={{ margin: '8px 0 3px', fontFamily: FONT_MONO, fontSize: 8.5, fontWeight: 700, letterSpacing: '0.12em', color: COLORS.textSecondary, textTransform: 'uppercase' as const }}>
+                          {children}
+                        </h3>
+                      ),
+                    }}
+                  >
                     {msg.content}
-                    {streaming && i === messages.length - 1 && (
-                      <span
-                        aria-hidden
-                        style={{
-                          display: 'inline-block',
-                          width: 6,
-                          height: 14,
-                          background: accent,
-                          marginLeft: 3,
-                          verticalAlign: 'middle',
-                          animation: 'mx4blink 1.1s step-end infinite',
-                        }}
-                      />
-                    )}
-                  </p>
+                  </ReactMarkdown>
+                  {streaming && i === messages.length - 1 && (
+                    <span
+                      aria-hidden
+                      style={{
+                        display: 'inline-block',
+                        width: 6,
+                        height: 14,
+                        background: accent,
+                        marginLeft: 3,
+                        verticalAlign: 'middle',
+                        animation: 'mx4blink 1.1s step-end infinite',
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             )

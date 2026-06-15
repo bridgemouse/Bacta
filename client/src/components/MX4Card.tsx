@@ -69,11 +69,13 @@ export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return
+    // Ensure ## headers are on their own lines (model sometimes omits newlines in JSON output)
+    const body = liveData.body.replace(/([^\n])(##\s)/g, '$1\n\n$2').trim()
     try {
       await fetch('/api/mx4/chat/seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, content: liveData.body }),
+        body: JSON.stringify({ sessionId, content: body }),
       })
     } catch {
       // Non-fatal — open AskSheet anyway

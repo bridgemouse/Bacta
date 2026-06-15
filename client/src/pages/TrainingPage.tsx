@@ -120,7 +120,7 @@ const CALORIES_TREND_INFO: CardInfo = {
 
 function TrainingOverview() {
   const { data: TRN } = useTrainingData()
-  const liveBriefing = useBriefing('training')
+  const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('training')
   const { isOpen: statusOpen, handleTap: statusTap } = useCardInfoOverlay('trn-status', STATUS_INFO, A)
   const { isOpen: ratioOpen, handleTap: ratioTap } = useCardInfoOverlay('trn-loadratio', LOAD_RATIO_INFO, A)
   const { isOpen: intensityOpen, handleTap: intensityTap } = useCardInfoOverlay('trn-intensity', INTENSITY_INFO, A)
@@ -142,7 +142,7 @@ function TrainingOverview() {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.training} liveData={liveBriefing ?? undefined} />
+      <MX4Briefing accent={A} brief={BRIEFS.training} liveData={liveBriefing ?? undefined} section="training" onRefresh={refreshBriefing} />
 
       {/* Status banner */}
       <div onClick={statusTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 9, minHeight: CARD_SIZES.row }}>

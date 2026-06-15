@@ -159,7 +159,7 @@ const SUBTEXT: CSSProperties = {
 
 function SleepOverview() {
   const { data: slp } = useSleepData()
-  const liveBriefing = useBriefing('sleep')
+  const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('sleep')
   const { isOpen: heroOpen, handleTap: heroTap } = useCardInfoOverlay('slp-hero', HERO_INFO, A)
   const { isOpen: archOpen, handleTap: archTap } = useCardInfoOverlay('slp-arch', ARCH_INFO, A)
   const { isOpen: effOpen, handleTap: effTap } = useCardInfoOverlay('slp-efficiency', EFFICIENCY_INFO, A)
@@ -193,7 +193,7 @@ function SleepOverview() {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.sleep} liveData={liveBriefing ?? undefined} />
+      <MX4Briefing accent={A} brief={BRIEFS.sleep} liveData={liveBriefing ?? undefined} section="sleep" onRefresh={refreshBriefing} />
       <Rail label="LAST NIGHT" accent={A} right="SYNTHESIZED" />
 
       {/* Hero */}

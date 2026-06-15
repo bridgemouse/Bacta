@@ -111,7 +111,7 @@ const SUBTEXT: CSSProperties = {
 
 function RecoveryOverview() {
   const { data: rec } = useRecoveryData()
-  const liveBriefing = useBriefing('recovery')
+  const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('recovery')
   const { isOpen: scoreOpen, handleTap: scoreTap } = useCardInfoOverlay('rec-score', SCORE_INFO, A)
   const { isOpen: hrvOpen, handleTap: hrvTap } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
   const { isOpen: battOpen, handleTap: battTap } = useCardInfoOverlay('rec-battery', BATTERY_INFO, A)
@@ -158,7 +158,7 @@ function RecoveryOverview() {
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.recovery} liveData={liveBriefing ?? undefined} />
+      <MX4Briefing accent={A} brief={BRIEFS.recovery} liveData={liveBriefing ?? undefined} section="recovery" onRefresh={refreshBriefing} />
       <Rail label="READINESS" accent={A} right="SYNTHESIZED" />
 
       {/* Recovery Score hero */}

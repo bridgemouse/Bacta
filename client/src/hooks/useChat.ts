@@ -1,20 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  section?: string
+  created_at?: string
 }
 
-export function useChat() {
+export function useChat(section?: string) {
   const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [hiddenBefore, setHiddenBefore] = useState<string | null>(null)
+  const hiddenBeforeRef = useRef<string | null>(null)
 
   function loadMessages() {
     fetch(`/api/mx4/chat/${sessionId}`)
       .then(r => r.json())
-      .then((msgs: ChatMessage[]) => setMessages(msgs))
+      .then((msgs: ChatMessage[]) => {
+        const cutoff = hiddenBeforeRef.current
+        setMessages(cutoff
+          ? msgs.filter(m => (m.created_at ?? '') > cutoff)
+          : msgs)
+      })
       .catch(() => {})
   }
 
@@ -23,20 +32,27 @@ export function useChat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
+  function clearVisualHistory() {
+    const now = new Date().toISOString()
+    hiddenBeforeRef.current = now
+    setHiddenBefore(now)
+    setMessages(prev => prev.filter(m => (m.created_at ?? '') > now))
+  }
+
   async function submit(overrideText?: string) {
     const text = (overrideText ?? input).trim()
     if (!text || streaming) return
 
     if (!overrideText) setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: text }])
+    setMessages(prev => [...prev, { role: 'user', content: text, section }])
     setStreaming(true)
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+    setMessages(prev => [...prev, { role: 'assistant', content: '', section }])
 
     try {
       const res = await fetch('/api/mx4/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId }),
+        body: JSON.stringify({ message: text, sessionId, section }),
       })
 
       if (!res.ok || !res.body) throw new Error('stream failed')
@@ -64,6 +80,7 @@ export function useChat() {
                 next[next.length - 1] = {
                   role: 'assistant',
                   content: next[next.length - 1].content + parsed,
+                  section,
                 }
                 return next
               })
@@ -73,6 +90,7 @@ export function useChat() {
                 next[next.length - 1] = {
                   role: 'assistant',
                   content: 'MX-4 is offline. Configure an AI provider in Settings.',
+                  section,
                 }
                 return next
               })
@@ -86,6 +104,7 @@ export function useChat() {
         next[next.length - 1] = {
           role: 'assistant',
           content: 'MX-4 is offline. Configure an AI provider in Settings.',
+          section,
         }
         return next
       })
@@ -94,5 +113,5 @@ export function useChat() {
     }
   }
 
-  return { messages, input, setInput, streaming, submit, sessionId, loadMessages }
+  return { messages, input, setInput, streaming, submit, sessionId, loadMessages, clearVisualHistory, hiddenBefore }
 }

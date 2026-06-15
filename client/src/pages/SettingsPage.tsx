@@ -336,7 +336,7 @@ export function SettingsPage() {
         </div>
 
         {/* Sync on Garmin toggle */}
-        <div style={rowStyleLast}>
+        <div style={rowStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={labelStyle}>Sync on Garmin</span>
             {savedBadge('mx4_on_sync_enabled')}
@@ -345,6 +345,38 @@ export function SettingsPage() {
             on={syncOnGarminOn}
             onChange={v => save('mx4_on_sync_enabled', String(v))}
           />
+        </div>
+
+        {/* Chat compression threshold */}
+        <div style={rowStyleLast}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={labelStyle}>Compress chat after</span>
+            {savedBadge('mx4_chat_compression_threshold')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="number"
+              min="10"
+              max="100"
+              value={settings['mx4_chat_compression_threshold'] ?? '20'}
+              onChange={e => save('mx4_chat_compression_threshold', e.target.value)}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                padding: '5px 8px',
+                borderRadius: 8,
+                border: `1px solid ${COLORS.line}`,
+                background: COLORS.surfaceElevated,
+                color: COLORS.text,
+                outline: 'none',
+                width: 60,
+                textAlign: 'right' as const,
+              }}
+            />
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, letterSpacing: '0.08em' }}>
+              MESSAGES
+            </span>
+          </div>
         </div>
       </div>
 

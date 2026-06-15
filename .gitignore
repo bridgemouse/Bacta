@@ -8,6 +8,7 @@ data/
 insights/*.html
 mx4/medical-log.md
 mx4/patient-summary.md
+mx4/wiki/
 claude-design-prompt*.md
 __pycache__/
 *.pyc

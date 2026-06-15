@@ -85,8 +85,8 @@
 - `docs/VAULT_SETUP.md` — NFS mount runbook for LXC 106 → LXC 109
 
 **Tests:**
-- 248 tests passing (90 server + 158 client, last verified Jun 15, 2026)
-- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, all 6 MX-4 tools, chat API (including seed endpoint), wiki module, orchestrator, wrap session, message compression
+- 265 tests passing (103 server + 162 client, last verified Jun 15, 2026)
+- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, all 6 MX-4 tools, chat API (including seed endpoint, section column, run/:section), wiki module, orchestrator, wrap session, message compression
 
 ### Present but Untested (Never Run)
 
@@ -103,7 +103,9 @@
 
 ## Immediate Priorities
 
-No immediate priorities — all four MX-4 sections (recovery, sleep, training, home) are live. Next session: full E2E QA sweep before v1.0.
+1. **E2E QA sweep** — full end-to-end quality pass now that all pre-release tweaks are shipped
+2. **Custom Skills in Settings** — user-defined prompt pills (stored as JSON in `app_settings`) surfaced alongside SYNC WIKI in AskSheet; deferred from Jun 15 session
+3. **Vault Settings toggle** — `vault_enabled` boolean + `vault_path` field in Settings to replace the 5 hardcoded `/mnt/vault/wiki` references and "do not attempt readVault" guards; deferred from Jun 15 session
 
 ---
 
@@ -156,7 +158,7 @@ The standing orders mechanism is documented and referenced in multiple places bu
 
 ## Known Technical Debt
 
-**Home section shows stub briefing.** Recovery, Sleep, Training are live. Home falls back to stub because there is no `home` section in the orchestrator — adding one requires a prompt and a section definition in `sections.ts`.
+**Home section briefing live** — resolved Jun 15, 2026. All four sections (home, recovery, sleep, training) produce live briefings.
 
 **`MX4Card` deprecated component.** `client/src/components/MX4Card.tsx` exports `MX4Card` which returns `null`. It's deprecated and left in place to avoid import breakage. Once no imports of `MX4Card` (the deprecated version, not `MX4Briefing`) exist, it can be removed.
 

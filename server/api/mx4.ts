@@ -3,7 +3,7 @@ import { streamText, stepCountIs } from 'ai'
 import { runOrchestrator, loadSystemPrompt } from '../lib/ai/orchestrator'
 import { loadChatHistory } from '../lib/ai/chat'
 import { getModel } from '../lib/ai/provider'
-import { readAllWikiPagesSync, loadHeartbeat } from '../lib/ai/wiki'
+import { readAllWikiPagesSync, loadHeartbeat, resetWikiPatternPages, resetAllWikiPages } from '../lib/ai/wiki'
 import { queryDb, readVault, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage } from '../lib/ai/tools'
 import { getSetting } from '../lib/settings'
 import db from '../db/client'
@@ -48,6 +48,29 @@ mx4Router.get('/chat/:sessionId', (req, res) => {
     `SELECT role, content FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at ASC`
   ).all(sessionId) as { role: string; content: string }[]
   res.json(rows.map(r => ({ role: r.role, content: r.content })))
+})
+
+mx4Router.delete('/chat', (_req, res) => {
+  db.prepare('DELETE FROM mx4_chat_messages').run()
+  res.json({ ok: true })
+})
+
+mx4Router.delete('/wiki/patterns', (_req, res) => {
+  try {
+    resetWikiPatternPages()
+    res.json({ ok: true })
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+mx4Router.delete('/wiki/all', (_req, res) => {
+  try {
+    resetAllWikiPages()
+    res.json({ ok: true })
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+  }
 })
 
 mx4Router.post('/chat/seed', (req, res) => {

@@ -94,6 +94,7 @@ const selectStyle: React.CSSProperties = {
 export function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [savedKey, setSavedKey] = useState<string | null>(null)
+  const [clearedKey, setClearedKey] = useState<string | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState('')
   const [apiKeyFocused, setApiKeyFocused] = useState(false)
   const [testStatus, setTestStatus] = useState<TestStatus>('idle')
@@ -148,6 +149,13 @@ export function SettingsPage() {
     save('ai_provider', p)
     save('mx4_briefing_model', firstModel)
     save('mx4_chat_model', firstModel)
+  }
+
+  async function clearData(endpoint: string, key: string, confirmMsg: string) {
+    if (!window.confirm(confirmMsg)) return
+    await fetch(endpoint, { method: 'DELETE' })
+    setClearedKey(key)
+    setTimeout(() => setClearedKey(null), 2500)
   }
 
   const nightlySyncOn = settings['mx4_nightly_enabled'] === 'true'
@@ -380,7 +388,54 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Rail 3: GARMIN */}
+      {/* Rail 3: DATA MANAGEMENT */}
+      <Rail label="DATA MANAGEMENT" accent={COLORS.mx4Red} />
+
+      <div style={cardStyle}>
+        {[
+          {
+            key: 'chat',
+            label: 'Clear chat history',
+            endpoint: '/api/mx4/chat',
+            confirm: 'Clear all MX-4 chat messages?\n\nThis permanently deletes every message in the current and all past sessions. MX-4 will have no memory of previous conversations.',
+          },
+          {
+            key: 'wiki-patterns',
+            label: 'Clear wiki pattern pages',
+            endpoint: '/api/mx4/wiki/patterns',
+            confirm: 'Reset MX-4 wiki pattern pages?\n\nThis erases all learned HRV patterns, sleep patterns, training patterns, correlations, and weekly observations. Your profile (name, age, goals) is preserved. MX-4 will rebuild patterns over time.',
+          },
+          {
+            key: 'wiki-all',
+            label: 'Clear full wiki',
+            endpoint: '/api/mx4/wiki/all',
+            confirm: 'Reset the full MX-4 wiki?\n\nThis erases ALL accumulated knowledge including your profile. MX-4 will start completely fresh with no memory of patterns, baselines, or identity context. This cannot be undone.',
+          },
+        ].map(({ key, label, endpoint, confirm }, i, arr) => (
+          <div key={key} style={i < arr.length - 1 ? rowStyle : rowStyleLast}>
+            <span style={{ ...labelStyle, color: COLORS.text }}>{label}</span>
+            <button
+              onClick={() => clearData(endpoint, key, confirm)}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                letterSpacing: '0.08em',
+                padding: '5px 12px',
+                borderRadius: 7,
+                border: `1px solid ${clearedKey === key ? COLORS.mx4Green : hexA(COLORS.mx4Red, 0.5)}`,
+                background: hexA(clearedKey === key ? COLORS.mx4Green : COLORS.mx4Red, 0.1),
+                color: clearedKey === key ? COLORS.mx4Green : COLORS.mx4Red,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              {clearedKey === key ? 'CLEARED ·' : 'CLEAR ›'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Rail 4: GARMIN */}
       <Rail label="GARMIN" accent={MX4_COLOR} />
 
       <div style={cardStyle}>

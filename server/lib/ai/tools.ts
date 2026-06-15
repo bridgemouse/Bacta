@@ -12,8 +12,32 @@ import {
 
 const VAULT_ROOT = process.env.VAULT_WIKI_ROOT ?? '/mnt/vault/wiki'
 
+const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the Garmin biometric database.
+
+Schema:
+  garmin_snapshots(date TEXT, metric TEXT, value REAL, unit TEXT, source_json TEXT)
+  garmin_activities(date TEXT, activity_id TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
+
+garmin_snapshots uses EAV format — one row per metric per day. ALWAYS filter by metric name:
+  SELECT date, value FROM garmin_snapshots WHERE metric = 'hrv' ORDER BY date DESC LIMIT 30
+
+Never use column names like sleep_score or hrv as column selectors — they are VALUES in the metric column.
+
+Available metric names:
+  hrv, hrv_baseline_high, hrv_baseline_low, hrv_week_avg
+  recovery_score, recovery_time_h
+  resting_hr, stress_avg, stress_max
+  body_battery_charged, body_battery_drained, body_battery_wake, body_battery_current
+  sleep_s, sleep_score, sleep_deep_s, sleep_rem_s, sleep_light_s, sleep_awake_s, sleep_stress, sleep_spo2, sleep_hr, sleep_resp
+  resp_avg, resp_max, spo2_avg
+  steps, distance_m, intensity_mod_min, intensity_vig_min
+  training_load, training_load_min, training_load_max, training_status_n
+  vo2max, fitness_age, fitness_age_achievable
+  calories_active, calories_total
+  hrzone_1_min, hrzone_2_min, hrzone_3_min, hrzone_4_min, hrzone_5_min`
+
 export const queryDb = tool({
-  description: 'Run a read-only SQL SELECT query against the Garmin biometric database (garmin_snapshots, garmin_activities)',
+  description: QUERY_DB_DESCRIPTION,
   inputSchema: z.object({
     sql: z.string().describe('SQL SELECT query to execute'),
   }),

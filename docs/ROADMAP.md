@@ -80,6 +80,8 @@
 - `SettingsPage.tsx` — compression threshold row added to MX-4 INTELLIGENCE rail; DATA MANAGEMENT rail with 3 protected clear actions (chat history, wiki patterns, full wiki)
 - `server/lib/ai/tools.ts` — `queryDb` tool description enriched with full metric name vocabulary
 - `client/src/pages/HomePage.tsx` — MX4Briefing wired to `useBriefing('home')` live data
+- `server/lib/ai/sections.ts` — `home` section added (Jun 15); queries `mx4_briefings` for cross-channel synthesis; runs last so recovery/sleep/training briefings are available
+- `server/lib/ai/tools.ts` — `mx4_briefings` table added to `queryDb` description so MX-4 can query his own completed briefings
 - `docs/VAULT_SETUP.md` — NFS mount runbook for LXC 106 → LXC 109
 
 **Tests:**
@@ -101,14 +103,7 @@
 
 ## Immediate Priorities
 
-### 1. Body Battery in Recovery Overview
-
-`useRecoveryData` fetches `body_battery_wake` and `body_battery_current` into `rec.battery`, but `RecoveryPage` never renders it. The `HeadlineCard` and `BodyBattery` components are both built and available. Adding a Body Battery card beside the HRV HeadlineCard completes the Recovery Overview's data density.
-
-**Where:** `client/src/pages/RecoveryPage.tsx`  
-**What:** Add a `HeadlineCard` using `rec.battery.wake` (PEAK) and `rec.battery.current` (NOW), with a `BodyBattery` component in the card footer.
-
----
+No immediate priorities — all four MX-4 sections (recovery, sleep, training, home) are live. Next session: full E2E QA sweep before v1.0.
 
 ---
 

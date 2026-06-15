@@ -25,12 +25,12 @@ vi.mock('ai', async (importOriginal) => {
   const actual = await importOriginal<typeof import('ai')>()
   return {
     ...actual,
-    streamText: vi.fn().mockReturnValue({
+    streamText: vi.fn().mockImplementation(() => ({
       textStream: (async function* () {
         yield 'Hello '
         yield 'from MX-4.'
       })(),
-    }),
+    })),
     generateText: vi.fn().mockResolvedValue({
       text: '[MX-4 ARCHIVE] Earlier conversation compressed.',
     }),
@@ -60,7 +60,9 @@ describe('MX-4 Chat API', () => {
     const res = await request(app).get('/api/mx4/chat/sess-get-test')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
-    expect(res.body[0]).toEqual({ role: 'user', content: 'test question' })
+    expect(res.body[0].role).toBe('user')
+    expect(res.body[0].content).toBe('test question')
+    expect(res.body[0].created_at).toBeDefined()
   })
 
   it('POST /api/mx4/chat returns 400 if message is missing', async () => {
@@ -169,5 +171,61 @@ describe('MX-4 Chat API', () => {
     // Should have: 1 compressed + 4 recent + 1 new user + 1 new assistant = ≤ threshold + 3
     expect(rows.length).toBeLessThan(10)
     expect(rows.some(r => r.content.includes('[MX-4 ARCHIVE]'))).toBe(true)
+  })
+
+  it('GET /api/mx4/chat/:sessionId returns section and created_at per message', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare(
+      'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
+    ).run('sess-section-test', 'user', 'hello', 'recovery')
+
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/mx4/chat/sess-section-test')
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveLength(1)
+    expect(res.body[0].section).toBe('recovery')
+    expect(res.body[0].created_at).toBeDefined()
+  })
+
+  it('GET /api/mx4/chat/:sessionId omits section field for null-section legacy messages', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare(
+      'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
+    ).run('sess-legacy-test', 'user', 'legacy message')
+
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/mx4/chat/sess-legacy-test')
+    expect(res.status).toBe(200)
+    expect(res.body[0].section).toBeUndefined()
+    expect(res.body[0].created_at).toBeDefined()
+  })
+
+  it('POST /api/mx4/chat stores section on user and assistant messages', async () => {
+    const { app } = await import('../../server/index')
+    const { default: db } = await import('../../server/db/client')
+
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'section test', sessionId: 'sess-section-write', section: 'sleep' })
+
+    const rows = db.prepare(
+      'SELECT role, section FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at'
+    ).all('sess-section-write') as { role: string; section: string | null }[]
+
+    expect(rows[0]).toEqual({ role: 'user', section: 'sleep' })
+    expect(rows[1]).toEqual({ role: 'assistant', section: 'sleep' })
+  })
+
+  it('POST /api/mx4/chat/seed stores section on seeded message', async () => {
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat/seed')
+      .send({ sessionId: 'seed-section-test', content: 'analysis body', section: 'training' })
+
+    const { default: db } = await import('../../server/db/client')
+    const row = db.prepare(
+      'SELECT section FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 1'
+    ).get('seed-section-test') as { section: string | null } | undefined
+    expect(row?.section).toBe('training')
   })
 })

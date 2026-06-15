@@ -28,8 +28,8 @@ async function compressSessionIfNeeded(sessionId: string): Promise<void> {
 
   const ids = toCompress.map(r => r.id)
   db.prepare(`DELETE FROM mx4_chat_messages WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids)
-  db.prepare('INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)').run(
-    sessionId, 'assistant', compressed
+  db.prepare('INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)').run(
+    sessionId, 'assistant', compressed, null
   )
 }
 
@@ -68,9 +68,14 @@ mx4Router.post('/run/:section', (req, res) => {
 mx4Router.get('/chat/:sessionId', (req, res) => {
   const { sessionId } = req.params
   const rows = db.prepare(
-    `SELECT role, content FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at ASC`
-  ).all(sessionId) as { role: string; content: string }[]
-  res.json(rows.map(r => ({ role: r.role, content: r.content })))
+    `SELECT role, content, section, created_at FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at ASC`
+  ).all(sessionId) as { role: string; content: string; section: string | null; created_at: string }[]
+  res.json(rows.map(r => ({
+    role: r.role,
+    content: r.content,
+    ...(r.section != null ? { section: r.section } : {}),
+    created_at: r.created_at,
+  })))
 })
 
 mx4Router.delete('/chat', (_req, res) => {
@@ -97,19 +102,19 @@ mx4Router.delete('/wiki/all', (_req, res) => {
 })
 
 mx4Router.post('/chat/seed', (req, res) => {
-  const { sessionId, content } = req.body as { sessionId?: string; content?: string }
+  const { sessionId, content, section } = req.body as { sessionId?: string; content?: string; section?: string }
   if (typeof sessionId !== 'string' || !sessionId.trim() || typeof content !== 'string' || !content.trim()) {
     res.status(400).json({ error: 'sessionId and content required' })
     return
   }
   db.prepare(
-    'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
-  ).run(sessionId.trim(), 'assistant', content.trim())
+    'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
+  ).run(sessionId.trim(), 'assistant', content.trim(), section ?? null)
   res.json({ ok: true })
 })
 
 mx4Router.post('/chat', async (req, res) => {
-  const { message, sessionId } = req.body as { message?: string; sessionId?: string }
+  const { message, sessionId, section } = req.body as { message?: string; sessionId?: string; section?: string }
 
   if (typeof message !== 'string' || !message.trim() || typeof sessionId !== 'string' || !sessionId) {
     res.status(400).json({ error: 'message and sessionId required' })
@@ -117,8 +122,8 @@ mx4Router.post('/chat', async (req, res) => {
   }
 
   db.prepare(
-    'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
-  ).run(sessionId, 'user', message.trim())
+    'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
+  ).run(sessionId, 'user', message.trim(), section ?? null)
 
   // Compress if needed before building context
   try {
@@ -158,8 +163,8 @@ mx4Router.post('/chat', async (req, res) => {
 
     if (fullText) {
       db.prepare(
-        'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
-      ).run(sessionId, 'assistant', fullText)
+        'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
+      ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
       res.write(`data: ${JSON.stringify({ error: 'no response — check AI provider settings' })}\n\n`)
     }

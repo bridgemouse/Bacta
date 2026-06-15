@@ -9,6 +9,7 @@ import { BottomBar } from './BottomBar'
 import { BottomSheet } from './BottomSheet'
 import { AskSheet } from './AskSheet'
 import { bactaTexture } from '../lib/bactaTexture'
+import { AskSheetContext } from '../lib/AskSheetContext'
 
 interface AppShellProps {
   section: SectionKey
@@ -26,67 +27,69 @@ export function AppShell({ section, hasTabs = false, children }: AppShellProps) 
   const accent = isHome ? MX4_COLOR : SECTION_ACCENTS[section]
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: COLORS.base,
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
-        color: COLORS.text,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Global texture overlay */}
+    <AskSheetContext.Provider value={{ openAskSheet: () => setAskOpen(true) }}>
       <div
         style={{
-          position: 'absolute',
+          position: 'fixed',
           inset: 0,
-          ...bactaTexture(accent),
-          pointerEvents: 'none',
-          zIndex: 0,
+          background: COLORS.base,
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
+          color: COLORS.text,
+          overflow: 'hidden',
         }}
-      />
-
-      <TopBar
-        section={section}
-        onBack={isHome ? undefined : () => navigate('/')}
-      />
-
-      <TabContext.Provider value={{ tab, setTab }}>
+      >
+        {/* Global texture overlay */}
         <div
           style={{
-            flex: 1,
-            overflowY: 'auto',
-            overscrollBehavior: 'none',
-            padding: '13px',
-            position: 'relative',
-            zIndex: 1,
+            position: 'absolute',
+            inset: 0,
+            ...bactaTexture(accent),
+            pointerEvents: 'none',
+            zIndex: 0,
           }}
-        >
-          {children}
-        </div>
-
-        <BottomBar
-          accent={accent}
-          hasTabs={hasTabs}
-          onAsk={() => setAskOpen(true)}
-          onNav={() => setNavOpen(true)}
         />
-      </TabContext.Provider>
 
-      <BottomSheet
-        open={navOpen}
-        onClose={() => setNavOpen(false)}
-        currentSection={section}
-      />
+        <TopBar
+          section={section}
+          onBack={isHome ? undefined : () => navigate('/')}
+        />
 
-      <AskSheet
-        open={askOpen}
-        onClose={() => setAskOpen(false)}
-        accent={accent}
-      />
-    </div>
+        <TabContext.Provider value={{ tab, setTab }}>
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              overscrollBehavior: 'none',
+              padding: '13px',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          >
+            {children}
+          </div>
+
+          <BottomBar
+            accent={accent}
+            hasTabs={hasTabs}
+            onAsk={() => setAskOpen(true)}
+            onNav={() => setNavOpen(true)}
+          />
+        </TabContext.Provider>
+
+        <BottomSheet
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          currentSection={section}
+        />
+
+        <AskSheet
+          open={askOpen}
+          onClose={() => setAskOpen(false)}
+          accent={accent}
+        />
+      </div>
+    </AskSheetContext.Provider>
   )
 }

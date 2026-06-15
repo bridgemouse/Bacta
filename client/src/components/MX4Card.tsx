@@ -1,4 +1,5 @@
 // All imports at top
+import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import type { MX4Mood } from './primitives/MX4Sigil'
@@ -42,12 +43,14 @@ const DEFAULT_CHIPS: [string, string][] = [
 
 // ─── MX4Briefing — section accent card with verdict badge ────────────────────
 interface MX4BriefingProps {
-  accent:    string
-  brief:     Brief
-  liveData?: BriefingResult
+  accent:      string
+  brief:       Brief
+  liveData?:   BriefingResult
+  section?:    string
+  onRefresh?:  () => void
 }
 
-export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
+export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4BriefingProps) {
   const rawTone    = liveData ? liveData.tone.toLowerCase() as 'positive' | 'caution' | 'flag' : brief.tone
   const activeMood: MX4Mood = liveData
     ? (liveData.tone === 'POSITIVE' ? 'pleased' : 'alert')
@@ -66,6 +69,32 @@ export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
 
   const { openAskSheet } = useAskSheet()
   const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
+
+  const [refreshState, setRefreshState] = useState<'idle' | 'running'>('idle')
+
+  async function handleRefresh() {
+    if (!section || refreshState === 'running') return
+    setRefreshState('running')
+    try {
+      await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
+      const originalAt = liveData?.generated_at
+      let attempts = 0
+      while (attempts < 24) {
+        await new Promise(r => setTimeout(r, 10_000))
+        const res = await fetch(`/api/insights/${section}`)
+        const d = await res.json()
+        if (d.generated_at !== originalAt) {
+          onRefresh?.()
+          break
+        }
+        attempts++
+      }
+    } catch {
+      // non-fatal
+    } finally {
+      setRefreshState('idle')
+    }
+  }
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return
@@ -245,6 +274,26 @@ export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
             }}
           >
             FULL ANALYSIS ›
+          </button>
+        )}
+        {section && (
+          <button
+            onClick={handleRefresh}
+            disabled={refreshState === 'running'}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: refreshState === 'running' ? 'default' : 'pointer',
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              color: refreshState === 'running' ? COLORS.textMuted : accent,
+              flexShrink: 0,
+            }}
+          >
+            {refreshState === 'running' ? 'RUNNING ›' : 'REFRESH ›'}
           </button>
         )}
         <span style={{ marginLeft: 'auto' }}>

@@ -12,6 +12,8 @@ const SUGGESTED_PROMPTS = [
   'Summarize my week',
 ]
 
+const WIKI_PROMPT = 'Review your wiki pages and update them based on our conversation so far. Write any new patterns or findings worth preserving.'
+
 interface AskSheetProps {
   open: boolean
   onClose: () => void
@@ -180,6 +182,25 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
                     {prompt}
                   </span>
                 ))}
+              </div>
+              <div style={{ display: 'flex', paddingBottom: 8 }}>
+                <span
+                  onClick={() => submit(WIKI_PROMPT)}
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    color: accent,
+                    background: hexA(accent, 0.08),
+                    border: `1px solid ${hexA(accent, 0.25)}`,
+                    borderRadius: 18,
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  SYNC WIKI ›
+                </span>
               </div>
             </>
           )}

@@ -6,6 +6,7 @@ describe('BriefingResultSchema', () => {
     const result = BriefingResultSchema.parse({
       tone: 'POSITIVE',
       headline: 'HRV elevated above baseline.',
+      summary: 'HRV is up. Recovery looks solid.',
       body: 'Detailed analysis here.',
       recommendation: 'Proceed with hard session.',
       flags: [],
@@ -17,14 +18,14 @@ describe('BriefingResultSchema', () => {
   it('rejects unknown tone values', () => {
     expect(() => BriefingResultSchema.parse({
       tone: 'GREAT',
-      headline: 'x', body: 'x', recommendation: 'x', flags: [],
+      headline: 'x', summary: 'x', body: 'x', recommendation: 'x', flags: [],
     })).toThrow()
   })
 
   it('accepts all three tone values', () => {
     for (const tone of ['POSITIVE', 'CAUTION', 'FLAG'] as const) {
       expect(() => BriefingResultSchema.parse({
-        tone, headline: 'x', body: 'x', recommendation: 'x', flags: [],
+        tone, headline: 'x', summary: 'x', body: 'x', recommendation: 'x', flags: [],
       })).not.toThrow()
     }
   })

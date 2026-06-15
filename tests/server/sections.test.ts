@@ -2,15 +2,24 @@ import { describe, it, expect } from 'vitest'
 import { SECTIONS } from '../../server/lib/ai/sections'
 
 describe('SECTIONS', () => {
-  it('defines exactly three sections with correct IDs', () => {
+  it('defines exactly four sections in the correct run order', () => {
     const ids = SECTIONS.map(s => s.id)
-    expect(ids).toEqual(['recovery', 'sleep', 'training'])
+    expect(ids).toEqual(['recovery', 'sleep', 'training', 'home'])
   })
 
-  it('each section has at least one metric', () => {
-    for (const s of SECTIONS) {
+  it('home section runs last', () => {
+    expect(SECTIONS[SECTIONS.length - 1].id).toBe('home')
+  })
+
+  it('each non-home section has at least one metric', () => {
+    for (const s of SECTIONS.filter(s => s.id !== 'home')) {
       expect(s.metrics.length).toBeGreaterThan(0)
     }
+  })
+
+  it('home section has empty metrics array (reads from mx4_briefings instead)', () => {
+    const home = SECTIONS.find(s => s.id === 'home')!
+    expect(home.metrics).toEqual([])
   })
 
   it('uses corrected metric names (no stale Python names)', () => {
@@ -29,5 +38,11 @@ describe('SECTIONS', () => {
       expect(s.promptAddendum.length).toBeGreaterThan(20)
       expect(s.promptAddendum.toLowerCase()).not.toContain('patient')
     }
+  })
+
+  it('home promptAddendum instructs querying mx4_briefings', () => {
+    const home = SECTIONS.find(s => s.id === 'home')!
+    expect(home.promptAddendum).toContain('mx4_briefings')
+    expect(home.promptAddendum).toContain("section IN ('recovery', 'sleep', 'training')")
   })
 })

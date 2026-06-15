@@ -43,10 +43,10 @@ describe('runOrchestrator', () => {
 
     const { default: db } = await import('../../server/db/client')
     const rows = db.prepare('SELECT section, content_json FROM mx4_briefings').all() as { section: string; content_json: string }[]
-    expect(rows.length).toBe(3)
+    expect(rows.length).toBe(4)
 
     const sections = rows.map(r => r.section).sort()
-    expect(sections).toEqual(['recovery', 'sleep', 'training'])
+    expect(sections).toEqual(['home', 'recovery', 'sleep', 'training'])
 
     const parsed = JSON.parse(rows[0].content_json)
     expect(parsed).toHaveProperty('tone')

@@ -56,7 +56,7 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
   const { object } = await generateObject({
     model,
     schema: BriefingResultSchema,
-    prompt: `Extract a structured briefing from this analysis. Preserve MX-4's voice in the body field.\n\nAnalysis:\n\n${fullAnalysis}`,
+    prompt: `Extract a structured briefing from this analysis.\n\n- summary: 3–5 punchy prose sentences (no headers) — key finding, implication, directive. This is what appears on the card.\n- body: full structured markdown analysis with ## uppercase headers, bold metric values, bullet lists. End with ## DIRECTIVE.\n- Preserve MX-4's voice throughout.\n\nAnalysis:\n\n${fullAnalysis}`,
   })
 
   const briefing: BriefingResult = object

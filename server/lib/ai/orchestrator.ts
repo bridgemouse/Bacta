@@ -68,6 +68,18 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
   return briefing
 }
 
+export async function runSectionById(sectionId: string): Promise<void> {
+  const section = SECTIONS.find(s => s.id === sectionId)
+  if (!section) throw new Error(`Unknown section: ${sectionId}`)
+
+  const systemPrompt = loadSystemPrompt()
+  const wikiContext  = readAllWikiPagesSync()
+  const heartbeat    = loadHeartbeat()
+
+  await runSection(section.id, section.name, section.promptAddendum, wikiContext, heartbeat, systemPrompt)
+  console.log(`[mx4] ${sectionId} briefing written`)
+}
+
 export async function runOrchestrator(): Promise<void> {
   console.log('[mx4] orchestrator run started', new Date().toISOString())
 

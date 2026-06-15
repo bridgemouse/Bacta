@@ -9,6 +9,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   mx4_nightly_time:               '04:00',
   mx4_on_sync_enabled:            'true',
   mx4_chat_compression_threshold: '20',
+  mx4_home_rerun_mode:            'home_only',
 }
 
 export function initSettings(): void {

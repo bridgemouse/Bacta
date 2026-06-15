@@ -38,6 +38,14 @@ export function migrate() {
   // garmin_activity_legs is a new table — CREATE TABLE IF NOT EXISTS handles idempotency
   // (schema.sql already ran above via db.exec(schema))
 
+  // Add section column to mx4_chat_messages — tracks which section a message belongs to
+  try {
+    db.exec('ALTER TABLE mx4_chat_messages ADD COLUMN section TEXT')
+  } catch (e: unknown) {
+    if (!(e instanceof Error) || !e.message.includes('duplicate column name')) throw e
+    // column already exists, idempotent
+  }
+
   initSettings()
 
   console.log('[db] migrations complete')

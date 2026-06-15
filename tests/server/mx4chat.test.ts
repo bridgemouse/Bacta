@@ -31,6 +31,9 @@ vi.mock('ai', async (importOriginal) => {
         yield 'from MX-4.'
       })(),
     }),
+    generateText: vi.fn().mockResolvedValue({
+      text: '[MX-4 ARCHIVE] Earlier conversation compressed.',
+    }),
   }
 })
 
@@ -138,5 +141,33 @@ describe('MX-4 Chat API', () => {
       .post('/api/mx4/chat/seed')
       .send({ sessionId: 'some-session', content: '' })
     expect(res.status).toBe(400)
+  })
+
+  it('POST /api/mx4/chat compresses session when message count exceeds threshold', async () => {
+    const { default: db } = await import('../../server/db/client')
+    const sessionId = 'compress-test-session'
+
+    // Set threshold to 4
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('mx4_chat_compression_threshold', '4')").run()
+
+    // Insert 6 messages (exceeds threshold of 4)
+    for (let i = 0; i < 6; i++) {
+      db.prepare('INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)').run(
+        sessionId, i % 2 === 0 ? 'user' : 'assistant', `message ${i}`
+      )
+    }
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ sessionId, message: 'new message' })
+
+    const rows = db.prepare(
+      'SELECT content FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at ASC'
+    ).all(sessionId) as { content: string }[]
+
+    // Should have: 1 compressed + 4 recent + 1 new user + 1 new assistant = ≤ threshold + 3
+    expect(rows.length).toBeLessThan(10)
+    expect(rows.some(r => r.content.includes('[MX-4 ARCHIVE]'))).toBe(true)
   })
 })

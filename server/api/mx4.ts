@@ -26,13 +26,13 @@ mx4Router.get('/chat/:sessionId', (req, res) => {
 
 mx4Router.post('/chat/seed', (req, res) => {
   const { sessionId, content } = req.body as { sessionId?: string; content?: string }
-  if (typeof sessionId !== 'string' || !sessionId || typeof content !== 'string' || !content) {
+  if (typeof sessionId !== 'string' || !sessionId.trim() || typeof content !== 'string' || !content.trim()) {
     res.status(400).json({ error: 'sessionId and content required' })
     return
   }
   db.prepare(
     'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
-  ).run(sessionId, 'assistant', content)
+  ).run(sessionId.trim(), 'assistant', content.trim())
   res.json({ ok: true })
 })
 

@@ -116,11 +116,27 @@ describe('MX-4 Chat API', () => {
     expect(res.status).toBe(400)
   })
 
+  it('POST /api/mx4/chat/seed returns 400 when sessionId is empty string', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat/seed')
+      .send({ sessionId: '', content: 'some content' })
+    expect(res.status).toBe(400)
+  })
+
   it('POST /api/mx4/chat/seed returns 400 when content missing', async () => {
     const { app } = await import('../../server/index')
     const res = await request(app)
       .post('/api/mx4/chat/seed')
       .send({ sessionId: 'some-session' })
+    expect(res.status).toBe(400)
+  })
+
+  it('POST /api/mx4/chat/seed returns 400 when content is empty string', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat/seed')
+      .send({ sessionId: 'some-session', content: '' })
     expect(res.status).toBe(400)
   })
 })

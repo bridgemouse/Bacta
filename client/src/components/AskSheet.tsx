@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { COLORS, FONT_MONO, FONT_UI } from '../theme'
+import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS, MX4_COLOR } from '../theme'
 import { Sheet, SheetShell, SheetHeader } from './Sheet'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import { hexA } from '../lib/hexA'
@@ -16,13 +16,24 @@ const SUGGESTED_PROMPTS = [
 const WIKI_PROMPT = 'Review your wiki pages and update them based on our conversation so far. Write any new patterns or findings worth preserving.'
 
 interface AskSheetProps {
-  open: boolean
+  open:    boolean
   onClose: () => void
-  accent: string
+  accent:  string
+  section: string
 }
 
-export function AskSheet({ open, onClose, accent }: AskSheetProps) {
-  const { messages, input, setInput, streaming, submit, loadMessages } = useChat()
+function msgAccent(section?: string): string {
+  if (!section) return MX4_COLOR
+  return (SECTION_ACCENTS as Record<string, string>)[section] ?? MX4_COLOR
+}
+
+function autoResize(el: HTMLTextAreaElement) {
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+}
+
+export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
+  const { messages, input, setInput, streaming, submit, loadMessages, clearVisualHistory } = useChat(section)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -41,6 +52,10 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  useEffect(() => {
+    if (textareaRef.current) autoResize(textareaRef.current)
+  }, [input])
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -49,6 +64,26 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
   }
 
   const showSuggested = messages.length === 0
+
+  const clearViewButton = messages.length > 0 ? (
+    <button
+      onClick={clearVisualHistory}
+      style={{
+        background: 'none',
+        border: 'none',
+        padding: '4px 6px',
+        cursor: 'pointer',
+        fontFamily: FONT_MONO,
+        fontSize: 8.5,
+        fontWeight: 700,
+        letterSpacing: '0.1em',
+        color: COLORS.textMuted,
+        flexShrink: 0,
+      }}
+    >
+      CLEAR VIEW ›
+    </button>
+  ) : undefined
 
   return (
     <Sheet open={open} onClose={onClose} maxHeight="88%">
@@ -59,6 +94,7 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
           sub="ASK ANYTHING · MEDICAL & PROTOCOL"
           sigil={<MX4Sigil color={accent} size={30} spin glow mood={streaming ? 'think' : 'transmit'} />}
           onClose={onClose}
+          actions={clearViewButton}
         />
 
         {/* Scrollable message area */}
@@ -74,7 +110,7 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
             gap: 12,
           }}
         >
-          {/* Static greeting — not stored in DB, not sent to model */}
+          {/* Static greeting */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
             <span style={{ flexShrink: 0, marginTop: 2 }}>
               <MX4Sigil color={accent} size={26} mood="pleased" />
@@ -95,13 +131,14 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
           </div>
 
           {/* Conversation history */}
-          {messages.map((msg, i) =>
-            msg.role === 'user' ? (
+          {messages.map((msg, i) => {
+            const color = msgAccent(msg.section)
+            return msg.role === 'user' ? (
               <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <div
                   style={{
-                    background: hexA(accent, 0.15),
-                    border: `1px solid ${hexA(accent, 0.3)}`,
+                    background: hexA(color, 0.15),
+                    border: `1px solid ${hexA(color, 0.3)}`,
                     borderRadius: '14px 4px 14px 14px',
                     padding: '10px 14px',
                     maxWidth: '80%',
@@ -116,15 +153,15 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
               <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{ flexShrink: 0, marginTop: 2 }}>
                   <MX4Sigil
-                    color={accent}
+                    color={color}
                     size={26}
                     mood={streaming && i === messages.length - 1 ? 'think' : 'pleased'}
                   />
                 </span>
                 <div
                   style={{
-                    background: hexA(accent, 0.08),
-                    border: `1px solid ${hexA(accent, 0.22)}`,
+                    background: hexA(color, 0.08),
+                    border: `1px solid ${hexA(color, 0.22)}`,
                     borderRadius: '4px 14px 14px 14px',
                     padding: '11px 14px',
                     maxWidth: '85%',
@@ -138,7 +175,7 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
                         </p>
                       ),
                       strong: ({ children }) => (
-                        <strong style={{ color: accent, fontWeight: 600 }}>{children}</strong>
+                        <strong style={{ color, fontWeight: 600 }}>{children}</strong>
                       ),
                       em: ({ children }) => (
                         <em style={{ color: COLORS.textSecondary, fontStyle: 'italic' }}>{children}</em>
@@ -150,7 +187,7 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
                         <li style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: '#eef4fb', marginBottom: 2 }}>{children}</li>
                       ),
                       h2: ({ children }) => (
-                        <h2 style={{ margin: '10px 0 4px', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: accent, textTransform: 'uppercase' as const }}>
+                        <h2 style={{ margin: '10px 0 4px', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color, textTransform: 'uppercase' as const }}>
                           {children}
                         </h2>
                       ),
@@ -170,7 +207,7 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
                         display: 'inline-block',
                         width: 6,
                         height: 14,
-                        background: accent,
+                        background: color,
                         marginLeft: 3,
                         verticalAlign: 'middle',
                         animation: 'mx4blink 1.1s step-end infinite',
@@ -180,9 +217,9 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
                 </div>
               </div>
             )
-          )}
+          })}
 
-          {/* Suggested prompts — visible only before first message */}
+          {/* Suggested prompts */}
           {showSuggested && (
             <>
               <div
@@ -255,7 +292,6 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Message MX-4"
-            rows={1}
             style={{
               flex: 1,
               background: COLORS.surface,
@@ -263,12 +299,15 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
               borderRadius: 11,
               padding: '11px 13px',
               fontFamily: FONT_MONO,
-              fontSize: 12.5,
+              fontSize: 16,
               color: COLORS.text,
               letterSpacing: '0.02em',
               resize: 'none',
               outline: 'none',
               lineHeight: 1.5,
+              minHeight: 44,
+              maxHeight: 120,
+              overflowY: 'auto',
             }}
           />
           <button

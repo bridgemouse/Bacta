@@ -101,9 +101,10 @@ interface SheetHeaderProps {
   title: string
   sub?: string
   onClose: () => void
+  actions?: ReactNode
 }
 
-export function SheetHeader({ accent, sigil, title, sub, onClose }: SheetHeaderProps) {
+export function SheetHeader({ accent, sigil, title, sub, onClose, actions }: SheetHeaderProps) {
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 11, padding: '13px 18px 12px' }}>
       {sigil}
@@ -117,6 +118,7 @@ export function SheetHeader({ accent, sigil, title, sub, onClose }: SheetHeaderP
           </span>
         )}
       </div>
+      {actions}
       <button
         onClick={onClose}
         aria-label="Close"

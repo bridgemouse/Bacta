@@ -8,6 +8,7 @@ import { hexA } from '../lib/hexA'
 import { COLORS, FONT_MONO, FONT_UI, toneColor } from '../theme'
 import type { Brief } from '../lib/stubData'
 import type { BriefingResult } from '../lib/briefing'
+import { useAskSheet } from '../lib/AskSheetContext'
 
 // ─── Temporary compatibility stub — removed in Task 3 / Task 5 ───
 export interface MX4Insight {
@@ -61,7 +62,27 @@ export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
   const tc = toneColor(rawTone)
   const verdictLabel = rawTone === 'flag' ? 'FLAG' : rawTone === 'caution' ? 'CAUTION' : 'POSITIVE'
 
+  const flags = liveData?.flags ?? []
+
+  const { openAskSheet } = useAskSheet()
+  const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
+
+  async function handleFullAnalysis() {
+    if (!liveData?.body) return
+    try {
+      await fetch('/api/mx4/chat/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, content: liveData.body }),
+      })
+    } catch {
+      // Non-fatal — open AskSheet anyway
+    }
+    openAskSheet()
+  }
+
   return (
+    <>
     <div
       style={{
         position: 'relative',
@@ -69,7 +90,7 @@ export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
         border: `1px solid ${hexA(accent, 0.35)}`,
         borderRadius: 14,
         boxShadow: `0 0 32px ${hexA(accent, 0.08)}`,
-        marginBottom: 14,
+        marginBottom: flags.length > 0 ? 8 : 14,
         overflow: 'hidden',
       }}
     >
@@ -143,9 +164,19 @@ export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
                 li: ({ children }) => (
                   <li style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: '#eef4fb', marginBottom: 3 }}>{children}</li>
                 ),
+                h2: ({ children }) => (
+                  <h2 style={{ margin: '10px 0 4px', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: accent, textTransform: 'uppercase' as const }}>
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 style={{ margin: '8px 0 3px', fontFamily: FONT_MONO, fontSize: 8.5, fontWeight: 700, letterSpacing: '0.12em', color: COLORS.textSecondary, textTransform: 'uppercase' as const }}>
+                    {children}
+                  </h3>
+                ),
               }}
             >
-              {liveData.body}
+              {liveData.summary ?? liveData.body}
             </ReactMarkdown>
             <div
               style={{
@@ -189,30 +220,65 @@ export function MX4Briefing({ accent, brief, liveData }: MX4BriefingProps) {
           borderTop: `1px solid ${hexA(accent, 0.18)}`,
         }}
       >
-        {liveData ? (
-          <>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
-              FLAGS <span style={{ color: liveData.flags.length > 0 ? tc : accent }}>{liveData.flags.length}</span>
-            </span>
-            {liveData.flags.slice(0, 2).map((flag, i) => (
-              <span key={i} style={{ fontFamily: FONT_MONO, fontSize: 8, letterSpacing: '0.08em', color: COLORS.textMuted }}>
-                · {flag.toUpperCase()}
-              </span>
-            ))}
-          </>
-        ) : (
-          brief.chips.map(([key, val]) => (
-            <span key={key} style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
-              {key}{' '}
-              <span style={{ color: accent }}>{val}</span>
-            </span>
-          ))
+        {!liveData && brief.chips.map(([key, val]) => (
+          <span key={key} style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
+            {key}{' '}
+            <span style={{ color: accent }}>{val}</span>
+          </span>
+        ))}
+        {liveData?.summary && (
+          <button
+            onClick={handleFullAnalysis}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              color: accent,
+              flexShrink: 0,
+            }}
+          >
+            FULL ANALYSIS ›
+          </button>
         )}
         <span style={{ marginLeft: 'auto' }}>
           <FTelemetry color={accent} bars={4} />
         </span>
       </div>
     </div>
+
+    {flags.length > 0 && (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+        {flags.map((flag, i) => (
+          <span
+            key={i}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              fontFamily: FONT_MONO,
+              fontSize: 8,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase' as const,
+              padding: '3px 9px',
+              borderRadius: 20,
+              background: hexA(tc, 0.12),
+              color: tc,
+              border: `1px solid ${hexA(tc, 0.3)}`,
+            }}
+          >
+            <StatusCore accent={tc} size={5} />
+            {flag}
+          </span>
+        ))}
+      </div>
+    )}
+    </>
   )
 }
 // ─────────────────────────────────────────────────────────────────────────────

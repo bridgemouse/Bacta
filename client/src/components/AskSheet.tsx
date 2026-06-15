@@ -184,7 +184,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
                         <ul style={{ margin: '0 0 6px 0', paddingLeft: 16 }}>{children}</ul>
                       ),
                       li: ({ children }) => (
-                        <li style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: '#eef4fb', marginBottom: 2 }}>{children}</li>
+                        <li style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: COLORS.text, marginBottom: 2 }}>{children}</li>
                       ),
                       h2: ({ children }) => (
                         <h2 style={{ margin: '10px 0 4px', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color, textTransform: 'uppercase' as const }}>

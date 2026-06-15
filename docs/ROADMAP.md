@@ -55,7 +55,7 @@
 
 **MX-4 system — Phase 2 complete (Jun 14, 2026):**
 - `server/lib/ai/sections.ts` — metric definitions per section with corrected Garmin schema names
-- `server/lib/ai/wiki.ts` — sync wiki utilities (read all pages, write page, list with sizes)
+- `server/lib/ai/wiki.ts` — sync wiki utilities (read all pages, write page, list with sizes); reset functions for data management
 - `server/lib/ai/wrap.ts` — post-session wiki maintenance: oversized page detection → AI synthesis → archive + rewrite
 - `server/lib/ai/orchestrator.ts` — two-step pipeline: `generateText` with all 6 tools → `generateObject` for structured briefing JSON; writes to `mx4_briefings` table; triggered via `POST /api/mx4/run`
 - `server/lib/ai/chat.ts` — `loadChatHistory(sessionId)` → `CoreMessage[]` for chat context
@@ -66,15 +66,30 @@
 - `node-cron` scheduler in `server/index.ts` — nightly run at configured time (default 04:00)
 - `mx4/wiki/` — wiki directory initialized; pages written by MX-4 on first orchestrator run
 
+**MX-4 system — Phase 3 complete (Jun 15, 2026):**
+- **Orchestrator first run executed** — all 3 sections (recovery, sleep, training) producing live briefings with real Garmin data
+- `mx4/HEARTBEAT.md` created — standing orders injected on every orchestrator run and every chat turn
+- `mx4/system-prompt.md` rewritten — voice-register examples, explicit output format spec (summary + body fields), removed clinical checklist
+- `server/lib/ai/sections.ts` rewritten — directive prompts, both `summary` (3–5 prose sentences for card) and `body` (structured markdown for FULL ANALYSIS) fields
+- `BriefingResult` schema: `summary` field added — cards show summary by default, body only in FULL ANALYSIS
+- `POST /api/mx4/chat/seed` — seeds assistant message directly into chat session (used by FULL ANALYSIS flow)
+- `AskSheetContext` — React context so deep components (MX4Card) can open AskSheet without prop drilling
+- FULL ANALYSIS › button on `MX4Briefing` — seeds briefing body into chat, opens AskSheet
+- `AskSheet` — ReactMarkdown rendering for assistant messages; reloads history on open to catch seeded messages; SYNC WIKI › pill
+- Message compression — `compressSessionIfNeeded()` runs before chat, summarizes oldest messages when threshold exceeded
+- `SettingsPage.tsx` — compression threshold row added to MX-4 INTELLIGENCE rail; DATA MANAGEMENT rail with 3 protected clear actions (chat history, wiki patterns, full wiki)
+- `server/lib/ai/tools.ts` — `queryDb` tool description enriched with full metric name vocabulary
+- `client/src/pages/HomePage.tsx` — MX4Briefing wired to `useBriefing('home')` live data
+- `docs/VAULT_SETUP.md` — NFS mount runbook for LXC 106 → LXC 109
+
 **Tests:**
-- 241 tests passing (83 server + 158 client, last verified Jun 14, 2026)
-- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, all 6 MX-4 tools, chat API, wiki module, orchestrator, wrap session
+- 248 tests passing (90 server + 158 client, last verified Jun 15, 2026)
+- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, all 6 MX-4 tools, chat API (including seed endpoint), wiki module, orchestrator, wrap session, message compression
 
 ### Present but Untested (Never Run)
 
-- **MX-4 orchestrator** — `python3 mx4/orchestrator.py` has never been executed. The full pipeline is implemented but dormant.
 - **`POST /api/poll/force`** — poll signal endpoint; counterpart `check_signal.py` has not been verified in production
-- **MX-4 cron entries** — neither the orchestrator cron nor the check_signal cron are installed on LXC 109
+- **MX-4 cron** — `node-cron` scheduler is wired in `server/index.ts` but nightly run has not been verified end-to-end in production yet (first orchestrator run was manual)
 
 ### Placeholder / Calibrating
 
@@ -86,22 +101,7 @@
 
 ## Immediate Priorities
 
-### 1. MX-4 First Orchestrator Run
-
-**Why this is next:** The full Phase 2 pipeline is implemented and tested but has never executed. A single manual `POST /api/mx4/run` with a real API key configured in SettingsPage will populate `mx4_briefings` and seed the wiki. Sections are already wired to display live briefings — they just need data.
-
-**Steps:**
-1. Add a Google AI API key in SettingsPage (SYSTEM → Settings)
-2. `curl -X POST http://localhost:3001/api/mx4/run` and tail server logs
-3. Verify `mx4_briefings` rows exist: `SELECT section, created_at FROM mx4_briefings ORDER BY created_at DESC LIMIT 10`
-4. Check that Recovery, Training, Sleep sections show live MX-4 text (not stub)
-5. Install the nightly cron (see server logs for scheduler status)
-
-### 2. HEARTBEAT.md — Standing Orders File
-
-Create `mx4/HEARTBEAT.md` — even a minimal stub. Referenced in docs and CLAUDE.md but doesn't exist. Enables behavioral adjustments to MX-4 without touching his system prompt.
-
-### 3. Body Battery in Recovery Overview
+### 1. Body Battery in Recovery Overview
 
 `useRecoveryData` fetches `body_battery_wake` and `body_battery_current` into `rec.battery`, but `RecoveryPage` never renders it. The `HeadlineCard` and `BodyBattery` components are both built and available. Adding a Body Battery card beside the HRV HeadlineCard completes the Recovery Overview's data density.
 
@@ -153,8 +153,6 @@ The standing orders mechanism is documented and referenced in multiple places bu
 
 ## Open Questions & Observed Inconsistencies
 
-**`HEARTBEAT.md` referenced but absent.** Multiple places in docs and CLAUDE.md reference this file. It does not exist. Immediate priority — see above.
-
 **`sections.py` metric names are stale.** The Python orchestrator (`mx4/sections.py`) has stale metric names. The TypeScript replacement (`server/lib/ai/sections.ts`) will be written with correct names in Phase 2 — `sections.py` can be left as-is (it's superseded).
 
 **Spec files reference LXC 107 and Docker.** Early design specs (`docs/superpowers/specs/2026-04-25-bacta-design.md`) targeted LXC 107 with Docker Compose. The actual deployment is LXC 109 with no Docker. The specs are historical documents — do not treat them as authoritative for infrastructure.
@@ -163,7 +161,7 @@ The standing orders mechanism is documented and referenced in multiple places bu
 
 ## Known Technical Debt
 
-**Static stub briefing text.** All four built sections show the same five-week-old stub text from `stubData.ts BRIEFS`. This is the most visible rough edge in the product and resolves entirely when the MX-4 orchestrator runs for the first time.
+**Home section shows stub briefing.** Recovery, Sleep, Training are live. Home falls back to stub because there is no `home` section in the orchestrator — adding one requires a prompt and a section definition in `sections.ts`.
 
 **`MX4Card` deprecated component.** `client/src/components/MX4Card.tsx` exports `MX4Card` which returns `null`. It's deprecated and left in place to avoid import breakage. Once no imports of `MX4Card` (the deprecated version, not `MX4Briefing`) exist, it can be removed.
 

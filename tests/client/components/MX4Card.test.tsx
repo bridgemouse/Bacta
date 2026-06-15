@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { TransmissionPanel } from '../../../client/src/components/MX4Card'
+import { TransmissionPanel, MX4Briefing } from '../../../client/src/components/MX4Card'
+import { BRIEFS } from '../../../client/src/lib/stubData'
 
 describe('TransmissionPanel', () => {
   it('renders the assessment text', () => {
@@ -68,5 +69,30 @@ describe('TransmissionPanel', () => {
       />
     )
     expect(screen.getByText('MON · MAY 29 · 06:00')).toBeInTheDocument()
+  })
+})
+
+describe('MX4Briefing', () => {
+  const liveBriefing = {
+    tone: 'POSITIVE' as const,
+    headline: 'Systems nominal.',
+    summary: 'Everything looks good today.',
+    body: '## DIRECTIVE\nKeep it up.',
+    recommendation: 'Train as planned.',
+    flags: [],
+  }
+
+  it('renders REFRESH button when section prop is provided', () => {
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} section="home" />
+    )
+    expect(screen.getByText('REFRESH ›')).toBeInTheDocument()
+  })
+
+  it('does not render REFRESH button when section prop is absent', () => {
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} />
+    )
+    expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
   })
 })

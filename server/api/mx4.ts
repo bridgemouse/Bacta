@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { streamText, stepCountIs } from 'ai'
-import { runOrchestrator, loadSystemPrompt } from '../lib/ai/orchestrator'
+import { runOrchestrator, runSectionById, loadSystemPrompt } from '../lib/ai/orchestrator'
 import { loadChatHistory } from '../lib/ai/chat'
 import { getModel } from '../lib/ai/provider'
 import { readAllWikiPagesSync, loadHeartbeat, resetWikiPatternPages, resetAllWikiPages } from '../lib/ai/wiki'
@@ -39,6 +39,29 @@ mx4Router.post('/run', (_req, res) => {
   res.status(202).json({ ok: true })
   setImmediate(() => {
     runOrchestrator().catch(err => console.error('[mx4] manual run error:', err))
+  })
+})
+
+const VALID_RUN_SECTIONS = ['recovery', 'sleep', 'training', 'home']
+
+mx4Router.post('/run/:section', (req, res) => {
+  const { section } = req.params
+  if (!VALID_RUN_SECTIONS.includes(section)) {
+    res.status(404).json({ error: `Unknown section: ${section}` })
+    return
+  }
+  res.status(202).json({ ok: true })
+  setImmediate(async () => {
+    try {
+      const homeRerunMode = getSetting('mx4_home_rerun_mode') ?? 'home_only'
+      if (section === 'home' && homeRerunMode === 'all_sections') {
+        await runOrchestrator()
+      } else {
+        await runSectionById(section)
+      }
+    } catch (err) {
+      console.error(`[mx4] section run error (${section}):`, err)
+    }
   })
 })
 

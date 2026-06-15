@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const BriefingResultSchema = z.object({
   tone:           z.enum(['POSITIVE', 'CAUTION', 'FLAG']),
   headline:       z.string(),
+  summary:        z.string(),
   body:           z.string(),
   recommendation: z.string(),
   flags:          z.array(z.string()),

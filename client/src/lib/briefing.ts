@@ -1,6 +1,7 @@
 export interface BriefingResult {
   tone:           'POSITIVE' | 'CAUTION' | 'FLAG'
   headline:       string
+  summary?:       string
   body:           string
   recommendation: string
   flags:          string[]

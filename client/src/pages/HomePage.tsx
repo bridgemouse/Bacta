@@ -22,7 +22,7 @@ const CALIBRATING_TILES: SystemCardTile[] = [
 
 const A = MX4_COLOR
 
-function HomeOverview({ onNavigate, liveData }: { onNavigate: (path: string) => void; liveData?: import('../lib/briefing').BriefingResult }) {
+function HomeOverview({ onNavigate, liveData, onRefresh }: { onNavigate: (path: string) => void; liveData?: import('../lib/briefing').BriefingResult; onRefresh?: () => void }) {
   const { data: home } = useHomeData()
 
   const LIVE_TILES: SystemCardTile[] = [
@@ -58,7 +58,7 @@ function HomeOverview({ onNavigate, liveData }: { onNavigate: (path: string) => 
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.home} liveData={liveData} />
+      <MX4Briefing accent={A} brief={BRIEFS.home} liveData={liveData} section="home" onRefresh={onRefresh} />
 
       <Rail label="SYSTEMS" accent={A} right="3 ONLINE · 3 CALIBRATING" />
 
@@ -76,7 +76,7 @@ function HomeOverview({ onNavigate, liveData }: { onNavigate: (path: string) => 
   )
 }
 
-function HomeTrends({ liveData }: { liveData?: import('../lib/briefing').BriefingResult }) {
+function HomeTrends({ liveData, onRefresh }: { liveData?: import('../lib/briefing').BriefingResult; onRefresh?: () => void }) {
   const REC  = SECTION_ACCENTS.recovery
   const SLP  = SECTION_ACCENTS.sleep
   const TRN  = SECTION_ACCENTS.training
@@ -87,7 +87,7 @@ function HomeTrends({ liveData }: { liveData?: import('../lib/briefing').Briefin
 
   return (
     <>
-      <MX4Briefing accent={A} brief={BRIEFS.home} liveData={liveData} />
+      <MX4Briefing accent={A} brief={BRIEFS.home} liveData={liveData} section="home" onRefresh={onRefresh} />
       <Rail label="WEEK IN REVIEW" accent={A} right="3 CHANNELS" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         <TrendRow
@@ -121,10 +121,10 @@ function HomeTrends({ liveData }: { liveData?: import('../lib/briefing').Briefin
 
 function HomeContent({ onNavigate }: { onNavigate: (path: string) => void }) {
   const tab = useTab()
-  const liveBriefing = useBriefing('home')
+  const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('home')
   return tab === 'overview'
-    ? <HomeOverview onNavigate={onNavigate} liveData={liveBriefing ?? undefined} />
-    : <HomeTrends liveData={liveBriefing ?? undefined} />
+    ? <HomeOverview onNavigate={onNavigate} liveData={liveBriefing ?? undefined} onRefresh={refreshBriefing} />
+    : <HomeTrends liveData={liveBriefing ?? undefined} onRefresh={refreshBriefing} />
 }
 
 export function HomePage() {

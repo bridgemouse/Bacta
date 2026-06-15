@@ -160,6 +160,7 @@ export function SettingsPage() {
 
   const nightlySyncOn = settings['mx4_nightly_enabled'] === 'true'
   const syncOnGarminOn = settings['mx4_on_sync_enabled'] === 'true'
+  const homeRerunAll = settings['mx4_home_rerun_mode'] === 'all_sections'
 
   const testButtonLabel =
     testStatus === 'testing' ? 'TESTING…' :
@@ -356,7 +357,7 @@ export function SettingsPage() {
         </div>
 
         {/* Chat compression threshold */}
-        <div style={rowStyleLast}>
+        <div style={rowStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={labelStyle}>Compress chat after</span>
             {savedBadge('mx4_chat_compression_threshold')}
@@ -385,6 +386,23 @@ export function SettingsPage() {
               MESSAGES
             </span>
           </div>
+        </div>
+
+        {/* Home re-run mode toggle */}
+        <div style={rowStyleLast}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={labelStyle}>Home re-run includes all sections</span>
+              {savedBadge('mx4_home_rerun_mode')}
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, letterSpacing: '0.08em' }}>
+              When off, uses cached briefings
+            </span>
+          </div>
+          <Toggle
+            on={homeRerunAll}
+            onChange={v => save('mx4_home_rerun_mode', v ? 'all_sections' : 'home_only')}
+          />
         </div>
       </div>
 

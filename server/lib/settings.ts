@@ -1,13 +1,14 @@
 import db from '../db/client'
 
 export const SETTING_DEFAULTS: Record<string, string> = {
-  ai_provider:           'google',
-  ai_api_key:            '',
-  mx4_briefing_model:    'gemini-2.5-flash',
-  mx4_chat_model:        'gemini-2.5-flash',
-  mx4_nightly_enabled:   'true',
-  mx4_nightly_time:      '04:00',
-  mx4_on_sync_enabled:   'true',
+  ai_provider:                    'google',
+  ai_api_key:                     '',
+  mx4_briefing_model:             'gemini-2.5-flash',
+  mx4_chat_model:                 'gemini-2.5-flash',
+  mx4_nightly_enabled:            'true',
+  mx4_nightly_time:               '04:00',
+  mx4_on_sync_enabled:            'true',
+  mx4_chat_compression_threshold: '20',
 }
 
 export function initSettings(): void {

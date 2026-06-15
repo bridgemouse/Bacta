@@ -21,6 +21,13 @@ describe('Settings API', () => {
     expect(res.body.mx4_on_sync_enabled).toBe('true')
   })
 
+  it('GET /api/settings includes mx4_chat_compression_threshold default', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/settings')
+    expect(res.status).toBe(200)
+    expect(res.body.mx4_chat_compression_threshold).toBe('20')
+  })
+
   it('GET /api/settings masks a non-empty api key — only last 4 chars visible', async () => {
     const { default: db } = await import('../../server/db/client')
     db.prepare(

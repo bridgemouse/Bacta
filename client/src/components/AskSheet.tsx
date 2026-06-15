@@ -21,7 +21,7 @@ interface AskSheetProps {
 }
 
 export function AskSheet({ open, onClose, accent }: AskSheetProps) {
-  const { messages, input, setInput, streaming, submit } = useChat()
+  const { messages, input, setInput, streaming, submit, loadMessages } = useChat()
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -33,9 +33,11 @@ export function AskSheet({ open, onClose, accent }: AskSheetProps) {
 
   useEffect(() => {
     if (open) {
+      loadMessages()
       const t = setTimeout(() => textareaRef.current?.focus(), 400)
       return () => clearTimeout(t)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {

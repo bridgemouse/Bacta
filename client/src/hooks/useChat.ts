@@ -6,16 +6,21 @@ export interface ChatMessage {
 }
 
 export function useChat() {
-  const sessionId = new Date().toISOString().slice(0, 10)
+  const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
 
-  useEffect(() => {
+  function loadMessages() {
     fetch(`/api/mx4/chat/${sessionId}`)
       .then(r => r.json())
       .then((msgs: ChatMessage[]) => setMessages(msgs))
       .catch(() => {})
+  }
+
+  useEffect(() => {
+    loadMessages()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
   async function submit(overrideText?: string) {
@@ -89,5 +94,5 @@ export function useChat() {
     }
   }
 
-  return { messages, input, setInput, streaming, submit, sessionId }
+  return { messages, input, setInput, streaming, submit, sessionId, loadMessages }
 }

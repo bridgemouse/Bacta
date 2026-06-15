@@ -104,7 +104,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
       await fetch('/api/mx4/chat/seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, content: body }),
+        body: JSON.stringify({ sessionId, content: body, section }),
       })
     } catch {
       // Non-fatal — open AskSheet anyway

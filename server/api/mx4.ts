@@ -24,6 +24,18 @@ mx4Router.get('/chat/:sessionId', (req, res) => {
   res.json(rows.map(r => ({ role: r.role, content: r.content })))
 })
 
+mx4Router.post('/chat/seed', (req, res) => {
+  const { sessionId, content } = req.body as { sessionId?: string; content?: string }
+  if (typeof sessionId !== 'string' || !sessionId || typeof content !== 'string' || !content) {
+    res.status(400).json({ error: 'sessionId and content required' })
+    return
+  }
+  db.prepare(
+    'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
+  ).run(sessionId, 'assistant', content)
+  res.json({ ok: true })
+})
+
 mx4Router.post('/chat', async (req, res) => {
   const { message, sessionId } = req.body as { message?: string; sessionId?: string }
 

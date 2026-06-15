@@ -91,4 +91,36 @@ describe('MX-4 Chat API', () => {
     expect(rows[0]).toEqual({ role: 'user', content: 'What is my HRV?' })
     expect(rows[1]).toEqual({ role: 'assistant', content: 'Hello from MX-4.' })
   })
+
+  it('POST /api/mx4/chat/seed inserts assistant message and returns ok', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat/seed')
+      .send({ sessionId: 'seed-test-session', content: '## FULL ANALYSIS\nDetailed briefing here.' })
+    expect(res.status).toBe(200)
+    expect(res.body.ok).toBe(true)
+
+    const { default: db } = await import('../../server/db/client')
+    const row = db.prepare(
+      'SELECT role, content FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 1'
+    ).get('seed-test-session') as { role: string; content: string } | undefined
+    expect(row?.role).toBe('assistant')
+    expect(row?.content).toContain('FULL ANALYSIS')
+  })
+
+  it('POST /api/mx4/chat/seed returns 400 when sessionId missing', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat/seed')
+      .send({ content: 'some content' })
+    expect(res.status).toBe(400)
+  })
+
+  it('POST /api/mx4/chat/seed returns 400 when content missing', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat/seed')
+      .send({ sessionId: 'some-session' })
+    expect(res.status).toBe(400)
+  })
 })

@@ -17,6 +17,10 @@ const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the Garmi
 Schema:
   garmin_snapshots(date TEXT, metric TEXT, value REAL, unit TEXT, source_json TEXT)
   garmin_activities(date TEXT, activity_id TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
+  mx4_briefings(section TEXT, content_json TEXT, generated_at TEXT, model TEXT)
+    — section values: 'recovery', 'sleep', 'training', 'home'
+    — content_json is a JSON string: { tone, headline, summary, body, recommendation, flags }
+    — Query example: SELECT section, content_json FROM mx4_briefings WHERE section IN ('recovery','sleep','training')
 
 garmin_snapshots uses EAV format — one row per metric per day. ALWAYS filter by metric name:
   SELECT date, value FROM garmin_snapshots WHERE metric = 'hrv' ORDER BY date DESC LIMIT 30

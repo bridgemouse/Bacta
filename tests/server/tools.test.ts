@@ -49,6 +49,27 @@ describe('MX-4 Tools', () => {
       const result = await queryDb.execute!({ sql: 'SELECT * FROM nonexistent_table' }) as any
       expect(result.error).toBeDefined()
     })
+
+    it('can query mx4_briefings table', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const { default: db } = await import('../../server/db/client')
+      db.prepare(
+        'INSERT OR REPLACE INTO mx4_briefings (section, content_json, generated_at, model) VALUES (?, ?, ?, ?)'
+      ).run('recovery', JSON.stringify({ tone: 'POSITIVE', headline: 'Test', summary: 'Test summary', body: 'Test body', recommendation: 'Rest', flags: [] }), new Date().toISOString(), 'test-model')
+
+      const result = await queryDb.execute!({
+        sql: "SELECT section, content_json FROM mx4_briefings WHERE section = 'recovery'",
+      }) as any
+      expect(result.rows).toHaveLength(1)
+      expect(result.rows[0].section).toBe('recovery')
+      const parsed = JSON.parse(result.rows[0].content_json)
+      expect(parsed.summary).toBe('Test summary')
+    })
+
+    it('description mentions mx4_briefings', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      expect(queryDb.description).toContain('mx4_briefings')
+    })
   })
 
   describe('readVault', () => {

@@ -5,7 +5,33 @@ import { loadChatHistory } from '../lib/ai/chat'
 import { getModel } from '../lib/ai/provider'
 import { readAllWikiPagesSync, loadHeartbeat } from '../lib/ai/wiki'
 import { queryDb, readVault, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage } from '../lib/ai/tools'
+import { getSetting } from '../lib/settings'
 import db from '../db/client'
+
+async function compressSessionIfNeeded(sessionId: string): Promise<void> {
+  const threshold = parseInt(getSetting('mx4_chat_compression_threshold') ?? '20', 10)
+  const rows = db.prepare(
+    'SELECT id, role, content FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at ASC'
+  ).all(sessionId) as { id: number; role: string; content: string }[]
+
+  if (rows.length <= threshold) return
+
+  const toCompress = rows.slice(0, rows.length - threshold)
+  const text = toCompress.map(r => `${r.role.toUpperCase()}: ${r.content}`).join('\n\n')
+
+  const { generateText: gt } = await import('ai')
+  const { text: compressed } = await gt({
+    model: getModel('chat'),
+    prompt: `You are MX-4. Compress the following conversation history into a single concise summary in your voice, preserving all key findings, data points, and decisions. Begin with "[MX-4 ARCHIVE] ".\n\n${text}`,
+    maxOutputTokens: 400,
+  })
+
+  const ids = toCompress.map(r => r.id)
+  db.prepare(`DELETE FROM mx4_chat_messages WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids)
+  db.prepare('INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)').run(
+    sessionId, 'assistant', compressed
+  )
+}
 
 const mx4Router = Router()
 
@@ -47,6 +73,13 @@ mx4Router.post('/chat', async (req, res) => {
   db.prepare(
     'INSERT INTO mx4_chat_messages (session_id, role, content) VALUES (?, ?, ?)'
   ).run(sessionId, 'user', message.trim())
+
+  // Compress if needed before building context
+  try {
+    await compressSessionIfNeeded(sessionId)
+  } catch {
+    // Non-fatal — proceed without compression
+  }
 
   const history = loadChatHistory(sessionId)
   const wikiContext = readAllWikiPagesSync()

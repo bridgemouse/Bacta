@@ -113,7 +113,7 @@ export function SheetHeader({ accent, sigil, title, sub, onClose, actions }: She
           {title}
         </span>
         {sub && (
-          <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {sub}
           </span>
         )}

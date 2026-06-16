@@ -65,6 +65,51 @@ describe('MX-4 Tools', () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
       expect(queryDb.description).toContain('mx4_briefings')
     })
+
+    it('rejects UPDATE and does not mutate data', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const { default: db } = await import('../../server/db/client')
+      const before = db.prepare("SELECT value FROM garmin_snapshots WHERE metric='hrv'").get() as any
+      const result = await queryDb.execute!({ sql: "UPDATE garmin_snapshots SET value=0 WHERE metric='hrv'" }) as any
+      expect(result.error).toMatch(/SELECT/)
+      const after = db.prepare("SELECT value FROM garmin_snapshots WHERE metric='hrv'").get() as any
+      expect(after.value).toBe(before.value)
+    })
+
+    it('rejects DELETE', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const result = await queryDb.execute!({ sql: 'DELETE FROM garmin_snapshots' }) as any
+      expect(result.error).toMatch(/SELECT/)
+    })
+
+    it('rejects multiple statements (injection via ;)', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const result = await queryDb.execute!({ sql: 'SELECT 1; DROP TABLE garmin_snapshots' }) as any
+      expect(result.error).toBeDefined()
+      const { default: db } = await import('../../server/db/client')
+      const exists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_snapshots'").get()
+      expect(exists).toBeTruthy()
+    })
+
+    it('rejects a write smuggled inside a CTE', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const result = await queryDb.execute!({ sql: "WITH x AS (SELECT 1) DELETE FROM garmin_snapshots" }) as any
+      expect(result.error).toBeDefined()
+    })
+
+    it('allows a read-only WITH ... SELECT', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const result = await queryDb.execute!({ sql: "WITH x AS (SELECT value FROM garmin_snapshots WHERE metric='hrv') SELECT * FROM x" }) as any
+      expect(result.rows).toBeDefined()
+      expect(result.error).toBeUndefined()
+    })
+
+    it('does not leak SQLite error text / schema on failure', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const result = await queryDb.execute!({ sql: 'SELECT * FROM secret_table_name' }) as any
+      expect(result.error).toBeDefined()
+      expect(result.error).not.toContain('secret_table_name')
+    })
   })
 
   describe('readAllWikiPages', () => {

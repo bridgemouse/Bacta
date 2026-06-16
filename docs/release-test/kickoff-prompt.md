@@ -65,7 +65,7 @@ Authoring `docs/MX4_REFERENCE.md` (tool catalog + data dictionary + custom-calc 
 
 ## Development discipline (this sweep includes real feature work)
 
-Several findings require **building**, not just fixing — the `research` tool, app authentication, encryption-at-rest, the DB backup system, the MX-4 reference + LLM-Wiki principles docs. Treat that as real development and follow the project's own skills (listed in `CLAUDE.md`) when they apply:
+Several findings require **building**, not just fixing — the `research` tool, app authentication, the DB backup script, the MX-4 reference + LLM-Wiki principles docs. (Infrastructure-level security — encryption at rest, firewall/Tailscale, etc. — is **runbook-only**, not built here; see the out-of-scope list above.) Treat the in-sweep builds as real development and follow the project's own skills (listed in `CLAUDE.md`) when they apply:
 
 - **`bacta-feature`** — invoke before starting any new feature or significant build (research tool, auth, backups). It enforces the design-first workflow.
 - **`bacta-component`** — for any new reusable UI component (e.g., the auth/login screen).
@@ -90,7 +90,7 @@ If anything goes wrong, restore from the backup before proceeding. Note backups 
 2. **Early wiki clear** — clear MX-4's corrupted wiki so functional/persona testing runs clean.
 3. **Dispatch subagents** — launch the lenses in `subagent-briefs.md` (Code, Data, UI/Visual, MX-4 Function/Persona, MX-4 Knowledge, Security/Privacy, Resilience/Ops). Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings. Dependencies: the MX-4 Knowledge lens (§6) runs after the Data lens (§2) feeds it the verified dictionary and after the early wiki clear. **The Docs lens (§4) runs LAST** — during this phase, lenses only *collect* drift notes.
 4. **Consolidate & cross-check** — merge findings, resolve conflicts between subagents, de-duplicate, and categorize as **critical / major / minor**.
-5. **Fix & build** — apply fixes under the tiered rules. For feature-level work (research tool, auth, encryption, backups, reference docs) follow the development skills above — design-first, tests-first. Re-verify each (re-run tests, re-screenshot, re-query DB) before committing.
+5. **Fix & build** — apply fixes under the tiered rules. For feature-level work (research tool, auth, backup script, reference docs) follow the development skills above — design-first, tests-first. Infrastructure items stay runbook-only. Re-verify each (re-run tests, re-screenshot, re-query DB) before committing.
 6. **Docs reconciliation (now)** — with all code/data/MX-4/security/ops fixes landed, run the Docs lens: reconcile drift **and** document every net-new capability, creating new doc files where nothing existing fits.
 7. **Final reset** — run the v1.0 baseline sequence from the checklist (verify DB clean → clear wiki → fresh orchestrator run → verify briefings → persona spot-check).
 8. **Verdict & wrap** — fill in `release-readiness-checklist.md`, write the findings report (use `findings-report-template.md`), render **GO / NO-GO**, open the PR, and run **`bacta-wrap`** to capture docs/roadmap/memory before closing.

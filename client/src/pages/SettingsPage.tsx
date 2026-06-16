@@ -103,6 +103,9 @@ export function SettingsPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const [newPrompt, setNewPrompt] = useState('')
+  const [vaultTestStatus, setVaultTestStatus] = useState<TestStatus>('idle')
+  const [vaultTestError, setVaultTestError] = useState('')
+  const [vaultTestDetails, setVaultTestDetails] = useState<{ domains?: number; page_count?: number } | null>(null)
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(setSettings)
@@ -160,6 +163,27 @@ export function SettingsPage() {
     }
   }
 
+  const testVaultConn = async () => {
+    setVaultTestStatus('testing')
+    setVaultTestError('')
+    setVaultTestDetails(null)
+    try {
+      const res = await fetch('/api/settings/test-vault-connection', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        setVaultTestStatus('ok')
+        setVaultTestDetails(data.details ?? null)
+        setTimeout(() => setVaultTestStatus('idle'), 5000)
+      } else {
+        setVaultTestStatus('error')
+        setVaultTestError(data.error ?? 'Unknown error')
+      }
+    } catch {
+      setVaultTestStatus('error')
+      setVaultTestError('Network error')
+    }
+  }
+
   const savedBadge = (key: string) =>
     savedKey === key ? (
       <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: MX4_COLOR, letterSpacing: '0.1em' }}>
@@ -184,6 +208,7 @@ export function SettingsPage() {
     setTimeout(() => setClearedKey(null), 2500)
   }
 
+  const vaultEnabled = settings['vault_enabled'] === 'true'
   const nightlySyncOn = settings['mx4_nightly_enabled'] === 'true'
   const syncOnGarminOn = settings['mx4_on_sync_enabled'] === 'true'
   const homeRerunAll = settings['mx4_home_rerun_mode'] === 'all_sections'
@@ -432,7 +457,93 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Rail 3: CUSTOM SKILLS */}
+      {/* Rail 3: VAULT */}
+      <Rail label="VAULT" accent={MX4_COLOR} />
+
+      <div style={cardStyle}>
+        <div style={vaultEnabled ? rowStyle : rowStyleLast}>
+          <span style={labelStyle}>Connect LLM-Wiki</span>
+          <Toggle
+            on={vaultEnabled}
+            onChange={v => save('vault_enabled', String(v))}
+          />
+        </div>
+
+        {vaultEnabled && (
+          <>
+            <div style={rowStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                <span style={labelStyle}>Vault URL</span>
+                {savedBadge('vault_url')}
+              </div>
+              <input
+                type="text"
+                placeholder="http://192.168.1.x:8765"
+                value={settings['vault_url'] ?? ''}
+                onChange={e => setSettings(prev => ({ ...prev, vault_url: e.target.value }))}
+                onBlur={e => save('vault_url', e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') save('vault_url', (e.target as HTMLInputElement).value) }}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: `1px solid ${COLORS.line}`,
+                  background: COLORS.surfaceElevated,
+                  color: COLORS.text,
+                  outline: 'none',
+                  width: 190,
+                  minWidth: 0,
+                }}
+              />
+            </div>
+
+            <div style={rowStyleLast}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <button
+                  onClick={testVaultConn}
+                  disabled={vaultTestStatus === 'testing'}
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    letterSpacing: '0.08em',
+                    padding: '6px 14px',
+                    borderRadius: 8,
+                    border: `1px solid ${
+                      vaultTestStatus === 'ok' ? COLORS.mx4Green :
+                      vaultTestStatus === 'error' ? COLORS.mx4Red :
+                      MX4_COLOR
+                    }`,
+                    background: 'none',
+                    color:
+                      vaultTestStatus === 'ok' ? COLORS.mx4Green :
+                      vaultTestStatus === 'error' ? COLORS.mx4Red :
+                      MX4_COLOR,
+                    cursor: vaultTestStatus === 'testing' ? 'default' : 'pointer',
+                  }}
+                >
+                  {vaultTestStatus === 'testing' ? 'TESTING…' :
+                   vaultTestStatus === 'ok' ? '✓ CONNECTED' :
+                   vaultTestStatus === 'error' ? '✗ FAILED' :
+                   'TEST CONNECTION'}
+                </button>
+                {vaultTestStatus === 'ok' && vaultTestDetails && (
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, letterSpacing: '0.08em' }}>
+                    {vaultTestDetails.domains} DOMAINS · {vaultTestDetails.page_count} PAGES
+                  </span>
+                )}
+                {vaultTestStatus === 'error' && (
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.mx4Red, letterSpacing: '0.06em' }}>
+                    {vaultTestError}
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Rail 4: CUSTOM SKILLS */}
       <Rail label="CUSTOM SKILLS" accent={MX4_COLOR} />
 
       <div style={cardStyle}>

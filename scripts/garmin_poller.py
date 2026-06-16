@@ -266,7 +266,7 @@ def sync_day(db, c, d):
         if s and isinstance(s, list) and len(s) > 0:
             item = s[0]
             store(db, d, 'recovery_score',    safe(item, 'score'),        '', s)
-            store(db, d, 'recovery_time_h',   safe(item, 'recoveryTime'), 'h', s)
+            store(db, d, 'recovery_time_h',   safe(item, 'recoveryTime'), 'min', s)  # Garmin returns MINUTES (column name is legacy)
         ok.append('training_readiness')
     except Exception as e:
         err.append(f'training_readiness({e})')

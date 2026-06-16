@@ -69,15 +69,34 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 
 ## Security & Privacy
 
+**LLM-specific**
 - [ ] **`queryDb` is provably read-only** — a write/drop attempt via chat is refused/fails safely (critical)
 - [ ] **Prompt injection guarded** — retrieved vault/wiki/research content treated as data, not instructions; injection probe did not make MX-4 comply or misuse write tools
-- [ ] `mx4/wiki/` gitignored and untracked; no PHI / vault content / `bacta.db` committed (history scanned)
-- [ ] API keys (incl. new `research_api_key`) masked in `GET /api/settings`; never logged or sent to client
-- [ ] Secrets-at-rest documented; `bacta.db`, backups, and Garmin tokens have tight file permissions
-- [ ] Plaintext HTTP-on-LAN is a documented, conscious decision; server reachable on local WiFi only
-- [ ] `research` tool sends scientific questions, not raw personal records, to external backends
+
+**Application / API (OWASP)**
+- [ ] Input validation on all endpoints; **all SQL parameterized** (no string-concatenated queries anywhere)
+- [ ] Security headers / CSP via Helmet; XSS-safe rendering (no unsanitized raw HTML from MX-4/vault/research)
+- [ ] CORS locked to expected origin; request size limits + rate limiting on AI / `poll/force`
 - [ ] Error responses don't leak stack traces / SQL / internal paths
-- [ ] `npm audit` — no unaddressed high/critical advisories in shipping deps
+
+**Auth & access (implement)**
+- [ ] App authentication in place (hashed secret, token-based session); `bacta.local` reachability ≠ data access
+- [ ] Firewall restricts app port to LAN + Tailscale only; app unreachable from untrusted segments; Tailscale ACLs scoped
+
+**Data protection (implement encryption at rest)**
+- [ ] Encryption at rest (LUKS full-disk or SQLCipher) covering `bacta.db`, tokens, backups
+- [ ] Backups encrypted with tight perms; clear-data path actually reclaims (`VACUUM`); no PII in logs
+
+**Secrets / host / supply chain**
+- [ ] `mx4/wiki/` gitignored & untracked; no PHI / vault content / `bacta.db` committed (history scanned)
+- [ ] API keys masked on GET, never logged/sent to client; `.env` ignored; Garmin tokens + DB perms `600/640`
+- [ ] Service runs non-root with systemd hardening; OS auto-patching on; minimal services
+- [ ] NFS export IP-restricted + read-only; vault MCP SSE (`106:8765`) auth/IP-allowlisted (not open on LAN)
+- [ ] CI uses `npm ci` + lockfile + `npm audit`; runner doesn't auto-build untrusted PRs; Actions secrets not leaked
+- [ ] `research` tool sends scientific questions, not raw personal records, to external backends
+
+**Deferred (documented with how-to)**
+- [ ] TLS/HTTPS on LAN — how-to written; tracked as recommended near-term follow-up (auth/data are cleartext on LAN until done; Tailscale is the encrypted path meanwhile)
 
 ## Resilience & Operations
 

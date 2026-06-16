@@ -155,7 +155,11 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 
 ## 7. Security & Privacy
 
-**Goal:** a private, single-user health app leaks nothing — not into git, not into logs, not onto the network beyond local WiFi.
+**Goal:** sensitive personal health data is protected with **defense in depth, to industry-standard (OWASP-aligned) practice** — LAN-only is explicitly **not** treated as a security boundary (other devices, IoT, guests, a compromised laptop all share the LAN). Audit everything below; **implement** the v1.0 items; **document + defer** the rest with a how-to.
+
+**v1.0 implementation decisions (from the user):**
+- **Implement now:** app authentication · network access control (firewall/Tailscale) · encryption at rest.
+- **Document + defer (with how-to):** TLS/HTTPS on LAN. ⚠️ Until TLS lands, app auth + data ride **plaintext HTTP on the LAN** — use a hashed, **token-based** auth (never a replayed cleartext password) and treat Tailscale as the encrypted path. Flag TLS as the recommended near-term follow-up.
 
 - **No PHI in git:** confirm `mx4/wiki/` is gitignored and not tracked (it holds personal health data); scan the repo + history for accidentally committed health data, vault content, or `bacta.db`. Confirm `data/*.db` and any `*.bak-*` are ignored.
 - **Secrets handling:** API keys (`ai_api_key`, `research_api_key`, etc.) are masked in `GET /api/settings`; never logged in plaintext (check server logs / error paths); never sent to the client. The known masking on settings GET is the baseline — verify it holds for the new keys too.
@@ -170,6 +174,42 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 - **Secrets at rest.** API keys live in `app_settings` (SQLite) in plaintext. Document this explicitly; assess whether that's acceptable for a single-user LAN box or whether keys should be moved to env/OS-protected storage. At minimum, ensure the DB file and backups have tight file permissions (not world-readable) and Garmin tokens in `~/.garminconnect` are protected.
 - **Transport.** The app serves over plaintext HTTP on the LAN — API keys and health data travel unencrypted. Acceptable on a trusted home LAN, but it should be a *conscious, documented* decision, not an accident. Note it.
 - **Error leakage.** Confirm API error responses don't return stack traces, SQL, or internal paths to the client.
+
+**Application / API security (OWASP-aligned):**
+
+- **Input validation** on every endpoint (params + bodies) — validate/whitelist, reject malformed.
+- **Parameterized queries everywhere** — audit that all server SQL uses better-sqlite3 prepared statements / bound params; **no string-concatenated SQL anywhere** (not just `queryDb`).
+- **Security headers (Helmet):** CSP (lock script/connect/img/font/style to same-origin + Google Fonts), `X-Content-Type-Options: nosniff`, `frame-ancestors 'none'`, `Referrer-Policy`, `Permissions-Policy`. CSP limits XSS blast radius and data exfiltration.
+- **XSS-safe rendering:** MX-4 + vault + research content is untrusted. Audit for raw HTML injection (`dangerouslySetInnerHTML`, the legacy insights-HTML path); ensure ReactMarkdown doesn't allow raw HTML; sanitize anything rendered as HTML.
+- **CORS** locked to the expected origin (not `*`); **request size limits + rate limiting** on expensive endpoints (AI runs, `poll/force`) to bound abuse and cost.
+
+**Authentication & access — IMPLEMENT:**
+
+- **App authentication:** session-persistent login (PIN/passphrase or device token) so reaching `bacta.local` ≠ reading data. Store any secret **hashed** (argon2/bcrypt/scrypt), token-based sessions; never a replayed cleartext password (plaintext-HTTP caveat above).
+- **Network access control:** **Tailscale is already running on the homelab — leverage it, don't rebuild.** Verify: host firewall (ufw/nftables) restricts the app port to the LAN subnet + Tailscale interface only; app unreachable from untrusted segments; Tailscale ACLs scope who/what can reach Bacta. Tailscale also provides encrypted transport for remote access, which materially reduces the plaintext-HTTP risk and supports deferring TLS.
+
+**Data protection — encryption & lifecycle:**
+
+- **Encryption at rest (implement):** LUKS full-disk on the LXC 109 volume (simplest — covers DB, tokens, backups) or SQLCipher for `bacta.db`.
+- **Encrypted backups:** the §8 health-data backups (especially off-box copies) must be encrypted with tight perms.
+- **Retention & secure deletion:** when the user clears data, confirm it's actually reclaimed (`VACUUM`), not just unlinked. Document retention.
+- **No PII in logs:** health metrics / personal content never written to logs or error output.
+
+**Secrets management:**
+
+- API keys live in `app_settings` (SQLite plaintext) — encryption-at-rest covers them on disk; additionally keep them masked on GET (baseline holds), never logged, never sent to client. Consider env/OS-protected storage with restricted perms. `.env` gitignored; Garmin tokens perms tight.
+
+**Host & infrastructure hardening:**
+
+- Service runs as **non-root least-privilege** user (confirm `wheat`, not root); apply **systemd hardening** (`NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`, drop capabilities).
+- **OS patching:** `unattended-upgrades` on Debian; minimal installed services.
+- **File permissions:** `bacta.db`, backups, tokens, any `.env` → `600/640`, owned by the service user, not world-readable.
+- **NFS vault mount** (from LXC 106): export restricted to LXC 109's IP, read-only, on a trusted segment (NFS is cleartext). The **vault MCP SSE** (`LXC 106:8765`) is currently open/unauthenticated on the LAN — add auth or an IP allowlist so only Bacta can query your second brain.
+
+**Supply chain & CI:**
+
+- CI uses `npm ci` against the committed lockfile; `npm audit` in the pipeline; pin/refresh deps (Dependabot optional).
+- The **self-hosted runner** on LXC 109 has repo + deploy access — confirm it does **not** auto-build untrusted/fork PRs, its token is least-scope, and Actions secrets aren't echoed into logs.
 
 ---
 

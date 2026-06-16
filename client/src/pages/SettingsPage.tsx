@@ -103,6 +103,9 @@ export function SettingsPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const [newPrompt, setNewPrompt] = useState('')
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editLabel, setEditLabel] = useState('')
+  const [editPrompt, setEditPrompt] = useState('')
   const [vaultTestStatus, setVaultTestStatus] = useState<TestStatus>('idle')
   const [vaultTestError, setVaultTestError] = useState('')
   const [vaultTestDetails, setVaultTestDetails] = useState<{ domains?: number; page_count?: number } | null>(null)
@@ -142,6 +145,19 @@ export function SettingsPage() {
     setNewLabel('')
     setNewPrompt('')
     setShowAddForm(false)
+  }
+
+  function startEdit(i: number) {
+    setEditingIndex(i)
+    setEditLabel(skills[i].label)
+    setEditPrompt(skills[i].prompt)
+    setShowAddForm(false)
+  }
+
+  async function saveEdit() {
+    if (editingIndex === null || !editLabel.trim() || !editPrompt.trim()) return
+    await saveSkills(skills.map((s, i) => i === editingIndex ? { label: editLabel.trim(), prompt: editPrompt.trim() } : s))
+    setEditingIndex(null)
   }
 
   const testConn = async () => {
@@ -485,7 +501,7 @@ export function SettingsPage() {
                 onKeyDown={e => { if (e.key === 'Enter') save('vault_url', (e.target as HTMLInputElement).value) }}
                 style={{
                   fontFamily: FONT_MONO,
-                  fontSize: 11,
+                  fontSize: 16,
                   padding: '6px 10px',
                   borderRadius: 8,
                   border: `1px solid ${COLORS.line}`,
@@ -550,28 +566,127 @@ export function SettingsPage() {
         {skills.map((skill, i) => {
           const isLocked = i === 0
           const isLast = i === skills.length - 1
+          const isEditing = editingIndex === i
+
+          if (isEditing) {
+            return (
+              <div key={i} style={{ padding: '12px 0', borderBottom: isLast && !showAddForm ? 'none' : `1px solid ${COLORS.line}` }}>
+                <input
+                  value={editLabel}
+                  onChange={e => setEditLabel(e.target.value)}
+                  placeholder="LABEL"
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 16,
+                    padding: '7px 10px',
+                    borderRadius: 8,
+                    border: `1px solid ${COLORS.line}`,
+                    background: COLORS.surfaceElevated,
+                    color: COLORS.text,
+                    outline: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box' as const,
+                    marginBottom: 8,
+                  }}
+                />
+                <textarea
+                  value={editPrompt}
+                  onChange={e => setEditPrompt(e.target.value)}
+                  rows={3}
+                  style={{
+                    fontFamily: FONT_UI,
+                    fontSize: 16,
+                    padding: '7px 10px',
+                    borderRadius: 8,
+                    border: `1px solid ${COLORS.line}`,
+                    background: COLORS.surfaceElevated,
+                    color: COLORS.text,
+                    outline: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box' as const,
+                    resize: 'vertical' as const,
+                    marginBottom: 10,
+                  }}
+                />
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setEditingIndex(null)}
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      letterSpacing: '0.08em',
+                      padding: '5px 12px',
+                      borderRadius: 7,
+                      border: `1px solid ${COLORS.line}`,
+                      background: COLORS.surfaceElevated,
+                      color: COLORS.textSecondary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    onClick={saveEdit}
+                    disabled={!editLabel.trim() || !editPrompt.trim()}
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      letterSpacing: '0.08em',
+                      padding: '5px 12px',
+                      borderRadius: 7,
+                      border: `1px solid ${MX4_COLOR}`,
+                      background: hexA(MX4_COLOR, 0.12),
+                      color: MX4_COLOR,
+                      cursor: !editLabel.trim() || !editPrompt.trim() ? 'default' : 'pointer',
+                    }}
+                  >
+                    SAVE ›
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
           return (
             <div key={i} style={isLast && !showAddForm ? rowStyleLast : rowStyle}>
               <span style={{ ...labelStyle, fontFamily: FONT_MONO, fontSize: 12, color: COLORS.text }}>
                 {skill.label}
               </span>
-              {!isLocked && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <button
-                  onClick={() => deleteSkill(i)}
+                  onClick={() => startEdit(i)}
                   style={{
                     background: 'none',
                     border: 'none',
                     padding: '4px 6px',
                     cursor: 'pointer',
                     fontFamily: FONT_MONO,
-                    fontSize: 11,
-                    color: COLORS.mx4Red,
+                    fontSize: 10,
+                    letterSpacing: '0.06em',
+                    color: COLORS.textMuted,
                     flexShrink: 0,
                   }}
                 >
-                  ✕
+                  EDIT
                 </button>
-              )}
+                {!isLocked && (
+                  <button
+                    onClick={() => deleteSkill(i)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '4px 6px',
+                      cursor: 'pointer',
+                      fontFamily: FONT_MONO,
+                      fontSize: 11,
+                      color: COLORS.mx4Red,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           )
         })}
@@ -584,7 +699,7 @@ export function SettingsPage() {
               placeholder="LABEL"
               style={{
                 fontFamily: FONT_MONO,
-                fontSize: 12,
+                fontSize: 16,
                 padding: '7px 10px',
                 borderRadius: 8,
                 border: `1px solid ${COLORS.line}`,
@@ -603,7 +718,7 @@ export function SettingsPage() {
               rows={3}
               style={{
                 fontFamily: FONT_UI,
-                fontSize: 13,
+                fontSize: 16,
                 padding: '7px 10px',
                 borderRadius: 8,
                 border: `1px solid ${COLORS.line}`,

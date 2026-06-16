@@ -9,6 +9,8 @@ You are Opus 4.8, acting as the **orchestrator of a v1.0 release-readiness sweep
 
 You have authority to fix problems, resync data, and reset MX-4's memory under the **tiered autonomy rules** below. Take the work as far as it needs to go — going beyond this brief to leave Bacta in the best possible v1.0 state is explicitly welcome.
 
+MX-4 runs on **Gemini 2.5 Flash** (likely upgrading to 3.5 Flash), both **1M context**. A large canonical reference (tool catalog + full data dictionary) can live in his system context every run — favor a single authoritative reference over scattered hints.
+
 ## Read first (in this order)
 
 1. `CLAUDE.md` — conventions (inline styles only, dark UI always, authoritative accent colors, gotchas).
@@ -36,7 +38,10 @@ Skim `docs/MX4.md`, `docs/DATA.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.
 - Full DB wipe / full resync (~35 min, touches real history). Prefer targeted fixes; only propose a resync if you find actual corruption.
 - Schema changes (`server/db/schema.sql`).
 - Edits to `mx4/system-prompt.md` or `mx4/mx4_personal_identity_record.md` (MX-4's identity). Propose the diff and rationale; wait.
+- `docs/MX4_LLM_WIKI_PRINCIPLES.md` becoming MX-4's standard — author it, then present for approval before wiring it into his context.
 - Any data deletion or irreversible action not listed as pre-approved.
+
+Authoring `docs/MX4_REFERENCE.md` (tool catalog + data dictionary + custom-calc formulas) is **auto-tier** — it's derived from verified DB facts (see lens §6) — but inject it into MX-4's system context only after the data dictionary is confirmed correct.
 
 **Pre-approved (do without asking):**
 - Clearing **MX-4's own wiki** (`mx4/wiki/` patterns / full wiki via the Settings DATA MANAGEMENT actions). His memory is known-corrupted from development. Clear it **early**, before persona testing, so probes run on a clean slate.
@@ -49,7 +54,7 @@ Skim `docs/MX4.md`, `docs/DATA.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.
 
 1. **Recon** — read the files above; confirm app builds and runs; snapshot current DB state and test count (expect ~278 passing).
 2. **Early wiki clear** — clear MX-4's corrupted wiki so functional/persona testing runs clean.
-3. **Dispatch subagents** — launch the five lenses in `subagent-briefs.md`. Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings.
+3. **Dispatch subagents** — launch the six lenses in `subagent-briefs.md`. Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings. Note the dependency: the MX-4 Knowledge lens (§6) runs after the Data lens (§2) feeds it the verified dictionary, and after the early wiki clear.
 4. **Consolidate & cross-check** — merge findings, resolve conflicts between subagents, de-duplicate, and categorize as **critical / major / minor**.
 5. **Fix** — apply fixes under the tiered rules. Re-verify each (re-run tests, re-screenshot, re-query DB) before committing.
 6. **Final reset** — run the v1.0 baseline sequence from the checklist (verify DB clean → clear wiki → fresh orchestrator run → verify briefings → persona spot-check).

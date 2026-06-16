@@ -46,7 +46,17 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] Persona holds across a 6–10 turn conversation (no drift, context retained)
 - [ ] Per-section FULL ANALYSIS continuation works for all 4 built sections (seed lands, follow-ups grounded + in-persona)
 - [ ] Custom skills: carousel, SYNC WIKI default, add/edit/delete all work
-- [ ] Vault / LLM-Wiki: TEST CONNECTION + all 4 tools return real data; MX-4 demonstrably **uses** vault content end-to-end
+- [ ] Vault / LLM-Wiki (external): TEST CONNECTION + all 4 tools return real data; MX-4 demonstrably **uses** vault content end-to-end
+- [ ] Web search wired (`google.tools.googleSearch`) and working in briefing + chat; coexists with his function tools (or a two-step research pattern is implemented); returns real grounded sources
+- [ ] MX-4 can research peer-reviewed/primary science, cite real sources with links, and tie evidence to the user's metrics (no fabricated citations)
+
+## MX-4 — Knowledge & Self-Maintained Wiki
+
+- [ ] `docs/MX4_REFERENCE.md` authored — full tool catalog + complete data dictionary (DB name → display name → meaning → unit/range) + custom-calc formulas (incl. Arch Score)
+- [ ] Reference injected into MX-4's system context AND mirrored to `mx4/wiki/reference/*`
+- [ ] `docs/MX4_LLM_WIKI_PRINCIPLES.md` authored and **approved** by user; wired into MX-4's context
+- [ ] MX-4 answers metric / display-name / custom-calc / tool questions correctly (no fabrication)
+- [ ] MX-4 maintains his own wiki per the principles doc (correct granularity/indexing; wrap-session synthesis works); distinguishes his wiki from the external vault
 
 ## MX-4 — Persona (see `mx4-persona-rubric.md`)
 

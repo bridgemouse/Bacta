@@ -109,7 +109,9 @@
 
 ## Immediate Priorities
 
-1. **E2E QA sweep** — full end-to-end quality pass; all pre-release features (Custom Skills, Vault Integration, tech debt) are now shipped and pushed
+1. **v1.0 release-readiness sweep** — the prep kit is built and committed at `docs/release-test/` (kickoff prompt, 8 subagent lens briefs, MX-4 persona rubric, GO/NO-GO checklist, findings-report template). It is build-plus-verify (research tool, app auth, backups, MX-4 reference are built; infra/network is runbook-only). Run by pasting `docs/release-test/kickoff-prompt.md` into a fresh Opus 4.8 session.
+
+> ⚠️ **Confirmed security issue for the sweep:** `mx4/wiki/` is gitignored (`.gitignore:11`) **but still tracked** — personal health data is committed in history (likely on GitHub origin). Needs `git rm --cached -r mx4/wiki/` + history scrub (filter-repo/BFG) + force-push. Flagged in the sweep's Security lens.
 
 ---
 

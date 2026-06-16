@@ -47,14 +47,25 @@ Authoring `docs/MX4_REFERENCE.md` (tool catalog + data dictionary + custom-calc 
 - Clearing **MX-4's own wiki** (`mx4/wiki/` patterns / full wiki via the Settings DATA MANAGEMENT actions). His memory is known-corrupted from development. Clear it **early**, before persona testing, so probes run on a clean slate.
 - The **final** wiki clear + fresh orchestrator run that produces the clean v1.0 baseline.
 - `POST /api/poll/force` to ingest fresh Garmin data.
+- Toggling the MX-4 **nightly-run setting** (currently OFF) to test the scheduler fires, then restoring it to the user's chosen state.
 
 > Note: "MX-4's wiki" (his accumulated memory under `mx4/wiki/`) and the "LLM-Wiki / Vault integration" (external MCP knowledge source, `vaultClient.ts`) are **different systems**. Clearing applies only to the former. The latter is a connection to verify, never to wipe.
 
+## Safety — reversibility (mandatory)
+
+Before **any** destructive or irreversible action (DB wipe/resync, wiki clear, schema change), take a timestamped backup so the entire sweep is reversible:
+
+- Copy `data/bacta.db` → `data/bacta.db.bak-<timestamp>`.
+- Copy `mx4/wiki/` → `mx4/wiki.bak-<timestamp>/` (do **not** commit these — they hold personal health data and `mx4/wiki/` is gitignored).
+- Record the current settings values you change (e.g. nightly-run, vault) so you can restore them.
+
+If anything goes wrong, restore from the backup before proceeding. Note backups in the final report.
+
 ## Phase flow
 
-1. **Recon** — read the files above; confirm app builds and runs; snapshot current DB state and test count (expect ~278 passing).
+1. **Recon** — read the files above; confirm app builds and runs; snapshot current DB state and test count (expect ~278 passing). Take the safety backups above before any destructive step.
 2. **Early wiki clear** — clear MX-4's corrupted wiki so functional/persona testing runs clean.
-3. **Dispatch subagents** — launch the six lenses in `subagent-briefs.md`. Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings. Note the dependency: the MX-4 Knowledge lens (§6) runs after the Data lens (§2) feeds it the verified dictionary, and after the early wiki clear.
+3. **Dispatch subagents** — launch the seven lenses in `subagent-briefs.md` (Code, Data, UI/Visual, Docs, MX-4 Function/Persona, MX-4 Knowledge, Security/Privacy). Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings. Note the dependency: the MX-4 Knowledge lens (§6) runs after the Data lens (§2) feeds it the verified dictionary, and after the early wiki clear.
 4. **Consolidate & cross-check** — merge findings, resolve conflicts between subagents, de-duplicate, and categorize as **critical / major / minor**.
 5. **Fix** — apply fixes under the tiered rules. Re-verify each (re-run tests, re-screenshot, re-query DB) before committing.
 6. **Final reset** — run the v1.0 baseline sequence from the checklist (verify DB clean → clear wiki → fresh orchestrator run → verify briefings → persona spot-check).

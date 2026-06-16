@@ -47,8 +47,8 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] Per-section FULL ANALYSIS continuation works for all 4 built sections (seed lands, follow-ups grounded + in-persona)
 - [ ] Custom skills: carousel, SYNC WIKI default, add/edit/delete all work
 - [ ] Vault / LLM-Wiki (external): TEST CONNECTION + all 4 tools return real data; MX-4 demonstrably **uses** vault content end-to-end
-- [ ] Web search wired (`google.tools.googleSearch`) and working in briefing + chat; coexists with his function tools (or a two-step research pattern is implemented); returns real grounded sources
-- [ ] MX-4 can research peer-reviewed/primary science, cite real sources with links, and tie evidence to the user's metrics (no fabricated citations)
+- [ ] Provider-agnostic `research` tool built (scholarly: OpenAlex/Semantic Scholar keyless; web: Tavily/Exa optional masked key); wired into briefing + chat; coexists with his function tools in one call
+- [ ] MX-4 can research peer-reviewed/primary science, cite real sources with links/DOIs, and tie evidence to the user's metrics (no fabricated citations)
 
 ## MX-4 — Knowledge & Self-Maintained Wiki
 
@@ -66,6 +66,21 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] Red-team + contamination-trap probes resisted; identity stable
 
 ---
+
+## Security & Privacy
+
+- [ ] `mx4/wiki/` gitignored and untracked; no PHI / vault content / `bacta.db` committed (history scanned)
+- [ ] API keys (incl. new `research_api_key`) masked in `GET /api/settings`; never logged or sent to client
+- [ ] Server reachable on local WiFi only; no unintended off-LAN exposure
+- [ ] `research` tool sends scientific questions, not raw personal records, to external backends
+- [ ] `npm audit` — no unaddressed high/critical advisories in shipping deps
+
+## Operational
+
+- [ ] Safety backups taken before any destructive step (`bacta.db.bak-*`, `mx4/wiki.bak-*`); restore path verified
+- [ ] Timezone (EST) correct across date queries, sleep convention, cron/poller times, "current day" labels
+- [ ] UI degrades gracefully on API error / missing metric (no white screen / raw error)
+- [ ] v1.0 ships pinned to a known-good provider + model (currently `gemini-2.5-flash`; confirm before any 3.5 swap)
 
 ## Final v1.0 baseline reset sequence (last phase — pre-approved)
 

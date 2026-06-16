@@ -99,9 +99,14 @@ export function SettingsPage() {
   const [apiKeyFocused, setApiKeyFocused] = useState(false)
   const [testStatus, setTestStatus] = useState<TestStatus>('idle')
   const [testError, setTestError] = useState('')
+  const [skills, setSkills] = useState<Array<{ label: string; prompt: string }>>([])
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newLabel, setNewLabel] = useState('')
+  const [newPrompt, setNewPrompt] = useState('')
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(setSettings)
+    fetch('/api/settings/custom-skills').then(r => r.json()).then(d => setSkills(d.skills ?? []))
   }, [])
 
   const save = async (key: string, value: string) => {
@@ -113,6 +118,27 @@ export function SettingsPage() {
     setSettings(prev => ({ ...prev, [key]: value }))
     setSavedKey(key)
     setTimeout(() => setSavedKey(null), 1500)
+  }
+
+  async function saveSkills(updated: Array<{ label: string; prompt: string }>) {
+    await fetch('/api/settings/mx4_custom_skills', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: JSON.stringify(updated) }),
+    })
+    setSkills(updated)
+  }
+
+  async function deleteSkill(index: number) {
+    await saveSkills(skills.filter((_, i) => i !== index))
+  }
+
+  async function addSkill() {
+    if (!newLabel.trim() || !newPrompt.trim()) return
+    await saveSkills([...skills, { label: newLabel.trim(), prompt: newPrompt.trim() }])
+    setNewLabel('')
+    setNewPrompt('')
+    setShowAddForm(false)
   }
 
   const testConn = async () => {
@@ -406,7 +432,138 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Rail 3: DATA MANAGEMENT */}
+      {/* Rail 3: CUSTOM SKILLS */}
+      <Rail label="CUSTOM SKILLS" accent={MX4_COLOR} />
+
+      <div style={cardStyle}>
+        {skills.map((skill, i) => {
+          const isLocked = i === 0
+          const isLast = i === skills.length - 1
+          return (
+            <div key={i} style={isLast && !showAddForm ? rowStyleLast : rowStyle}>
+              <span style={{ ...labelStyle, fontFamily: FONT_MONO, fontSize: 12, color: COLORS.text }}>
+                {skill.label}
+              </span>
+              {!isLocked && (
+                <button
+                  onClick={() => deleteSkill(i)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px 6px',
+                    cursor: 'pointer',
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    color: COLORS.mx4Red,
+                    flexShrink: 0,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )
+        })}
+
+        {showAddForm ? (
+          <div style={{ padding: '12px 0' }}>
+            <input
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              placeholder="LABEL"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 12,
+                padding: '7px 10px',
+                borderRadius: 8,
+                border: `1px solid ${COLORS.line}`,
+                background: COLORS.surfaceElevated,
+                color: COLORS.text,
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box' as const,
+                marginBottom: 8,
+              }}
+            />
+            <textarea
+              value={newPrompt}
+              onChange={e => setNewPrompt(e.target.value)}
+              placeholder="Full prompt text…"
+              rows={3}
+              style={{
+                fontFamily: FONT_UI,
+                fontSize: 13,
+                padding: '7px 10px',
+                borderRadius: 8,
+                border: `1px solid ${COLORS.line}`,
+                background: COLORS.surfaceElevated,
+                color: COLORS.text,
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box' as const,
+                resize: 'vertical' as const,
+                marginBottom: 10,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setShowAddForm(false); setNewLabel(''); setNewPrompt('') }}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  letterSpacing: '0.08em',
+                  padding: '5px 12px',
+                  borderRadius: 7,
+                  border: `1px solid ${COLORS.line}`,
+                  background: COLORS.surfaceElevated,
+                  color: COLORS.textSecondary,
+                  cursor: 'pointer',
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={addSkill}
+                disabled={!newLabel.trim() || !newPrompt.trim()}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  letterSpacing: '0.08em',
+                  padding: '5px 12px',
+                  borderRadius: 7,
+                  border: `1px solid ${MX4_COLOR}`,
+                  background: hexA(MX4_COLOR, 0.12),
+                  color: MX4_COLOR,
+                  cursor: !newLabel.trim() || !newPrompt.trim() ? 'default' : 'pointer',
+                }}
+              >
+                SAVE ›
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={rowStyleLast}>
+            <span />
+            <button
+              onClick={() => setShowAddForm(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px 0',
+                cursor: 'pointer',
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                letterSpacing: '0.1em',
+                color: MX4_COLOR,
+              }}
+            >
+              ADD SKILL ›
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Rail 4: DATA MANAGEMENT */}
       <Rail label="DATA MANAGEMENT" accent={COLORS.mx4Red} />
 
       <div style={cardStyle}>
@@ -453,7 +610,7 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {/* Rail 4: GARMIN */}
+      {/* Rail 5: GARMIN */}
       <Rail label="GARMIN" accent={MX4_COLOR} />
 
       <div style={cardStyle}>

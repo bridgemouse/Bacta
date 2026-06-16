@@ -1,4 +1,6 @@
 # mx4/sections.py
+# DEPRECATED — superseded by server/lib/ai/sections.ts (TypeScript pipeline).
+# Retained for reference only. Section IDs and metric names here are stale.
 """Section definitions for MX-4 insight cards."""
 
 from dataclasses import dataclass

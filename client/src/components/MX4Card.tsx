@@ -11,20 +11,6 @@ import type { Brief } from '../lib/stubData'
 import type { BriefingResult } from '../lib/briefing'
 import { useAskSheet } from '../lib/AskSheetContext'
 
-// ─── Temporary compatibility stub — removed in Task 3 / Task 5 ───
-export interface MX4Insight {
-  generated_at: string
-  summary: string
-  tone: 'positive' | 'caution' | 'flag'
-  flags: string[]
-}
-
-/** @deprecated Use TransmissionPanel instead. This stub returns null until pages are updated in Tasks 3 and 5. */
-export function MX4Card(_props: { insight: MX4Insight | null; section: string; isGenerating?: boolean }): null {
-  return null
-}
-// ────────────────────────────────────────────────────────────────
-
 // ─── New API ─────────────────────────────────────────────────────
 interface TransmissionPanelProps {
   accent: string

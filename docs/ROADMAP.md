@@ -85,9 +85,10 @@
 - `docs/VAULT_SETUP.md` — NFS mount runbook for LXC 106 → LXC 109
 
 **MX-4 system — Phase 4 complete (Jun 16, 2026):**
-- **Custom Skills** — `mx4_custom_skills` JSON array in `app_settings`; SYNC WIKI seeded as default; `GET /api/settings/custom-skills`; CUSTOM SKILLS rail in Settings (SYNC WIKI locked, user skills add/delete); AskSheet carousel (3 per swipeable page, page dots when >3)
+- **Custom Skills** — `mx4_custom_skills` JSON array in `app_settings`; SYNC WIKI seeded as default; `GET /api/settings/custom-skills`; CUSTOM SKILLS rail in Settings (add/delete user skills; all skills incl. SYNC WIKI editable via inline form showing label+prompt; SYNC WIKI not deletable but shows prompt as guidance template); AskSheet carousel (3 per swipeable page, page dots when >3); iOS zoom fix (fontSize 16 on all inputs)
 - **Vault Integration** — `@modelcontextprotocol/sdk` MCP client singleton in `server/lib/ai/vaultClient.ts`; 4 tools: `search_wiki`, `read_wiki_page`, `list_wiki_pages`, `get_wiki_index`; `vault_enabled`/`vault_url` settings; VAULT rail in Settings (toggle, URL input, TEST CONNECTION with domain/page count); vault tools merged conditionally into orchestrator + chat; `readVault` filesystem tool removed
 - **Tech debt cleared** — `MX4Card`/`MX4Insight` stub deleted; ARCHITECTURE.md briefing pipeline notes updated; `mx4/sections.py` and `mx4/orchestrator.py` marked deprecated
+- **Home body battery fix** — Recovery tile now reads `body_battery_current ?? body_battery_wake ?? 74`; was showing start-of-day wake value instead of live intraday reading
 
 **Tests:**
 - 278 tests passing (113 server + 165 client, last verified Jun 16, 2026)

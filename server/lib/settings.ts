@@ -14,6 +14,8 @@ export const SETTING_DEFAULTS: Record<string, string> = {
     label:  'SYNC WIKI',
     prompt: 'Review your wiki pages and update them based on our conversation so far. Write any new patterns or findings worth preserving.',
   }]),
+  vault_enabled: 'false',
+  vault_url:     '',
 }
 
 export function initSettings(): void {

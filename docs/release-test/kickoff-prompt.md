@@ -40,8 +40,18 @@ Skim `docs/MX4.md`, `docs/DATA.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.
 - Schema changes (`server/db/schema.sql`).
 - Edits to `mx4/system-prompt.md` or `mx4/mx4_personal_identity_record.md` (MX-4's identity). Propose the diff and rationale; wait.
 - `docs/MX4_LLM_WIKI_PRINCIPLES.md` becoming MX-4's standard — author it, then present for approval before wiring it into his context.
-- **Host / infrastructure-level changes** — LUKS/full-disk encryption of the LXC volume, firewall/ufw rules, systemd-unit hardening, OS packages, NFS/Proxmox config. Propose with a runbook and **snapshot the LXC (Proxmox) first**; some must be executed by the user at the host/Proxmox level, not from the app context. **Never run anything that could take the box offline without explicit approval.** (App-level security work — auth, in-app crypto, headers, validation, rate limits — is normal in-branch feature work.)
 - Any data deletion or irreversible action not listed as pre-approved.
+
+**Out of scope — do NOT execute; leave for the user (post-sweep manual steps):**
+
+Anything that changes the **container, host, or network infrastructure** needs the user's manual intervention and is **not** performed in this session. For these, the sweep's job is to write a clear, exact **runbook** (in `docs/SECURITY.md` / `docs/OPERATIONS.md`); the user runs them afterward. Out of scope:
+- Encryption at rest (LUKS/full-disk on the LXC volume).
+- Network access control — firewall/ufw rules + Tailscale ACLs.
+- systemd-unit hardening; OS packages / auto-patching.
+- NFS export restriction; vault-MCP (`LXC 106:8765`) auth/allowlist; self-hosted-runner hardening.
+- TLS/HTTPS on LAN.
+
+App-level security work — app auth, in-app crypto, security headers, input validation, rate limits, the research tool, backup scripts — **is** in scope and built in-branch.
 
 Authoring `docs/MX4_REFERENCE.md` (tool catalog + data dictionary + custom-calc formulas) is **auto-tier** — it's derived from verified DB facts (see lens §6) — but inject it into MX-4's system context only after the data dictionary is confirmed correct.
 

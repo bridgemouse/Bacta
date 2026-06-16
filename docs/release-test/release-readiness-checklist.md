@@ -82,28 +82,23 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] CORS locked to expected origin; request size limits + rate limiting on AI / `poll/force`
 - [ ] Error responses don't leak stack traces / SQL / internal paths
 
-**Auth & access (implement)**
+**Auth & access (in-sweep)**
 - [ ] App authentication in place (hashed secret, token-based session); `bacta.local` reachability ≠ data access
-- [ ] Firewall restricts app port to LAN + Tailscale only; app unreachable from untrusted segments; Tailscale ACLs scoped
 
-**Data protection (implement encryption at rest)**
-- [ ] Encryption at rest (LUKS full-disk or SQLCipher) covering `bacta.db`, tokens, backups
+**Data protection (in-sweep)**
 - [ ] Backups encrypted with tight perms; clear-data path actually reclaims (`VACUUM`); no PII in logs
 
-**Secrets / host / supply chain**
+**Secrets / supply chain (in-sweep)**
 - [ ] `mx4/wiki/` gitignored & untracked; no PHI / vault content / `bacta.db` committed (history scanned)
 - [ ] API keys masked on GET, never logged/sent to client; `.env` ignored; Garmin tokens + DB perms `600/640`
-- [ ] Service runs non-root with systemd hardening; OS auto-patching on; minimal services
-- [ ] NFS export IP-restricted + read-only; vault MCP SSE (`106:8765`) auth/IP-allowlisted (not open on LAN)
-- [ ] CI uses `npm ci` + lockfile + `npm audit`; runner doesn't auto-build untrusted PRs; Actions secrets not leaked
+- [ ] CI uses `npm ci` + lockfile + `npm audit` (repo-level config)
 - [ ] `research` tool sends scientific questions, not raw personal records, to external backends
 
-**Deferred (documented with how-to)**
-- [ ] TLS/HTTPS on LAN — how-to written; tracked as recommended near-term follow-up (auth/data are cleartext on LAN until done; Tailscale is the encrypted path meanwhile)
+> Infrastructure-level security (firewall/Tailscale, encryption at rest, systemd hardening, OS patching, NFS + vault-MCP lockdown, runner hardening, TLS) is **runbook-only** — see **Post-Sweep Manual Follow-up** below.
 
 ## Resilience & Operations
 
-- [ ] Automated DB backup + rotation implemented (off-box copy); **restore path verified**
+- [ ] DB backup script implemented + **restore path verified** (in-sweep); systemd timer install + off-box destination → runbook (follow-up)
 - [ ] SQLite in WAL mode; `PRAGMA integrity_check` clean; concurrent poller/API/MX-4 writes safe
 - [ ] Failure notification / observability for the nightly poll + MX-4 run (user finds out when they fail)
 - [ ] Graceful degradation when Garmin / vault MCP / AI provider is down (app loads, clear errors, no crash)
@@ -116,6 +111,18 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] Timezone (EST) correct across date queries, sleep convention, cron/poller times, "current day" labels
 - [ ] UI degrades gracefully on API error / missing metric (no white screen / raw error)
 - [ ] v1.0 pinned to `google` / `gemini-2.5-flash` (confirmed); 3.5-flash swap deferred post-v1.0
+
+## Post-Sweep Manual Follow-up (infrastructure / container / network — user-executed)
+
+The sweep does **not** run these; it delivers an exact runbook for each. **GO requires the runbook written**; actual execution is the user's follow-up after the sweep.
+
+- [ ] Encryption at rest (LUKS full-disk on LXC 109) — runbook in `SECURITY.md`
+- [ ] Network access control — firewall/ufw + Tailscale ACLs — runbook
+- [ ] systemd-unit hardening + OS auto-patching — runbook
+- [ ] NFS export restriction + vault-MCP (`106:8765`) auth/allowlist — runbook
+- [ ] Self-hosted runner hardening — runbook
+- [ ] DB backup systemd timer install + off-box destination — runbook in `OPERATIONS.md`
+- [ ] TLS/HTTPS on LAN — runbook (Tailscale is the encrypted path meanwhile)
 
 ## Final v1.0 baseline reset sequence (last phase — pre-approved)
 

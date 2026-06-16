@@ -171,11 +171,11 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 
 **Goal:** sensitive personal health data is protected with **defense in depth, to industry-standard (OWASP-aligned) practice** — LAN-only is explicitly **not** treated as a security boundary (other devices, IoT, guests, a compromised laptop all share the LAN). Audit everything below; **implement** the v1.0 items; **document + defer** the rest with a how-to.
 
-**v1.0 implementation decisions (from the user):**
-- **Implement now:** app authentication · network access control (firewall/Tailscale) · encryption at rest.
-- **Document + defer (with how-to):** TLS/HTTPS on LAN. ⚠️ Until TLS lands, app auth + data ride **plaintext HTTP on the LAN** — use a hashed, **token-based** auth (never a replayed cleartext password) and treat Tailscale as the encrypted path. Flag TLS as the recommended near-term follow-up.
+**v1.0 scope split (from the user):**
+- **Built in-sweep (app-level):** app authentication · all OWASP app/API hardening below · research-tool / secrets-masking / encrypted-backup-script work.
+- **Runbook only — the user executes afterward (anything touching container / host / network):** network access control (firewall/ufw + Tailscale ACLs) · encryption at rest (LUKS) · systemd hardening · OS patching · NFS + vault-MCP lockdown · self-hosted-runner hardening · TLS/HTTPS on LAN. Write these up in `docs/SECURITY.md` / `docs/OPERATIONS.md` with exact steps; **do not run them** — they need manual intervention and could take the host offline.
 
-> **Execution split (important).** App-level items (auth, in-app crypto, security headers, input validation, rate limits) are built in-branch under the dev skills. **Infrastructure-level items — LUKS/full-disk encryption of the LXC volume, firewall/ufw rules, systemd-unit hardening, OS packages, NFS/Proxmox config — are delivered as proposals + runbooks** (in `SECURITY.md` / `OPERATIONS.md`) and **gated**: the user may execute them at the host/Proxmox level. Do **not** silently reconfigure or risk taking the production host offline. Snapshot the LXC (Proxmox) before any such change.
+> ⚠️ Until TLS + network lockdown land (post-sweep), app auth + data ride **plaintext HTTP on the LAN** — so build a hashed, **token-based** auth (never a replayed cleartext password) and rely on Tailscale as the encrypted path meanwhile.
 
 - **No PHI in git:** confirm `mx4/wiki/` is gitignored and not tracked (it holds personal health data); scan the repo + history for accidentally committed health data, vault content, or `bacta.db`. Confirm `data/*.db` and any `*.bak-*` are ignored.
 - **Secrets handling:** API keys (`ai_api_key`, `research_api_key`, etc.) are masked in `GET /api/settings`; never logged in plaintext (check server logs / error paths); never sent to the client. The known masking on settings GET is the baseline — verify it holds for the new keys too.
@@ -199,23 +199,23 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 - **XSS-safe rendering:** MX-4 + vault + research content is untrusted. Audit for raw HTML injection (`dangerouslySetInnerHTML`, the legacy insights-HTML path); ensure ReactMarkdown doesn't allow raw HTML; sanitize anything rendered as HTML.
 - **CORS** locked to the expected origin (not `*`); **request size limits + rate limiting** on expensive endpoints (AI runs, `poll/force`) to bound abuse and cost.
 
-**Authentication & access — IMPLEMENT:**
+**Authentication & access:**
 
-- **App authentication:** session-persistent login (PIN/passphrase or device token) so reaching `bacta.local` ≠ reading data. Store any secret **hashed** (argon2/bcrypt/scrypt), token-based sessions; never a replayed cleartext password (plaintext-HTTP caveat above).
-- **Network access control:** **Tailscale is already running on the homelab — leverage it, don't rebuild.** Verify: host firewall (ufw/nftables) restricts the app port to the LAN subnet + Tailscale interface only; app unreachable from untrusted segments; Tailscale ACLs scope who/what can reach Bacta. Tailscale also provides encrypted transport for remote access, which materially reduces the plaintext-HTTP risk and supports deferring TLS.
+- **App authentication (build in-sweep):** session-persistent login (PIN/passphrase or device token) so reaching `bacta.local` ≠ reading data. Store any secret **hashed** (argon2/bcrypt/scrypt), token-based sessions; never a replayed cleartext password (plaintext-HTTP caveat above).
+- **Network access control (RUNBOOK — user executes post-sweep):** **Tailscale is already running on the homelab — leverage it, don't rebuild.** Runbook should cover: host firewall (ufw/nftables) restricting the app port to the LAN subnet + Tailscale interface only; app unreachable from untrusted segments; Tailscale ACLs scoping who/what can reach Bacta. (Tailscale also gives encrypted transport for remote access, reducing the plaintext-HTTP risk.)
 
 **Data protection — encryption & lifecycle:**
 
-- **Encryption at rest (implement):** LUKS full-disk on the LXC 109 volume (simplest — covers DB, tokens, backups) or SQLCipher for `bacta.db`.
-- **Encrypted backups:** the §8 health-data backups (especially off-box copies) must be encrypted with tight perms.
-- **Retention & secure deletion:** when the user clears data, confirm it's actually reclaimed (`VACUUM`), not just unlinked. Document retention.
-- **No PII in logs:** health metrics / personal content never written to logs or error output.
+- **Encryption at rest (RUNBOOK — user executes post-sweep):** LUKS full-disk on the LXC 109 volume (simplest — covers DB, tokens, backups). SQLCipher for `bacta.db` is an app-level alternative the sweep *may* propose, but the host-level LUKS path is the recommended default and is the user's to run.
+- **Encrypted backups (in-sweep script):** the §8 health-data backups (especially off-box copies) must be encrypted with tight perms.
+- **Retention & secure deletion (in-sweep):** when the user clears data, confirm it's actually reclaimed (`VACUUM`), not just unlinked. Document retention.
+- **No PII in logs (in-sweep):** health metrics / personal content never written to logs or error output.
 
 **Secrets management:**
 
 - API keys live in `app_settings` (SQLite plaintext) — encryption-at-rest covers them on disk; additionally keep them masked on GET (baseline holds), never logged, never sent to client. Consider env/OS-protected storage with restricted perms. `.env` gitignored; Garmin tokens perms tight.
 
-**Host & infrastructure hardening:**
+**Host & infrastructure hardening (RUNBOOK — user executes post-sweep):**
 
 - Service runs as **non-root least-privilege** user (confirm `wheat`, not root); apply **systemd hardening** (`NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`, drop capabilities).
 - **OS patching:** `unattended-upgrades` on Debian; minimal installed services.
@@ -224,8 +224,8 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 
 **Supply chain & CI:**
 
-- CI uses `npm ci` against the committed lockfile; `npm audit` in the pipeline; pin/refresh deps (Dependabot optional).
-- The **self-hosted runner** on LXC 109 has repo + deploy access — confirm it does **not** auto-build untrusted/fork PRs, its token is least-scope, and Actions secrets aren't echoed into logs.
+- CI config (in-sweep, repo-level): `npm ci` against the committed lockfile; `npm audit` in the pipeline; pin/refresh deps (Dependabot optional).
+- **Self-hosted runner hardening (RUNBOOK — user executes post-sweep):** the runner on LXC 109 has repo + deploy access — confirm it does **not** auto-build untrusted/fork PRs, its token is least-scope, and Actions secrets aren't echoed into logs.
 
 ---
 

@@ -35,7 +35,10 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] `MX4.md` + `DATA.md` updated — dead Python-orchestrator narrative replaced with the live TS pipeline
 - [ ] `insights` format, `sections.py` ID mismatch, `HEARTBEAT.md` existence all reconciled across docs
 - [ ] No remaining doc-vs-reality drift found in the sweep
-- [ ] `CLAUDE.md` accurate
+- [ ] Net-new work documented: research tool, auth, encryption-at-rest, backups/DR, MX-4 reference + wiki principles
+- [ ] New doc files created where nothing fit (e.g. `SECURITY.md`, `OPERATIONS.md`, `MX4_REFERENCE.md`, `MX4_LLM_WIKI_PRINCIPLES.md`)
+- [ ] `CLAUDE.md` doc-index table + conventions updated; `ROADMAP.md`, `ARCHITECTURE.md`, `DEVELOPMENT.md` reflect final state
+- [ ] `bacta-wrap` run at session end (docs / roadmap / memory captured)
 
 ## MX-4 — Function
 

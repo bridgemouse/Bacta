@@ -52,6 +52,17 @@ Authoring `docs/MX4_REFERENCE.md` (tool catalog + data dictionary + custom-calc 
 
 > Note: "MX-4's wiki" (his accumulated memory under `mx4/wiki/`) and the "LLM-Wiki / Vault integration" (external MCP knowledge source, `vaultClient.ts`) are **different systems**. Clearing applies only to the former. The latter is a connection to verify, never to wipe.
 
+## Development discipline (this sweep includes real feature work)
+
+Several findings require **building**, not just fixing — the `research` tool, app authentication, encryption-at-rest, the DB backup system, the MX-4 reference + LLM-Wiki principles docs. Treat that as real development and follow the project's own skills (listed in `CLAUDE.md`) when they apply:
+
+- **`bacta-feature`** — invoke before starting any new feature or significant build (research tool, auth, backups). It enforces the design-first workflow.
+- **`bacta-component`** — for any new reusable UI component (e.g., the auth/login screen).
+- **`superpowers:writing-plans` + `superpowers:test-driven-development`** — for multi-step builds; write tests first, keep the suite green.
+- **`bacta-wrap`** — run at the **end** of the session before closing, to capture docs / roadmap / memory updates.
+
+Honor the hard conventions throughout: inline styles only, dark UI always, authoritative accent colors from `theme.ts`, and the `e2e-release-sweep` branch + PR flow.
+
 ## Safety — reversibility (mandatory)
 
 Before **any** destructive or irreversible action (DB wipe/resync, wiki clear, schema change), take a timestamped backup so the entire sweep is reversible:
@@ -68,10 +79,10 @@ If anything goes wrong, restore from the backup before proceeding. Note backups 
 2. **Early wiki clear** — clear MX-4's corrupted wiki so functional/persona testing runs clean.
 3. **Dispatch subagents** — launch the lenses in `subagent-briefs.md` (Code, Data, UI/Visual, MX-4 Function/Persona, MX-4 Knowledge, Security/Privacy, Resilience/Ops). Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings. Dependencies: the MX-4 Knowledge lens (§6) runs after the Data lens (§2) feeds it the verified dictionary and after the early wiki clear. **The Docs lens (§4) runs LAST** — during this phase, lenses only *collect* drift notes.
 4. **Consolidate & cross-check** — merge findings, resolve conflicts between subagents, de-duplicate, and categorize as **critical / major / minor**.
-5. **Fix** — apply fixes under the tiered rules. Re-verify each (re-run tests, re-screenshot, re-query DB) before committing.
-6. **Docs reconciliation (now)** — with all code/data/MX-4/security/ops fixes landed, run the Docs lens to bring every doc in line with the final state.
+5. **Fix & build** — apply fixes under the tiered rules. For feature-level work (research tool, auth, encryption, backups, reference docs) follow the development skills above — design-first, tests-first. Re-verify each (re-run tests, re-screenshot, re-query DB) before committing.
+6. **Docs reconciliation (now)** — with all code/data/MX-4/security/ops fixes landed, run the Docs lens: reconcile drift **and** document every net-new capability, creating new doc files where nothing existing fits.
 7. **Final reset** — run the v1.0 baseline sequence from the checklist (verify DB clean → clear wiki → fresh orchestrator run → verify briefings → persona spot-check).
-8. **Verdict** — fill in `release-readiness-checklist.md`, write the findings report (use `findings-report-template.md`), render **GO / NO-GO**, and open the PR.
+8. **Verdict & wrap** — fill in `release-readiness-checklist.md`, write the findings report (use `findings-report-template.md`), render **GO / NO-GO**, open the PR, and run **`bacta-wrap`** to capture docs/roadmap/memory before closing.
 
 ## Ground-truth data for MX-4 testing (as of 2026-06-16)
 
@@ -86,4 +97,4 @@ Before persona/usage testing, the Data subagent must confirm these are ingested;
 
 ## Done means
 
-Every item in `release-readiness-checklist.md` is green (or explicitly waived with rationale for the data-blocked sections), the v1.0 baseline is generated from clean state, the report is written, and the PR is open. If the verdict is **NO-GO**, the report states exactly what blocks the release and what remains.
+Every item in `release-readiness-checklist.md` is green (or explicitly waived with rationale for the data-blocked sections), the v1.0 baseline is generated from clean state, the docs reflect the final state (new files created where needed), `bacta-wrap` has run, the report is written, and the PR is open. If the verdict is **NO-GO**, the report states exactly what blocks the release and what remains.

@@ -69,6 +69,20 @@ Reconcile every `docs/*.md` and `CLAUDE.md` against actual code, DB, and runtime
 
 Propose concrete edits; the orchestrator commits them (doc fixes are auto-fix tier).
 
+**Document the net-new work — this sweep builds real features, all of which must land in the docs.** Don't just reconcile drift; document every new capability:
+
+- The provider-agnostic **`research` tool** (backends, when MX-4 uses it, citation guidance).
+- **App authentication**, **encryption at rest**, **network/Tailscale + firewall**, host hardening — the full security posture and what's deferred (TLS).
+- **DB backups / restore / rollback / observability** (the Resilience/Ops work).
+- The **MX-4 reference + data dictionary** and **LLM-Wiki principles** (these are themselves new docs — see §6).
+
+**Create new doc files where nothing existing fits.** Likely new files:
+- `docs/SECURITY.md` — threat model, what's implemented vs deferred, secrets handling, data protection, the LAN/Tailscale/TLS posture.
+- `docs/OPERATIONS.md` — backups & restore, rollback, deploy, failure notifications/observability, disaster recovery runbook.
+- `docs/MX4_REFERENCE.md` and `docs/MX4_LLM_WIKI_PRINCIPLES.md` (from §6).
+
+**Then update the connective tissue:** the `CLAUDE.md` doc-index table (add the new files + "read when…" rows), commands/conventions if they changed (new env/secrets, auth, backup); `ROADMAP.md` (final state, v1.0 shipped, what's deferred); `ARCHITECTURE.md` (auth layer, research tool, vault); `DEVELOPMENT.md` (new setup steps — auth, encryption, backups). Leave the docs as authoritative as they claim to be.
+
 ---
 
 ## 5. MX-4 — Function & Persona

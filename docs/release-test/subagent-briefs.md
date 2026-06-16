@@ -15,7 +15,7 @@ Five lenses. The orchestrator dispatches these (parallel where independent), col
   - `MX4Card.tsx` — deprecated null shim; confirm no live imports and remove if clean.
   - Legacy EAV activity metrics (`act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr`) — written by nothing, read by nothing; flag for removal from `VALID_METRICS`.
   - `insights` `.html` (orchestrator writes) vs `.json` (`insights.ts` reads) mismatch — resolve.
-  - **Untested-but-present:** `POST /api/poll/force` + `check_signal.py`; the `node-cron` nightly scheduler in `server/index.ts` (verify it's wired correctly and would fire at the configured time — `bacta-garmin.timer` for the poller, cron for MX-4).
+  - **Untested-but-present — actually fire them, don't just read the wiring:** `POST /api/poll/force` + `check_signal.py`. The **MX-4 nightly cron** (`node-cron` in `server/index.ts`): the nightly-run setting is **currently OFF (disabled by the user)**. Enable it (pre-approved), set the run time a couple of minutes ahead — or invoke the scheduled callback directly — and confirm a **real** orchestrator run fires and writes briefings. Then **restore the setting to the user's chosen v1.0 state** (confirm with the user what that should be). The poller's `bacta-garmin.timer` (systemd) is separate — confirm it's enabled and scheduled for 03:00.
 - Dead code, unused exports, `TODO`/`FIXME` left in shipping paths.
 - Validate any Python you touch: `python3 -c "import py_compile; py_compile.compile('scripts/foo.py', doraise=True)"`.
 
@@ -30,6 +30,7 @@ Five lenses. The orchestrator dispatches these (parallel where independent), col
 - **Sparse / zero metrics handled gracefully (not as bugs):** `vo2max` (~11 rows), `spo2_avg`/`sleep_spo2` (~10–11), `recovery_time_h` (0 rows, added Jun 11), `fitness_age_achievable` (0 rows). Confirm the UI degrades cleanly (no `NaN`, no blank crash) where these are absent.
 - `body_battery` naming consistency — `_wake`/`_current` (levels) vs `_charged`/`_drained` (deltas); no lingering `_max`/`_min` references.
 - Sleep date convention (stored under the morning date `d`, not `d-1`).
+- **Timezone correctness (user is EST, not UTC):** verify date-based logic uses the right tz — "today"/`MAX(date)` boundaries, the sleep date convention, the nightly cron/poller run times, and any "current day" UI labels. A UTC-vs-EST off-by-one shifts which day's data shows after midnight.
 - `garmin_activities` + `garmin_activity_legs` integrity — multi-sport parents have child legs with zone data; no orphans.
 - **No stub leakage:** confirm built-section UI is not silently rendering `stubData.ts` values where live data should be.
 - **Ground-truth freshness check (2026-06-16):** confirm yesterday's run, today's strength + treadmill, and the last two nights' sleep are ingested. If today's activities are missing, trigger `POST /api/poll/force` and re-verify.
@@ -48,6 +49,7 @@ Five lenses. The orchestrator dispatches these (parallel where independent), col
 - Console clean (no errors/warnings) across the walk.
 - **Gotcha:** `fullPage` screenshots only capture viewport height (shell is `position: fixed; overflow: hidden`). To capture scrolled content, set `document.querySelector('[style*="overflow-y"]').scrollTop = N` via `browser_evaluate`, then screenshot.
 - **PWA:** manifest + iOS meta tags present; app loads saved-to-home-screen style (fixed viewport, no browser chrome assumptions).
+- **Failure / empty states:** simulate an API error and a missing-metric case (e.g. block a request, or a section whose data is sparse) and confirm the UI degrades gracefully — no white screen, no raw error, no crash. The 3 calibrating sections and sparse metrics are the natural test surface.
 
 ---
 
@@ -82,9 +84,11 @@ Propose concrete edits; the orchestrator commits them (doc fixes are auto-fix ti
   - Settings → VAULT rail: TEST CONNECTION returns domain + page count.
   - All four vault MCP tools (`search_wiki`, `read_wiki_page`, `list_wiki_pages`, `get_wiki_index`) return real data when called.
   - **Prove end-to-end use:** ask MX-4 something answerable *only* from vault content and confirm he retrieves and uses it — not just that the socket opens. Confirm vault tools are merged into both orchestrator and chat when `vault_enabled`.
-- **Web search / scientific research (currently broken — wire it):** MX-4 has **no** web search today. `provider.ts` builds the Google model with `google(modelId)` and passes **no** search tool; the orchestrator/chat `tools` objects don't include one. Gemini's Google Search is native but **must be registered as a tool** — `google.tools.googleSearch({})` (per current `@ai-sdk/google` docs). Wire it into the briefing + chat tool sets and confirm it returns real results + grounding `sources`.
-  - **Known constraint to test:** Gemini has historically not allowed the built-in `googleSearch` tool to coexist with custom function tools (`queryDb`, wiki, vault) in the **same** request. Test whether they can be combined on the configured model. If not, design a **two-step research pattern** — a dedicated search/grounding call that returns findings, then the analysis call with his function tools — so MX-4 keeps both DB access and web research.
-  - **Goal — peer-reviewed research:** verify MX-4 can go find **peer-reviewed / primary scientific sources** (e.g. "what does current research say about HRV-guided training for endurance athletes?"), return **real** citations with links, and integrate the evidence into analysis. **Fabricated citations are a hard-fail** (see rubric). He should prefer primary/peer-reviewed sources over blogs and note recency.
+- **Research tool — build it (MX-4 has none today):** `provider.ts` passes no search tool; the orchestrator/chat tool sets include none. **Decision: build a provider-agnostic custom `research` tool**, NOT provider-native grounding — so it works on any AI key (google/anthropic/openai) and coexists with his function tools (`queryDb`, wiki, vault) in a single call with no Gemini mixing constraint. Prefer copying/adopting existing integrations over building from scratch.
+  - **Scholarly backend (primary, keyless):** OpenAlex and/or Semantic Scholar (+ Europe PMC/PubMed) for peer-reviewed / primary science. No API key required — ships today. This is the core of the "enhance MX-4 with peer-reviewed data" goal.
+  - **General web backend (secondary):** Tavily or Exa for current / non-academic context. Store its key in settings like the other keys (add `research_api_key` / provider setting; **mask it**; auto-tier code change). Degrade gracefully when absent — scholarly still works.
+  - **Wire into briefing + chat tool sets;** confirm it returns real results with citations and coexists with all his other tools in one request.
+  - **Goal — peer-reviewed research:** verify MX-4 finds real peer-reviewed sources (e.g. "what does current research say about HRV-guided training for endurance athletes?"), returns **real** citations with working links/DOIs, prefers primary sources over blogs, notes recency, and ties the evidence to the user's own metrics. **Fabricated citations are a hard-fail** (see rubric).
 
 ### Persona — two probe sets, both against real ground-truth data (see kickoff for the Jun 15–16 events)
 
@@ -132,7 +136,7 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 
 1. **`docs/MX4_LLM_WIKI_PRINCIPLES.md`** — the canonical "how to keep an LLM-Wiki" standard for MX-4, derived from the Karpathy LLM-Wiki idea, the external vault's actual structure, and MX-4's existing `mx4/wiki/` layout. Covers: page granularity, naming/indexing, when to create vs update vs archive, how synthesis/compaction works, what belongs in the wiki vs ephemeral chat. **Gated** — present to the user for approval before it becomes MX-4's standard.
 2. **`docs/MX4_REFERENCE.md`** — canonical, injected into MX-4's system context each run AND mirrored to `mx4/wiki/reference/*`:
-   - **Tool catalog** — every tool available to MX-4 (`queryDb`, the wiki tools, the vault tools when enabled, **web search / `googleSearch`**, any others), what it does, when to use it, gotchas. For web search, include research guidance: prefer peer-reviewed / primary scientific sources, cite with links, note recency, never fabricate citations.
+   - **Tool catalog** — every tool available to MX-4 (`queryDb`, the wiki tools, the vault tools when enabled, the **`research` tool** (scholarly + web), any others), what it does, when to use it, gotchas. For research, include guidance: prefer peer-reviewed / primary scientific sources, cite with links/DOIs, note recency, never fabricate citations.
    - **Complete data dictionary** — for every metric: **DB name** → **display name** (what MX-4 should call it when talking to the user) → **what it truly represents** → unit + real range. Cover all ~30+ `garmin_snapshots` metrics, `garmin_activities`/`legs` columns, and the manual/blood/macro tables.
    - **Custom calculations** — every derived value with its formula and meaning. Includes **Sleep Arch Score** (currently client-only — document the formula and explicitly note whether MX-4 can compute/access it, and recommend whether to surface it server-side so he can).
 
@@ -144,3 +148,15 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 - **Wiki understanding:** "How do you decide what goes in your wiki, and how do you keep it from rotting?" — answer aligns with `MX4_LLM_WIKI_PRINCIPLES.md`.
 - **Wiki maintenance in practice:** after an orchestrator run, inspect what he wrote to `mx4/wiki/` — correct granularity, indexed, no dumping raw data, conforms to the principles doc. Confirm the wrap-session synthesis behaves (oversized pages detected → synthesized → archived).
 - **External vault use:** confirm he distinguishes his own wiki from the external LLM-Wiki and pulls personal context from the external one when relevant (ties to §5 vault end-to-end check).
+
+---
+
+## 7. Security & Privacy
+
+**Goal:** a private, single-user health app leaks nothing — not into git, not into logs, not onto the network beyond local WiFi.
+
+- **No PHI in git:** confirm `mx4/wiki/` is gitignored and not tracked (it holds personal health data); scan the repo + history for accidentally committed health data, vault content, or `bacta.db`. Confirm `data/*.db` and any `*.bak-*` are ignored.
+- **Secrets handling:** API keys (`ai_api_key`, `research_api_key`, etc.) are masked in `GET /api/settings`; never logged in plaintext (check server logs / error paths); never sent to the client. The known masking on settings GET is the baseline — verify it holds for the new keys too.
+- **Network exposure:** the app is meant for local WiFi only (`bacta.local`). Confirm the Express server binding and any CORS config don't expose it more broadly than intended; no auth is expected (single-user LAN), but it shouldn't be reachable off-LAN.
+- **Outbound data:** the new `research` tool and vault client make outbound calls. Confirm no biometric/PHI is sent in research queries beyond what's necessary (e.g. don't ship raw personal data to Tavily/Exa — send the scientific question, not the user's records).
+- **Dependency sanity:** `npm audit` for high/critical advisories in shipping deps; note (don't necessarily fix) anything serious.

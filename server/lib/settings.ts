@@ -16,7 +16,12 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   }]),
   vault_enabled: 'false',
   vault_url:     '',
+  research_provider: 'none',  // none | tavily | exa — scholarly backend is always on
+  research_api_key:  '',      // optional key for the web backend (masked)
 }
+
+// Keys whose values must never be returned to the client in cleartext.
+export const SECRET_SETTING_KEYS = new Set(['ai_api_key', 'research_api_key'])
 
 export function initSettings(): void {
   const insert = db.prepare(

@@ -53,7 +53,9 @@
       "Bash(git rm *)",
       "Bash(git commit -q -m 'security: untrack PHI \\(mx4/wiki, HEARTBEAT.md\\), tighten DB perms, add HEARTBEAT template *)",
       "Bash(python3 *)",
-      "Bash(git commit -q -m 'data: fix recovery_time_h unit \\(minutes\\), remove legacy EAV metrics, tz-safe latest-value *)"
+      "Bash(git commit -q -m 'data: fix recovery_time_h unit \\(minutes\\), remove legacy EAV metrics, tz-safe latest-value *)",
+      "Bash(node *)",
+      "Bash(git commit -q -m 'security: harden server — read-only queryDb, helmet/CSP, input validation, rate limit *)"
     ]
   }
 }

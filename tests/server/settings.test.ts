@@ -124,4 +124,38 @@ describe('Settings API', () => {
     expect(res.status).toBe(200)
     expect(res.body.ok).toBe(true)
   })
+
+  it('PUT rejects an unknown setting key (no arbitrary key writes)', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/evil_key').send({ value: 'x' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/unknown/)
+  })
+
+  it('PUT rejects an auth_* secret key', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/auth_pin_hash').send({ value: 'x' })
+    expect(res.status).toBe(400)
+  })
+
+  it('PUT rejects an invalid provider enum', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/ai_provider').send({ value: 'skynet' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/invalid/)
+  })
+
+  it('PUT rejects a malformed nightly time', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/mx4_nightly_time').send({ value: '25:99' })
+    expect(res.status).toBe(400)
+  })
+
+  it('GET never exposes auth_* keys even if present in the DB', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('auth_pin_hash', 'deadbeef')").run()
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/settings')
+    expect(res.body.auth_pin_hash).toBeUndefined()
+  })
 })

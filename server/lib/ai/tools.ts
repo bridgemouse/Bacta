@@ -1,6 +1,6 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import db from '../../db/client'
+import { dbReadonly } from '../../db/client'
 import {
   readAllWikiPagesSync,
   writeWikiPageSync,
@@ -42,14 +42,22 @@ export const queryDb = tool({
     sql: z.string().describe('SQL SELECT query to execute'),
   }),
   execute: async ({ sql }) => {
-    if (!sql.trim().toUpperCase().startsWith('SELECT')) {
-      return { error: 'Only SELECT queries are permitted' }
+    const trimmed = sql.trim()
+    // Defense in depth: (1) must read as SELECT/WITH, (2) runs on an engine-level
+    // read-only connection, (3) prepare() throws on multiple statements, and
+    // (4) stmt.reader rejects anything that doesn't return rows (writes/DDL/PRAGMA-set).
+    if (!/^(select|with)\b/i.test(trimmed)) {
+      return { error: 'Only read-only SELECT queries are permitted' }
     }
     try {
-      const rows = db.prepare(sql).all()
-      return { rows }
-    } catch (e: unknown) {
-      return { error: e instanceof Error ? e.message : String(e) }
+      const stmt = dbReadonly.prepare(trimmed)
+      if (!stmt.reader) {
+        return { error: 'Only read-only SELECT queries are permitted' }
+      }
+      return { rows: stmt.all() }
+    } catch {
+      // Never leak SQLite error text / schema back to the model.
+      return { error: 'Query failed — check the metric name and SQL syntax.' }
     }
   },
 })

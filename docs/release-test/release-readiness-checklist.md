@@ -39,9 +39,12 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 
 ## MX-4 — Function
 
-- [ ] Orchestrator runs end-to-end; all built sections produce `summary`+`body` briefings in `mx4_briefings`
+- [ ] Home refresh / orchestrator runs end-to-end; all built sections produce `summary`+`body` briefings in `mx4_briefings`
+- [ ] Each section's briefing contains real analysis — no empty/meta "report generated" output (verify all 4 individually)
 - [ ] Briefings render with correct verdict badge + tone; section accent on card, cyan sigil
 - [ ] Chat streams; history persists; FULL ANALYSIS seed → coherent continuation
+- [ ] Persona holds across a 6–10 turn conversation (no drift, context retained)
+- [ ] Per-section FULL ANALYSIS continuation works for all 4 built sections (seed lands, follow-ups grounded + in-persona)
 - [ ] Custom skills: carousel, SYNC WIKI default, add/edit/delete all work
 - [ ] Vault / LLM-Wiki: TEST CONNECTION + all 4 tools return real data; MX-4 demonstrably **uses** vault content end-to-end
 

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import db from '../db/client'
 import { setSetting, getSetting } from '../lib/settings'
 import { scheduleNightly } from '../lib/ai/scheduler'
+import { testVaultConnection, resetVaultClient } from '../lib/ai/vaultClient'
 
 const settingsRouter = Router()
 
@@ -31,6 +32,11 @@ settingsRouter.post('/test-connection', async (_req, res) => {
   }
 })
 
+settingsRouter.post('/test-vault-connection', async (_req, res) => {
+  const result = await testVaultConnection()
+  res.json(result)
+})
+
 settingsRouter.get('/custom-skills', (_req, res) => {
   const raw = getSetting('mx4_custom_skills')
   try {
@@ -50,6 +56,9 @@ settingsRouter.put('/:key', (req, res) => {
   setSetting(key, value)
   if (key === 'mx4_nightly_time' || key === 'mx4_nightly_enabled') {
     scheduleNightly()
+  }
+  if (key === 'vault_enabled' || key === 'vault_url') {
+    resetVaultClient()
   }
   res.json({ ok: true })
 })

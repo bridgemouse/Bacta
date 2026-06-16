@@ -109,4 +109,19 @@ describe('Settings API', () => {
     expect(res.status).toBe(200)
     expect(res.body.skills).toEqual([])
   })
+
+  it('POST /api/settings/test-vault-connection returns ok:false when vault is unreachable', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).post('/api/settings/test-vault-connection')
+    expect(res.status).toBe(200)
+    expect(res.body.ok).toBe(false)
+    expect(res.body.error).toBeDefined()
+  })
+
+  it('PUT /api/settings/vault_url resets vault client without error', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/vault_url').send({ value: 'http://localhost:9999' })
+    expect(res.status).toBe(200)
+    expect(res.body.ok).toBe(true)
+  })
 })

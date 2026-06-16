@@ -1,6 +1,6 @@
 # Bacta — Current State & Roadmap
 
-## Feature Inventory (as of Jun 11, 2026)
+## Feature Inventory (as of Jun 16, 2026)
 
 ### Complete and Live
 
@@ -47,8 +47,8 @@
 - `server/lib/settings.ts` — pure DB helpers (`getSetting`/`setSetting`/`initSettings`) with 7 defaults (google, gemini-2.5-flash, 04:00, etc.)
 - `server/api/settings.ts` — `GET /api/settings` (API key masked), `PUT /api/settings/:key`, `POST /api/settings/test-connection`
 - `server/lib/ai/provider.ts` — Vercel AI SDK wrapper, reads settings at call time, supports google/anthropic/openai
-- `server/lib/ai/tools.ts` — 6 MX-4 tools: `queryDb`, `readVault`, `readAllWikiPages`, `writeWikiPage`, `listWikiPages`, `archiveWikiPage`
-- `SettingsPage.tsx` — 3-rail settings UI (AI PROVIDER, MX-4 INTELLIGENCE, GARMIN placeholder); accessible from NavSheet under SYSTEM divider
+- `server/lib/ai/tools.ts` — 5 MX-4 tools: `queryDb`, `readAllWikiPages`, `writeWikiPage`, `listWikiPages`, `archiveWikiPage` (`readVault` removed Jun 16)
+- `SettingsPage.tsx` — settings UI; accessible from NavSheet under SYSTEM divider
 - `mx4/system-prompt.md` — rewritten Jun 11, 2026 (replaced AZI-3 fabrication with correct identity)
 - `server/api/mx4.ts` — `POST /api/mx4/run` signal endpoint live
 - **Superseded:** `mx4/orchestrator.py` (Python/`claude -p` approach) replaced by TypeScript/Vercel AI SDK pipeline
@@ -75,7 +75,7 @@
 - `POST /api/mx4/chat/seed` — seeds assistant message directly into chat session (used by FULL ANALYSIS flow)
 - `AskSheetContext` — React context so deep components (MX4Card) can open AskSheet without prop drilling
 - FULL ANALYSIS › button on `MX4Briefing` — seeds briefing body into chat, opens AskSheet
-- `AskSheet` — ReactMarkdown rendering for assistant messages; reloads history on open to catch seeded messages; SYNC WIKI › pill
+- `AskSheet` — ReactMarkdown rendering for assistant messages; reloads history on open to catch seeded messages; SYNC WIKI › pill (now a seeded custom skill, not hardcoded)
 - Message compression — `compressSessionIfNeeded()` runs before chat, summarizes oldest messages when threshold exceeded
 - `SettingsPage.tsx` — compression threshold row added to MX-4 INTELLIGENCE rail; DATA MANAGEMENT rail with 3 protected clear actions (chat history, wiki patterns, full wiki)
 - `server/lib/ai/tools.ts` — `queryDb` tool description enriched with full metric name vocabulary
@@ -84,9 +84,14 @@
 - `server/lib/ai/tools.ts` — `mx4_briefings` table added to `queryDb` description so MX-4 can query his own completed briefings
 - `docs/VAULT_SETUP.md` — NFS mount runbook for LXC 106 → LXC 109
 
+**MX-4 system — Phase 4 complete (Jun 16, 2026):**
+- **Custom Skills** — `mx4_custom_skills` JSON array in `app_settings`; SYNC WIKI seeded as default; `GET /api/settings/custom-skills`; CUSTOM SKILLS rail in Settings (SYNC WIKI locked, user skills add/delete); AskSheet carousel (3 per swipeable page, page dots when >3)
+- **Vault Integration** — `@modelcontextprotocol/sdk` MCP client singleton in `server/lib/ai/vaultClient.ts`; 4 tools: `search_wiki`, `read_wiki_page`, `list_wiki_pages`, `get_wiki_index`; `vault_enabled`/`vault_url` settings; VAULT rail in Settings (toggle, URL input, TEST CONNECTION with domain/page count); vault tools merged conditionally into orchestrator + chat; `readVault` filesystem tool removed
+- **Tech debt cleared** — `MX4Card`/`MX4Insight` stub deleted; ARCHITECTURE.md briefing pipeline notes updated; `mx4/sections.py` and `mx4/orchestrator.py` marked deprecated
+
 **Tests:**
-- 265 tests passing (103 server + 162 client, last verified Jun 15, 2026)
-- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, all 6 MX-4 tools, chat API (including seed endpoint, section column, run/:section), wiki module, orchestrator, wrap session, message compression
+- 278 tests passing (113 server + 165 client, last verified Jun 16, 2026)
+- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API
 
 ### Present but Untested (Never Run)
 
@@ -103,9 +108,7 @@
 
 ## Immediate Priorities
 
-1. **E2E QA sweep** — full end-to-end quality pass now that all pre-release tweaks are shipped
-2. **Custom Skills in Settings** — user-defined prompt pills (stored as JSON in `app_settings`) surfaced alongside SYNC WIKI in AskSheet; deferred from Jun 15 session
-3. **Vault Settings toggle** — `vault_enabled` boolean + `vault_path` field in Settings to replace the 5 hardcoded `/mnt/vault/wiki` references and "do not attempt readVault" guards; deferred from Jun 15 session
+1. **E2E QA sweep** — full end-to-end quality pass; all pre-release features (Custom Skills, Vault Integration, tech debt) are now shipped and pushed
 
 ---
 

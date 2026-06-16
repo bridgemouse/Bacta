@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import db from '../db/client'
-import { setSetting } from '../lib/settings'
+import { setSetting, getSetting } from '../lib/settings'
 import { scheduleNightly } from '../lib/ai/scheduler'
 
 const settingsRouter = Router()
@@ -28,6 +28,16 @@ settingsRouter.post('/test-connection', async (_req, res) => {
     res.json(result)
   } catch {
     res.json({ ok: false, error: 'Provider not configured' })
+  }
+})
+
+settingsRouter.get('/custom-skills', (_req, res) => {
+  const raw = getSetting('mx4_custom_skills')
+  try {
+    const skills = raw ? JSON.parse(raw) : []
+    res.json({ skills })
+  } catch {
+    res.json({ skills: [] })
   }
 })
 

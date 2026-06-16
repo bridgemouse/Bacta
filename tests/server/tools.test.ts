@@ -5,10 +5,8 @@ import path from 'path'
 
 process.env.DB_PATH = ':memory:'
 
-const TEST_WIKI_DIR  = path.join(os.tmpdir(), 'bacta-wiki-test-' + process.pid)
-const TEST_VAULT_DIR = path.join(os.tmpdir(), 'bacta-vault-test-' + process.pid)
-process.env.WIKI_DIR        = TEST_WIKI_DIR
-process.env.VAULT_WIKI_ROOT = TEST_VAULT_DIR
+const TEST_WIKI_DIR = path.join(os.tmpdir(), 'bacta-wiki-test-' + process.pid)
+process.env.WIKI_DIR = TEST_WIKI_DIR
 
 describe('MX-4 Tools', () => {
   beforeAll(async () => {
@@ -20,13 +18,10 @@ describe('MX-4 Tools', () => {
       'INSERT INTO garmin_snapshots (date, metric, value, unit) VALUES (?, ?, ?, ?)'
     ).run(today, 'hrv', 52, 'ms')
     fs.mkdirSync(TEST_WIKI_DIR, { recursive: true })
-    fs.mkdirSync(TEST_VAULT_DIR, { recursive: true })
-    fs.writeFileSync(path.join(TEST_VAULT_DIR, 'test-note.md'), '# Test Note\nSome content.')
   })
 
   afterAll(() => {
     fs.rmSync(TEST_WIKI_DIR, { recursive: true, force: true })
-    fs.rmSync(TEST_VAULT_DIR, { recursive: true, force: true })
   })
 
   describe('queryDb', () => {
@@ -69,20 +64,6 @@ describe('MX-4 Tools', () => {
     it('description mentions mx4_briefings', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
       expect(queryDb.description).toContain('mx4_briefings')
-    })
-  })
-
-  describe('readVault', () => {
-    it('returns file content when file exists', async () => {
-      const { readVault } = await import('../../server/lib/ai/tools')
-      const result = await readVault.execute!({ relativePath: 'test-note.md' }) as any
-      expect(result.content).toContain('Test Note')
-    })
-
-    it('returns error when file does not exist', async () => {
-      const { readVault } = await import('../../server/lib/ai/tools')
-      const result = await readVault.execute!({ relativePath: 'nonexistent.md' }) as any
-      expect(result.error).toBeDefined()
     })
   })
 

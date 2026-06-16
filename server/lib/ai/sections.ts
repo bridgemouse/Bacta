@@ -57,8 +57,6 @@ Pull 30 days of training_load. Assess whether the stimulus is sufficient to driv
 
 intensity_mod_min and intensity_vig_min are weekly moderate and vigorous intensity minutes. Inconsistency in these indicates variable stimulus.
 
-Do not attempt readVault — vault is inaccessible per standing orders.
-
 summary: 3–5 sentences. VO2 max trajectory toward July target, whether current load is building or maintaining, and what needs to change. No headers.
 body: Use ## VO2 MAX TRAJECTORY, ## LOAD ANALYSIS, ## INTENSITY PATTERN, ## DIRECTIVE. Bold all metric values. The ## DIRECTIVE must address the July target specifically.
 
@@ -77,8 +75,6 @@ Parse the summary field from each content_json result. You have already run thre
 Do not restate each section in sequence. Synthesize: what is the dominant signal across the system today? Where do the channels agree, and where do they create tension? A strong recovery reading means little if sleep architecture was poor — surface the interaction.
 
 Lead with the cross-channel verdict: primed, nominal, or under strain. Then the most significant tension or confirmation across domains. Close with one directive that accounts for all three channels.
-
-Do not attempt readVault — vault is inaccessible per standing orders.
 
 summary: 3–5 sentences. Cross-channel verdict, the most significant interaction between domains, the directive. No headers.
 body: Use ## SYSTEM STATE, ## CHANNEL SYNTHESIS, ## TENSIONS & CONFIRMATIONS, ## DIRECTIVE. Bold all metric values referenced. Bullets for multi-point cross-channel findings.

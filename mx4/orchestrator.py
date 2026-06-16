@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # mx4/orchestrator.py
+# DEPRECATED — superseded by server/lib/ai/orchestrator.ts (TypeScript/Vercel AI SDK pipeline).
+# Retained for reference only. Do not run.
 """MX-4 Orchestrator — generate insight cards using claude -p."""
 
 import argparse

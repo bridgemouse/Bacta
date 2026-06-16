@@ -179,7 +179,7 @@ All routes are defined in `server/api/` and mounted in `server/index.ts`.
 | `GET` | `/api/garmin/weekly-avg-hr?weeks=6` | Weekly average HR from activities |
 | `GET` | `/api/garmin/activities/:id/legs` | Leg data for multi-sport activity |
 | `GET` | `/api/garmin/:metric?from=&to=` | Single metric — today's value, or date range if both params given |
-| `GET` | `/api/insights/:section` | Insight for section — reads `insights/{section}.json` if present, falls back to mock JSON |
+| `GET` | `/api/insights/:section` | Insight for section — reads from `mx4_briefings` DB table, falls back to stub JSON |
 | `GET` | `/api/manual` | Manual daily inputs (readiness, caffeine, supplements) |
 | `POST` | `/api/manual` | Save manual daily inputs |
 | `GET` | `/api/bloodwork` | Blood work markers |
@@ -188,7 +188,7 @@ All routes are defined in `server/api/` and mounted in `server/index.ts`.
 
 **Route ordering note:** Specific routes (`/activities`, `/sync/status`, `/weekly-volume`, `/weekly-intensity`, `/weekly-avg-hr`) must be defined **before** the `/:metric` wildcard in `garmin.ts`, or Express swallows them. This is a documented bug class in this codebase.
 
-**Format mismatch:** `insights.ts` reads and serves `.json` files, but `mx4/orchestrator.py` writes `.html` files. The current mock fallback returns JSON objects with `summary/tone/flags` shape. The actual orchestrator output is an HTML fragment. The frontend currently uses stub text from `stubData.ts BRIEFS` and does not consume the insights endpoint in production. Resolving this mismatch is part of the orchestrator first-run work.
+**Briefing pipeline:** The TypeScript orchestrator (`server/lib/ai/orchestrator.ts`) writes structured briefings to the `mx4_briefings` DB table. `insights.ts` reads from that table and returns the `content_json` field, falling back to stub JSON when no briefing exists. All four sections (home, recovery, sleep, training) produce live briefings on each orchestrator run.
 
 ---
 

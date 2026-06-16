@@ -9,7 +9,7 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] Production build succeeds; no runtime console errors
 - [ ] `MX4Card` shim removed (or confirmed no live imports); dead code / legacy EAV metrics addressed
 - [ ] `insights` `.html`/`.json` mismatch resolved
-- [ ] Untested endpoints exercised: `POST /api/poll/force` works; `node-cron` MX-4 scheduler + `bacta-garmin.timer` confirmed correctly wired
+- [ ] Untested paths exercised for real: `POST /api/poll/force` works; **MX-4 nightly cron actually fires** a run (setting enabled → tested → restored); `bacta-garmin.timer` enabled for 03:00
 
 ## Data
 
@@ -110,7 +110,7 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 - [ ] Cost / runaway caps in place (retry limits, compression threshold, no unbounded loops)
 - [ ] Documented rollback path for a bad deploy; v1.0 tagged; version surfaced in UI; short CHANGELOG
 
-## Operational
+## Sweep Process & Misc
 
 - [ ] Safety backups taken before any destructive step (`bacta.db.bak-*`, `mx4/wiki.bak-*`); restore path verified
 - [ ] Timezone (EST) correct across date queries, sleep convention, cron/poller times, "current day" labels

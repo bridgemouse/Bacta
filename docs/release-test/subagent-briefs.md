@@ -1,6 +1,6 @@
 # Subagent Briefs — v1.0 Release Sweep
 
-Five lenses. The orchestrator dispatches these (parallel where independent), collects findings, cross-checks, and owns the fixes. Each subagent **reports**; the orchestrator **decides and fixes** under the tiered rules. Every subagent must return: findings categorized critical/major/minor, with file:line or query evidence, and a short "what I verified clean" list.
+Eight lenses (§1–§8). The orchestrator dispatches these (parallel where independent; the Docs lens §4 runs last), collects findings, cross-checks, and owns the fixes. Each subagent **reports**; the orchestrator **decides and fixes** under the tiered rules. Every subagent must return: findings categorized critical/major/minor, with file:line or query evidence, and a short "what I verified clean" list.
 
 ---
 
@@ -57,7 +57,7 @@ Five lenses. The orchestrator dispatches these (parallel where independent), col
 
 **Goal:** documentation describes the system as it actually is. Drift is a release blocker for a project whose docs are declared "authoritative."
 
-> **Run this lens LAST**, after all code/data/MX-4/security fixes have landed — otherwise you document a system you're about to change and have to reconcile twice. During the earlier lenses, just *collect* drift notes; do the actual doc rewrites here as the final reconciliation pass.
+> **Run this lens LAST**, after all code/data/MX-4/security/ops fixes have landed — otherwise you document a system you're about to change and have to reconcile twice. During the earlier lenses, just *collect* drift notes; do the actual doc rewrites here as the final reconciliation pass.
 
 Reconcile every `docs/*.md` and `CLAUDE.md` against actual code, DB, and runtime. **Known drift to fix (confirmed during prep):**
 
@@ -106,7 +106,7 @@ Propose concrete edits; the orchestrator commits them (doc fixes are auto-fix ti
   - **Wire into briefing + chat tool sets;** confirm it returns real results with citations and coexists with all his other tools in one request.
   - **Goal — peer-reviewed research:** verify MX-4 finds real peer-reviewed sources (e.g. "what does current research say about HRV-guided training for endurance athletes?"), returns **real** citations with working links/DOIs, prefers primary sources over blogs, notes recency, and ties the evidence to the user's own metrics. **Fabricated citations are a hard-fail** (see rubric).
 
-### Persona — two probe sets, both against real ground-truth data (see kickoff for the Jun 15–16 events)
+### Persona — probe sets, all against real ground-truth data (see kickoff for the Jun 15–16 events)
 
 **Realistic-usage probes** (how the user actually interacts — verify data-grounding against known answers):
 1. "How'd I sleep last night?" (truth: good) — then "And the night before?" (truth: bad). Must distinguish; must cite real figures.
@@ -174,6 +174,8 @@ Score each against the rubric. Any hard-fail marker = immediate NO-GO flag with 
 **v1.0 implementation decisions (from the user):**
 - **Implement now:** app authentication · network access control (firewall/Tailscale) · encryption at rest.
 - **Document + defer (with how-to):** TLS/HTTPS on LAN. ⚠️ Until TLS lands, app auth + data ride **plaintext HTTP on the LAN** — use a hashed, **token-based** auth (never a replayed cleartext password) and treat Tailscale as the encrypted path. Flag TLS as the recommended near-term follow-up.
+
+> **Execution split (important).** App-level items (auth, in-app crypto, security headers, input validation, rate limits) are built in-branch under the dev skills. **Infrastructure-level items — LUKS/full-disk encryption of the LXC volume, firewall/ufw rules, systemd-unit hardening, OS packages, NFS/Proxmox config — are delivered as proposals + runbooks** (in `SECURITY.md` / `OPERATIONS.md`) and **gated**: the user may execute them at the host/Proxmox level. Do **not** silently reconfigure or risk taking the production host offline. Snapshot the LXC (Proxmox) before any such change.
 
 - **No PHI in git:** confirm `mx4/wiki/` is gitignored and not tracked (it holds personal health data); scan the repo + history for accidentally committed health data, vault content, or `bacta.db`. Confirm `data/*.db` and any `*.bak-*` are ignored.
 - **Secrets handling:** API keys (`ai_api_key`, `research_api_key`, etc.) are masked in `GET /api/settings`; never logged in plaintext (check server logs / error paths); never sent to the client. The known masking on settings GET is the baseline — verify it holds for the new keys too.

@@ -15,9 +15,10 @@ MX-4 runs on **Gemini 2.5 Flash** (likely upgrading to 3.5 Flash), both **1M con
 
 1. `CLAUDE.md` — conventions (inline styles only, dark UI always, authoritative accent colors, gotchas).
 2. `docs/ROADMAP.md` — current state, what's shipped, known issues, sparse metrics.
-3. `docs/release-test/subagent-briefs.md` — the five lens briefs you will dispatch.
+3. `docs/release-test/subagent-briefs.md` — the eight lens briefs you will dispatch.
 4. `docs/release-test/mx4-persona-rubric.md` — how MX-4 is judged.
 5. `docs/release-test/release-readiness-checklist.md` — the GO/NO-GO gate and final reset sequence.
+6. `docs/release-test/findings-report-template.md` — the structure for the report you deliver at the end.
 
 Skim `docs/MX4.md`, `docs/DATA.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md` as needed — but **treat them as suspect**: doc-vs-reality drift is a known issue and one of your test targets. `ROADMAP.md` is the most current narrative.
 
@@ -65,11 +66,12 @@ If anything goes wrong, restore from the backup before proceeding. Note backups 
 
 1. **Recon** — read the files above; confirm app builds and runs; snapshot current DB state and test count (expect ~278 passing). Take the safety backups above before any destructive step.
 2. **Early wiki clear** — clear MX-4's corrupted wiki so functional/persona testing runs clean.
-3. **Dispatch subagents** — launch the seven lenses in `subagent-briefs.md` (Code, Data, UI/Visual, Docs, MX-4 Function/Persona, MX-4 Knowledge, Security/Privacy). Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings. Note the dependency: the MX-4 Knowledge lens (§6) runs after the Data lens (§2) feeds it the verified dictionary, and after the early wiki clear.
+3. **Dispatch subagents** — launch the lenses in `subagent-briefs.md` (Code, Data, UI/Visual, MX-4 Function/Persona, MX-4 Knowledge, Security/Privacy, Resilience/Ops). Run independent lenses in parallel via the `Agent` tool; each works in its own context and returns findings. Dependencies: the MX-4 Knowledge lens (§6) runs after the Data lens (§2) feeds it the verified dictionary and after the early wiki clear. **The Docs lens (§4) runs LAST** — during this phase, lenses only *collect* drift notes.
 4. **Consolidate & cross-check** — merge findings, resolve conflicts between subagents, de-duplicate, and categorize as **critical / major / minor**.
 5. **Fix** — apply fixes under the tiered rules. Re-verify each (re-run tests, re-screenshot, re-query DB) before committing.
-6. **Final reset** — run the v1.0 baseline sequence from the checklist (verify DB clean → clear wiki → fresh orchestrator run → verify briefings → persona spot-check).
-7. **Verdict** — fill in `release-readiness-checklist.md`, write the findings report, render **GO / NO-GO**, and open the PR.
+6. **Docs reconciliation (now)** — with all code/data/MX-4/security/ops fixes landed, run the Docs lens to bring every doc in line with the final state.
+7. **Final reset** — run the v1.0 baseline sequence from the checklist (verify DB clean → clear wiki → fresh orchestrator run → verify briefings → persona spot-check).
+8. **Verdict** — fill in `release-readiness-checklist.md`, write the findings report (use `findings-report-template.md`), render **GO / NO-GO**, and open the PR.
 
 ## Ground-truth data for MX-4 testing (as of 2026-06-16)
 

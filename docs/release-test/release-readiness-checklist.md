@@ -69,18 +69,31 @@ The GO/NO-GO gate. Mark each ✅ / ❌ / ⚠️-waived with evidence. **GO requi
 
 ## Security & Privacy
 
+- [ ] **`queryDb` is provably read-only** — a write/drop attempt via chat is refused/fails safely (critical)
+- [ ] **Prompt injection guarded** — retrieved vault/wiki/research content treated as data, not instructions; injection probe did not make MX-4 comply or misuse write tools
 - [ ] `mx4/wiki/` gitignored and untracked; no PHI / vault content / `bacta.db` committed (history scanned)
 - [ ] API keys (incl. new `research_api_key`) masked in `GET /api/settings`; never logged or sent to client
-- [ ] Server reachable on local WiFi only; no unintended off-LAN exposure
+- [ ] Secrets-at-rest documented; `bacta.db`, backups, and Garmin tokens have tight file permissions
+- [ ] Plaintext HTTP-on-LAN is a documented, conscious decision; server reachable on local WiFi only
 - [ ] `research` tool sends scientific questions, not raw personal records, to external backends
+- [ ] Error responses don't leak stack traces / SQL / internal paths
 - [ ] `npm audit` — no unaddressed high/critical advisories in shipping deps
+
+## Resilience & Operations
+
+- [ ] Automated DB backup + rotation implemented (off-box copy); **restore path verified**
+- [ ] SQLite in WAL mode; `PRAGMA integrity_check` clean; concurrent poller/API/MX-4 writes safe
+- [ ] Failure notification / observability for the nightly poll + MX-4 run (user finds out when they fail)
+- [ ] Graceful degradation when Garmin / vault MCP / AI provider is down (app loads, clear errors, no crash)
+- [ ] Cost / runaway caps in place (retry limits, compression threshold, no unbounded loops)
+- [ ] Documented rollback path for a bad deploy; v1.0 tagged; version surfaced in UI; short CHANGELOG
 
 ## Operational
 
 - [ ] Safety backups taken before any destructive step (`bacta.db.bak-*`, `mx4/wiki.bak-*`); restore path verified
 - [ ] Timezone (EST) correct across date queries, sleep convention, cron/poller times, "current day" labels
 - [ ] UI degrades gracefully on API error / missing metric (no white screen / raw error)
-- [ ] v1.0 ships pinned to a known-good provider + model (currently `gemini-2.5-flash`; confirm before any 3.5 swap)
+- [ ] v1.0 pinned to `google` / `gemini-2.5-flash` (confirmed); 3.5-flash swap deferred post-v1.0
 
 ## Final v1.0 baseline reset sequence (last phase — pre-approved)
 

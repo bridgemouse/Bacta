@@ -51,7 +51,7 @@ export function useHomeData(): { data: HomeTileData; loading: boolean } {
 
         setData({
           recovery: {
-            value: String(s.body_battery_wake ?? 74),
+            value: String(s.body_battery_current ?? s.body_battery_wake ?? 74),
             sub:   hrvSub,
           },
           training: {

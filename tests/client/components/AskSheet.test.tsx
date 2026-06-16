@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi, beforeEach } from 'vitest'
 import { AskSheet } from '../../../client/src/components/AskSheet'
 
 vi.mock('../../../client/src/hooks/useChat', () => ({
@@ -21,6 +21,12 @@ function renderAsk(open: boolean, onClose = vi.fn(), section = 'home') {
 }
 
 describe('AskSheet', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ skills: [] }),
+    } as unknown as Response)
+  })
   it('renders nothing when closed', () => {
     renderAsk(false)
     expect(screen.queryByText('MX-4')).not.toBeInTheDocument()
@@ -65,5 +71,36 @@ describe('AskSheet', () => {
   it('does not render CLEAR VIEW button when no messages', () => {
     renderAsk(true)
     expect(screen.queryByText('CLEAR VIEW ›')).not.toBeInTheDocument()
+  })
+
+  it('does not render skill carousel when skills are empty', async () => {
+    renderAsk(true)
+    expect(screen.queryByTestId('skill-carousel')).not.toBeInTheDocument()
+  })
+
+  it('renders skill carousel with pills when skills are returned', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        skills: [
+          { label: 'SYNC WIKI', prompt: 'Review your wiki pages...' },
+          { label: 'MORNING BRIEF', prompt: 'Give me a morning brief...' },
+        ],
+      }),
+    } as unknown as Response)
+
+    const { findByTestId } = renderAsk(true)
+    const carousel = await findByTestId('skill-carousel')
+    expect(carousel).toBeInTheDocument()
+    const pills = await screen.findAllByTestId('skill-pill')
+    expect(pills).toHaveLength(2)
+    expect(pills[0]).toHaveTextContent('SYNC WIKI')
+  })
+
+  it('does not render carousel when fetch fails', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+    renderAsk(true)
+    await new Promise(r => setTimeout(r, 10))
+    expect(screen.queryByTestId('skill-carousel')).not.toBeInTheDocument()
   })
 })

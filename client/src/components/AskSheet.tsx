@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS, MX4_COLOR } from '../theme'
 import { Sheet, SheetShell, SheetHeader } from './Sheet'
@@ -13,7 +13,6 @@ const SUGGESTED_PROMPTS = [
   'Summarize my week',
 ]
 
-const WIKI_PROMPT = 'Review your wiki pages and update them based on our conversation so far. Write any new patterns or findings worth preserving.'
 
 interface AskSheetProps {
   open:    boolean
@@ -32,10 +31,25 @@ function autoResize(el: HTMLTextAreaElement) {
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`
 }
 
+function chunkSkills<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
+function handleCarouselScroll(e: React.UIEvent<HTMLDivElement>, setPage: (n: number) => void) {
+  const el = e.currentTarget
+  const page = Math.round(el.scrollLeft / el.clientWidth)
+  setPage(page)
+}
+
 export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
   const { messages, input, setInput, streaming, submit, loadMessages, clearVisualHistory } = useChat(section)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [skills, setSkills] = useState<Array<{ label: string; prompt: string }>>([])
+  const [activePage, setActivePage] = useState(0)
+  const carouselRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -46,6 +60,10 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
   useEffect(() => {
     if (open) {
       loadMessages()
+      fetch('/api/settings/custom-skills')
+        .then(r => r.json())
+        .then((d: { skills: Array<{ label: string; prompt: string }> }) => setSkills(d.skills ?? []))
+        .catch(() => {})
       if (textareaRef.current) autoResize(textareaRef.current)
       const t = setTimeout(() => textareaRef.current?.focus(), 400)
       return () => clearTimeout(t)
@@ -254,25 +272,77 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
                   </span>
                 ))}
               </div>
-              <div style={{ display: 'flex', paddingBottom: 8 }}>
-                <span
-                  onClick={() => submit(WIKI_PROMPT)}
-                  style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    letterSpacing: '0.12em',
-                    color: accent,
-                    background: hexA(accent, 0.08),
-                    border: `1px solid ${hexA(accent, 0.25)}`,
-                    borderRadius: 18,
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  SYNC WIKI ›
-                </span>
-              </div>
+              {skills.length > 0 && (() => {
+                const pages = chunkSkills(skills, 3)
+                const totalPages = pages.length
+                return (
+                  <>
+                    <div
+                      ref={carouselRef}
+                      data-testid="skill-carousel"
+                      onScroll={e => handleCarouselScroll(e, setActivePage)}
+                      style={{
+                        display: 'flex',
+                        overflowX: 'auto',
+                        scrollSnapType: 'x mandatory',
+                        scrollbarWidth: 'none',
+                        WebkitOverflowScrolling: 'touch',
+                        paddingBottom: totalPages > 1 ? 4 : 8,
+                      } as React.CSSProperties}
+                    >
+                      {pages.map((page, pi) => (
+                        <div
+                          key={pi}
+                          style={{
+                            flex: '0 0 100%',
+                            scrollSnapAlign: 'start',
+                            display: 'flex',
+                            gap: 8,
+                          }}
+                        >
+                          {page.map(skill => (
+                            <span
+                              key={skill.label}
+                              data-testid="skill-pill"
+                              onClick={() => submit(skill.prompt)}
+                              style={{
+                                fontFamily: FONT_MONO,
+                                fontSize: 9,
+                                fontWeight: 700,
+                                letterSpacing: '0.12em',
+                                color: accent,
+                                background: hexA(accent, 0.08),
+                                border: `1px solid ${hexA(accent, 0.25)}`,
+                                borderRadius: 18,
+                                padding: '6px 12px',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {skill.label} ›
+                            </span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, paddingBottom: 8 }}>
+                        {pages.map((_, pi) => (
+                          <div
+                            key={pi}
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              background: pi === activePage ? MX4_COLOR : COLORS.line,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </>
           )}
         </div>

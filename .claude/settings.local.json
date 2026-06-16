@@ -38,7 +38,20 @@
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_close",
       "Bash(rm -rf /tmp/pw-*)",
-      "Bash(rm -f /opt/bacta/wrap-home.png /opt/bacta/wrap-asksheet.png)"
+      "Bash(rm -f /opt/bacta/wrap-home.png /opt/bacta/wrap-asksheet.png)",
+      "mcp__plugin_claude-mem_mcp-search__observation_add",
+      "Bash(npm -v)",
+      "mcp__bacta-sqlite__write_query",
+      "mcp__bacta-sqlite__list_tables",
+      "mcp__bacta-sqlite__read_query",
+      "mcp__bacta-sqlite__describe_table",
+      "Bash(npm audit *)",
+      "Bash(git check-ignore *)",
+      "Bash(systemctl is-active *)",
+      "Bash(chmod 600 data/bacta.db data/bacta.db-wal data/bacta.db-shm data/bacta.db.bak-*)",
+      "Bash(awk '{print $1, $NF}')",
+      "Bash(git rm *)",
+      "Bash(git commit -q -m 'security: untrack PHI \\(mx4/wiki, HEARTBEAT.md\\), tighten DB perms, add HEARTBEAT template *)"
     ]
   }
 }

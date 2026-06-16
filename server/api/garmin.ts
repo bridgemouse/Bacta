@@ -39,8 +39,6 @@ const VALID_METRICS = [
   'steps_goal', 'floors_goal',
   // HR zones
   'hrzone_1_min', 'hrzone_2_min', 'hrzone_3_min', 'hrzone_4_min', 'hrzone_5_min',
-  // Activities (legacy EAV — kept for backwards compat)
-  'act_distance_m', 'act_duration_s', 'act_calories', 'act_avg_hr',
 ]
 
 // In-memory sync state — resets on server restart, which is fine
@@ -215,10 +213,11 @@ garminRouter.get('/:metric', (req, res) => {
     return
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Latest available value for this metric — per-metric MAX(date), robust to
+  // timezone (user is EST) and to metrics that arrive at different times.
   const row = db.prepare(
-    'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? AND date = ?'
-  ).get(metric, today) as { date: string; metric: string; value: number; unit: string } | undefined
+    'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? ORDER BY date DESC LIMIT 1'
+  ).get(metric) as { date: string; metric: string; value: number; unit: string } | undefined
 
   res.json(row ?? { metric, value: null, unit: null })
 })

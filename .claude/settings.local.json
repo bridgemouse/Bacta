@@ -51,7 +51,9 @@
       "Bash(chmod 600 data/bacta.db data/bacta.db-wal data/bacta.db-shm data/bacta.db.bak-*)",
       "Bash(awk '{print $1, $NF}')",
       "Bash(git rm *)",
-      "Bash(git commit -q -m 'security: untrack PHI \\(mx4/wiki, HEARTBEAT.md\\), tighten DB perms, add HEARTBEAT template *)"
+      "Bash(git commit -q -m 'security: untrack PHI \\(mx4/wiki, HEARTBEAT.md\\), tighten DB perms, add HEARTBEAT template *)",
+      "Bash(python3 *)",
+      "Bash(git commit -q -m 'data: fix recovery_time_h unit \\(minutes\\), remove legacy EAV metrics, tz-safe latest-value *)"
     ]
   }
 }

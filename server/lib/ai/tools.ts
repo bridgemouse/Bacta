@@ -1,7 +1,5 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import fs from 'fs'
-import path from 'path'
 import db from '../../db/client'
 import {
   readAllWikiPagesSync,
@@ -9,8 +7,6 @@ import {
   listWikiPagesSync,
   archiveWikiPageSync,
 } from './wiki'
-
-const VAULT_ROOT = process.env.VAULT_WIKI_ROOT ?? '/mnt/vault/wiki'
 
 const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the Garmin biometric database.
 
@@ -54,21 +50,6 @@ export const queryDb = tool({
       return { rows }
     } catch (e: unknown) {
       return { error: e instanceof Error ? e.message : String(e) }
-    }
-  },
-})
-
-export const readVault = tool({
-  description: "Read a file from Ethan's Obsidian vault wiki for personal context",
-  inputSchema: z.object({
-    relativePath: z.string().describe('Path relative to vault wiki root, e.g. "training/summer-plan.md"'),
-  }),
-  execute: async ({ relativePath }) => {
-    try {
-      const content = fs.readFileSync(path.join(VAULT_ROOT, relativePath), 'utf-8')
-      return { content }
-    } catch {
-      return { error: `Vault not accessible or file not found: ${relativePath}` }
     }
   },
 })

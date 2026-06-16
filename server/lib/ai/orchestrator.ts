@@ -1,9 +1,10 @@
-import { generateText, generateObject, stepCountIs } from 'ai'
+import { generateText, generateObject, stepCountIs, type ToolSet } from 'ai'
 import { getModel } from './provider'
 import { getSetting } from '../settings'
 import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
-import { queryDb, readVault, readAllWikiPages } from './tools'
+import { queryDb, readAllWikiPages } from './tools'
+import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
 import db from '../../db/client'
 import fs from 'fs'
@@ -40,7 +41,7 @@ async function runSection(
 
 Section focus: ${promptAddendum}
 
-Use queryDb to pull the last 30 days of relevant metrics. Use readVault if you need personal context from the Obsidian vault. Use readAllWikiPages if you need to review accumulated knowledge.
+Use queryDb to pull the last 30 days of relevant metrics. ${isVaultEnabled() ? 'Use get_wiki_index then read_wiki_page or search_wiki to pull personal context from the connected vault.' : ''} Use readAllWikiPages if you need to review accumulated MX-4 knowledge.
 
 Produce a complete analysis in your voice. Cover: what the data shows today, how it compares to the 30-day trend, what it means for Ethan's current training block, and one specific recommendation.`
 
@@ -48,7 +49,11 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     model,
     system: systemWithContext,
     prompt: sectionPrompt,
-    tools: { queryDb, readVault, readAllWikiPages },
+    tools: {
+      queryDb,
+      readAllWikiPages,
+      ...(isVaultEnabled() ? await getVaultTools() : {}),
+    } as ToolSet,
     stopWhen: stepCountIs(8),
   })
 

@@ -77,4 +77,36 @@ describe('Settings API', () => {
       .send({})
     expect(res.status).toBe(400)
   })
+
+  it('GET /api/settings/custom-skills returns seeded SYNC WIKI skill', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/settings/custom-skills')
+    expect(res.status).toBe(200)
+    expect(res.body.skills).toHaveLength(1)
+    expect(res.body.skills[0].label).toBe('SYNC WIKI')
+    expect(res.body.skills[0].prompt).toContain('wiki pages')
+  })
+
+  it('GET /api/settings/custom-skills returns updated skills after PUT', async () => {
+    const { app } = await import('../../server/index')
+    const updated = [
+      { label: 'SYNC WIKI', prompt: 'Review your wiki pages and update them based on our conversation so far. Write any new patterns or findings worth preserving.' },
+      { label: 'WEEKLY REVIEW', prompt: 'Give me a full weekly review of all systems.' },
+    ]
+    await request(app)
+      .put('/api/settings/mx4_custom_skills')
+      .send({ value: JSON.stringify(updated) })
+    const res = await request(app).get('/api/settings/custom-skills')
+    expect(res.body.skills).toHaveLength(2)
+    expect(res.body.skills[1].label).toBe('WEEKLY REVIEW')
+  })
+
+  it('GET /api/settings/custom-skills returns empty array when setting is invalid JSON', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('mx4_custom_skills', 'not-json')").run()
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/settings/custom-skills')
+    expect(res.status).toBe(200)
+    expect(res.body.skills).toEqual([])
+  })
 })

@@ -10,6 +10,10 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   mx4_on_sync_enabled:            'true',
   mx4_chat_compression_threshold: '20',
   mx4_home_rerun_mode:            'home_only',
+  mx4_custom_skills:              JSON.stringify([{
+    label:  'SYNC WIKI',
+    prompt: 'Review your wiki pages and update them based on our conversation so far. Write any new patterns or findings worth preserving.',
+  }]),
 }
 
 export function initSettings(): void {

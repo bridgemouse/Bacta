@@ -1,17 +1,25 @@
 import { Router } from 'express'
-import fs from 'fs'
+import { spawn } from 'child_process'
 import path from 'path'
 
 const pollRouter = Router()
 
-const DEFAULT_SIGNAL_PATH = path.join(process.cwd(), 'data', 'poll_signal')
+let polling = false
 
-// POST /api/poll/force — write a signal file to trigger a manual data poll
+// POST /api/poll/force — force an immediate Garmin data poll by running the
+// poller. (Previously wrote an orphaned signal file that nothing consumed; the
+// legacy check_signal.py watcher spawned the deprecated Python orchestrator.)
 pollRouter.post('/force', (_req, res) => {
-  const signalPath = process.env.POLL_SIGNAL_PATH ?? DEFAULT_SIGNAL_PATH
-  fs.mkdirSync(path.dirname(signalPath), { recursive: true })
-  fs.writeFileSync(signalPath, new Date().toISOString())
-  res.status(202).json({ ok: true })
+  if (polling) {
+    res.status(202).json({ ok: true, status: 'running' })
+    return
+  }
+  const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
+  polling = true
+  const child = spawn('python3', [script], { stdio: 'ignore' })
+  child.on('close', () => { polling = false })
+  child.on('error', () => { polling = false })
+  res.status(202).json({ ok: true, status: 'running' })
 })
 
 export default pollRouter

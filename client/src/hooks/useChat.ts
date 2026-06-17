@@ -102,7 +102,7 @@ export function useChat(section?: string) {
                 const next = [...prev]
                 next[next.length - 1] = {
                   role: 'assistant',
-                  content: 'MX-4 is offline. Configure an AI provider in Settings.',
+                  content: (parsed as { error: string }).error,
                   section,
                 }
                 return next
@@ -116,7 +116,7 @@ export function useChat(section?: string) {
         const next = [...prev]
         next[next.length - 1] = {
           role: 'assistant',
-          content: 'MX-4 is offline. Configure an AI provider in Settings.',
+          content: 'Connection lost during analysis. MX-4 may have completed — try sending another message.',
           section,
         }
         return next

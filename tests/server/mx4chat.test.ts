@@ -230,6 +230,50 @@ describe('MX-4 Chat API', () => {
   })
 })
 
+describe('categorizeError', () => {
+  let categorizeError: (e: unknown) => string
+
+  beforeAll(async () => {
+    const mod = await import('../../server/api/mx4')
+    categorizeError = mod.categorizeError
+  })
+
+  it('detects unconfigured provider', () => {
+    expect(categorizeError(new Error('No AI provider configured')))
+      .toBe('No AI provider configured. Check Settings → Intelligence.')
+  })
+
+  it('detects missing API key', () => {
+    expect(categorizeError(new Error('Invalid API key provided')))
+      .toBe('No AI provider configured. Check Settings → Intelligence.')
+  })
+
+  it('detects rate limit', () => {
+    expect(categorizeError(new Error('Rate limit exceeded: 429')))
+      .toBe('Rate limit reached — try again in a moment.')
+  })
+
+  it('detects quota exceeded', () => {
+    expect(categorizeError(new Error('quota exceeded for this model')))
+      .toBe('Rate limit reached — try again in a moment.')
+  })
+
+  it('detects timeout', () => {
+    expect(categorizeError(new Error('Request timed out after 30s')))
+      .toBe('MX-4 timed out during analysis. Try a shorter query.')
+  })
+
+  it('returns generic message for unknown errors', () => {
+    expect(categorizeError(new Error('something unexpected')))
+      .toBe('MX-4 encountered an error. Try again.')
+  })
+
+  it('handles non-Error objects', () => {
+    expect(categorizeError('string error'))
+      .toBe('MX-4 encountered an error. Try again.')
+  })
+})
+
 describe('toolLabel', () => {
   let toolLabel: (toolName: string, args: Record<string, unknown>) => string
 

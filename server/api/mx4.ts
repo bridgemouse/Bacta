@@ -51,6 +51,20 @@ export function toolLabel(toolName: string, args: Record<string, unknown>): stri
   }
 }
 
+export function categorizeError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : ''
+  if (/api.key|not configured|no.*(provider|ai)|invalid.key|unauthorized/i.test(msg)) {
+    return 'No AI provider configured. Check Settings → Intelligence.'
+  }
+  if (/rate.limit|429|quota|too many requests/i.test(msg)) {
+    return 'Rate limit reached — try again in a moment.'
+  }
+  if (/timeout|timed out/i.test(msg)) {
+    return 'MX-4 timed out during analysis. Try a shorter query.'
+  }
+  return 'MX-4 encountered an error. Try again.'
+}
+
 async function compressSessionIfNeeded(sessionId: string): Promise<void> {
   const threshold = parseInt(getSetting('mx4_chat_compression_threshold') ?? '20', 10)
   const rows = db.prepare(
@@ -241,7 +255,7 @@ mx4Router.post('/chat', async (req, res) => {
     }
   } catch (e: unknown) {
     console.error('[mx4] chat stream error:', e)
-    res.write(`data: ${JSON.stringify({ error: 'MX-4 is unavailable — check AI provider settings.' })}\n\n`)
+    res.write(`data: ${JSON.stringify({ error: categorizeError(e) })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')

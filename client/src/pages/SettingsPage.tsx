@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AppShell } from '../components/AppShell'
 import { Rail } from '../components/viz/Rail'
+import { SecurityRail } from '../components/SecurityRail'
 import { COLORS, FONT_MONO, FONT_UI, MX4_COLOR } from '../theme'
 import { hexA } from '../lib/hexA'
 
@@ -835,6 +836,8 @@ export function SettingsPage() {
           </div>
         ))}
       </div>
+
+      <SecurityRail />
 
       {/* Rail 5: GARMIN */}
       <Rail label="GARMIN" accent={MX4_COLOR} />

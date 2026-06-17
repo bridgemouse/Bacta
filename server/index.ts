@@ -39,6 +39,10 @@ app.use(helmet({
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],
+      // Bacta is served over plain HTTP on the LAN until the TLS runbook lands;
+      // do NOT upgrade requests to https or the app becomes unreachable. (helmet
+      // adds this by default — null removes it.)
+      upgradeInsecureRequests: null,
     },
   },
 }))

@@ -70,6 +70,8 @@ LUKS full-disk on the LXC 109 volume is the recommended default (covers DB, toke
 ### 4.4 TLS on the LAN
 Terminate TLS via a local reverse proxy (Caddy/nginx) with an internal CA or Tailscale's HTTPS; then set the session cookie `Secure`. Until then Tailscale is the encrypted path.
 
+> **Note:** the CSP intentionally **omits `upgrade-insecure-requests`** (`server/index.ts`) because the app is served over plain HTTP on the LAN — leaving it in (helmet's default) makes browsers force-upgrade to `https://` and the app becomes unreachable. **When TLS lands, re-enable it** and set the cookie `Secure`.
+
 ### 4.5 systemd hardening (`bacta-api.service`)
 Add: `NoNewPrivileges=true`, `ProtectSystem=strict`, `ProtectHome=read-only`, `PrivateTmp=true`, `ReadWritePaths=/opt/bacta/data /opt/bacta/backups /opt/bacta/mx4`, drop capabilities. Confirm the service runs as `wheat` (non-root).
 

@@ -10,7 +10,7 @@ Currently wired for **Garmin Connect**. Built to expand to other fitness integra
 
 ## MX-4
 
-MX-4 is a Star Wars-themed AI companion — specifically a Cybot Galactica MX-series multi-system interface droid *(yes, Cybot Galactica makes protocol droids in canon — we took liberties)*, built to see across domains and surface what matters. He runs a nightly briefing pipeline, maintains a structured health wiki, and is available via live chat with real-time tool visibility.
+MX-4 is a Star Wars-themed AI companion — specifically a Cybot Galactica MX-series multi-system interface droid *(yes, we know this isn't a real droid model in canon)*, built to see across domains and surface what matters. He runs a nightly briefing pipeline, maintains a structured health wiki, and is available via live chat with real-time tool visibility.
 
 He does not serve. He collaborates.
 

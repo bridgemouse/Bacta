@@ -12,6 +12,7 @@ mx4/wiki/
 mx4/wiki.bak-*/
 mx4/HEARTBEAT.md
 *.bak-*
+backups/
 claude-design-prompt*.md
 __pycache__/
 *.pyc

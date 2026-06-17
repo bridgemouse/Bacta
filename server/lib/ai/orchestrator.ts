@@ -8,6 +8,7 @@ import { queryDb, readAllWikiPages } from './tools'
 import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
+import { notifyFailure } from '../notify'
 import db from '../../db/client'
 import fs from 'fs'
 import path from 'path'
@@ -123,6 +124,10 @@ export async function runOrchestrator(): Promise<void> {
 
   if (errors.length > 0) {
     console.error('[mx4] run completed with errors:', errors)
+    await notifyFailure(
+      'nightly MX-4 run failed',
+      errors.map(e => `${e.section}: ${e.error}`).join('; ') + (rateLimitHit ? ' (usage limit)' : ''),
+    )
   } else {
     console.log('[mx4] orchestrator run complete')
   }

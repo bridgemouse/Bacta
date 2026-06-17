@@ -44,7 +44,7 @@ function handleCarouselScroll(e: React.UIEvent<HTMLDivElement>, setPage: (n: num
 }
 
 export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
-  const { messages, input, setInput, streaming, submit, loadMessages, clearVisualHistory } = useChat(section)
+  const { messages, input, setInput, streaming, toolCalls, submit, loadMessages, clearVisualHistory } = useChat(section)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [skills, setSkills] = useState<Array<{ label: string; prompt: string }>>([])
@@ -170,22 +170,64 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
               </div>
             ) : (
               <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span style={{ flexShrink: 0, marginTop: 2 }}>
+                <span style={{ flexShrink: 0, marginTop: 4 }}>
                   <MX4Sigil
                     color={color}
-                    size={26}
+                    size={22}
                     mood={streaming && i === messages.length - 1 ? 'think' : 'pleased'}
                   />
                 </span>
                 <div
                   style={{
-                    background: hexA(color, 0.08),
-                    border: `1px solid ${hexA(color, 0.22)}`,
-                    borderRadius: '4px 14px 14px 14px',
-                    padding: '11px 14px',
-                    maxWidth: '85%',
+                    flex: 1,
+                    borderLeft: `2px solid ${hexA(color, 0.25)}`,
+                    paddingLeft: 12,
+                    minWidth: 0,
                   }}
                 >
+                  {streaming && i === messages.length - 1 && toolCalls.length > 0 && (
+                    <div style={{ marginBottom: msg.content ? 10 : 0 }}>
+                      {toolCalls.map((label, ti) => {
+                        const isActive = ti === toolCalls.length - 1
+                        return (
+                          <div
+                            key={ti}
+                            style={{
+                              fontFamily: FONT_MONO,
+                              fontSize: 9,
+                              letterSpacing: '0.1em',
+                              color: isActive ? hexA(color, 0.75) : COLORS.textMuted,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              overflow: 'hidden',
+                              whiteSpace: 'nowrap' as const,
+                              textOverflow: 'ellipsis',
+                              marginBottom: 3,
+                            }}
+                          >
+                            {isActive ? (
+                              <span
+                                aria-hidden
+                                style={{
+                                  width: 5,
+                                  height: 5,
+                                  borderRadius: '50%',
+                                  background: color,
+                                  flexShrink: 0,
+                                  display: 'inline-block',
+                                  animation: 'mx4blink 1.1s step-end infinite',
+                                }}
+                              />
+                            ) : (
+                              <span style={{ width: 5, flexShrink: 0, color: COLORS.textMuted }}>·</span>
+                            )}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                   <ReactMarkdown
                     components={{
                       p: ({ children }) => (

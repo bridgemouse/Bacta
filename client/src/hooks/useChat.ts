@@ -19,8 +19,9 @@ export function useChat(section?: string) {
 
   function loadMessages() {
     fetch(`/api/mx4/chat/${sessionId}`)
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : [])
       .then((msgs: ChatMessage[]) => {
+        if (!Array.isArray(msgs)) return
         const cutoff = hiddenBeforeRef.current
         setMessages(cutoff
           ? msgs.filter(m => (m.created_at ?? '') > cutoff)

@@ -3,6 +3,7 @@ import { getModel } from './provider'
 import { getSetting } from '../settings'
 import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
+import { assembleSystemPrompt } from './prompt'
 import { queryDb, readAllWikiPages } from './tools'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
@@ -31,11 +32,7 @@ async function runSection(
   const model = getModel('briefing')
   const modelId = (model as unknown as { modelId?: string }).modelId ?? getSetting('mx4_briefing_model') ?? 'unknown'
 
-  const systemWithContext = [
-    systemPrompt,
-    heartbeat ? `\n\n## Standing Orders\n${heartbeat}` : '',
-    `\n\n## Wiki Knowledge\n${wikiContext}`,
-  ].join('')
+  const systemWithContext = assembleSystemPrompt(systemPrompt, heartbeat, wikiContext)
 
   const sectionPrompt = `You are generating MX-4's ${sectionName} briefing.
 

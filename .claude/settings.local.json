@@ -55,7 +55,8 @@
       "Bash(python3 *)",
       "Bash(git commit -q -m 'data: fix recovery_time_h unit \\(minutes\\), remove legacy EAV metrics, tz-safe latest-value *)",
       "Bash(node *)",
-      "Bash(git commit -q -m 'security: harden server — read-only queryDb, helmet/CSP, input validation, rate limit *)"
+      "Bash(git commit -q -m 'security: harden server — read-only queryDb, helmet/CSP, input validation, rate limit *)",
+      "Bash(git commit -q -m 'security: prompt-injection guard, run-lock, stop error leakage *)"
     ]
   }
 }

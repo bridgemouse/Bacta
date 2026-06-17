@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { streamText, stepCountIs } from 'ai'
 import { runOrchestrator, runSectionById, loadSystemPrompt } from '../lib/ai/orchestrator'
+import { assembleSystemPrompt } from '../lib/ai/prompt'
 import { loadChatHistory } from '../lib/ai/chat'
 import { getModel } from '../lib/ai/provider'
 import { readAllWikiPagesSync, loadHeartbeat, resetWikiPatternPages, resetAllWikiPages } from '../lib/ai/wiki'
@@ -36,10 +37,25 @@ async function compressSessionIfNeeded(sessionId: string): Promise<void> {
 
 const mx4Router = Router()
 
+// In-flight guard so rapid Home-refresh taps / double POSTs can't stack
+// concurrent orchestrator runs and rack up AI spend (OPS-M2).
+let orchestratorRunning = false
+
 mx4Router.post('/run', (_req, res) => {
+  if (orchestratorRunning) {
+    res.status(409).json({ ok: false, error: 'A run is already in progress' })
+    return
+  }
+  orchestratorRunning = true
   res.status(202).json({ ok: true })
-  setImmediate(() => {
-    runOrchestrator().catch(err => console.error('[mx4] manual run error:', err))
+  setImmediate(async () => {
+    try {
+      await runOrchestrator()
+    } catch (err) {
+      console.error('[mx4] manual run error:', err)
+    } finally {
+      orchestratorRunning = false
+    }
   })
 })
 
@@ -51,6 +67,11 @@ mx4Router.post('/run/:section', (req, res) => {
     res.status(404).json({ error: `Unknown section: ${section}` })
     return
   }
+  if (orchestratorRunning) {
+    res.status(409).json({ ok: false, error: 'A run is already in progress' })
+    return
+  }
+  orchestratorRunning = true
   res.status(202).json({ ok: true })
   setImmediate(async () => {
     try {
@@ -62,6 +83,8 @@ mx4Router.post('/run/:section', (req, res) => {
       }
     } catch (err) {
       console.error(`[mx4] section run error (${section}):`, err)
+    } finally {
+      orchestratorRunning = false
     }
   })
 })
@@ -89,7 +112,8 @@ mx4Router.delete('/wiki/patterns', (_req, res) => {
     resetWikiPatternPages()
     res.json({ ok: true })
   } catch (e: unknown) {
-    res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+    console.error('[mx4] wiki/patterns reset failed:', e)
+    res.status(500).json({ error: 'Failed to reset wiki pattern pages' })
   }
 })
 
@@ -98,7 +122,8 @@ mx4Router.delete('/wiki/all', (_req, res) => {
     resetAllWikiPages()
     res.json({ ok: true })
   } catch (e: unknown) {
-    res.status(500).json({ error: e instanceof Error ? e.message : String(e) })
+    console.error('[mx4] wiki/all reset failed:', e)
+    res.status(500).json({ error: 'Failed to reset wiki' })
   }
 })
 
@@ -137,11 +162,7 @@ mx4Router.post('/chat', async (req, res) => {
   const wikiContext = readAllWikiPagesSync()
   const heartbeat = loadHeartbeat()
   const systemBase = loadSystemPrompt()
-  const system = [
-    systemBase,
-    heartbeat ? `\n\n## Standing Orders\n${heartbeat}` : '',
-    `\n\n## Wiki Knowledge\n${wikiContext}`,
-  ].join('')
+  const system = assembleSystemPrompt(systemBase, heartbeat, wikiContext)
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -171,8 +192,8 @@ mx4Router.post('/chat', async (req, res) => {
       res.write(`data: ${JSON.stringify({ error: 'no response — check AI provider settings' })}\n\n`)
     }
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e)
-    res.write(`data: ${JSON.stringify({ error: msg })}\n\n`)
+    console.error('[mx4] chat stream error:', e)
+    res.write(`data: ${JSON.stringify({ error: 'MX-4 is unavailable — check AI provider settings.' })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')

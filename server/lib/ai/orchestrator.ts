@@ -4,7 +4,7 @@ import { getSetting } from '../settings'
 import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
 import { assembleSystemPrompt } from './prompt'
-import { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage } from './tools'
+import { queryDb, readAllWikiPages } from './tools'
 import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
@@ -48,12 +48,13 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     model,
     system: systemWithContext,
     prompt: sectionPrompt,
+    // Briefing generation is READ-ONLY: analysis only. Giving the model write
+    // tools here made it end with wiki-update meta ("briefing generated, wiki
+    // updated") or exhaust its steps. Wiki curation is a separate concern (the
+    // SYNC WIKI chat skill / wrap synthesis), keeping briefings clean.
     tools: {
       queryDb,
       readAllWikiPages,
-      writeWikiPage,
-      listWikiPages,
-      archiveWikiPage,
       research,
       ...(isVaultEnabled() ? await getVaultTools() : {}),
     } as ToolSet,

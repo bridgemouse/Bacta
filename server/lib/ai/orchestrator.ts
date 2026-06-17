@@ -8,6 +8,7 @@ import { queryDb, readAllWikiPages } from './tools'
 import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
+import { wrapSession } from './wrap'
 import { notifyFailure } from '../notify'
 import db from '../../db/client'
 import fs from 'fs'
@@ -141,5 +142,14 @@ export async function runOrchestrator(): Promise<void> {
     )
   } else {
     console.log('[mx4] orchestrator run complete')
+  }
+
+  // Compact any wiki pages that have grown past the token limit.
+  // Runs after briefings so it doesn't delay them, and only synthesizes —
+  // no knowledge is dropped, just expressed more densely.
+  try {
+    await wrapSession()
+  } catch (e: unknown) {
+    console.error('[mx4] wrapSession failed:', e instanceof Error ? e.message : e)
   }
 }

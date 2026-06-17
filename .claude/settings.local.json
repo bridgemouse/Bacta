@@ -57,7 +57,8 @@
       "Bash(node *)",
       "Bash(git commit -q -m 'security: harden server — read-only queryDb, helmet/CSP, input validation, rate limit *)",
       "Bash(git commit -q -m 'security: prompt-injection guard, run-lock, stop error leakage *)",
-      "Bash(git commit -q -m 'feat\\(mx4\\): provider-agnostic research tool \\(OpenAlex scholarly + optional web\\) *)"
+      "Bash(git commit -q -m 'feat\\(mx4\\): provider-agnostic research tool \\(OpenAlex scholarly + optional web\\) *)",
+      "Bash(git commit -q -m 'feat\\(mx4\\): canonical MX4_REFERENCE \\(tool catalog + data dictionary\\) injected into context *)"
     ]
   }
 }

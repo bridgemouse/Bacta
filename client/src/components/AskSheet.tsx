@@ -169,17 +169,17 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
                 </div>
               </div>
             ) : (
-              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span style={{ flexShrink: 0, marginTop: 4 }}>
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <MX4Sigil
                     color={color}
-                    size={22}
+                    size={18}
                     mood={streaming && i === messages.length - 1 ? 'think' : 'pleased'}
                   />
-                </span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: hexA(color, 0.6) }}>MX-4</span>
+                </div>
                 <div
                   style={{
-                    flex: 1,
                     borderLeft: `2px solid ${hexA(color, 0.25)}`,
                     paddingLeft: 12,
                     minWidth: 0,

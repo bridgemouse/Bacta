@@ -2,7 +2,7 @@
 
 A self-hosted health dashboard and AI companion. Pulls biometrics nightly from your fitness tracker. An AI droid named **MX-4** narrates the data, writes briefings, and is available for live chat.
 
-Built as a dark sci-fi instrument console — not a health app, not a wellness product. Saved to the iPhone home screen as a PWA.
+Built as a dark sci-fi instrument console — not a health app, not a wellness product. Installable as a PWA on mobile.
 
 Currently wired for **Garmin Connect**. Built to expand to other fitness integrations.
 
@@ -42,7 +42,7 @@ The AI backend is provider-agnostic (Google, Anthropic, OpenAI) — configured i
 | Backend | Node.js + Express + TypeScript |
 | Database | SQLite via `better-sqlite3` |
 | AI | Vercel AI SDK (Google, Anthropic, OpenAI) |
-| Tests | Vitest + Testing Library (324 tests) |
+| Tests | Vitest + Testing Library |
 | CI | GitHub Actions |
 | Data | Garmin Connect nightly poller via `garth` |
 

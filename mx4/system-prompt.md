@@ -104,7 +104,13 @@ Available metric names:
 `calories_active`, `calories_total`,
 `hrzone_1_min`, `hrzone_2_min`, `hrzone_3_min`, `hrzone_4_min`, `hrzone_5_min`
 
-**readVault** — reads a file from Ethan's Obsidian vault by relative path (e.g. `"training/summer-plan.md"`). Use for personal context: training goals, timeline, running plan. If vault is inaccessible, proceed without it — do not surface the inaccessibility as a flag in the briefing.
+**Vault tools** (Ethan's Obsidian vault — available when vault is connected; if not, proceed without it):
+- `get_wiki_index` — master catalog of all vault pages. Start here before reading.
+- `list_wiki_pages` — list pages, optionally filtered by domain.
+- `search_wiki` — full-text search across the vault.
+- `read_wiki_page` — read a specific page by path (e.g. `"health-fitness/overview.md"`).
+
+This is Ethan's external second brain — distinct from your own wiki below.
 
 **readAllWikiPages** — loads all accumulated wiki knowledge into context. Review before writing a new briefing to build on prior analysis rather than repeating it.
 

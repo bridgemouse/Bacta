@@ -144,6 +144,12 @@
 **Path:** Define what "daily log" means for this user (caffeine? mood? readiness? supplements?) → build input form (possibly in AskSheet or a dedicated input view) → wire to `manual_inputs` table → build `DailyLogPage.tsx`.  
 **DB ready:** `manual_inputs` table has `readiness` (1–5), `caffeine_mg`, `supplements` columns.
 
+### Docker Support
+
+**Scope:** Containerise the app so users can spin it up with a single `docker compose up`. Currently requires manual host setup (Node, Python, systemd). Docker would lower the barrier significantly for self-hosters.  
+**Path:** Write `Dockerfile` for the Node server + client build → `docker-compose.yml` with volume mounts for `data/` and `mx4/` → document in self-hosting guide.  
+**Note:** The Garmin poller is Python and runs on a cron/systemd schedule — either include it as a second container or document it as a sidecar.
+
 ---
 
 ## Sparse / Missing Metrics

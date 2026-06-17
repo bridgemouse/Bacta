@@ -50,7 +50,7 @@ The AI backend is provider-agnostic (Google, Anthropic, OpenAI) — configured i
 
 ## Self-Hosting
 
-Bacta runs on a single Linux host (tested on Debian 13). No Docker required.
+Bacta runs on a single Linux host (tested on Debian 13). Docker support is on the roadmap — for now, setup is manual.
 
 Requirements:
 - Node.js 20+

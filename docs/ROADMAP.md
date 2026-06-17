@@ -9,7 +9,7 @@
 - `TopBar.tsx` — home and section modes; MX-4 ONLINE indicator
 - `BottomBar.tsx` — Ask MX-4 button, Overview/Trends toggle, nav circle; always MX-4 cyan
 - `BottomSheet.tsx` — All Systems nav sheet with 2-column channel grid
-- `AskSheet.tsx` — Ask MX-4 sheet with greeting, suggested prompts, input bar
+- `AskSheet.tsx` — Ask MX-4 sheet: greeting, suggested prompts, input bar; full-width assistant messages with left accent line; real-time tool activity indicators (Jun 17)
 - `Sheet.tsx` — shared animated bottom-sheet wrapper
 - Tab toggle state via `TabContext` — persists Overview/Trends per app session, resets on section change
 
@@ -90,9 +90,17 @@
 - **Tech debt cleared** — `MX4Card`/`MX4Insight` stub deleted; ARCHITECTURE.md briefing pipeline notes updated; `mx4/sections.py` and `mx4/orchestrator.py` marked deprecated
 - **Home body battery fix** — Recovery tile now reads `body_battery_current ?? body_battery_wake ?? 74`; was showing start-of-day wake value instead of live intraday reading
 
+**MX-4 system — Chat UX complete (Jun 17, 2026):**
+- `server/api/mx4.ts` — `toolLabel()` function: Star Wars-themed real-time droid comms labels per tool/args (metric name from SQL, query for research/vault, page name for wiki writes); chat SSE loop switched `textStream` → `fullStream`, emits `{"tool":"LABEL"}` on tool-call events
+- `server/api/mx4.ts` — `categorizeError()` function: four-branch error categorization (unconfigured provider, rate limit, timeout, generic fallback); both the catch block and the empty-response path route through it
+- `client/src/hooks/useChat.ts` — `toolCalls: string[]` state; parses tool SSE events, keeps last 3, clears on first text delta and in `finally`; SSE error branch passes server string through to UI; outer catch shows connection-drop guidance
+- `AskSheet.tsx` — full-width assistant message layout (left accent line, no bubble, matches Claude Desktop); tool indicator rows stack above content while streaming, blink on active row
+- `client/src/hooks/useChat.ts` — `loadMessages` crash fix: `r.ok ? r.json() : []` guard + `Array.isArray(msgs)` check prevents crash on 401 response body
+- Branch: `mx4-tweaks`, PR: https://github.com/bridgemouse/Bacta/pull/new/mx4-tweaks
+
 **Tests:**
-- 278 tests passing (113 server + 165 client, last verified Jun 16, 2026)
-- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API
+- 324 tests passing (154 server + 170 client, last verified Jun 17, 2026)
+- Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)
 
 ### Present but Untested (Never Run)
 
@@ -135,10 +143,6 @@
 **Blocker:** No data source and no input UI.  
 **Path:** Define what "daily log" means for this user (caffeine? mood? readiness? supplements?) → build input form (possibly in AskSheet or a dedicated input view) → wire to `manual_inputs` table → build `DailyLogPage.tsx`.  
 **DB ready:** `manual_inputs` table has `readiness` (1–5), `caffeine_mg`, `supplements` columns.
-
-### HEARTBEAT.md — Standing Orders File
-
-The standing orders mechanism is documented and referenced in multiple places but the file doesn't exist. Creating it (even empty with format documentation) enables future behavioral adjustments to MX-4 without touching his system prompt.
 
 ---
 

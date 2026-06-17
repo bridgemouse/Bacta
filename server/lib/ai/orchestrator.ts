@@ -5,6 +5,7 @@ import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
 import { assembleSystemPrompt } from './prompt'
 import { queryDb, readAllWikiPages } from './tools'
+import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
 import db from '../../db/client'
@@ -49,6 +50,7 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     tools: {
       queryDb,
       readAllWikiPages,
+      research,
       ...(isVaultEnabled() ? await getVaultTools() : {}),
     } as ToolSet,
     stopWhen: stepCountIs(8),

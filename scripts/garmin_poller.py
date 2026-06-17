@@ -471,10 +471,32 @@ def sync_range(db, c, start, end):
 
 # ─── Main ──────────────────────────────────────────────────────────────────────
 
+def notify_failure(detail):
+    """Best-effort Discord webhook on poll failure. No-op if unset. No PHI."""
+    url = os.environ.get('DISCORD_WEBHOOK_URL')
+    if not url:
+        return
+    try:
+        import json as _json, urllib.request as _u
+        body = _json.dumps({'content': f'⚠️ Bacta — nightly Garmin poll failed\n{detail}'[:1800]}).encode()
+        req = _u.Request(url, data=body, headers={'Content-Type': 'application/json'})
+        _u.urlopen(req, timeout=8)
+    except Exception:
+        pass
+
+
 def main():
     db = connect_db()
     c = Garmin()
-    c.login(TOKEN_DIR)
+    try:
+        c.login(TOKEN_DIR)
+    except Exception as e:
+        # Auth/token failure is fatal for the whole run — surface it, don't crash silently.
+        print(f'FATAL: Garmin login failed: {e}')
+        notify_failure(f'Garmin login failed (token may have expired): {e}')
+        db.close()
+        raise
+
     print(f'Authenticated as: {c.display_name}')
 
     today = date.today()
@@ -493,4 +515,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        notify_failure(f'poll run aborted: {e}')
+        raise

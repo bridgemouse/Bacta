@@ -5,7 +5,7 @@
 > Karpathy's "second brain for the model"), the structure of Ethan's external Obsidian
 > vault, and the existing `mx4/wiki/SCHEMA.md`.
 >
-> **Status: proposed — pending Ethan's approval before being wired into MX-4's standing context.**
+> **Status: APPROVED (2026-06-17) — wired into MX-4's chat context via `assembleSystemPrompt(..., includeWikiPrinciples=true)`.**
 
 ---
 

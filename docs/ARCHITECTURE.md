@@ -165,11 +165,21 @@ client/src/
 
 ## Express API Routes
 
-All routes are defined in `server/api/` and mounted in `server/index.ts`.
+All routes are defined in `server/api/` and mounted in `server/index.ts`, behind
+`helmet` (CSP), a 1MB JSON limit, and rate limiting on the AI/poll endpoints.
+
+**Auth layer:** a `requireAuth` gate fronts every data/AI/settings route (health +
+`/api/auth/*` are exempt). It enforces a session cookie once a PIN is configured
+(`server/lib/auth.ts`: scrypt-hashed PIN → HMAC token). `/api/auth/{status,login,logout,set-pin}`.
+**MX-4 tools:** the orchestrator and chat share one tool set — `queryDb` (read-only),
+`research` (OpenAlex + optional web), the wiki tools, and vault tools when enabled
+(`server/lib/ai/{tools,research,vaultClient}.ts`). See `docs/MX4_REFERENCE.md`.
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/health` | Health check — returns `{ status: 'ok', timestamp }` |
+| `POST` | `/api/auth/login` | Exchange PIN for a session cookie (rate-limited) |
+| `GET` | `/api/garmin/summary` | Latest available value per metric (uses per-metric MAX(date)) |
 | `GET` | `/api/garmin/summary` | Latest available value per metric (uses per-metric MAX(date)) |
 | `GET` | `/api/garmin/activities?days=7` | Last N days of activities (max 30), newest first |
 | `GET` | `/api/garmin/sync/status` | Current sync state: `idle | running | done | error` |

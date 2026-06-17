@@ -251,7 +251,7 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
-      res.write(`data: ${JSON.stringify({ error: 'no response — check AI provider settings' })}\n\n`)
+      res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
     }
   } catch (e: unknown) {
     console.error('[mx4] chat stream error:', e)

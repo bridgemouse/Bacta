@@ -61,7 +61,8 @@
       "Bash(git commit -q -m 'feat\\(mx4\\): canonical MX4_REFERENCE \\(tool catalog + data dictionary\\) injected into context *)",
       "Bash(git commit -q -m 'feat\\(security\\): app authentication — PIN -> scrypt hash -> HMAC session token *)",
       "Bash(chmod +x scripts/backup-db.js scripts/install-db-backup.sh)",
-      "Bash(git commit -q -m 'feat\\(ops\\): DB backup script \\(restore-verified\\) + failure notifications *)"
+      "Bash(git commit -q -m 'feat\\(ops\\): DB backup script \\(restore-verified\\) + failure notifications *)",
+      "Bash(git commit -q -m 'docs+ops: MX4 LLM-Wiki principles, CHANGELOG, version in Settings footer *)"
     ]
   }
 }

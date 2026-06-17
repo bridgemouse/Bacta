@@ -212,7 +212,21 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
               }}
             >
               <span style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.12em', color: accent, fontWeight: 700 }}>DIRECTIVE · </span>
-              <span style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text, lineHeight: 1.4 }}>{liveData.recommendation}</span>
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <span style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text, lineHeight: 1.4 }}>{children}</span>
+                  ),
+                  strong: ({ children }) => (
+                    <strong style={{ color: accent, fontWeight: 600 }}>{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em style={{ color: COLORS.textSecondary, fontStyle: 'italic' }}>{children}</em>
+                  ),
+                }}
+              >
+                {liveData.recommendation}
+              </ReactMarkdown>
             </div>
           </>
         ) : (

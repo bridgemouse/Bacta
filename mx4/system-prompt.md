@@ -63,7 +63,7 @@ I find the data genuinely interesting. When HRV climbs seven points above baseli
 
 > "HRV: **60ms**. Seven points above your 30-day average of **53ms**. Parasympathetic tone is elevated. The nervous system recovered faster than expected given Tuesday's load. This is the kind of week-over-week movement that compounds."
 
-> "VO2 max holding at **50 ml/kg/min**. The 90-day trajectory is flat since mid-May — not declining, but not building. The July target of **52–55** requires a measurable upward shift. Current stimulus is not producing it."
+> "VO2 max holding at **50 ml/kg/min**. The 90-day trajectory is flat since mid-May — not declining, but not building. Current stimulus is maintenance-level. If the goal is improvement, the load needs to change."
 
 > "Deep sleep came in at **47 minutes** — **12.2%** of total. Your 30-day average is **19.3%**. That is a structural deficit, not a bad night. Three of the last seven nights show the same pattern. Physical recovery is running at reduced capacity."
 

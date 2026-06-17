@@ -33,7 +33,7 @@ Your entire response must be the analysis prose itself — never a summary of ac
     includeManual: false,
     promptAddendum: `Pull 14 days of sleep stage data via queryDb: sleep_s, sleep_deep_s, sleep_rem_s, sleep_awake_s, sleep_score. Calculate each stage as a percentage of total sleep to assess architecture.
 
-Targets for a 26M athlete: deep ≥15% of total, REM ≥20%, awake <5%. Flag chronic deficiency — one bad night is a data point, three in a row is a pattern.
+Check your wiki for any established personal sleep baselines before applying general benchmarks. If no personal baselines are documented, general adult athlete targets (deep ≥15%, REM ≥20%, awake <5%) are a starting reference — but treat them as population-level, not Ethan-specific. Flag chronic deficiency — one bad night is a data point, three in a row is a pattern.
 
 sleep_stress is Garmin's overnight autonomic stress estimate — lower is better, indicates parasympathetic recovery.
 
@@ -51,14 +51,14 @@ Your entire response must be the analysis prose itself — never a summary of ac
       'fitness_age', 'fitness_age_achievable',
     ],
     includeManual: true,
-    promptAddendum: `Pull 90 days of vo2max via queryDb and project the trajectory toward the July target (52–55 ml/kg/min). State the projection directly — where does current trajectory land by late July?
+    promptAddendum: `Pull 90 days of vo2max via queryDb and characterize the trajectory — building, flat, or declining? Read your wiki for any documented training goals; if a goal exists, assess the trajectory against it. Do not assume a goal that is not in your wiki.
 
-Pull 30 days of training_load. Assess whether the stimulus is sufficient to drive VO2 max gains or whether it is merely maintaining.
+Pull 30 days of training_load. Assess whether the current stimulus is sufficient to drive VO2 max improvement, or whether it is maintaining or producing decline.
 
 intensity_mod_min and intensity_vig_min are weekly moderate and vigorous intensity minutes. Inconsistency in these indicates variable stimulus.
 
-summary: 3–5 sentences. VO2 max trajectory toward July target, whether current load is building or maintaining, and what needs to change. No headers.
-body: Use ## VO2 MAX TRAJECTORY, ## LOAD ANALYSIS, ## INTENSITY PATTERN, ## DIRECTIVE. Bold all metric values. The ## DIRECTIVE must address the July target specifically.
+summary: 3–5 sentences. VO2 max current value and trend, whether load is building or maintaining, and the directive. If a documented goal exists in your wiki, assess against it. No headers.
+body: Use ## VO2 MAX TRAJECTORY, ## LOAD ANALYSIS, ## INTENSITY PATTERN, ## DIRECTIVE. Bold all metric values. The ## DIRECTIVE must be specific and concrete.
 
 Your entire response must be the analysis prose itself — never a summary of actions taken or a note about tools/wiki.`,
   },

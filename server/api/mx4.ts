@@ -11,6 +11,46 @@ import { getVaultTools } from '../lib/ai/vaultClient'
 import { getSetting } from '../lib/settings'
 import db from '../db/client'
 
+export function toolLabel(toolName: string, args: Record<string, unknown>): string {
+  switch (toolName) {
+    case 'queryDb': {
+      const sql = String(args.sql ?? '')
+      const match = sql.match(/metric\s*=\s*'([^']+)'/i)
+      return match ? `PULLING TELEMETRY ON ${match[1]}` : 'PULLING TELEMETRY'
+    }
+    case 'research': {
+      const q = String(args.query ?? '').slice(0, 50).trim()
+      return q ? `SWEEPING ARCHIVES FOR ${q}` : 'SWEEPING ARCHIVES'
+    }
+    case 'readAllWikiPages':
+      return 'CONSULTING LOADED MATRICES'
+    case 'writeWikiPage': {
+      const name = String(args.name ?? '')
+      return name ? `ENCODING ${name} TO MATRIX` : 'ENCODING TO MATRIX'
+    }
+    case 'archiveWikiPage': {
+      const name = String(args.name ?? '')
+      return name ? `ARCHIVING ${name} FROM MATRIX` : 'ARCHIVING FROM MATRIX'
+    }
+    case 'listWikiPages':
+      return 'SURVEYING LOADED MATRICES'
+    case 'search_wiki': {
+      const q = String(args.query ?? '').slice(0, 50).trim()
+      return q ? `SWEEPING EXTERNAL MATRIX FOR ${q}` : 'SWEEPING EXTERNAL MATRIX'
+    }
+    case 'read_wiki_page': {
+      const path = String(args.path ?? '')
+      return path ? `PULLING ${path} FROM EXTERNAL MATRIX` : 'PULLING FROM EXTERNAL MATRIX'
+    }
+    case 'get_wiki_index':
+      return 'ORIENTING ON EXTERNAL MATRIX'
+    case 'list_wiki_pages':
+      return 'SURVEYING EXTERNAL MATRIX'
+    default:
+      return `ACCESSING ${toolName.toUpperCase()}`
+  }
+}
+
 async function compressSessionIfNeeded(sessionId: string): Promise<void> {
   const threshold = parseInt(getSetting('mx4_chat_compression_threshold') ?? '20', 10)
   const rows = db.prepare(
@@ -182,9 +222,14 @@ mx4Router.post('/chat', async (req, res) => {
     })
 
     let fullText = ''
-    for await (const chunk of result.textStream) {
-      res.write(`data: ${JSON.stringify(chunk)}\n\n`)
-      fullText += chunk
+    for await (const part of result.fullStream) {
+      if (part.type === 'tool-call') {
+        const label = toolLabel(part.toolName, part.input as Record<string, unknown>)
+        res.write(`data: ${JSON.stringify({ tool: label })}\n\n`)
+      } else if (part.type === 'text-delta') {
+        res.write(`data: ${JSON.stringify(part.text)}\n\n`)
+        fullText += part.text
+      }
     }
 
     if (fullText) {

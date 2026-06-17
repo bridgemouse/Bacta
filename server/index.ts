@@ -12,6 +12,8 @@ import bloodworkRouter from './api/bloodwork'
 import pollRouter from './api/poll'
 import mx4Router from './api/mx4'
 import settingsRouter from './api/settings'
+import authRouter from './api/auth'
+import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './lib/auth'
 import { scheduleNightly } from './lib/ai/scheduler'
 
 migrate()
@@ -53,14 +55,35 @@ const aiLimiter = rateLimit({
   skip: () => isTest,
 })
 
+// Strict limiter for credential endpoints — slows PIN brute-force.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+})
+
+// Auth gate: enforced only once a PIN is configured, so a fresh box / the test
+// suite stay open until the user secures it. Health + auth endpoints are exempt.
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  if (!isAuthConfigured()) return next()
+  const token = parseCookies(req.headers.cookie)[SESSION_COOKIE]
+  if (verifyToken(token)) return next()
+  res.status(401).json({ error: 'Authentication required' })
+}
+
 app.use('/api/health', healthRouter)
-app.use('/api/garmin', garminRouter)
-app.use('/api/manual', manualRouter)
-app.use('/api/insights', insightsRouter)
-app.use('/api/bloodwork', bloodworkRouter)
-app.use('/api/poll', aiLimiter, pollRouter)
-app.use('/api/mx4', aiLimiter, mx4Router)
-app.use('/api/settings', settingsRouter)
+app.use('/api/auth/login', loginLimiter)
+app.use('/api/auth/set-pin', loginLimiter)
+app.use('/api/auth', authRouter)
+app.use('/api/garmin', requireAuth, garminRouter)
+app.use('/api/manual', requireAuth, manualRouter)
+app.use('/api/insights', requireAuth, insightsRouter)
+app.use('/api/bloodwork', requireAuth, bloodworkRouter)
+app.use('/api/poll', requireAuth, aiLimiter, pollRouter)
+app.use('/api/mx4', requireAuth, aiLimiter, mx4Router)
+app.use('/api/settings', requireAuth, settingsRouter)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {
@@ -81,5 +104,10 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 if (require.main === module) {
   const port = process.env.PORT ?? 3001
-  app.listen(port, () => console.log(`[server] listening on :${port}`))
+  app.listen(port, () => {
+    console.log(`[server] listening on :${port}`)
+    if (!isAuthConfigured()) {
+      console.warn('[server] ⚠ AUTH NOT CONFIGURED — the app is OPEN to anyone on the network. Set a PIN to secure it.')
+    }
+  })
 }

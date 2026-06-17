@@ -163,7 +163,9 @@ mx4Router.post('/chat', async (req, res) => {
   const wikiContext = readAllWikiPagesSync()
   const heartbeat = loadHeartbeat()
   const systemBase = loadSystemPrompt()
-  const system = assembleSystemPrompt(systemBase, heartbeat, wikiContext)
+  // Chat is where MX-4 curates his wiki (writeWikiPage / SYNC WIKI), so include
+  // the wiki-curation standard here.
+  const system = assembleSystemPrompt(systemBase, heartbeat, wikiContext, true)
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')

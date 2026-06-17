@@ -128,9 +128,9 @@
 
 ### Nutrition Section
 
-**Blocker:** No MacroFactor account. MacroFactor is the likely data source (nutrition tracking app with CSV/API export).  
-**Path:** Create MacroFactor account → implement import script → wire to `macrofactor_snapshots` table → build `NutritionPage.tsx` (design session first).  
-**DB ready:** `macrofactor_snapshots` table exists.
+**Scope:** Custom-built nutrition tracker — not a third-party integration. This is a major feature: food logging UI, macro/calorie tracking, meal history, and a Bacta-native data model.  
+**Path:** Design session first (data model + UI) → build logging interface → wire to nutrition table → build `NutritionPage.tsx` → wire MX-4 briefing.  
+**DB:** `macrofactor_snapshots` table exists as a placeholder; will be replaced or repurposed when the data model is defined.
 
 ### Blood Work Section
 

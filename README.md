@@ -26,7 +26,7 @@ The AI backend is provider-agnostic (Google, Anthropic, OpenAI) — configured i
 | Recovery | Live — HRV, body battery, RHR, stress, SpO2, respiration |
 | Sleep | Live — sleep score, stage depth, SpO2, sleep stress |
 | Training | Live — training load, VO2max, fitness age, zones, activity log |
-| Nutrition | Roadmap — MacroFactor integration planned |
+| Nutrition | Roadmap — custom nutrition tracking (in development) |
 | Blood Work | Roadmap — lab result import planned |
 | Daily Log | Roadmap — manual input UI planned |
 
@@ -62,4 +62,4 @@ Setup guide coming soon. The poller and ingest scripts are in `scripts/`, the da
 
 ## Roadmap
 
-The next milestones are additional fitness integrations and the three placeholder sections (Nutrition, Blood Work, Daily Log). Contributions expanding device support are welcome.
+The next milestones are the three placeholder sections. Nutrition is the largest — a custom-built nutrition tracker, not a third-party integration. Blood Work and Daily Log follow. Contributions expanding device support beyond Garmin are welcome.

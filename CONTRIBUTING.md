@@ -30,7 +30,8 @@ Open an issue first to discuss what you want to build. This avoids duplicate eff
 ## What's in Scope
 
 - New fitness data integrations (Polar, Wahoo, Oura, Apple Health, etc.)
-- The Nutrition, Blood Work, and Daily Log sections (coordinate on data model first)
+- Blood Work and Daily Log sections (coordinate on data model first)
+- Nutrition is a major in-progress feature with a custom data model — check open issues before contributing here
 - Performance, accessibility, or reliability improvements
 - Bug fixes
 

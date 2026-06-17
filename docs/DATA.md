@@ -45,7 +45,7 @@ CREATE TABLE garmin_activities (
   elevation_m      REAL,
   aerobic_te       REAL,                  -- aerobic training effect (0–5)
   anaerobic_te     REAL,                  -- anaerobic training effect (0–5)
-  recovery_time_h  REAL,                  -- Garmin's estimated recovery time in hours
+  recovery_time_h  REAL,                  -- recovery time in MINUTES (legacy column name; ÷60 for hours)
   zone1_s          INTEGER,               -- seconds in HR zone 1
   zone2_s          INTEGER,
   zone3_s          INTEGER,
@@ -213,7 +213,7 @@ As of 2026-06-11 (live recon from database). All metrics are in `garmin_snapshot
 | `sleep_stress` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Overnight stress level |
 | `sleep_hr` | 41 | 2026-05-02 → 2026-06-11 | bpm | Average overnight heart rate |
 | `recovery_score` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Garmin Training Readiness |
-| `recovery_time_h` | 0 | — | h | Hours until full recovery; newly added Jun 11, 2026 |
+| `recovery_time_h` | 6 | 2026-06-11 → | **min** | Recovery time — **stored in MINUTES despite the name/legacy unit**; divide by 60 for hours. See `docs/MX4_REFERENCE.md`. |
 | `intensity_vig_min` | 41 | 2026-05-02 → 2026-06-11 | min | Vigorous intensity minutes |
 | `intensity_mod_min` | 41 | 2026-05-02 → 2026-06-11 | min | Moderate intensity minutes |
 | `hrv_baseline_low` | 41 | 2026-05-02 → 2026-06-11 | ms | Personal HRV baseline lower bound |
@@ -271,14 +271,13 @@ These were renamed from `max`/`min` in a database migration (Jun 11, 2026). Any 
 | All Garmin metrics | Live — `garmin_snapshots` via `/api/garmin/*` |
 | Activities | Live — `garmin_activities` via `/api/garmin/activities` |
 | Activity legs | Live — `garmin_activity_legs` via `/api/garmin/activities/:id/legs` |
-| MX-4 briefing text | **Stub** — `client/src/lib/stubData.ts` `BRIEFS` |
-| MX-4 tone/mood/chips | **Stub** — `stubData.ts` `BRIEFS` |
-| Nutrition data | Empty — `macrofactor_snapshots` has no rows |
-| Blood work | Empty — `blood_work` has no rows |
-| Manual inputs | Empty — `manual_inputs` has no rows |
-| Insights HTML | Empty — `insights/` directory has no `.html` files |
+| MX-4 briefing text | **Live** — `mx4_briefings` table via `/api/insights/:section` → `useBriefing`. `stubData.ts` `BRIEFS` is a fallback only (used until a section has generated). |
+| MX-4 tone/headline/summary/body | **Live** — `mx4_briefings.content_json` |
+| Nutrition data | Empty — `macrofactor_snapshots` has no rows (section in STANDBY) |
+| Blood work | Empty — `blood_work` has no rows (section in STANDBY) |
+| Manual inputs | Empty — `manual_inputs` has no rows (Daily Log in STANDBY) |
 
-The MX-4 briefing system is the primary stub. All section pages render static `BRIEFS` text until the orchestrator is run for the first time.
+MX-4 briefings are **live**: the TypeScript orchestrator (`server/lib/ai/orchestrator.ts`) writes `{tone, headline, summary, body, recommendation, flags}` to the `mx4_briefings` table, which the section pages render. The legacy `insights/*.html` path is dead. Only the three data-blocked sections (Nutrition, Blood Work, Daily Log) remain placeholders.
 
 ---
 

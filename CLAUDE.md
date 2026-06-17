@@ -212,10 +212,26 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 ## Infrastructure
 
-- **Repo:** `github.com/bridgemouse/bacta`
+- **Repo:** `github.com/bridgemouse/bacta` — **public**, framed as a self-hostable open-source project
 - **CI:** GitHub Actions, self-hosted runner on LXC 109 (labels: `bacta, self-hosted`)
 - **PWA:** `client/public/manifest.json`, iOS meta tags in `client/index.html`
 - **Fonts:** Google Fonts (Hanken Grotesk + JetBrains Mono) in `client/index.html`
+- **GitHub CLI:** `gh` is installed and authenticated on LXC 109 as `bridgemouse`
+
+### GitHub Repo Governance (set Jun 17, 2026)
+- **Branch protection on `main`:** force pushes blocked, deletions blocked, contributors must open a PR with CI passing and owner approval. Ethan (owner) can push directly — `enforce_admins: false`.
+- **CODEOWNERS:** `@bridgemouse` is auto-added as required reviewer on all PRs (`.github/CODEOWNERS`)
+- **License:** MIT (`LICENSE`)
+- **Contributing guide:** `CONTRIBUTING.md` — documents hard UI rules (inline styles, dark only, theme colors), code conventions, what's in/out of scope
+- **PR template:** `.github/pull_request_template.md`
+- **Issue templates:** `.github/ISSUE_TEMPLATE/` (bug report, feature request)
+- **Topics:** `ai`, `biometrics`, `express`, `fitness`, `garmin`, `health-dashboard`, `pwa`, `quantified-self`, `react`, `self-hosted`, `sqlite`, `typescript`
+
+### Repo Scope & Framing
+- Bacta is open to contributions — especially additional fitness device integrations (Polar, Wahoo, Oura, Apple Health, etc.)
+- **Nutrition** is a major custom-built feature (not a third-party integration like MacroFactor); flag this clearly when discussing the roadmap
+- **Vault integration** is via a custom LLM-Wiki MCP that exposes an Obsidian vault to Bacta — a separate repo, coming soon. It is NOT an NFS mount from Bacta's perspective.
+- **Docker support** is on the roadmap — do not describe Bacta as "no Docker" to contributors
 
 ---
 

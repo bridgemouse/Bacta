@@ -57,8 +57,15 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
       research,
       ...(isVaultEnabled() ? await getVaultTools() : {}),
     } as ToolSet,
-    stopWhen: stepCountIs(8),
+    stopWhen: stepCountIs(12),
   })
+
+  // If the model exhausted its step budget on tool calls without emitting prose,
+  // fullAnalysis is empty. Throw so the orchestrator's retry loop re-runs the
+  // section instead of writing an empty/meta "no analysis" briefing.
+  if (!fullAnalysis || !fullAnalysis.trim()) {
+    throw new Error(`empty analysis for ${sectionName} — model produced no text (likely exhausted tool steps)`)
+  }
 
   // No tools — avoids Gemini structured-output + tools conflict
   const { object } = await generateObject({

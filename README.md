@@ -10,11 +10,13 @@ Currently wired for **Garmin Connect**. Built to expand to other fitness integra
 
 ## MX-4
 
-MX-4 is a Cybot Galactica MX-series multi-system interface droid — built to see across domains and surface what matters. He runs a nightly briefing pipeline, maintains a structured health wiki, and is available via live chat with real-time tool visibility.
+MX-4 is a Star Wars-themed AI companion — specifically a Cybot Galactica MX-series multi-system interface droid, built to see across domains and surface what matters. He runs a nightly briefing pipeline, maintains a structured health wiki, and is available via live chat with real-time tool visibility.
 
 He does not serve. He collaborates.
 
 The AI backend is provider-agnostic (Google, Anthropic, OpenAI) — configured in settings.
+
+**Changing the persona:** MX-4's character is defined in two markdown files: `mx4/system-prompt.md` (voice, output format, behavior rules) and `mx4/mx4_personal_identity_record.md` (canonical identity). Edit those to swap in a different character without touching any code. `mx4/HEARTBEAT.md` (gitignored, template at `mx4/HEARTBEAT.md.example`) holds standing orders injected on every run — use it for user-specific behavioral overrides.
 
 ---
 

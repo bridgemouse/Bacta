@@ -39,4 +39,4 @@ Open an issue first to discuss what you want to build. This avoids duplicate eff
 
 - Light mode
 - Cloud deployment or SaaS features — Bacta is intentionally self-hosted
-- Removing or replacing MX-4 — he's the product
+- Removing or replacing MX-4 — he's the product. If you want a different persona, edit `mx4/system-prompt.md` and `mx4/mx4_personal_identity_record.md` in your own fork; that's the intended customization path

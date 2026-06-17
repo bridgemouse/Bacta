@@ -3,9 +3,12 @@ import { getModel } from './provider'
 import { getSetting } from '../settings'
 import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
+import { assembleSystemPrompt } from './prompt'
 import { queryDb, readAllWikiPages } from './tools'
+import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
+import { notifyFailure } from '../notify'
 import db from '../../db/client'
 import fs from 'fs'
 import path from 'path'
@@ -31,11 +34,7 @@ async function runSection(
   const model = getModel('briefing')
   const modelId = (model as unknown as { modelId?: string }).modelId ?? getSetting('mx4_briefing_model') ?? 'unknown'
 
-  const systemWithContext = [
-    systemPrompt,
-    heartbeat ? `\n\n## Standing Orders\n${heartbeat}` : '',
-    `\n\n## Wiki Knowledge\n${wikiContext}`,
-  ].join('')
+  const systemWithContext = assembleSystemPrompt(systemPrompt, heartbeat, wikiContext)
 
   const sectionPrompt = `You are generating MX-4's ${sectionName} briefing.
 
@@ -49,13 +48,25 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     model,
     system: systemWithContext,
     prompt: sectionPrompt,
+    // Briefing generation is READ-ONLY: analysis only. Giving the model write
+    // tools here made it end with wiki-update meta ("briefing generated, wiki
+    // updated") or exhaust its steps. Wiki curation is a separate concern (the
+    // SYNC WIKI chat skill / wrap synthesis), keeping briefings clean.
     tools: {
       queryDb,
       readAllWikiPages,
+      research,
       ...(isVaultEnabled() ? await getVaultTools() : {}),
     } as ToolSet,
-    stopWhen: stepCountIs(8),
+    stopWhen: stepCountIs(12),
   })
+
+  // If the model exhausted its step budget on tool calls without emitting prose,
+  // fullAnalysis is empty. Throw so the orchestrator's retry loop re-runs the
+  // section instead of writing an empty/meta "no analysis" briefing.
+  if (!fullAnalysis || !fullAnalysis.trim()) {
+    throw new Error(`empty analysis for ${sectionName} — model produced no text (likely exhausted tool steps)`)
+  }
 
   // No tools — avoids Gemini structured-output + tools conflict
   const { object } = await generateObject({
@@ -124,6 +135,10 @@ export async function runOrchestrator(): Promise<void> {
 
   if (errors.length > 0) {
     console.error('[mx4] run completed with errors:', errors)
+    await notifyFailure(
+      'nightly MX-4 run failed',
+      errors.map(e => `${e.section}: ${e.error}`).join('; ') + (rateLimitHit ? ' (usage limit)' : ''),
+    )
   } else {
     console.log('[mx4] orchestrator run complete')
   }

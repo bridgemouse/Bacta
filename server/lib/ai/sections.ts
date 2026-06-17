@@ -19,7 +19,7 @@ Issue a clear training recommendation: green (go hard) / yellow (moderate only) 
 summary: 3–5 sentences. Key autonomic finding, what it means for today's training, the directive. No headers.
 body: Use ## HRV, ## RECOVERY MARKERS, ## DIRECTIVE. Bold all metric values. Bullets for multi-point findings.
 
-After writing: decide if anything is worth updating in your wiki — HRV baseline shifts, sustained trend changes, or a new pattern worth tracking.`,
+Your entire response must be the analysis prose itself — never a summary of actions taken or a note about tools/wiki.`,
   },
   {
     id: 'sleep',
@@ -40,7 +40,7 @@ sleep_stress is Garmin's overnight autonomic stress estimate — lower is better
 summary: 3–5 sentences. Key architecture finding (which stage and by how much), what it means for physical or cognitive recovery, one concrete action. No headers.
 body: Use ## SLEEP ARCHITECTURE, ## STAGE BREAKDOWN, ## TREND, ## DIRECTIVE. Bold all durations and percentages. Bullets for the stage breakdown.
 
-After writing: if deep sleep deficit is a sustained pattern (>3 nights), update or create a wiki page for sleep-architecture.`,
+Your entire response must be the analysis prose itself — never a summary of actions taken or a note about tools/wiki.`,
   },
   {
     id: 'training',
@@ -60,7 +60,7 @@ intensity_mod_min and intensity_vig_min are weekly moderate and vigorous intensi
 summary: 3–5 sentences. VO2 max trajectory toward July target, whether current load is building or maintaining, and what needs to change. No headers.
 body: Use ## VO2 MAX TRAJECTORY, ## LOAD ANALYSIS, ## INTENSITY PATTERN, ## DIRECTIVE. Bold all metric values. The ## DIRECTIVE must address the July target specifically.
 
-After writing: update the vo2max-trajectory wiki page with the current projection and date.`,
+Your entire response must be the analysis prose itself — never a summary of actions taken or a note about tools/wiki.`,
   },
   {
     id: 'home',
@@ -79,6 +79,6 @@ Lead with the cross-channel verdict: primed, nominal, or under strain. Then the 
 summary: 3–5 sentences. Cross-channel verdict, the most significant interaction between domains, the directive. No headers.
 body: Use ## SYSTEM STATE, ## CHANNEL SYNTHESIS, ## TENSIONS & CONFIRMATIONS, ## DIRECTIVE. Bold all metric values referenced. Bullets for multi-point cross-channel findings.
 
-After writing: no wiki update — home synthesis does not generate new standing knowledge.`,
+Your entire response must be the analysis prose itself — never a summary of actions taken or a note about tools/wiki.`,
   },
 ]

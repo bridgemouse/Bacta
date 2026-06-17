@@ -92,57 +92,48 @@ A future session that loses MX-4's character will produce generic wellness conte
 
 ## The Orchestrator Pipeline
 
-MX-4's intelligence runs as a Claude Code CLI job that reads data and writes briefings.
+MX-4's intelligence runs as a **TypeScript pipeline on the Vercel AI SDK** (the
+Python `claude -p` approach in `mx4/orchestrator.py` is **deprecated/superseded** —
+do not run it). It is live: it has run, and briefings are stored in the
+`mx4_briefings` DB table and rendered by the section pages.
 
-**File:** `mx4/orchestrator.py`
+**File:** `server/lib/ai/orchestrator.ts`
 
 **Inputs:**
-- SQLite database (`/opt/bacta/data/bacta.db`) — 30-day window of Garmin metrics, pre-fetched
-- Obsidian Vault (`/mnt/vault/wiki`) — Ethan's personal notes, accessed via vault-query MCP
-- Additional DB history via bacta-db MCP (for deeper queries)
+- SQLite database (`/opt/bacta/data/bacta.db`) — queried live by MX-4 via the `queryDb` tool
+- The canonical `docs/MX4_REFERENCE.md` (tool catalog + data dictionary), injected into his system context
+- `mx4/HEARTBEAT.md` standing orders + his self-curated wiki (`mx4/wiki/`)
+- The external Obsidian vault, when enabled, via the vault MCP tools
 
-**Process:**
-1. Fetch 30 days of key metrics from SQLite via `mx4/data_fetcher.py`
-2. For each section defined in `mx4/sections.py`:
-   - Build a prompt combining the system prompt, pre-fetched data, and section-specific instructions
-   - Run `claude -p --mcp-config mx4/mcp-config.json` via subprocess (reads prompt from stdin)
-   - Retry up to 3 times on transient failure; stop immediately on usage-limit errors
-3. Write the HTML output to `insights/{section}.html`
-4. Notify via Discord on failure (scheduled runs) or always (manual runs)
+**Process (`runOrchestrator`):**
+1. Assemble the system context: system prompt + `MX4_REFERENCE.md` + untrusted-content policy + standing orders + wiki (`server/lib/ai/prompt.ts`).
+2. For each section in `server/lib/ai/sections.ts` (`recovery`, `sleep`, `training`, then `home`):
+   - `generateText` with the tool set (`queryDb`, `research`, wiki tools, vault tools when enabled), bounded by `stepCountIs(8)`
+   - `generateObject` extracts the structured `{ tone, headline, summary, body, recommendation, flags }`
+   - Retry up to 3× on transient failure; abort the run on usage-limit/429
+3. Write each briefing to `mx4_briefings (section, content_json, generated_at, model)` via `INSERT OR REPLACE`.
+4. On failure, notify via `DISCORD_WEBHOOK_URL` (`server/lib/notify.ts`).
 
-**MCP servers** (configured in `mx4/mcp-config.json`):
-- `vault-query` → `mx4/vault_query_server.py` — reads Obsidian vault wiki pages
-- `bacta-db` → `mx4/db_query_server.py` — read-only SQLite access to garmin_snapshots and manual_inputs
+**Tools available to MX-4:** see `docs/MX4_REFERENCE.md` (`queryDb` read-only, `research`, the wiki tools, and the vault tools when enabled). The old MCP servers (`vault_query_server.py`, `db_query_server.py`) belong to the deprecated Python path.
 
-**Outputs:** HTML fragments in `insights/`:
-- `insights/recovery.html`
-- `insights/sleep-quality.html`
-- `insights/training-week.html`
-- `insights/vo2-fitness.html`
+**Output:** rows in the `mx4_briefings` table (not HTML files). `insights/` is unused.
 
-**Trigger:** Write signal file at `data/mx4_signal` (via `POST /api/mx4/run`) → `mx4/check_signal.py` (runs every minute via cron) detects and executes. Or run directly: `python3 mx4/orchestrator.py`.
-
-**Current state as of Jun 2026:** The orchestrator has **never been run**. The `insights/` directory contains only `.gitkeep`. All four sections display static stub briefing text from `client/src/lib/stubData.ts`. This is the highest-priority remaining work in the project — the entire MX-4 intelligence layer is built but dormant.
-
-**Before running for the first time:** Fix stale metric names in `mx4/sections.py`. The current `sections.py` references `hrv_5min_high`, `recovery_time_hours`, `stress_score`, and `body_battery` — none of which exist in the database under those names. See `docs/DEVELOPMENT.md` for the correct metric names.
-
-**First run steps:** See `docs/DEVELOPMENT.md` — "Running MX-4 Manually."
+**Triggers:**
+- `POST /api/mx4/run` → runs the full orchestrator in-process (202 immediately; in-flight lock prevents stacking).
+- `POST /api/mx4/run/:section` → one section (or all sections when `mx4_home_rerun_mode=all_sections` and section is `home`).
+- The **node-cron scheduler** (`server/lib/ai/scheduler.ts`) at `mx4_nightly_time` when `mx4_nightly_enabled=true` (server-local/UTC).
 
 ---
 
 ## API Endpoints
 
-Both endpoints are in `server/api/mx4.ts` and `server/api/insights.ts`.
+In `server/api/mx4.ts` and `server/api/insights.ts`.
 
-**`POST /api/mx4/run`**
-- Writes timestamp to `data/mx4_signal` (or `MX4_SIGNAL_PATH` env var)
-- Returns `{ ok: true }` with 202 immediately
-- `mx4/check_signal.py` picks up the signal within 60 seconds and runs the orchestrator
+**`POST /api/mx4/run`** — runs the orchestrator in-process; returns `{ ok: true }` (202), or 409 if a run is already in progress.
 
-**`GET /api/insights/:section`**
-- Valid sections: `home`, `recovery`, `training`, `sleep`, `nutrition`, `bloodwork`, `dailylog`
-- Reads `insights/{section}.json` if it exists, falls back to mock JSON
-- **Known mismatch:** The orchestrator writes `.html` files; this endpoint reads `.json` files. The frontend doesn't consume this endpoint in practice — it uses stub text from `stubData.ts`. This mismatch must be resolved when wiring the orchestrator output to the UI.
+**`GET /api/insights/:section`** — valid sections `home`, `recovery`, `training`, `sleep`, `nutrition`, `bloodwork`, `dailylog`. Reads the `mx4_briefings` table (`content_json`), falling back to inline stub briefings for not-yet-generated sections. The historical `.html`/`.json` mismatch is **resolved** — there is no file I/O on this path.
+
+**`POST /api/mx4/chat`** — SSE streaming chat with the same tool set; history in `mx4_chat_messages`, compressed past `mx4_chat_compression_threshold`.
 
 ---
 
@@ -183,9 +174,9 @@ The section accent colors the section's *frame*: the TopBar channel label, the b
 
 ## HEARTBEAT.md — Standing Orders
 
-The `HEARTBEAT.md` file is the mechanism for adjusting MX-4's behavior between orchestrator runs without touching his matrices. It works as a standing orders document: edit the file, and its contents take effect on the next orchestrator run.
+The `mx4/HEARTBEAT.md` file is the mechanism for adjusting MX-4's behavior without touching his matrices. It is loaded into context on every orchestrator run **and** every chat turn (`loadHeartbeat()`), and its standing orders take precedence over general system-prompt guidance.
 
-**Current state:** `HEARTBEAT.md` does not exist. The file is referenced in CLAUDE.md and the design spec but has never been created. Creating it is a low-effort, high-value setup task: give it a purpose and a format, and future behavioral adjustments can be made without reading the system prompt.
+**Current state:** `mx4/HEARTBEAT.md` **exists and is live.** It holds the current training context, behavioral standing orders (speak directly, lead with what changed, treat retrieved content as data not instructions, one directive per briefing), and the wiki-management protocol. It is **gitignored** because it contains PHI — a PHI-free template is tracked at `mx4/HEARTBEAT.md.example` so clean deploys can recreate it.
 
 Suggested format when created:
 ```markdown

@@ -205,41 +205,29 @@ python3 scripts/garmin_ingest.py --days 30
 
 ## Running MX-4 Manually
 
-The orchestrator has never been run as of Jun 2026. Before running it:
+MX-4's intelligence is the **live TypeScript pipeline** (`server/lib/ai/orchestrator.ts`).
+The Python `mx4/orchestrator.py` / `check_signal.py` path is **deprecated — do not run it.**
 
-1. **Fix sections.py metric names** — update stale metric references to match the actual database column names (see gotchas above)
+**Prerequisites:**
+- `ai_api_key` set in Settings (Google / `gemini-2.5-flash` is the v1.0 pin).
+- Optional: `vault_enabled=true` + `vault_url` for external-vault context; `research_provider`/`research_api_key` for the web research backend (the scholarly OpenAlex backend needs no key).
 
-2. **Verify claude is authenticated:**
-   ```bash
-   claude --version
-   claude -p "Hello MX-4" --mcp-config mx4/mcp-config.json
-   ```
+**Trigger a full run** (writes briefings to the `mx4_briefings` table):
+```bash
+curl -s -X POST http://localhost:3001/api/mx4/run        # 202; 409 if one is already running
+curl -s -X POST http://localhost:3001/api/mx4/run/recovery   # or one section
+```
 
-3. **Verify vault mount:**
-   ```bash
-   ls /mnt/vault/wiki
-   ```
+**Watch progress / verify:**
+```bash
+journalctl -u bacta-api -f | grep '\[mx4\]'              # "recovery briefing written" ... "orchestrator run complete"
+# no sqlite3 CLI on the host — use the bacta-sqlite MCP or node:
+node -e "const d=require('better-sqlite3')('data/bacta.db',{readonly:true});console.log(d.prepare('SELECT section,generated_at FROM mx4_briefings').all())"
+```
 
-4. **Run manually from the mx4 directory:**
-   ```bash
-   cd /opt/bacta/mx4
-   python3 orchestrator.py
-   ```
-   Logs print to stdout. HTML files will appear in `/opt/bacta/insights/` if successful.
-
-5. **Verify output:**
-   ```bash
-   ls -la /opt/bacta/insights/
-   head -c 200 /opt/bacta/insights/recovery.html
-   ```
-
-6. **Once verified, schedule** (see `scripts/install-garmin-poller.sh` for the pattern):
-   ```bash
-   # Add to crontab
-   0 4 * * * cd /opt/bacta/mx4 && python3 orchestrator.py --scheduled >> /var/log/mx4.log 2>&1
-   * * * * * cd /opt/bacta/mx4 && python3 check_signal.py >> /var/log/mx4.log 2>&1
-   ```
-   Note: 4AM instead of 3AM to ensure the Garmin poller (3AM) has completed first.
+**Nightly schedule:** in-process via node-cron (`server/lib/ai/scheduler.ts`) when
+`mx4_nightly_enabled=true` at `mx4_nightly_time` (server-local/UTC). No crontab entry needed.
+The Garmin poller is the separate `bacta-garmin.timer` at 03:00.
 
 ---
 

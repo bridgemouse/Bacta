@@ -15,6 +15,10 @@
 | `docs/GARMIN.md` | You're touching the poller, ingest scripts, or any Garmin API call |
 | `docs/PLUGINS.md` | You need to use an MCP server, Claude Design, or a slash command |
 | `docs/ROADMAP.md` | You need to understand what's built, what's pending, and what's blocked |
+| `docs/MX4_REFERENCE.md` | You need the authoritative MX-4 tool catalog, data dictionary, or custom-calc formulas (injected into his context) |
+| `docs/MX4_LLM_WIKI_PRINCIPLES.md` | You're changing how MX-4 curates his own wiki |
+| `docs/SECURITY.md` | You're touching auth, secrets, the threat model, or the security runbook |
+| `docs/OPERATIONS.md` | You need backups/restore, rollback, observability, or the DR runbook |
 
 ---
 
@@ -136,13 +140,13 @@ Full component tree: `docs/ARCHITECTURE.md`
 Full completion status: `docs/ROADMAP.md`
 
 ### What's Next (in priority order)
-1. **MX-4 orchestrator — first run** — `mx4/orchestrator.py` has **never been run**. Fix stale metric names in `mx4/sections.py` first (see `docs/ROADMAP.md`), then run manually and verify. This is the highest-impact remaining work.
-2. **Body Battery in Recovery Overview** — `useRecoveryData` already fetches `body_battery_wake`/`body_battery_current` into `rec.battery`, but `RecoveryPage` never renders it. Add a `HeadlineCard` with the `BodyBattery` component between the HRV card and RHR/Stress row.
+1. **Post-sweep infrastructure runbook** — execute `docs/SECURITY.md` §4 (PHI git-history scrub + force-push, firewall/Tailscale, LUKS, systemd hardening, NFS/vault-MCP lockdown, runner hardening, TLS) and `docs/OPERATIONS.md` §1 (install `bacta-backup.timer` + off-box encrypted copy). These need manual host intervention.
+2. **Set the app PIN** in Settings → SECURITY (the app warns and stays open until set).
 3. **LogEntry Phase C** — expand panel content (training effect, HR zones per activity) currently behind `hasContent = false` flag in `LogEntry.tsx`
 
 **Deferred:** MacroFactor/Nutrition (no account), Blood Work (waiting on lab results), Daily Log (no data source defined)
 
-**Known open issues:** `mx4/sections.py` has stale metric names; `HEARTBEAT.md` does not exist; `insights.ts` reads `.json` but orchestrator writes `.html` (format mismatch to resolve before MX-4 UI wiring). Full list in `docs/ROADMAP.md`.
+**Resolved in the v1.0 sweep:** the MX-4 TypeScript orchestrator is live (the Python path is deprecated); `mx4/HEARTBEAT.md` exists; the `insights` `.html`/`.json` mismatch is resolved (reads the `mx4_briefings` table); `recovery_time_h` unit fixed; app auth, read-only `queryDb`, helmet/CSP, backups, and the `research` tool shipped. Full record: `docs/ROADMAP.md` and `docs/release-test/findings-2026-06-17.md`.
 
 ---
 
@@ -150,16 +154,18 @@ Full completion status: `docs/ROADMAP.md`
 
 MX-4 is the AI companion embedded in Bacta. He is a Cybot Galactica MX-series multi-system interface droid — commissioned as a single unit at the Affa orbital assembly platform, built to see across domains and surface what matters. He has three loaded matrices: TC-series baseline (composure under all conditions), Nines/TC-99 (intellectual curiosity, tells you when you're wrong), Two-Boots/2B0T (protocol-transparent, clarity over deference). **Does not serve — collaborates.** Full character: `docs/MX4.md`.
 
-- `mx4/orchestrator.py` — scheduled Claude Code CLI job. Reads Garmin data + vault notes, writes HTML briefings to `insights/`
+- `server/lib/ai/orchestrator.ts` — **live** TypeScript/Vercel-AI-SDK pipeline. Queries Garmin data via tools, writes briefings to the `mx4_briefings` table. (The Python `mx4/orchestrator.py` is **deprecated** — do not run.)
+- `docs/MX4_REFERENCE.md` — authoritative tool catalog + data dictionary, injected into his context every run
 - `mx4/system-prompt.md` — MX-4 identity and output quality standards (rewritten Jun 11, 2026)
 - `mx4/mx4_personal_identity_record.md` — canonical character definition; read this if MX-4 ever sounds wrong
-- Signal: `POST /api/mx4/run` triggers a run
+- `mx4/HEARTBEAT.md` — live standing orders (gitignored PHI; template at `mx4/HEARTBEAT.md.example`)
+- Triggers: `POST /api/mx4/run` (full run), `POST /api/mx4/run/:section`, and the node-cron nightly scheduler
 
 His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil stays cyan; the section accent colors the frame/chrome around him.
 
 **MX-4 Sigil moods:** `transmit` (Home, Training), `pleased` (Recovery), `alert` (Sleep), `listen` (Ask sheet), `idle` (nav/status), `think` (processing)
 
-**Character preservation:** The character in `mx4/mx4_personal_identity_record.md` and `docs/MX4.md` is the product's identity layer. Future sessions that need to adjust his behavior should do so through a `HEARTBEAT.md` standing orders file (file does not yet exist — create it when ready). If MX-4 ever sounds like a medical droid, references Kamino, uses "I have always wanted to have human feelings," or refers to Ethan as "the patient," AZI-3 contamination has occurred — re-read the identity record. Do not compromise between the two identities.
+**Character preservation:** The character in `mx4/mx4_personal_identity_record.md` and `docs/MX4.md` is the product's identity layer. Future sessions that need to adjust his behavior should do so through the `mx4/HEARTBEAT.md` standing orders file (exists and is live; gitignored PHI, template at `mx4/HEARTBEAT.md.example`). If MX-4 ever sounds like a medical droid, references Kamino, uses "I have always wanted to have human feelings," or refers to Ethan as "the patient," AZI-3 contamination has occurred — re-read the identity record. Do not compromise between the two identities.
 
 ---
 

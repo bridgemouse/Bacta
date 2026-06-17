@@ -41,8 +41,8 @@ manualRouter.post('/', (req, res) => {
     const row = db.prepare('SELECT * FROM manual_inputs WHERE date = ?').get(date)
     res.status(201).json(row)
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Database error'
-    res.status(400).json({ error: message })
+    console.error('[manual] write failed:', err)
+    res.status(400).json({ error: 'Could not save manual input' })
   }
 })
 

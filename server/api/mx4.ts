@@ -11,6 +11,60 @@ import { getVaultTools } from '../lib/ai/vaultClient'
 import { getSetting } from '../lib/settings'
 import db from '../db/client'
 
+export function toolLabel(toolName: string, args: Record<string, unknown>): string {
+  switch (toolName) {
+    case 'queryDb': {
+      const sql = String(args.sql ?? '')
+      const match = sql.match(/metric\s*=\s*'([^']+)'/i)
+      return match ? `PULLING TELEMETRY ON ${match[1]}` : 'PULLING TELEMETRY'
+    }
+    case 'research': {
+      const q = String(args.query ?? '').slice(0, 50).trim()
+      return q ? `SWEEPING ARCHIVES FOR ${q}` : 'SWEEPING ARCHIVES'
+    }
+    case 'readAllWikiPages':
+      return 'CONSULTING LOADED MATRICES'
+    case 'writeWikiPage': {
+      const name = String(args.name ?? '')
+      return name ? `ENCODING ${name} TO MATRIX` : 'ENCODING TO MATRIX'
+    }
+    case 'archiveWikiPage': {
+      const name = String(args.name ?? '')
+      return name ? `ARCHIVING ${name} FROM MATRIX` : 'ARCHIVING FROM MATRIX'
+    }
+    case 'listWikiPages':
+      return 'SURVEYING LOADED MATRICES'
+    case 'search_wiki': {
+      const q = String(args.query ?? '').slice(0, 50).trim()
+      return q ? `SWEEPING EXTERNAL MATRIX FOR ${q}` : 'SWEEPING EXTERNAL MATRIX'
+    }
+    case 'read_wiki_page': {
+      const path = String(args.path ?? '')
+      return path ? `PULLING ${path} FROM EXTERNAL MATRIX` : 'PULLING FROM EXTERNAL MATRIX'
+    }
+    case 'get_wiki_index':
+      return 'ORIENTING ON EXTERNAL MATRIX'
+    case 'list_wiki_pages':
+      return 'SURVEYING EXTERNAL MATRIX'
+    default:
+      return `ACCESSING ${toolName.toUpperCase()}`
+  }
+}
+
+export function categorizeError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : ''
+  if (/api.key|not configured|no.*(provider|ai)|invalid.key|unauthorized/i.test(msg)) {
+    return 'No AI provider configured. Check Settings → Intelligence.'
+  }
+  if (/rate.limit|429|quota|too many requests/i.test(msg)) {
+    return 'Rate limit reached — try again in a moment.'
+  }
+  if (/timeout|timed out/i.test(msg)) {
+    return 'MX-4 timed out during analysis. Try a shorter query.'
+  }
+  return 'MX-4 encountered an error. Try again.'
+}
+
 async function compressSessionIfNeeded(sessionId: string): Promise<void> {
   const threshold = parseInt(getSetting('mx4_chat_compression_threshold') ?? '20', 10)
   const rows = db.prepare(
@@ -182,9 +236,14 @@ mx4Router.post('/chat', async (req, res) => {
     })
 
     let fullText = ''
-    for await (const chunk of result.textStream) {
-      res.write(`data: ${JSON.stringify(chunk)}\n\n`)
-      fullText += chunk
+    for await (const part of result.fullStream) {
+      if (part.type === 'tool-call') {
+        const label = toolLabel(part.toolName, part.input as Record<string, unknown>)
+        res.write(`data: ${JSON.stringify({ tool: label })}\n\n`)
+      } else if (part.type === 'text-delta') {
+        res.write(`data: ${JSON.stringify(part.text)}\n\n`)
+        fullText += part.text
+      }
     }
 
     if (fullText) {
@@ -192,11 +251,11 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
-      res.write(`data: ${JSON.stringify({ error: 'no response — check AI provider settings' })}\n\n`)
+      res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
     }
   } catch (e: unknown) {
     console.error('[mx4] chat stream error:', e)
-    res.write(`data: ${JSON.stringify({ error: 'MX-4 is unavailable — check AI provider settings.' })}\n\n`)
+    res.write(`data: ${JSON.stringify({ error: categorizeError(e) })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')

@@ -12,13 +12,16 @@ export function useChat(section?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [toolCalls, setToolCalls] = useState<string[]>([])
   const [hiddenBefore, setHiddenBefore] = useState<string | null>(null)
   const hiddenBeforeRef = useRef<string | null>(null)
+  const hasTextRef = useRef(false)
 
   function loadMessages() {
     fetch(`/api/mx4/chat/${sessionId}`)
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : [])
       .then((msgs: ChatMessage[]) => {
+        if (!Array.isArray(msgs)) return
         const cutoff = hiddenBeforeRef.current
         setMessages(cutoff
           ? msgs.filter(m => (m.created_at ?? '') > cutoff)
@@ -44,6 +47,8 @@ export function useChat(section?: string) {
     if (!text || streaming) return
 
     if (!overrideText) setInput('')
+    hasTextRef.current = false
+    setToolCalls([])
     setMessages(prev => [...prev, { role: 'user', content: text, section }])
     setStreaming(true)
     setMessages(prev => [...prev, { role: 'assistant', content: '', section }])
@@ -73,23 +78,31 @@ export function useChat(section?: string) {
           const data = line.slice(6)
           if (data === '[DONE]') break
           try {
-            const parsed: string | { error: string } = JSON.parse(data)
+            const parsed: string | { error: string } | { tool: string } = JSON.parse(data)
             if (typeof parsed === 'string') {
+              if (!hasTextRef.current) {
+                hasTextRef.current = true
+                setToolCalls([])
+              }
               setMessages(prev => {
                 const next = [...prev]
+                const last = next[next.length - 1]
+                if (!last) return prev
                 next[next.length - 1] = {
                   role: 'assistant',
-                  content: next[next.length - 1].content + parsed,
+                  content: (last.content ?? '') + parsed,
                   section,
                 }
                 return next
               })
-            } else if (typeof parsed === 'object' && parsed.error) {
+            } else if (typeof parsed === 'object' && 'tool' in parsed) {
+              setToolCalls(prev => [...prev.slice(-2), parsed.tool])
+            } else if (typeof parsed === 'object' && 'error' in parsed) {
               setMessages(prev => {
                 const next = [...prev]
                 next[next.length - 1] = {
                   role: 'assistant',
-                  content: 'MX-4 is offline. Configure an AI provider in Settings.',
+                  content: (parsed as { error: string }).error,
                   section,
                 }
                 return next
@@ -103,15 +116,16 @@ export function useChat(section?: string) {
         const next = [...prev]
         next[next.length - 1] = {
           role: 'assistant',
-          content: 'MX-4 is offline. Configure an AI provider in Settings.',
+          content: 'Connection lost during analysis. MX-4 may have completed — try sending another message.',
           section,
         }
         return next
       })
     } finally {
       setStreaming(false)
+      setToolCalls([])
     }
   }
 
-  return { messages, input, setInput, streaming, submit, sessionId, loadMessages, clearVisualHistory, hiddenBefore }
+  return { messages, input, setInput, streaming, toolCalls, submit, sessionId, loadMessages, clearVisualHistory, hiddenBefore }
 }

@@ -26,9 +26,9 @@ vi.mock('ai', async (importOriginal) => {
   return {
     ...actual,
     streamText: vi.fn().mockImplementation(() => ({
-      textStream: (async function* () {
-        yield 'Hello '
-        yield 'from MX-4.'
+      fullStream: (async function* () {
+        yield { type: 'text-delta', text: 'Hello ' }
+        yield { type: 'text-delta', text: 'from MX-4.' }
       })(),
     })),
     generateText: vi.fn().mockResolvedValue({
@@ -227,5 +227,116 @@ describe('MX-4 Chat API', () => {
       'SELECT section FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 1'
     ).get('seed-section-test') as { section: string | null } | undefined
     expect(row?.section).toBe('training')
+  })
+})
+
+describe('categorizeError', () => {
+  let categorizeError: (e: unknown) => string
+
+  beforeAll(async () => {
+    const mod = await import('../../server/api/mx4')
+    categorizeError = mod.categorizeError
+  })
+
+  it('detects unconfigured provider', () => {
+    expect(categorizeError(new Error('No AI provider configured')))
+      .toBe('No AI provider configured. Check Settings → Intelligence.')
+  })
+
+  it('detects missing API key', () => {
+    expect(categorizeError(new Error('Invalid API key provided')))
+      .toBe('No AI provider configured. Check Settings → Intelligence.')
+  })
+
+  it('detects rate limit', () => {
+    expect(categorizeError(new Error('Rate limit exceeded: 429')))
+      .toBe('Rate limit reached — try again in a moment.')
+  })
+
+  it('detects quota exceeded', () => {
+    expect(categorizeError(new Error('quota exceeded for this model')))
+      .toBe('Rate limit reached — try again in a moment.')
+  })
+
+  it('detects timeout', () => {
+    expect(categorizeError(new Error('Request timed out after 30s')))
+      .toBe('MX-4 timed out during analysis. Try a shorter query.')
+  })
+
+  it('returns generic message for unknown errors', () => {
+    expect(categorizeError(new Error('something unexpected')))
+      .toBe('MX-4 encountered an error. Try again.')
+  })
+
+  it('handles non-Error objects', () => {
+    expect(categorizeError('string error'))
+      .toBe('MX-4 encountered an error. Try again.')
+  })
+})
+
+describe('toolLabel', () => {
+  let toolLabel: (toolName: string, args: Record<string, unknown>) => string
+
+  beforeAll(async () => {
+    const mod = await import('../../server/api/mx4')
+    toolLabel = mod.toolLabel
+  })
+
+  it('extracts metric from queryDb SQL', () => {
+    expect(toolLabel('queryDb', { sql: "SELECT date, value FROM garmin_snapshots WHERE metric = 'hrv' ORDER BY date DESC LIMIT 30" }))
+      .toBe('PULLING TELEMETRY ON hrv')
+  })
+
+  it('falls back for queryDb with no metric match', () => {
+    expect(toolLabel('queryDb', { sql: 'SELECT * FROM garmin_activities' }))
+      .toBe('PULLING TELEMETRY')
+  })
+
+  it('includes query for research', () => {
+    expect(toolLabel('research', { query: 'HRV and slow-wave sleep correlation' }))
+      .toBe('SWEEPING ARCHIVES FOR HRV and slow-wave sleep correlation')
+  })
+
+  it('truncates long research query to 50 chars', () => {
+    const q = 'a'.repeat(60)
+    const label = toolLabel('research', { query: q })
+    expect(label).toBe(`SWEEPING ARCHIVES FOR ${'a'.repeat(50)}`)
+  })
+
+  it('returns static label for readAllWikiPages', () => {
+    expect(toolLabel('readAllWikiPages', {})).toBe('CONSULTING LOADED MATRICES')
+  })
+
+  it('includes name for writeWikiPage', () => {
+    expect(toolLabel('writeWikiPage', { name: 'hrv-baseline' })).toBe('ENCODING hrv-baseline TO MATRIX')
+  })
+
+  it('includes name for archiveWikiPage', () => {
+    expect(toolLabel('archiveWikiPage', { name: 'sleep-arch' })).toBe('ARCHIVING sleep-arch FROM MATRIX')
+  })
+
+  it('returns static label for listWikiPages', () => {
+    expect(toolLabel('listWikiPages', {})).toBe('SURVEYING LOADED MATRICES')
+  })
+
+  it('includes query for search_wiki', () => {
+    expect(toolLabel('search_wiki', { query: 'training goals' })).toBe('SWEEPING EXTERNAL MATRIX FOR training goals')
+  })
+
+  it('includes path for read_wiki_page', () => {
+    expect(toolLabel('read_wiki_page', { path: 'health-fitness/running.md' }))
+      .toBe('PULLING health-fitness/running.md FROM EXTERNAL MATRIX')
+  })
+
+  it('returns static label for get_wiki_index', () => {
+    expect(toolLabel('get_wiki_index', {})).toBe('ORIENTING ON EXTERNAL MATRIX')
+  })
+
+  it('returns static label for list_wiki_pages', () => {
+    expect(toolLabel('list_wiki_pages', {})).toBe('SURVEYING EXTERNAL MATRIX')
+  })
+
+  it('returns fallback for unknown tool', () => {
+    expect(toolLabel('someNewTool', {})).toBe('ACCESSING SOMENEWTOOL')
   })
 })

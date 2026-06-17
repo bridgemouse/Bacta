@@ -8,6 +8,7 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "vite",
     "build": "tsc -p tsconfig.server.json && cp server/db/schema.sql dist/server/db/schema.sql && vite build",
+    "build:client": "vite build",
     "start": "node dist/server/index.js",
     "test": "vitest run --config vitest.config.ts && vitest run --config vitest.client.config.ts",
     "test:server": "vitest run --config vitest.config.ts",

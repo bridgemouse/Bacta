@@ -50,18 +50,19 @@ Saved to iPhone home screen, runs on local WiFi only (`bacta.local`). Runs on **
 | Backend | Node/Express + TypeScript |
 | Database | SQLite via `better-sqlite3` |
 | Tests | Vitest + Testing Library |
-| CI | GitHub Actions, self-hosted runner on LXC 109 |
+| CI | GitHub Actions (cloud runners — tests + type checks only) |
 
 **Dev commands:**
 ```bash
-npm run dev:client     # Vite dev server
-npm run dev:server     # Express dev server
+npm run build:client   # Rebuild React app — run after any client change to see it on phone
 npm run test:client    # Vitest client tests
 npm run test:server    # Vitest server tests
 npm test               # All tests
 npx tsc --noEmit       # Type check client
 npx tsc -p tsconfig.server.json --noEmit  # Type check server
 ```
+
+**Server auto-reloads.** `bacta-api` runs `tsx watch server/index.ts` via systemd — any server-side file save triggers an automatic reload. No restart or build needed for server changes. Client changes require `npm run build:client` to rebuild the static assets.
 
 ---
 
@@ -213,10 +214,16 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 ## Infrastructure
 
 - **Repo:** `github.com/bridgemouse/bacta` — **public**, framed as a self-hostable open-source project
-- **CI:** GitHub Actions, self-hosted runner on LXC 109 (labels: `bacta, self-hosted`)
+- **CI:** GitHub Actions on cloud runners — runs tests and type checks on every push and PR. No deploy workflow; the service runs directly on LXC 109.
 - **PWA:** `client/public/manifest.json`, iOS meta tags in `client/index.html`
 - **Fonts:** Google Fonts (Hanken Grotesk + JetBrains Mono) in `client/index.html`
 - **GitHub CLI:** `gh` is installed and authenticated on LXC 109 as `bridgemouse`
+
+### Branch Convention
+- Work on **feature branches** (`feature/nutrition`, `feature/bloodwork`, etc.)
+- Merge to `main` via PR — CI must pass, owner approval required
+- `main` is always stable and represents the running state of the app
+- Do not commit directly to `main`
 
 ### GitHub Repo Governance (set Jun 17, 2026)
 - **Branch protection on `main`:** force pushes blocked, deletions blocked, contributors must open a PR with CI passing and owner approval. Ethan (owner) can push directly — `enforce_admins: false`.

@@ -1,23 +1,26 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import request from 'supertest'
-import fs from 'fs'
+import { describe, it, expect, vi } from 'vitest'
+import { EventEmitter } from 'events'
 
 process.env.DB_PATH = ':memory:'
-process.env.POLL_SIGNAL_PATH = '/tmp/test_poll_signal'
+
+// Mock spawn so the test never launches the real Garmin poller.
+const spawnMock = vi.fn(() => {
+  const child = new EventEmitter() as any
+  setImmediate(() => child.emit('close', 0))
+  return child
+})
+vi.mock('child_process', () => ({ spawn: spawnMock }))
 
 describe('POST /api/poll/force', () => {
-  afterEach(() => {
-    if (fs.existsSync('/tmp/test_poll_signal')) {
-      fs.rmSync('/tmp/test_poll_signal')
-    }
-  })
-
-  it('creates the signal file and returns 202', async () => {
+  it('spawns the Garmin poller and returns 202', async () => {
     const { migrate } = await import('../../server/db/migrate')
     migrate()
+    const request = (await import('supertest')).default
     const { app } = await import('../../server/index')
     const res = await request(app).post('/api/poll/force')
     expect(res.status).toBe(202)
-    expect(fs.existsSync('/tmp/test_poll_signal')).toBe(true)
+    expect(spawnMock).toHaveBeenCalled()
+    expect(spawnMock.mock.calls[0][0]).toBe('python3')
+    expect(String(spawnMock.mock.calls[0][1])).toContain('garmin_poller.py')
   })
 })

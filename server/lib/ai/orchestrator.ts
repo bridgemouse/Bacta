@@ -4,7 +4,7 @@ import { getSetting } from '../settings'
 import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
 import { assembleSystemPrompt } from './prompt'
-import { queryDb, readAllWikiPages } from './tools'
+import { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage } from './tools'
 import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
@@ -51,6 +51,9 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     tools: {
       queryDb,
       readAllWikiPages,
+      writeWikiPage,
+      listWikiPages,
+      archiveWikiPage,
       research,
       ...(isVaultEnabled() ? await getVaultTools() : {}),
     } as ToolSet,

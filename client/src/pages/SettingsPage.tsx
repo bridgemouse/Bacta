@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { AppShell } from '../components/AppShell'
 import { Rail } from '../components/viz/Rail'
 import { SecurityRail } from '../components/SecurityRail'
+import { APP_VERSION } from '../version'
 import { COLORS, FONT_MONO, FONT_UI, MX4_COLOR } from '../theme'
 import { hexA } from '../lib/hexA'
 
@@ -853,6 +854,13 @@ export function SettingsPage() {
             SYNC PREFERENCES — COMING SOON
           </span>
         </div>
+      </div>
+
+      <div style={{
+        textAlign: 'center', padding: '20px 0 8px',
+        fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.12em', color: COLORS.textMuted,
+      }}>
+        BACTA·OS v{APP_VERSION}
       </div>
     </AppShell>
   )

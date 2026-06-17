@@ -683,6 +683,202 @@ git commit -m "feat(mx4): full-width assistant messages + tool activity indicato
 
 ---
 
+### Task 5: Meaningful error messages — server categorization + client passthrough
+
+**Files:**
+- Modify: `server/api/mx4.ts`
+- Modify: `client/src/hooks/useChat.ts`
+- Test: `server/tests/mx4.test.ts`, existing useChat tests
+
+**Problem:** Every mid-stream failure — "no API key", "rate limited", "provider timeout", "connection dropped" — shows the same "MX-4 is offline. Configure an AI provider in Settings." message. This is actively misleading when the provider IS configured but hit a transient error. The user described getting this error during tool-intensive tasks, then sending a follow-up and getting the real answer — indicating the issue was a connection drop, not a missing provider.
+
+**Interfaces:**
+- Consumes: existing `{"error":"..."}` SSE event shape — no protocol change, just better strings
+- Produces: human-readable, actionable error message in the assistant bubble
+
+- [ ] **Step 1: Write failing tests for server error categorization**
+
+Add to `server/tests/mx4.test.ts` — import and test a new exported `categorizeError` function:
+
+```typescript
+import { categorizeError } from '../api/mx4'
+
+describe('categorizeError', () => {
+  it('detects unconfigured provider', () => {
+    expect(categorizeError(new Error('No AI provider configured')))
+      .toBe('No AI provider configured. Check Settings → Intelligence.')
+  })
+
+  it('detects missing API key', () => {
+    expect(categorizeError(new Error('Invalid API key provided')))
+      .toBe('No AI provider configured. Check Settings → Intelligence.')
+  })
+
+  it('detects rate limit', () => {
+    expect(categorizeError(new Error('Rate limit exceeded: 429')))
+      .toBe('Rate limit reached — try again in a moment.')
+  })
+
+  it('detects quota exceeded', () => {
+    expect(categorizeError(new Error('quota exceeded for this model')))
+      .toBe('Rate limit reached — try again in a moment.')
+  })
+
+  it('detects timeout', () => {
+    expect(categorizeError(new Error('Request timed out after 30s')))
+      .toBe('MX-4 timed out during analysis. Try a shorter query.')
+  })
+
+  it('returns generic message for unknown errors', () => {
+    expect(categorizeError(new Error('something unexpected')))
+      .toBe('MX-4 encountered an error. Try again.')
+  })
+
+  it('handles non-Error objects', () => {
+    expect(categorizeError('string error'))
+      .toBe('MX-4 encountered an error. Try again.')
+  })
+})
+```
+
+- [ ] **Step 2: Run to verify failure**
+
+```bash
+npm run test:server 2>&1 | grep -A3 "categorizeError"
+```
+
+Expected: FAIL — `categorizeError` not exported
+
+- [ ] **Step 3: Add `categorizeError` to server and use it in the catch block**
+
+In `server/api/mx4.ts`, add this exported function alongside `toolLabel`:
+
+```typescript
+export function categorizeError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : ''
+  if (/api.key|not configured|no provider|invalid.key|unauthorized/i.test(msg)) {
+    return 'No AI provider configured. Check Settings → Intelligence.'
+  }
+  if (/rate.limit|429|quota|too many requests/i.test(msg)) {
+    return 'Rate limit reached — try again in a moment.'
+  }
+  if (/timeout|timed out/i.test(msg)) {
+    return 'MX-4 timed out during analysis. Try a shorter query.'
+  }
+  return 'MX-4 encountered an error. Try again.'
+}
+```
+
+Then update the catch block in `mx4Router.post('/chat', ...)`:
+
+```typescript
+  } catch (e: unknown) {
+    console.error('[mx4] chat stream error:', e)
+    res.write(`data: ${JSON.stringify({ error: categorizeError(e) })}\n\n`)
+  }
+```
+
+- [ ] **Step 4: Run server tests**
+
+```bash
+npm run test:server
+```
+
+Expected: all tests pass including new `categorizeError` tests
+
+- [ ] **Step 5: Update client to use server error string instead of hardcoded fallback**
+
+In `client/src/hooks/useChat.ts`, the SSE error branch currently ignores `parsed.error` and hardcodes the message. Update it to pass the server's string through:
+
+Find:
+```typescript
+            } else if (typeof parsed === 'object' && 'error' in parsed) {
+              setMessages(prev => {
+                const next = [...prev]
+                next[next.length - 1] = {
+                  role: 'assistant',
+                  content: 'MX-4 is offline. Configure an AI provider in Settings.',
+                  section,
+                }
+                return next
+              })
+            }
+```
+
+Replace with:
+```typescript
+            } else if (typeof parsed === 'object' && 'error' in parsed) {
+              setMessages(prev => {
+                const next = [...prev]
+                next[next.length - 1] = {
+                  role: 'assistant',
+                  content: (parsed as { error: string }).error,
+                  section,
+                }
+                return next
+              })
+            }
+```
+
+Also update the outer `catch` block (fetch/connection failure — distinct from a server-sent error event) to give an accurate message for the "connection dropped during tool use" case:
+
+Find:
+```typescript
+    } catch {
+      setMessages(prev => {
+        const next = [...prev]
+        next[next.length - 1] = {
+          role: 'assistant',
+          content: 'MX-4 is offline. Configure an AI provider in Settings.',
+          section,
+        }
+        return next
+      })
+    }
+```
+
+Replace with:
+```typescript
+    } catch {
+      setMessages(prev => {
+        const next = [...prev]
+        next[next.length - 1] = {
+          role: 'assistant',
+          content: 'Connection lost during analysis. MX-4 may have completed — try sending another message.',
+          section,
+        }
+        return next
+      })
+    }
+```
+
+This message is accurate for the exact bug the user described: connection drops during long tool chains, but the model actually finished — sending another message works because the session history has the result.
+
+- [ ] **Step 6: Run full test suite**
+
+```bash
+npm test
+```
+
+Expected: all 299 tests pass
+
+- [ ] **Step 7: Type-check both**
+
+```bash
+npx tsc --noEmit && npx tsc -p tsconfig.server.json --noEmit
+```
+
+Expected: no errors
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add server/api/mx4.ts server/tests/mx4.test.ts client/src/hooks/useChat.ts
+git commit -m "fix(mx4): meaningful error messages — categorize server errors, pass through to client"
+```
+
+---
+
 ### Task 4: Final verification + PR
 
 - [ ] **Step 1: Run full test suite**
@@ -719,7 +915,9 @@ gh pr create --title "feat(mx4): tool activity indicators + full-width chat" --b
 - [ ] Verify label truncation on long research queries
 - [ ] Verify full-width layout with left accent line
 - [ ] Verify user message bubble unchanged
-- [ ] All 299 tests passing
+- [ ] All 299 tests passing (may be higher with new tests from Tasks 1 and 5)
+- [ ] Error messages are specific: rate limit, timeout, no provider, and connection drop each show a distinct message
+- [ ] The generic "MX-4 is offline. Configure an AI provider in Settings." string no longer appears anywhere in the codebase
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF

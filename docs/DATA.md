@@ -245,7 +245,7 @@ Every entry here represents a real bug that was introduced and fixed. Read these
 
 **Sleep date convention.** `get_sleep_data(d)` returns sleep that *ended* on the morning of `d`. Store the result under date `d`, not `d-1`. Getting this wrong shifts all sleep data back one day.
 
-**Fitness age field name.** The Garmin API returns `fitnessAge`, not `biometricAge`. Never fall back to `chronologicalAge` — it's a completely different field (Ethan's actual age) and will always exist even when `fitnessAge` is absent. Writing `chronologicalAge` as the fitness age is a silent data corruption.
+**Fitness age field name.** The Garmin API returns `fitnessAge`, not `biometricAge`. Never fall back to `chronologicalAge` — it's a completely different field (the user's chronological age) and will always exist even when `fitnessAge` is absent. Writing `chronologicalAge` as the fitness age is a silent data corruption.
 
 **HR zone data source.** `get_heart_rates(d)` returns minute-by-minute HR values, not zone minutes. To get zone minutes, use `get_activity_hr_in_timezones(activityId)` — the field is `secsInZone` per zone. Divide by 60 to get minutes. Aggregate across all activities for the day to get daily totals.
 
@@ -286,7 +286,7 @@ MX-4 briefings are **live**: the TypeScript orchestrator (`server/lib/ai/orchest
 **Mount:** NFS read-only from LXC 106 (192.168.1.202) → `/mnt/vault` on LXC 109  
 **MX-4 path:** `VAULT_WIKI_ROOT=/mnt/vault/wiki`  
 **Access:** `mx4/vault_query_server.py` — local MCP server exposing `search_wiki`, `read_wiki_page`, `get_wiki_index` tools  
-**Purpose:** MX-4 reads Ethan's vault for personal context during briefing generation: training goals, running plans, timeline (including pre-wedding timeline), race goals, health history notes  
+**Purpose:** MX-4 reads the user's vault for personal context during briefing generation: training goals, running plans, timeline, race goals, health history notes  
 
 The vault is read-only. The MCP server does not write to it.
 

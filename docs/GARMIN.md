@@ -1,6 +1,6 @@
 # Garmin API Reference — Bacta
 
-> Audited 2026-06-11 against garminconnect v0.3.5 and Ethan's live Garmin account (Venu 4).
+> Audited 2026-06-11 against garminconnect v0.3.5 and a live Garmin Venu 4.
 > Re-run `/tmp/garmin_audit.py` after library upgrades or firmware changes to refresh status.
 
 ---

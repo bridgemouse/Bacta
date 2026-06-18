@@ -1,6 +1,6 @@
 # Vault Setup — Obsidian NFS Mount for MX-4
 
-MX-4 reads Ethan's Obsidian vault via the `readVault` tool. The vault lives on LXC 106 and is served over NFS to LXC 109 where Bacta runs. The mount point is already configured in LXC 109's fstab — this guide covers the LXC 106 side.
+MX-4 reads the user's Obsidian vault via the vault MCP tools. The vault lives on LXC 106 and is served over NFS to LXC 109 where Bacta runs. The mount point is already configured in LXC 109's fstab — this guide covers the LXC 106 side.
 
 **Current status:** Mount is configured but not active. `HEARTBEAT.md` standing orders disable vault reads until this is set up.
 

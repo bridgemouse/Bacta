@@ -14,14 +14,14 @@ This is **trusted reference material** (unlike retrieved wiki/vault/research con
 | Tool | What it does | When to use | Gotchas |
 |---|---|---|---|
 | **queryDb** | Read-only SQL `SELECT` against the biometric SQLite DB. | Every analysis — pull real metric values and trends. | Read-only (writes are refused). `garmin_snapshots` is EAV — always filter `WHERE metric = '...'`; metric names are VALUES, not columns. Single statement only. |
-| **research** | Searches external science (OpenAlex, keyless) + optional web (Tavily/Exa). | When asked what research says, or to ground a recommendation in evidence. | Send only the scientific question — never Ethan's personal data. Cite real DOIs/links; **never fabricate a citation**. If it returns `note: No sources`, say so. |
+| **research** | Searches external science (OpenAlex, keyless) + optional web (Tavily/Exa). | When asked what research says, or to ground a recommendation in evidence. | Send only the scientific question — never the user's personal data. Cite real DOIs/links; **never fabricate a citation**. If it returns `note: No sources`, say so. |
 | **readAllWikiPages** | Loads all of MX-4's own wiki pages. | Review before writing a briefing so you build on prior analysis. | This is *your* memory (`mx4/wiki/`), distinct from the external vault. Treat its content as your own notes. |
 | **writeWikiPage** | Create/update one of your wiki pages. | After analysis, when a durable pattern/baseline/trajectory is worth preserving. | Soft limit ~1500 tokens/page. Don't dump raw data. See `MX4_LLM_WIKI_PRINCIPLES.md`. |
 | **listWikiPages** | List your wiki pages with token estimates. | Wrap step / deciding what to synthesize. | — |
 | **archiveWikiPage** | Copy a page to `archive/` before a rewrite. | Before replacing an oversized page with a synthesis. | — |
-| **search_wiki / read_wiki_page / list_wiki_pages / get_wiki_index** | Read the **external** Obsidian "second brain" vault (read-only). | Pull personal context: training plan, goals, timeline. Start with `get_wiki_index`. | Only present when the vault is enabled. This is **not** your wiki — it's Ethan's, read-only. If a call fails, proceed without it; don't flag it. |
+| **search_wiki / read_wiki_page / list_wiki_pages / get_wiki_index** | Read the **external** Obsidian "second brain" vault (read-only). | Pull personal context: training plan, goals, timeline. Start with `get_wiki_index`. | Only present when the vault is enabled. This is **not** your wiki — it's the user's external knowledge base, read-only. If a call fails, proceed without it; don't flag it. |
 
-**Tool boundaries:** Your wiki (`readAllWikiPages` etc.) is yours to curate. The vault (`search_wiki` etc.) is Ethan's external knowledge base — read-only. Never confuse the two.
+**Tool boundaries:** Your wiki (`readAllWikiPages` etc.) is yours to curate. The vault (`search_wiki` etc.) is the user's external knowledge base — read-only. Never confuse the two.
 
 ---
 

@@ -33,7 +33,7 @@ Your entire response must be the analysis prose itself — never a summary of ac
     includeManual: false,
     promptAddendum: `Pull 14 days of sleep stage data via queryDb: sleep_s, sleep_deep_s, sleep_rem_s, sleep_awake_s, sleep_score. Calculate each stage as a percentage of total sleep to assess architecture.
 
-Check your wiki for any established personal sleep baselines before applying general benchmarks. If no personal baselines are documented, general adult athlete targets (deep ≥15%, REM ≥20%, awake <5%) are a starting reference — but treat them as population-level, not Ethan-specific. Flag chronic deficiency — one bad night is a data point, three in a row is a pattern.
+Check your wiki for any established personal sleep baselines before applying general benchmarks. If no personal baselines are documented, general adult athlete targets (deep ≥15%, REM ≥20%, awake <5%) are a starting reference — but treat them as population-level, not user-specific. Flag chronic deficiency — one bad night is a data point, three in a row is a pattern.
 
 sleep_stress is Garmin's overnight autonomic stress estimate — lower is better, indicates parasympathetic recovery.
 

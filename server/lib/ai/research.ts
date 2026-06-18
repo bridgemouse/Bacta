@@ -19,7 +19,7 @@ const RESEARCH_DESCRIPTION = `Search for information across two backends — sch
 
 **Web backend (requires configuration):** Tavily or Exa — general web search, can find anything: device specs, product pages, manufacturer documentation, news, non-academic content. Only active when research_provider + research_api_key are set in settings. If web results are empty, the backend is not configured — not that nothing exists on the web.
 
-Use this tool freely for any lookup — scientific or otherwise. If web results come back empty on a non-academic query, tell Ethan the web backend isn't configured and he can add a Tavily or Exa key in Settings to enable it.
+Use this tool freely for any lookup — scientific or otherwise. If web results come back empty on a non-academic query, tell the user the web backend isn't configured and they can add a Tavily or Exa key in Settings to enable it.
 
 Guidance:
 - For scholarly results: cite title, year, and DOI/URL. NEVER invent a citation.

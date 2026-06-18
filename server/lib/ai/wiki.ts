@@ -59,7 +59,7 @@ const PATTERN_PAGES: Record<string, string> = {
   'weekly-observations': '# Weekly Observations\n_(MX-4 will populate this on first run)_\n',
 }
 
-const ETHAN_PROFILE_BLANK = '# Ethan Profile\n_(MX-4 will rebuild this from Obsidian vault and sessions)_\n'
+const USER_PROFILE_BLANK = '# User Profile\n_(MX-4 will build this from the vault and sessions)_\n'
 
 export function resetWikiPatternPages(): void {
   const dir = WIKI_DIR()
@@ -73,7 +73,7 @@ export function resetAllWikiPages(): void {
   for (const [name, content] of Object.entries(PATTERN_PAGES)) {
     fs.writeFileSync(path.join(dir, `${name}.md`), content, 'utf-8')
   }
-  fs.writeFileSync(path.join(dir, 'ethan-profile.md'), ETHAN_PROFILE_BLANK, 'utf-8')
+  fs.writeFileSync(path.join(dir, 'user-profile.md'), USER_PROFILE_BLANK, 'utf-8')
 }
 
 export function loadHeartbeat(): string {

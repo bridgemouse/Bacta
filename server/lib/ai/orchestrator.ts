@@ -20,7 +20,7 @@ export function loadSystemPrompt(): string {
   try {
     return fs.readFileSync(SYSTEM_PROMPT_PATH, 'utf-8')
   } catch {
-    return 'You are MX-4, a data analysis droid. Analyze Ethan\'s biometric data and provide insights.'
+    return 'You are MX-4, a data analysis droid. Analyze the user\'s biometric data and provide insights.'
   }
 }
 
@@ -43,7 +43,7 @@ Section focus: ${promptAddendum}
 
 Use queryDb to pull the last 30 days of relevant metrics. ${isVaultEnabled() ? 'Use get_wiki_index then read_wiki_page or search_wiki to pull personal context from the connected vault.' : ''} Use readAllWikiPages if you need to review accumulated MX-4 knowledge.
 
-Produce a complete analysis in your voice. Cover: what the data shows today, how it compares to the 30-day trend, what it means for Ethan's current training block, and one specific recommendation.`
+Produce a complete analysis in your voice. Cover: what the data shows today, how it compares to the 30-day trend, what it means for the user's current training block, and one specific recommendation.`
 
   const { text: fullAnalysis } = await generateText({
     model,

@@ -6,7 +6,7 @@ Configured in `mx4/mcp-config.json` (for the MX-4 orchestrator) and `.claude/set
 
 ### vault-query
 
-**Purpose:** Read-only access to Ethan's Obsidian Vault wiki pages.  
+**Purpose:** Read-only access to the user's Obsidian Vault wiki pages.  
 **Implementation:** `mx4/vault_query_server.py` — local copy of the vault-query MCP server.  
 **Environment:** `VAULT_WIKI_ROOT=/mnt/vault/wiki`  
 **Tools:** `search_wiki`, `read_wiki_page`, `get_wiki_index`  

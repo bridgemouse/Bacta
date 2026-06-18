@@ -166,7 +166,9 @@ sudo chown wheat:wheat client/src/components/viz/{ComponentName}.tsx
 
 5. **Add to TypeScript interface:** If the metric is used in a hook, add it to the relevant `GarminSummary` interface in the hook file.
 
-6. **Test with manual sync:** `POST /api/garmin/sync` or run the poller directly.
+6. **Update `docs/MX4_REFERENCE.md`:** Add a row to the Data Dictionary table with the metric name, display name, meaning, unit, and typical range. This is the authoritative reference MX-4 uses to interpret data — keep it in sync with the poller.
+
+7. **Test with manual sync:** `POST /api/garmin/sync` or run the poller directly.
 
 ---
 

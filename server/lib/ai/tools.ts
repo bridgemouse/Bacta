@@ -23,18 +23,8 @@ garmin_snapshots uses EAV format — one row per metric per day. ALWAYS filter b
 
 Never use column names like sleep_score or hrv as column selectors — they are VALUES in the metric column.
 
-Available metric names:
-  hrv, hrv_baseline_high, hrv_baseline_low, hrv_week_avg
-  recovery_score, recovery_time_h
-  resting_hr, stress_avg, stress_max
-  body_battery_charged, body_battery_drained, body_battery_wake, body_battery_current
-  sleep_s, sleep_score, sleep_deep_s, sleep_rem_s, sleep_light_s, sleep_awake_s, sleep_stress, sleep_spo2, sleep_hr, sleep_resp
-  resp_avg, resp_max, spo2_avg
-  steps, distance_m, intensity_mod_min, intensity_vig_min
-  training_load, training_load_min, training_load_max, training_status_n
-  vo2max, fitness_age, fitness_age_achievable
-  calories_active, calories_total
-  hrzone_1_min, hrzone_2_min, hrzone_3_min, hrzone_4_min, hrzone_5_min`
+For the full metric catalog (names, units, typical ranges, sparse flags) see MX4_REFERENCE.md in your context.
+To discover what metrics are actually present in the DB: SELECT DISTINCT metric FROM garmin_snapshots ORDER BY metric`
 
 export const queryDb = tool({
   description: QUERY_DB_DESCRIPTION,

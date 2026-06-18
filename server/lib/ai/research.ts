@@ -13,26 +13,19 @@ import { getSetting } from '../settings'
 // user's biometric values or personal records in the query (enforced by the
 // tool description + the system-prompt's untrusted-content policy).
 
-const RESEARCH_DESCRIPTION = `Search peer-reviewed scientific literature for evidence to ground a recommendation.
+const RESEARCH_DESCRIPTION = `Search for information across two backends — scholarly literature and the general web.
 
-The primary backend is OpenAlex — an academic database of peer-reviewed papers with real DOIs. It covers exercise science, sleep research, nutrition, physiology, and similar fields. It does NOT index consumer product documentation, device specs, manufacturer pages, or general web content. Queries about specific consumer devices (e.g. "Garmin Venu 4 metrics") will return nothing.
+**Scholarly backend (always available, keyless):** OpenAlex — peer-reviewed papers with real DOIs. Best for exercise science, sleep, nutrition, physiology, HRV research, and similar academic topics. Will return nothing for consumer product specs or manufacturer documentation.
 
-A web backend (Tavily or Exa) is available if configured in settings under research_provider + research_api_key. Without that, only scholarly literature is searchable.
+**Web backend (requires configuration):** Tavily or Exa — general web search, can find anything: device specs, product pages, manufacturer documentation, news, non-academic content. Only active when research_provider + research_api_key are set in settings. If web results are empty, the backend is not configured — not that nothing exists on the web.
 
-Use this tool for:
-- Scientific questions (e.g. "HRV and recovery", "deep sleep and memory consolidation", "zone 2 training adaptations")
-- Grounding a briefing recommendation with current evidence
-- When Ethan explicitly asks what research says about a health or training topic
-
-Do NOT use this tool for:
-- Consumer device specifications or sensor capabilities — say you'd need web search configured for that
-- Product comparisons, manufacturer documentation, or app feature lists
-- General web lookups
+Use this tool freely for any lookup — scientific or otherwise. If web results come back empty on a non-academic query, tell Ethan the web backend isn't configured and he can add a Tavily or Exa key in Settings to enable it.
 
 Guidance:
-- Cite sources with title, year, and DOI/URL. NEVER invent a citation — if nothing relevant is found, say so clearly.
-- Send only the scientific question. Never include personal biometric values in the query.
-- After retrieving, tie the evidence back to Ethan's own metrics in your own words.`
+- For scholarly results: cite title, year, and DOI/URL. NEVER invent a citation.
+- For web results: summarise what was found and link the source.
+- If nothing is found on either backend for a scientific topic, say so — do not fabricate.
+- Never include personal biometric values in the query.`
 
 interface Source {
   title: string

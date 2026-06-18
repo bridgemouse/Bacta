@@ -118,7 +118,7 @@
 ## Immediate Priorities
 
 1. **v1.0 release-readiness sweep — DONE (2026-06-17).** Executed on branch `e2e-release-sweep`; report at `docs/release-test/findings-2026-06-17.md`. Shipped: app auth (PIN→token), read-only `queryDb`, prompt-injection defense, helmet/CSP + input validation + rate limits, the provider-agnostic `research` tool, `docs/MX4_REFERENCE.md` (injected), DB backup+restore, failure notifications, the `recovery_time_h` unit fix, and data cleanup. MX-4 verified end-to-end (grounded briefings, vault use, real research citations, zero persona hard-fails).
-2. **Post-sweep infrastructure runbook (operator-executed)** — `docs/SECURITY.md` §4 + `docs/OPERATIONS.md` §1. Includes the PHI git-history scrub + force-push, firewall/Tailscale, encryption at rest, systemd hardening, NFS/vault-MCP lockdown, runner hardening, TLS, and installing the backup timer + off-box copy.
+2. **Post-sweep infrastructure runbook (operator-executed)** — `docs/SECURITY.md` §4 + `docs/OPERATIONS.md` §1. Includes the PHI git-history scrub + force-push, firewall/Tailscale, encryption at rest, systemd hardening, NFS/vault-MCP lockdown, TLS, and installing the backup timer + off-box copy. *(Runner hardening removed — self-hosted runner decommissioned 2026-06-17; CI now runs on GitHub cloud runners only.)*
 
 > ⚠️ **PHI in git (still requires the operator):** `mx4/wiki/` and `mx4/HEARTBEAT.md` are now untracked + gitignored, but they remain in history. Run the `git filter-repo` scrub + force-push from `docs/SECURITY.md` §4.1 before pushing to any shared remote, and rotate exposed secrets.
 

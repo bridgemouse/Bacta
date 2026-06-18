@@ -15,6 +15,7 @@ import settingsRouter from './api/settings'
 import authRouter from './api/auth'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './lib/auth'
 import { scheduleNightly } from './lib/ai/scheduler'
+import { getSetting } from './lib/settings'
 
 migrate()
 scheduleNightly()
@@ -92,6 +93,39 @@ app.use('/api/settings', requireAuth, settingsRouter)
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {
   const clientDir = path.join(process.cwd(), 'dist/client')
+
+  const VALID_LOGOS = ['capsule','splash','splat','crown','bloom','orb','vortex']
+
+  // Dynamic manifest — returns icon pointing to the selected logo
+  app.get('/manifest.json', (_req, res) => {
+    const key = getSetting('app_logo') ?? 'splash'
+    const logoKey = VALID_LOGOS.includes(key) ? key : 'splash'
+    res.set('Cache-Control', 'no-store')
+    res.json({
+      name: 'Bacta',
+      short_name: 'Bacta',
+      description: 'Personal health dashboard',
+      start_url: '/',
+      display: 'standalone',
+      background_color: '#0f1117',
+      theme_color: '#0f1117',
+      orientation: 'portrait',
+      icons: [
+        { src: `/logos/logo-${logoKey}.png`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      ],
+    })
+  })
+
+  // Dynamic apple-touch-icon — iOS reads this at "Add to Home Screen" time
+  app.get('/apple-touch-icon.png', (_req, res) => {
+    const key = getSetting('app_logo') ?? 'splash'
+    const logoKey = VALID_LOGOS.includes(key) ? key : 'splash'
+    res.set('Cache-Control', 'no-store')
+    res.sendFile(path.join(clientDir, 'logos', `logo-${logoKey}.png`))
+  })
+  // iOS also requests these variants
+  app.get('/apple-touch-icon-precomposed.png', (_req, res) => res.redirect('/apple-touch-icon.png'))
+
   app.use(express.static(clientDir, { etag: false }))
   app.get('/{*splat}', (_req, res) => {
     res.set('Cache-Control', 'no-store')

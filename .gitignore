@@ -22,4 +22,6 @@ __pycache__/
 
 .vscode/
 *.png
+!client/public/**/*.png
+*.png
 !client/public/*.png

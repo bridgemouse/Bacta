@@ -5,6 +5,7 @@ import { SecurityRail } from '../components/SecurityRail'
 import { APP_VERSION } from '../version'
 import { COLORS, FONT_MONO, FONT_UI, MX4_COLOR } from '../theme'
 import { hexA } from '../lib/hexA'
+import { LOGO_OPTIONS, DEFAULT_LOGO, logoSrc, type LogoKey } from '../hooks/useAppLogo'
 
 const MODELS_BY_PROVIDER: Record<string, string[]> = {
   google:    ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.5-flash'],
@@ -242,8 +243,52 @@ export function SettingsPage() {
     testStatus === 'error' ? COLORS.mx4Red :
     MX4_COLOR
 
+  const currentLogo = (settings['app_logo'] as LogoKey | undefined) ?? DEFAULT_LOGO
+
   return (
     <AppShell section="settings">
+      {/* Rail: APPEARANCE */}
+      <Rail label="APPEARANCE" accent={MX4_COLOR} />
+      <div style={{ ...cardStyle, padding: '12px 16px' }}>
+        <div style={{ fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted, marginBottom: 10, letterSpacing: '0.05em' }}>
+          App icon — re-add to home screen to apply
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {LOGO_OPTIONS.map(({ key, label }) => {
+            const active = currentLogo === key
+            return (
+              <button
+                key={key}
+                onClick={() => save('app_logo', key)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                  padding: '8px 10px',
+                  borderRadius: 10,
+                  border: `1px solid ${active ? MX4_COLOR : COLORS.line}`,
+                  background: active ? hexA(MX4_COLOR, 0.1) : COLORS.surfaceElevated,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                <img
+                  src={logoSrc(key)}
+                  alt={label}
+                  style={{ width: 44, height: 44, objectFit: 'contain', filter: active ? `drop-shadow(0 0 6px ${hexA(MX4_COLOR, 0.6)})` : 'none' }}
+                />
+                <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: active ? MX4_COLOR : COLORS.textMuted }}>
+                  {label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        {savedKey === 'app_logo' && (
+          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: MX4_COLOR, letterSpacing: '0.1em', marginTop: 8 }}>
+            SAVED ·
+          </div>
+        )}
+      </div>
+
       {/* Rail 1: AI PROVIDER */}
       <Rail label="AI PROVIDER" accent={MX4_COLOR} />
 

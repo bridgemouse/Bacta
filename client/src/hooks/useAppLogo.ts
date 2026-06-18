@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export type LogoKey = 'capsule' | 'splash' | 'splat' | 'crown' | 'bloom' | 'orb' | 'vortex'
+export type LogoKey = 'capsule' | 'splash' | 'splat' | 'crown' | 'bloom' | 'orb' | 'vortex' | 'beaker'
 
 export const LOGO_OPTIONS: { key: LogoKey; label: string }[] = [
   { key: 'splash',  label: 'SPLASH'  },
@@ -10,6 +10,7 @@ export const LOGO_OPTIONS: { key: LogoKey; label: string }[] = [
   { key: 'bloom',   label: 'BLOOM'   },
   { key: 'orb',     label: 'ORB'     },
   { key: 'vortex',  label: 'VORTEX'  },
+  { key: 'beaker',  label: 'BEAKER'  },
 ]
 
 export const DEFAULT_LOGO: LogoKey = 'splash'

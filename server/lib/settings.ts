@@ -18,6 +18,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   vault_url:     '',
   research_provider: 'none',  // none | tavily | exa — scholarly backend is always on
   research_api_key:  '',      // optional key for the web backend (masked)
+  app_logo: 'splash',
 }
 
 // Keys whose values must never be returned to the client in cleartext.

@@ -98,8 +98,14 @@
 - `client/src/hooks/useChat.ts` — `loadMessages` crash fix: `r.ok ? r.json() : []` guard + `Array.isArray(msgs)` check prevents crash on 401 response body
 - Branch: `mx4-tweaks`, PR: https://github.com/bridgemouse/Bacta/pull/new/mx4-tweaks
 
+**Codebase cleanup (Jun 18, 2026):**
+- Depersonalized all hardcoded user references across server source, AI docs, and public docs — repo is public and should not assume a named user
+- Refactored duplicate/stale hardcoded lists: `VALID_LOGOS` now single export in `settings.ts`; `VALID_RUN_SECTIONS` derives from `SECTIONS.map()`; phantom metrics removed from `VALID_METRICS` in `garmin.ts`; metric list removed from `queryDb` tool description (MX-4 now uses `SELECT DISTINCT` for discovery)
+- Removed hardcoded metric list from `mx4/system-prompt.md` (same self-discovery pattern)
+- Added `## Chat` section to `mx4/system-prompt.md` — MX-4 now knows conversational replies are proportional and non-repetitive; tool use unconstrained; briefing structure reserved for briefings
+
 **Tests:**
-- 324 tests passing (154 server + 170 client, last verified Jun 17, 2026)
+- 324 tests passing (154 server + 170 client, last verified Jun 18, 2026)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)
 
 ### Present but Untested (Never Run)
@@ -143,6 +149,13 @@
 **Blocker:** No data source and no input UI.  
 **Path:** Define what "daily log" means for this user (caffeine? mood? readiness? supplements?) → build input form (possibly in AskSheet or a dedicated input view) → wire to `manual_inputs` table → build `DailyLogPage.tsx`.  
 **DB ready:** `manual_inputs` table has `readiness` (1–5), `caffeine_mg`, `supplements` columns.
+
+### Open Wearables Integration
+
+**Scope:** Expand Bacta's data pipeline beyond Garmin via [Open Wearables](https://github.com/the-momentum/open-wearables) — supports Polar, Wahoo, Oura, Whoop, and others. Garmin integration stays as-is (Open Wearables does not cover Garmin's proprietary API).  
+**Data layer impact:** The current `garmin_snapshots` / `garmin_activities` schema has no `source` column. Adding additional devices requires either (a) a unified `snapshots` table with a `source TEXT` column, or (b) separate per-device tables. Decision needed before implementation.  
+**Path:** Research Open Wearables API surface → design schema extension → build device-specific pollers → wire into existing MX-4 tool/query patterns.  
+**Blocker:** Needs a dedicated design + research session before any code is written.
 
 ### Docker Support
 

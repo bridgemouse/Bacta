@@ -94,7 +94,7 @@ app.use('/api/settings', requireAuth, settingsRouter)
 if (process.env.NODE_ENV === 'production') {
   const clientDir = path.join(process.cwd(), 'dist/client')
 
-  const VALID_LOGOS = ['capsule','splash','splat','crown','bloom','orb','vortex']
+  const VALID_LOGOS = ['capsule','splash','splat','crown','bloom','orb','vortex','beaker']
 
   // Dynamic manifest — returns icon pointing to the selected logo
   app.get('/manifest.json', (_req, res) => {

@@ -6,6 +6,8 @@ import { testVaultConnection, resetVaultClient } from '../lib/ai/vaultClient'
 
 const settingsRouter = Router()
 
+export const VALID_LOGOS = ['capsule','splash','splat','crown','bloom','orb','vortex','beaker']
+
 // Per-key value validators. Only keys present here may be written via the API;
 // anything else (including auth_* secrets) is rejected.
 const SETTING_VALIDATORS: Record<string, (v: string) => boolean> = {
@@ -23,7 +25,7 @@ const SETTING_VALIDATORS: Record<string, (v: string) => boolean> = {
   mx4_home_rerun_mode: v => ['home_only', 'all_sections'].includes(v),
   mx4_custom_skills:   v => { try { return Array.isArray(JSON.parse(v)) } catch { return false } },
   vault_url:           v => v === '' || /^https?:\/\/[^\s]+$/.test(v),
-  app_logo:            v => ['capsule','splash','splat','crown','bloom','orb','vortex','beaker'].includes(v),
+  app_logo:            v => VALID_LOGOS.includes(v),
 }
 
 settingsRouter.get('/', (_req, res) => {

@@ -4,8 +4,11 @@ import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
 import { getSetting } from '../settings'
 
+// Informational reference — not used for server-side validation (the settings
+// validator accepts any regex-matching model ID so users can type future models).
+// Update when providers release new models worth surfacing in the UI.
 export const SUPPORTED_MODELS: Record<string, string[]> = {
-  google:    ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.5-flash'],
+  google:    ['gemini-2.5-flash', 'gemini-2.5-pro'],
   anthropic: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8'],
   openai:    ['gpt-4o-mini', 'gpt-4o', 'o3'],
 }

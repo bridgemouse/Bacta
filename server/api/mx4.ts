@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { streamText, stepCountIs } from 'ai'
 import { runOrchestrator, runSectionById, loadSystemPrompt } from '../lib/ai/orchestrator'
+import { SECTIONS } from '../lib/ai/sections'
 import { assembleSystemPrompt } from '../lib/ai/prompt'
 import { loadChatHistory } from '../lib/ai/chat'
 import { getModel } from '../lib/ai/provider'
@@ -114,7 +115,7 @@ mx4Router.post('/run', (_req, res) => {
   })
 })
 
-const VALID_RUN_SECTIONS = ['recovery', 'sleep', 'training', 'home']
+const VALID_RUN_SECTIONS = SECTIONS.map(s => s.id)
 
 mx4Router.post('/run/:section', (req, res) => {
   const { section } = req.params

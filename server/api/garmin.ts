@@ -18,7 +18,7 @@ const VALID_METRICS = [
   // Body battery (charged/drained = delta amounts; wake/current = level readings)
   'body_battery_charged', 'body_battery_drained',
   // SpO2 / respiration
-  'spo2_avg', 'spo2_min', 'resp_avg', 'resp_max',
+  'spo2_avg', 'resp_avg', 'resp_max',
   // Training / readiness
   'recovery_score', 'recovery_time_h', 'training_status_n', 'training_load', 'training_load_min', 'training_load_max',
   // HRV
@@ -28,11 +28,7 @@ const VALID_METRICS = [
   // Body battery
   'body_battery_current', 'body_battery_wake',
   // Fitness metrics
-  'vo2max', 'fitness_age', 'fitness_age_achievable', 'endurance_score', 'hill_score',
-  // Body composition / weight
-  'weight_kg', 'bmi', 'body_fat_pct', 'muscle_mass_kg',
-  // Blood pressure
-  'bp_systolic', 'bp_diastolic',
+  'vo2max', 'fitness_age', 'fitness_age_achievable',
   // Intensity
   'intensity_mod_min', 'intensity_vig_min',
   // Daily goals

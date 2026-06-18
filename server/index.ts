@@ -14,6 +14,7 @@ import mx4Router from './api/mx4'
 import settingsRouter from './api/settings'
 import authRouter from './api/auth'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './lib/auth'
+import { VALID_LOGOS } from './api/settings'
 import { scheduleNightly } from './lib/ai/scheduler'
 import { getSetting } from './lib/settings'
 
@@ -93,8 +94,6 @@ app.use('/api/settings', requireAuth, settingsRouter)
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {
   const clientDir = path.join(process.cwd(), 'dist/client')
-
-  const VALID_LOGOS = ['capsule','splash','splat','crown','bloom','orb','vortex','beaker']
 
   // Dynamic manifest — returns icon pointing to the selected logo
   app.get('/manifest.json', (_req, res) => {

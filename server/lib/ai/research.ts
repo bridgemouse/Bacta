@@ -13,15 +13,25 @@ import { getSetting } from '../settings'
 // user's biometric values or personal records in the query (enforced by the
 // tool description + the system-prompt's untrusted-content policy).
 
-const RESEARCH_DESCRIPTION = `Search external sources for peer-reviewed / primary scientific evidence to ground a recommendation.
+const RESEARCH_DESCRIPTION = `Search peer-reviewed scientific literature for evidence to ground a recommendation.
 
-Use this when Ethan asks what research says about a topic, or when a briefing would be strengthened by current evidence (e.g. HRV-guided training, deep-sleep and recovery, VO2max trends).
+The primary backend is OpenAlex — an academic database of peer-reviewed papers with real DOIs. It covers exercise science, sleep research, nutrition, physiology, and similar fields. It does NOT index consumer product documentation, device specs, manufacturer pages, or general web content. Queries about specific consumer devices (e.g. "Garmin Venu 4 metrics") will return nothing.
+
+A web backend (Tavily or Exa) is available if configured in settings under research_provider + research_api_key. Without that, only scholarly literature is searchable.
+
+Use this tool for:
+- Scientific questions (e.g. "HRV and recovery", "deep sleep and memory consolidation", "zone 2 training adaptations")
+- Grounding a briefing recommendation with current evidence
+- When Ethan explicitly asks what research says about a health or training topic
+
+Do NOT use this tool for:
+- Consumer device specifications or sensor capabilities — say you'd need web search configured for that
+- Product comparisons, manufacturer documentation, or app feature lists
+- General web lookups
 
 Guidance:
-- Prefer primary, peer-reviewed sources over blogs. The scholarly backend (OpenAlex) returns real papers with DOIs.
-- Cite sources with their title, year, and DOI/URL. NEVER invent a citation or DOI — if nothing relevant is found, say so.
-- Note recency; prefer recent work when the science is evolving.
-- Send only the scientific QUESTION. Never put Ethan's personal biometric values or records in the query.
+- Cite sources with title, year, and DOI/URL. NEVER invent a citation — if nothing relevant is found, say so clearly.
+- Send only the scientific question. Never include personal biometric values in the query.
 - After retrieving, tie the evidence back to Ethan's own metrics in your own words.`
 
 interface Source {

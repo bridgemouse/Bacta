@@ -16,6 +16,7 @@ export function useChat(section?: string) {
   const [hiddenBefore, setHiddenBefore] = useState<string | null>(null)
   const hiddenBeforeRef = useRef<string | null>(null)
   const hasTextRef = useRef(false)
+  const toolClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function loadMessages() {
     fetch(`/api/mx4/chat/${sessionId}`)
@@ -48,6 +49,7 @@ export function useChat(section?: string) {
 
     if (!overrideText) setInput('')
     hasTextRef.current = false
+    if (toolClearTimerRef.current) clearTimeout(toolClearTimerRef.current)
     setToolCalls([])
     setMessages(prev => [...prev, { role: 'user', content: text, section }])
     setStreaming(true)
@@ -82,7 +84,7 @@ export function useChat(section?: string) {
             if (typeof parsed === 'string') {
               if (!hasTextRef.current) {
                 hasTextRef.current = true
-                setToolCalls([])
+                toolClearTimerRef.current = setTimeout(() => setToolCalls([]), 800)
               }
               setMessages(prev => {
                 const next = [...prev]

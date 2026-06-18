@@ -112,6 +112,8 @@ export function SettingsPage() {
   const [vaultTestStatus, setVaultTestStatus] = useState<TestStatus>('idle')
   const [vaultTestError, setVaultTestError] = useState('')
   const [vaultTestDetails, setVaultTestDetails] = useState<{ domains?: number; page_count?: number } | null>(null)
+  const [webKeyInput, setWebKeyInput] = useState('')
+  const [webKeyFocused, setWebKeyFocused] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(setSettings)
@@ -606,7 +608,89 @@ export function SettingsPage() {
         )}
       </div>
 
-      {/* Rail 4: CUSTOM SKILLS */}
+      {/* Rail 4: WEB SEARCH */}
+      <Rail label="WEB SEARCH" accent={MX4_COLOR} />
+
+      <div style={cardStyle}>
+        {/* Provider selector */}
+        <div style={rowStyle}>
+          <span style={labelStyle}>Provider</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['none', 'tavily', 'exa'] as const).map(p => {
+              const active = (settings['research_provider'] ?? 'none') === p
+              return (
+                <button
+                  key={p}
+                  onClick={() => save('research_provider', p)}
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    letterSpacing: '0.06em',
+                    padding: '5px 11px',
+                    borderRadius: 7,
+                    border: `1px solid ${active ? MX4_COLOR : COLORS.line}`,
+                    background: active ? hexA(MX4_COLOR, 0.15) : COLORS.surfaceElevated,
+                    color: active ? MX4_COLOR : COLORS.textSecondary,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {p.toUpperCase()}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* API key */}
+        <div style={rowStyleLast}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+            <span style={labelStyle}>API Key</span>
+            {savedBadge('research_api_key')}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type={webKeyFocused ? 'text' : 'password'}
+              value={webKeyInput}
+              placeholder={settings['research_api_key'] ? '••••••••••••••••' : 'Enter key…'}
+              onChange={e => setWebKeyInput(e.target.value)}
+              onFocus={() => setWebKeyFocused(true)}
+              onBlur={() => setWebKeyFocused(false)}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 16,
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: `1px solid ${webKeyFocused ? MX4_COLOR : COLORS.line}`,
+                background: COLORS.surfaceElevated,
+                color: COLORS.text,
+                minWidth: 0,
+                width: 160,
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => { if (webKeyInput.length > 0) { save('research_api_key', webKeyInput); setWebKeyInput('') } }}
+              disabled={webKeyInput.length === 0}
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                letterSpacing: '0.06em',
+                padding: '6px 11px',
+                borderRadius: 7,
+                border: `1px solid ${webKeyInput.length > 0 ? MX4_COLOR : COLORS.line}`,
+                background: webKeyInput.length > 0 ? hexA(MX4_COLOR, 0.12) : 'none',
+                color: webKeyInput.length > 0 ? MX4_COLOR : COLORS.textMuted,
+                cursor: webKeyInput.length > 0 ? 'pointer' : 'default',
+                flexShrink: 0,
+              }}
+            >
+              SAVE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Rail 5: CUSTOM SKILLS */}
       <Rail label="CUSTOM SKILLS" accent={MX4_COLOR} />
 
       <div style={cardStyle}>
@@ -836,7 +920,7 @@ export function SettingsPage() {
         )}
       </div>
 
-      {/* Rail 4: DATA MANAGEMENT */}
+      {/* Rail 6: DATA MANAGEMENT */}
       <Rail label="DATA MANAGEMENT" accent={COLORS.mx4Red} />
 
       <div style={cardStyle}>
@@ -885,7 +969,7 @@ export function SettingsPage() {
 
       <SecurityRail />
 
-      {/* Rail 5: GARMIN */}
+      {/* Rail 7: GARMIN */}
       <Rail label="GARMIN" accent={MX4_COLOR} />
 
       <div style={cardStyle}>

@@ -11,7 +11,7 @@ describe('Garmin API', () => {
     const today = new Date().toISOString().slice(0, 10)
     // Seed test data
     const insert = db.prepare(
-      'INSERT INTO garmin_snapshots (date, metric, value, unit) VALUES (?, ?, ?, ?)'
+      'INSERT INTO health_snapshots (date, metric, value, unit) VALUES (?, ?, ?, ?)'
     )
     insert.run(today, 'steps', 9241, 'steps')
     insert.run(today, 'hrv', 48, 'ms')
@@ -74,14 +74,14 @@ describe('Activities endpoint — expand fields', () => {
     const { default: db } = await import('../../server/db/client')
     const today = new Date().toISOString().slice(0, 10)
     db.prepare(
-      `INSERT OR REPLACE INTO garmin_activities
-       (activity_id, date, start_time, name, type_key, duration_s, avg_hr,
+      `INSERT OR REPLACE INTO health_activities
+       (activity_id, source, date, start_time, name, type_key, duration_s, avg_hr,
         aerobic_te, anaerobic_te, recovery_time_h,
         zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
         run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
-      9999, today, `${today} 07:00:00`, 'Test Run', 'running',
+      '9999', 'garmin', today, `${today} 07:00:00`, 'Test Run', 'running',
       3600, 148,
       3.8, 1.2, 24,
       120, 900, 600, 120, 60,
@@ -94,7 +94,7 @@ describe('Activities endpoint — expand fields', () => {
     const res = await request(app).get('/api/garmin/activities').query({ days: 7 })
     expect(res.status).toBe(200)
     const acts = res.body.activities as any[]
-    const testAct = acts.find((a: any) => a.activity_id === 9999)
+    const testAct = acts.find((a: any) => String(a.activity_id) === '9999')
     expect(testAct).toBeDefined()
     expect(testAct.aerobic_te).toBe(3.8)
     expect(testAct.anaerobic_te).toBe(1.2)
@@ -139,7 +139,7 @@ describe('sleep-hypno endpoint', () => {
       ],
     })
     db.prepare(
-      `INSERT OR REPLACE INTO garmin_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
+      `INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
     ).run('2026-06-13', 'sleep_score', 82, 'score', sourceJson)
 
     const { app } = await import('../../server/index')
@@ -156,7 +156,7 @@ describe('sleep-hypno endpoint', () => {
   it('handles parse failure gracefully', async () => {
     const { default: db } = await import('../../server/db/client')
     db.prepare(
-      `INSERT OR REPLACE INTO garmin_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
+      `INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
     ).run('2026-06-14', 'sleep_score', 0, 'score', 'not valid json {{{')
 
     const { app } = await import('../../server/index')
@@ -172,12 +172,12 @@ describe('Phase B endpoints', () => {
     migrate()
     const { default: db } = await import('../../server/db/client')
     const insertAct = db.prepare(
-      `INSERT OR IGNORE INTO garmin_activities (activity_id, date, start_time, name, type_key, duration_s, avg_hr)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT OR IGNORE INTO health_activities (activity_id, source, date, start_time, name, type_key, duration_s, avg_hr)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     const dates = ['2026-05-26', '2026-05-27', '2026-06-02', '2026-06-03']
     dates.forEach((d, i) => {
-      insertAct.run(9000 + i, d, `${d}T07:00:00`, 'Run', 'running', 3600, 140 + i)
+      insertAct.run(String(9000 + i), 'garmin', d, `${d}T07:00:00`, 'Run', 'running', 3600, 140 + i)
     })
   })
 

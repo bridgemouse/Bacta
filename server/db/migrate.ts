@@ -38,6 +38,21 @@ export function migrate() {
   // garmin_activity_legs is a new table — CREATE TABLE IF NOT EXISTS handles idempotency
   // (schema.sql already ran above via db.exec(schema))
 
+  // Rename garmin_snapshots → health_snapshots (idempotent)
+  const hasOldSnapshots = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_snapshots'"
+  ).get()
+  if (hasOldSnapshots) {
+    db.exec(`
+      INSERT OR IGNORE INTO health_snapshots
+        (id, date, metric, value, unit, source_json, created_at)
+      SELECT id, date, metric, value, unit, source_json, created_at
+      FROM garmin_snapshots
+    `)
+    db.exec('DROP TABLE garmin_snapshots')
+    console.log('[db] migrated garmin_snapshots → health_snapshots')
+  }
+
   // Add section column to mx4_chat_messages — tracks which section a message belongs to
   try {
     db.exec('ALTER TABLE mx4_chat_messages ADD COLUMN section TEXT')

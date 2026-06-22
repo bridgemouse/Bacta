@@ -1,12 +1,13 @@
-CREATE TABLE IF NOT EXISTS garmin_snapshots (
+CREATE TABLE IF NOT EXISTS health_snapshots (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   date        TEXT NOT NULL,
   metric      TEXT NOT NULL,
   value       REAL,
   unit        TEXT,
+  source      TEXT NOT NULL DEFAULT 'garmin',
   source_json TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(date, metric)
+  UNIQUE(date, metric, source)
 );
 
 CREATE TABLE IF NOT EXISTS macrofactor_snapshots (

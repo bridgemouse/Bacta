@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import Database from 'better-sqlite3'
 
-// Use in-memory DB for tests
 process.env.DB_PATH = ':memory:'
 
 describe('schema', () => {
@@ -14,9 +13,9 @@ describe('schema', () => {
     migrate()
   })
 
-  it('creates garmin_snapshots table', () => {
+  it('creates health_snapshots table', () => {
     const row = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_snapshots'"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='health_snapshots'"
     ).get()
     expect(row).toBeTruthy()
   })
@@ -50,14 +49,25 @@ describe('schema', () => {
     }).toThrow()
   })
 
-  it('enforces unique date+metric on garmin_snapshots', () => {
+  it('allows same metric from two sources on health_snapshots', () => {
     db.prepare(
-      'INSERT INTO garmin_snapshots (date, metric, value) VALUES (?, ?, ?)'
-    ).run('2026-04-25', 'steps', 9000)
+      'INSERT INTO health_snapshots (date, metric, value, source) VALUES (?, ?, ?, ?)'
+    ).run('2026-04-25', 'hrv', 45, 'garmin')
     expect(() => {
       db.prepare(
-        'INSERT INTO garmin_snapshots (date, metric, value) VALUES (?, ?, ?)'
-      ).run('2026-04-25', 'steps', 9001)
+        'INSERT INTO health_snapshots (date, metric, value, source) VALUES (?, ?, ?, ?)'
+      ).run('2026-04-25', 'hrv', 48, 'oura')
+    }).not.toThrow()
+  })
+
+  it('rejects duplicate date+metric+source on health_snapshots', () => {
+    db.prepare(
+      'INSERT INTO health_snapshots (date, metric, value, source) VALUES (?, ?, ?, ?)'
+    ).run('2026-04-26', 'steps', 9000, 'garmin')
+    expect(() => {
+      db.prepare(
+        'INSERT INTO health_snapshots (date, metric, value, source) VALUES (?, ?, ?, ?)'
+      ).run('2026-04-26', 'steps', 9001, 'garmin')
     }).toThrow()
   })
 })

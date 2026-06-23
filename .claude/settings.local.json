@@ -77,12 +77,30 @@
       "Bash(rm -f /opt/bacta/wrap-*.png)",
       "Bash(sudo cat /etc/systemd/system/bacta-api.service)",
       "Bash(sudo journalctl *)",
-"Bash(rm -f /opt/bacta/wrap2-*.png)",
+      "Bash(rm -f /opt/bacta/wrap2-*.png)",
       "WebFetch(domain:tryterra.co)",
       "WebFetch(domain:developer.whoop.com)",
       "Bash(gh api *)",
       "Bash(/home/wheat/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.2/skills/subagent-driven-development/scripts/task-brief *)",
-      "Bash(/home/wheat/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.2/skills/subagent-driven-development/scripts/review-package *)"
+      "Bash(/home/wheat/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.2/skills/subagent-driven-development/scripts/review-package *)",
+      "WebFetch(domain:developers.strava.com)",
+      "WebFetch(domain:www.kaggle.com)",
+      "WebFetch(domain:huggingface.co)",
+      "Bash(timedatectl status *)",
+      "Bash(sudo timedatectl *)",
+      "Bash(sudo chown *)",
+      "Bash(claude setup-token *)",
+      "Bash(tmux -V)",
+      "Bash(screen --version)",
+      "Bash(claude --version)",
+      "Bash(sudo apt *)",
+      "Bash(loginctl enable-linger *)",
+      "Bash(systemctl --user daemon-reload)",
+      "Bash(systemctl --user enable claude-remote.service)",
+      "Bash(systemctl --user start claude-remote.service)",
+      "Bash(systemctl --user status claude-remote.service)",
+      "Bash(tmux list-sessions *)",
+      "Bash(tmux capture-pane *)"
     ]
   }
 }

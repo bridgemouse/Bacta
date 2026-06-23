@@ -67,7 +67,22 @@
       "Skill(bacta-wrap)",
       "Bash(systemctl is-enabled *)",
       "Bash(systemctl is-active *)",
-      "Bash(systemctl list-timers *)"
+      "Bash(systemctl list-timers *)",
+      "Bash(sudo bash *)",
+      "Bash(systemctl list-units *)",
+      "Read(//home/wheat/**)",
+      "Read(//home/wheat/actions-runner/**)",
+      "Bash(pip3 install *)",
+      "Bash(rm -rf /tmp/pw-*)",
+      "Bash(rm -f /opt/bacta/wrap-*.png)",
+      "Bash(sudo cat /etc/systemd/system/bacta-api.service)",
+      "Bash(sudo journalctl *)",
+"Bash(rm -f /opt/bacta/wrap2-*.png)",
+      "WebFetch(domain:tryterra.co)",
+      "WebFetch(domain:developer.whoop.com)",
+      "Bash(gh api *)",
+      "Bash(/home/wheat/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.2/skills/subagent-driven-development/scripts/task-brief *)",
+      "Bash(/home/wheat/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.2/skills/subagent-driven-development/scripts/review-package *)"
     ]
   }
 }

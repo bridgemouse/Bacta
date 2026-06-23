@@ -105,7 +105,7 @@
 - Added `## Chat` section to `mx4/system-prompt.md` — MX-4 now knows conversational replies are proportional and non-repetitive; tool use unconstrained; briefing structure reserved for briefings
 
 **Tests:**
-- 324 tests passing (154 server + 170 client, last verified Jun 18, 2026)
+- 329 tests passing (159 server + 170 client, last verified Jun 23, 2026)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)
 
 ### Present but Untested (Never Run)
@@ -150,12 +150,28 @@
 **Path:** Define what "daily log" means for this user (caffeine? mood? readiness? supplements?) → build input form (possibly in AskSheet or a dedicated input view) → wire to `manual_inputs` table → build `DailyLogPage.tsx`.  
 **DB ready:** `manual_inputs` table has `readiness` (1–5), `caffeine_mg`, `supplements` columns.
 
-### Open Wearables Integration
+### Multi-Device Wearables Integration
 
-**Scope:** Expand Bacta's data pipeline beyond Garmin via [Open Wearables](https://github.com/the-momentum/open-wearables) — supports Polar, Wahoo, Oura, Whoop, and others. Garmin integration stays as-is (Open Wearables does not cover Garmin's proprietary API).  
-**Data layer impact:** The current `garmin_snapshots` / `garmin_activities` schema has no `source` column. Adding additional devices requires either (a) a unified `snapshots` table with a `source TEXT` column, or (b) separate per-device tables. Decision needed before implementation.  
-**Path:** Research Open Wearables API surface → design schema extension → build device-specific pollers → wire into existing MX-4 tool/query patterns.  
-**Blocker:** Needs a dedicated design + research session before any code is written.
+**Branch:** `feature/multi-device` — Plan 1 (Foundation) complete Jun 23, 2026.
+
+**Plan 1 complete:**
+- `garmin_snapshots` → `health_snapshots` (+ `source TEXT NOT NULL DEFAULT 'garmin'`, `UNIQUE(date, metric, source)`)
+- `garmin_activities` → `health_activities` (composite PK `activity_id TEXT + source TEXT`)
+- `garmin_activity_legs` → `health_activity_legs` (+ `source` column)
+- Idempotent migrations in `server/db/migrate.ts` — existing Garmin data preserved
+- All Python pollers updated to new table names; Garmin scripts relocated to `scripts/providers/garmin/`
+- `scripts/health_poller.py` dispatcher — runs Garmin always + OAuth providers when enabled
+- `server/lib/integrations/shared/metricMap.ts` — canonical metric registry + `PROVIDER_LABELS`
+- `server/lib/integrations/shared/sourceResolver.ts` — `resolveSource()` priority utility
+- 329 tests passing
+
+**Plan 2 (Server Integration Layer) — pending:** OAuth routes (`/api/integrations/:provider/authorize|callback|disconnect|sync|status`), credential storage in `app_settings`, per-provider `XxxService.ts` + `XxxProcessor.ts` for Polar, Oura, Whoop, Withings, Strava, Hevy.
+
+**Plan 3 (Frontend) — pending:** Collapsible rails across SettingsPage, INSTANCE rail (`base_url`), CONNECTED DEVICES rail with provider cards, DATA PRIORITY reorder, dynamic source strings in RecoveryPage/SleepPage/TrainingPage/LogEntry.
+
+**Providers:** Polar, Oura, Whoop, Withings, Strava, Hevy — all direct OAuth 2.0 (no intermediary). Fitbit skipped (API deprecated Sept 2026). Apple Health / Google Health Connect deferred to native app.
+
+**Open Wearables** — deferred as optional upstream adapter, not a v1 dependency.
 
 ### Docker Support
 
@@ -192,6 +208,6 @@
 
 **`MX4Card` deprecated component.** `client/src/components/MX4Card.tsx` exports `MX4Card` which returns `null`. It's deprecated and left in place to avoid import breakage. Once no imports of `MX4Card` (the deprecated version, not `MX4Briefing`) exist, it can be removed.
 
-**Legacy EAV activity metrics.** `act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr` rows exist in `garmin_snapshots` from before the `garmin_activities` table existed. They're no longer written but still queried by nothing. They could be removed from VALID_METRICS and eventually deleted from the DB.
+**Legacy EAV activity metrics.** `act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr` rows exist in `health_snapshots` from before the `health_activities` table existed. They're no longer written but still queried by nothing. They could be removed from VALID_METRICS and eventually deleted from the DB.
 
 **`mx4/sections.py` section IDs don't match API route section names.** The sections in `sections.py` are `recovery`, `sleep-quality`, `training-week`, `vo2-fitness`. The section names in `insights.ts` VALID_SECTIONS are `home`, `recovery`, `training`, `sleep`, `nutrition`, `bloodwork`, `dailylog`. These naming schemes don't align. A decision is needed about what section IDs the orchestrator should use.

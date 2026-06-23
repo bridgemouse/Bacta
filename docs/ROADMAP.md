@@ -110,6 +110,13 @@
 - Added concrete good/bad examples (same mechanism as the Voice register examples — models follow examples more reliably than prose rules)
 - Completed depersonalization of `mx4/system-prompt.md`: all "Ethan" references replaced with "the user"; personal context (name, profile, goals) belongs in HEARTBEAT.md (gitignored)
 
+**MX-4 voice guardrails + context injection (Jun 23, 2026):**
+- Created `docs/MX4_DROID_VOICE.md` — canonical speech patterns grounded in verbatim TC-99 (*Masters of Evil*) and Two-Boots (*Maul: Shadow Lords*) quotes; 10 modeled MX-4 scenarios covering direct opinion, Two-Boots deference, TC-99 unprompted surfacing, dry acknowledgment, protocol transparency
+- `server/lib/ai/prompt.ts` — now injects `mx4_personal_identity_record.md` and `MX4_DROID_VOICE.md` alongside `MX4_REFERENCE.md` on every run (briefings + chat); Gemini 1M context window makes this essentially free
+- `mx4/system-prompt.md` — 4 rounds of voice tightening: direct address ("speak to the person, not about their system"), opinion framing ("That's not a good idea" over protocol citations), Two-Boots deference examples ("Your call"), TC-99 unprompted surfacing, expanded banned phrase list, chat output format clarified (no JSON, no ## headers, no summary/body labels)
+- Stale `mx4/wiki/reference/MX4_REFERENCE.md` removed — redundant with authoritative injection, was feeding contradictory stale table names as low-trust wiki content
+- Wiki pattern pages cleared via Settings — breaks the adjective-drift feedback loop; MX-4 rebuilds pages under new voice guardrails on next briefing run
+
 **MX4_REFERENCE.md table name fix (Jun 23, 2026):**
 - `MX4_REFERENCE.md` still referenced `garmin_snapshots`, `garmin_activities`, `garmin_activity_legs` — not updated during the multi-device table rename
 - Since this doc is injected into MX-4's system prompt every run, he generated SQL against non-existent tables; Recovery and Home briefings reported "Biometric Database Inaccessible"
@@ -117,7 +124,7 @@
 - Root cause: `queryDb` swallows SQLite errors silently (by design, to avoid schema leakage) — so MX-4 gets a generic failure and assumes the DB is down
 
 **Tests:**
-- 329 tests passing (159 server + 170 client, last verified Jun 23, 2026)
+- 329 tests passing (159 server + 170 client, last verified Jun 23, 2026 — unchanged by voice guardrail work)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)
 
 ### Present but Untested (Never Run)

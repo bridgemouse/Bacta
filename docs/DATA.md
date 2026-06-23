@@ -34,7 +34,8 @@ One row per activity. Not EAV — activities are multi-field entities that can't
 
 ```sql
 CREATE TABLE health_activities (
-  activity_id      INTEGER PRIMARY KEY,   -- Garmin's activity ID
+  activity_id      TEXT NOT NULL,         -- provider's activity ID
+  source           TEXT NOT NULL DEFAULT 'garmin',
   date             TEXT NOT NULL,
   start_time       TEXT NOT NULL,
   name             TEXT NOT NULL,
@@ -56,7 +57,8 @@ CREATE TABLE health_activities (
   run_stride_cm    REAL,
   run_vert_osc_cm  REAL,
   run_gct_ms       INTEGER,              -- ground contact time in ms
-  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (activity_id, source)
 );
 CREATE INDEX idx_health_activities_date ON health_activities(date);
 ```
@@ -68,7 +70,8 @@ One row per leg (segment) of a multi-sport activity. Multi-sport containers retu
 ```sql
 CREATE TABLE health_activity_legs (
   leg_id            INTEGER PRIMARY KEY,
-  activity_id       INTEGER NOT NULL,      -- references health_activities.activity_id
+  activity_id       TEXT NOT NULL,         -- references health_activities.activity_id
+  source            TEXT NOT NULL DEFAULT 'garmin',
   leg_index         INTEGER NOT NULL,      -- 0-based position within the parent activity
   type_key          TEXT NOT NULL,
   start_time        TEXT NOT NULL,

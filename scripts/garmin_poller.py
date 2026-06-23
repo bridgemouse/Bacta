@@ -24,7 +24,7 @@ def store(db, d, metric, value, unit='', raw=None):
     if value is None:
         return
     db.execute(
-        'INSERT OR REPLACE INTO garmin_snapshots '
+        'INSERT OR REPLACE INTO health_snapshots '
         '(date, metric, value, unit, source_json, created_at) '
         'VALUES (?, ?, ?, ?, ?, datetime("now"))',
         (d, metric, float(value), unit,
@@ -103,7 +103,7 @@ def store_legs(db, c, parent_id, child_ids):
             max_hr = dto.get('maxHR')
 
             db.execute(
-                'INSERT OR REPLACE INTO garmin_activity_legs '
+                'INSERT OR REPLACE INTO health_activity_legs '
                 '(leg_id, activity_id, leg_index, type_key, start_time, duration_s, distance_m, '
                 'calories, avg_hr, max_hr, aerobic_te, anaerobic_te, training_load, body_battery_diff, '
                 'zone1_s, zone2_s, zone3_s, zone4_s, zone5_s, '
@@ -438,7 +438,7 @@ def sync_range(db, c, start, end):
                     pass
 
             db.execute(
-                'INSERT OR REPLACE INTO garmin_activities '
+                'INSERT OR REPLACE INTO health_activities '
                 '(activity_id, date, start_time, name, type_key, distance_m, duration_s, '
                 'calories, avg_hr, elevation_m, aerobic_te, anaerobic_te, recovery_time_h, '
                 'zone1_s, zone2_s, zone3_s, zone4_s, zone5_s, '

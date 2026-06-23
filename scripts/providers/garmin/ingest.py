@@ -32,7 +32,7 @@ def make_store(replace=False):
         if value is None:
             return
         db.execute(
-            f'{verb} INTO garmin_snapshots '
+            f'{verb} INTO health_snapshots '
             '(date, metric, value, unit, source_json, created_at) '
             'VALUES (?, ?, ?, ?, ?, datetime("now"))',
             (d, metric, float(value), unit,
@@ -325,7 +325,7 @@ def sync_range_bulk(db, store, c, start, end):
             if not d:
                 continue
             db.execute(
-                'INSERT OR REPLACE INTO garmin_activities '
+                'INSERT OR REPLACE INTO health_activities '
                 '(activity_id, date, start_time, name, type_key, distance_m, duration_s, calories, avg_hr, elevation_m) '
                 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (safe(act, 'activityId'), d,
@@ -408,9 +408,9 @@ def main():
 
     db.close()
     row_count = sqlite3.connect(DB_PATH).execute(
-        'SELECT COUNT(*) FROM garmin_snapshots'
+        'SELECT COUNT(*) FROM health_snapshots'
     ).fetchone()[0]
-    print(f'\nIngest complete. Total rows in garmin_snapshots: {row_count}')
+    print(f'\nIngest complete. Total rows in health_snapshots: {row_count}')
     if total_errors:
         print(f'Total errors encountered: {total_errors} (check output above)')
 

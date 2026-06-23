@@ -110,6 +110,12 @@
 - Added concrete good/bad examples (same mechanism as the Voice register examples — models follow examples more reliably than prose rules)
 - Completed depersonalization of `mx4/system-prompt.md`: all "Ethan" references replaced with "the user"; personal context (name, profile, goals) belongs in HEARTBEAT.md (gitignored)
 
+**MX4_REFERENCE.md table name fix (Jun 23, 2026):**
+- `MX4_REFERENCE.md` still referenced `garmin_snapshots`, `garmin_activities`, `garmin_activity_legs` — not updated during the multi-device table rename
+- Since this doc is injected into MX-4's system prompt every run, he generated SQL against non-existent tables; Recovery and Home briefings reported "Biometric Database Inaccessible"
+- Fixed all 5 stale references to `health_snapshots`, `health_activities`, `health_activity_legs`
+- Root cause: `queryDb` swallows SQLite errors silently (by design, to avoid schema leakage) — so MX-4 gets a generic failure and assumes the DB is down
+
 **Tests:**
 - 329 tests passing (159 server + 170 client, last verified Jun 23, 2026)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)

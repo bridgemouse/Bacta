@@ -10,29 +10,30 @@
 
 ## Schema
 
-### `garmin_snapshots`
+### `health_snapshots`
 
-EAV (Entity-Attribute-Value) table for daily Garmin metrics.
+EAV (Entity-Attribute-Value) table for daily health metrics from all providers.
 
 ```sql
-CREATE TABLE garmin_snapshots (
+CREATE TABLE health_snapshots (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   date        TEXT NOT NULL,          -- ISO date: '2026-06-11'
   metric      TEXT NOT NULL,          -- e.g. 'hrv', 'sleep_score'
   value       REAL,                   -- numeric value
   unit        TEXT,                   -- e.g. 'ms', 'bpm', null
-  source_json TEXT,                   -- raw Garmin API response blob
+  source      TEXT NOT NULL DEFAULT 'garmin',  -- provider: 'garmin', 'oura', 'polar', etc.
+  source_json TEXT,                   -- raw provider API response blob
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(date, metric)
+  UNIQUE(date, metric, source)        -- allows multiple providers per metric per day
 );
 ```
 
-### `garmin_activities`
+### `health_activities`
 
-One row per Garmin activity. Not EAV — activities are multi-field entities that can't be represented in the EAV pattern.
+One row per activity. Not EAV — activities are multi-field entities that can't be represented in the EAV pattern.
 
 ```sql
-CREATE TABLE garmin_activities (
+CREATE TABLE health_activities (
   activity_id      INTEGER PRIMARY KEY,   -- Garmin's activity ID
   date             TEXT NOT NULL,
   start_time       TEXT NOT NULL,
@@ -57,17 +58,17 @@ CREATE TABLE garmin_activities (
   run_gct_ms       INTEGER,              -- ground contact time in ms
   created_at       TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX idx_garmin_activities_date ON garmin_activities(date);
+CREATE INDEX idx_health_activities_date ON health_activities(date);
 ```
 
-### `garmin_activity_legs`
+### `health_activity_legs`
 
 One row per leg (segment) of a multi-sport activity. Multi-sport containers return empty zone data from `get_activity_hr_in_timezones(parent_id)` — zones must be fetched from each child leg individually.
 
 ```sql
-CREATE TABLE garmin_activity_legs (
+CREATE TABLE health_activity_legs (
   leg_id            INTEGER PRIMARY KEY,
-  activity_id       INTEGER NOT NULL,      -- references garmin_activities.activity_id
+  activity_id       INTEGER NOT NULL,      -- references health_activities.activity_id
   leg_index         INTEGER NOT NULL,      -- 0-based position within the parent activity
   type_key          TEXT NOT NULL,
   start_time        TEXT NOT NULL,
@@ -96,12 +97,12 @@ CREATE TABLE garmin_activity_legs (
   created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(activity_id, leg_index)
 );
-CREATE INDEX idx_garmin_activity_legs_activity ON garmin_activity_legs(activity_id);
+CREATE INDEX idx_health_activity_legs_activity ON health_activity_legs(activity_id);
 ```
 
 ### `macrofactor_snapshots`
 
-Same EAV schema as `garmin_snapshots`. Currently empty — MacroFactor integration is blocked on account setup.
+Same EAV schema as `health_snapshots`. Currently empty — MacroFactor integration is blocked on account setup.
 
 ```sql
 CREATE TABLE macrofactor_snapshots (
@@ -153,27 +154,27 @@ CREATE TABLE blood_work (
 
 ## EAV Pattern
 
-`garmin_snapshots` and `macrofactor_snapshots` use Entity-Attribute-Value rather than wide tables. Each row is one metric for one date. This allows new metrics to be added without schema migrations and stores the raw `source_json` from the Garmin API for every reading.
+`health_snapshots` and `macrofactor_snapshots` use Entity-Attribute-Value rather than wide tables. Each row is one metric for one date. This allows new metrics to be added without schema migrations and stores the raw `source_json` from the provider API for every reading.
 
 **Querying correctly:** Always use per-metric `MAX(date)` to find the latest value for each metric. Do not hardcode today's date — metrics arrive at different times and some metrics only update weekly.
 
 ```python
 -- Correct: latest value per metric
-SELECT metric, value FROM garmin_snapshots gs
-WHERE date = (SELECT MAX(date) FROM garmin_snapshots WHERE metric = gs.metric)
+SELECT metric, value FROM health_snapshots hs
+WHERE date = (SELECT MAX(date) FROM health_snapshots WHERE metric = hs.metric)
 
 -- Wrong: hardcoding today
-SELECT metric, value FROM garmin_snapshots WHERE date = date('now')
+SELECT metric, value FROM health_snapshots WHERE date = date('now')
 -- (breaks when a metric hasn't arrived yet today)
 ```
 
-The tradeoff: EAV cannot represent entities with multiple rows per day (activities), which is why `garmin_activities` uses a conventional table.
+The tradeoff: EAV cannot represent entities with multiple rows per day (activities), which is why `health_activities` uses a conventional table.
 
 ---
 
 ## Metric Inventory
 
-As of 2026-06-11 (live recon from database). All metrics are in `garmin_snapshots`.
+As of 2026-06-11 (live recon from database). All metrics are in `health_snapshots`.
 
 | Metric | Count | Date Range | Unit | Notes |
 |---|---|---|---|---|
@@ -235,7 +236,7 @@ As of 2026-06-11 (live recon from database). All metrics are in `garmin_snapshot
 - `sleep_spo2` (10 rows): Sleep-specific SpO2 readings. Same device requirement as `spo2_avg`.
 - `endurance_score`: Zero rows — never collected. The Garmin API field exists but this device/plan level may not provide it.
 
-**Legacy EAV activity metrics** (`act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr`): Collected before the `garmin_activities` table existed. Now superseded. The poller no longer writes to these; they remain in the DB for historical continuity only.
+**Legacy EAV activity metrics** (`act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr`): Collected before the `health_activities` table existed. Now superseded. The poller no longer writes to these; they remain in the DB for historical continuity only.
 
 ---
 
@@ -253,7 +254,7 @@ Every entry here represents a real bug that was introduced and fixed. Read these
 
 **Summary queries use per-metric MAX(date).** See the EAV section above. Hardcoding `today` breaks when metrics arrive at different times during the day.
 
-**Write patterns.** Use `INSERT OR IGNORE` for `garmin_snapshots` rows (metrics are immutable once stored). Use `INSERT OR REPLACE` for `garmin_activities` rows so re-syncs overwrite stale activity data.
+**Write patterns.** Use `INSERT OR IGNORE` for `health_snapshots` rows (metrics are immutable once stored). Use `INSERT OR REPLACE` for `health_activities` rows so re-syncs overwrite stale activity data.
 
 **Body battery fields.** Garmin returns two types of body battery data:
 - Delta amounts: `body_battery_charged` and `body_battery_drained` (how much charged/drained in the day)
@@ -268,9 +269,9 @@ These were renamed from `max`/`min` in a database migration (Jun 11, 2026). Any 
 
 | Data type | Source |
 |---|---|
-| All Garmin metrics | Live — `garmin_snapshots` via `/api/garmin/*` |
-| Activities | Live — `garmin_activities` via `/api/garmin/activities` |
-| Activity legs | Live — `garmin_activity_legs` via `/api/garmin/activities/:id/legs` |
+| All Garmin metrics | Live — `health_snapshots` via `/api/garmin/*` |
+| Activities | Live — `health_activities` via `/api/garmin/activities` |
+| Activity legs | Live — `health_activity_legs` via `/api/garmin/activities/:id/legs` |
 | MX-4 briefing text | **Live** — `mx4_briefings` table via `/api/insights/:section` → `useBriefing`. `stubData.ts` `BRIEFS` is a fallback only (used until a section has generated). |
 | MX-4 tone/headline/summary/body | **Live** — `mx4_briefings.content_json` |
 | Nutrition data | Empty — `macrofactor_snapshots` has no rows (section in STANDBY) |

@@ -173,7 +173,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 ## Data
 
 - **DB:** SQLite at `/opt/bacta/data/bacta.db`
-- **Schema:** `server/db/schema.sql` — EAV tables `garmin_snapshots` + `macrofactor_snapshots` (date, metric, value, unit, source_json)
+- **Schema:** `server/db/schema.sql` — EAV tables `health_snapshots` + `macrofactor_snapshots` (date, metric, value, unit, source, source_json)
 - **Poller:** `scripts/garmin_poller.py` — nightly 3AM via `bacta-garmin.timer` (installed)
 - **Ingest:** `scripts/garmin_ingest.py` — historical import (365 days, ~35 min runtime)
 - **Garmin tokens:** `~/.garminconnect` on LXC 109
@@ -190,9 +190,9 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 - `get_sleep_data(d)` returns sleep that *ended* on morning of `d` — store under `d`, not `d-1`
 - `get_fitnessage_data()` field is `fitnessAge`, not `biometricAge`; never fall back to `chronologicalAge`
-- `garmin_snapshots.source_json` stores the raw API response — query it to debug field names before touching the poller
+- `health_snapshots.source_json` stores the raw API response — query it to debug field names before touching the poller
 - Summary queries must use per-metric `MAX(date)` — hardcoding `today` breaks when metrics arrive at different times
-- Activities need a dedicated `garmin_activities` table — EAV can't represent multiple rows per day
+- Activities need a dedicated `health_activities` table — EAV can't represent multiple rows per day
 - Use `INSERT OR REPLACE` (not `INSERT OR IGNORE`) for activity rows so re-syncs overwrite stale data
 - Common Garmin `typeKey` values: `running`, `trail_running`, `walking`, `hiking`, `cycling`, `strength_training`, `multi_sport`
 - `get_heart_rates(d)` returns minute-by-minute HR values — NOT zone minutes. For HR zone data use `get_activity_hr_in_timezones(activityId)` → field `secsInZone` per zone; aggregate across all activities for the day and divide by 60 for minutes
@@ -200,7 +200,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 ## Server & DB Gotchas
 
-- Query the DB via the `bacta-sqlite` MCP — ask Claude to run any SQL against `garmin_snapshots`, `garmin_activities`, etc. directly. No Python wrapper needed. (`sqlite3` CLI is not installed on LXC 109.)
+- Query the DB via the `bacta-sqlite` MCP — ask Claude to run any SQL against `health_snapshots`, `health_activities`, etc. directly. No Python wrapper needed. (`sqlite3` CLI is not installed on LXC 109.)
 - Express: define specific routes (`/activities`, `/sync/status`) **before** `/:param` wildcards or they get swallowed
 - Some files in `client/src/components/viz/` are owned by root from initial scaffold — run `sudo chown wheat:wheat <file>` if Edit fails with EACCES
 - `mx4spin` keyframe is global (defined in `client/index.css`) — use as `animation: 'mx4spin 1s linear infinite'` in inline styles

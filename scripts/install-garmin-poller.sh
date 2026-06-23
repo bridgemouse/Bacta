@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# DEPRECATED: Garmin is now managed by install-health-poller.sh
+# This script is kept for reference only. Use install-health-poller.sh instead.
+echo "WARNING: This script is deprecated. Run install-health-poller.sh instead."
+exit 1
 # Install the Garmin nightly poller as a systemd service + timer.
 # Run as: bash /opt/bacta/scripts/install-garmin-poller.sh
 set -e

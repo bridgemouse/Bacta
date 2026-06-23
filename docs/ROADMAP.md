@@ -104,6 +104,12 @@
 - Removed hardcoded metric list from `mx4/system-prompt.md` (same self-discovery pattern)
 - Added `## Chat` section to `mx4/system-prompt.md` — MX-4 now knows conversational replies are proportional and non-repetitive; tool use unconstrained; briefing structure reserved for briefings
 
+**MX-4 chat engagement (Jun 23, 2026):**
+- Rewrote `## Chat` section in `mx4/system-prompt.md` — original was all restraint rules; MX-4 was responding "Noted" to conversational observations
+- Added positive engagement mandate: ban on "Noted", curiosity applies in chat, corroborate/contradict data, use DB as background awareness not a report dump
+- Added concrete good/bad examples (same mechanism as the Voice register examples — models follow examples more reliably than prose rules)
+- Completed depersonalization of `mx4/system-prompt.md`: all "Ethan" references replaced with "the user"; personal context (name, profile, goals) belongs in HEARTBEAT.md (gitignored)
+
 **Tests:**
 - 329 tests passing (159 server + 170 client, last verified Jun 23, 2026)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)

@@ -5,7 +5,9 @@
 import fs from 'fs'
 import path from 'path'
 
-const REFERENCE_PATH = path.join(process.cwd(), 'docs', 'MX4_REFERENCE.md')
+const REFERENCE_PATH       = path.join(process.cwd(), 'docs', 'MX4_REFERENCE.md')
+const VOICE_GUIDE_PATH     = path.join(process.cwd(), 'docs', 'MX4_DROID_VOICE.md')
+const IDENTITY_RECORD_PATH = path.join(process.cwd(), 'mx4', 'mx4_personal_identity_record.md')
 const WIKI_PRINCIPLES_PATH = path.join(process.cwd(), 'docs', 'MX4_LLM_WIKI_PRINCIPLES.md')
 
 // Canonical tool catalog + data dictionary + custom-calc formulas. Trusted
@@ -13,6 +15,24 @@ const WIKI_PRINCIPLES_PATH = path.join(process.cwd(), 'docs', 'MX4_LLM_WIKI_PRIN
 export function loadReference(): string {
   try {
     return fs.readFileSync(REFERENCE_PATH, 'utf-8')
+  } catch {
+    return ''
+  }
+}
+
+// Canonical speech patterns and examples grounded in TC-99 and Two-Boots canon.
+export function loadVoiceGuide(): string {
+  try {
+    return fs.readFileSync(VOICE_GUIDE_PATH, 'utf-8')
+  } catch {
+    return ''
+  }
+}
+
+// MX-4's own identity record — lore, matrix origins, relationship context.
+export function loadIdentityRecord(): string {
+  try {
+    return fs.readFileSync(IDENTITY_RECORD_PATH, 'utf-8')
   } catch {
     return ''
   }
@@ -39,11 +59,15 @@ export function assembleSystemPrompt(
   wikiContext: string,
   includeWikiPrinciples = false,
 ): string {
-  const reference = loadReference()
-  const principles = includeWikiPrinciples ? loadWikiPrinciples() : ''
+  const reference     = loadReference()
+  const voiceGuide    = loadVoiceGuide()
+  const identityRecord = loadIdentityRecord()
+  const principles    = includeWikiPrinciples ? loadWikiPrinciples() : ''
   return [
     systemPrompt,
+    identityRecord ? `\n\n# Identity Record (who I am — lore, matrices, relationship context)\n${identityRecord}` : '',
     reference ? `\n\n# Canonical Reference (authoritative — tools & data dictionary)\n${reference}` : '',
+    voiceGuide ? `\n\n# Voice Guide (canonical speech patterns and examples)\n${voiceGuide}` : '',
     principles ? `\n\n# Wiki Curation Standard (how you maintain your own wiki)\n${principles}` : '',
     INJECTION_GUARD,
     heartbeat ? `\n\n## Standing Orders\n${heartbeat}` : '',

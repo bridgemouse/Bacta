@@ -158,4 +158,26 @@ describe('Settings API', () => {
     const res = await request(app).get('/api/settings')
     expect(res.body.auth_pin_hash).toBeUndefined()
   })
+
+  it('encrypts provider client_secret at write time', async () => {
+    process.env.BACTA_ENCRYPTION_KEY = 'a'.repeat(64)
+    const { app } = await import('../../server/index')
+    const { default: db } = await import('../../server/db/client')
+    // Clear the auth_pin_hash written by the previous test so auth stays open
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('auth_pin_hash', '')").run()
+
+    // Write plaintext client_secret via API
+    await request(app)
+      .put('/api/settings/strava_client_secret')
+      .send({ value: 'my-secret-value' })
+
+    // Stored value should be encrypted JSON (not plaintext)
+    const row = db.prepare("SELECT value FROM app_settings WHERE key = 'strava_client_secret'").get() as { value: string }
+    expect(() => JSON.parse(row.value)).not.toThrow()
+    const parsed = JSON.parse(row.value)
+    expect(parsed).toHaveProperty('e')
+    expect(parsed).toHaveProperty('iv')
+    expect(parsed).toHaveProperty('tag')
+    expect(row.value).not.toContain('my-secret-value')
+  })
 })

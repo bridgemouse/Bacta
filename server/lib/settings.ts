@@ -55,12 +55,12 @@ export const SETTING_DEFAULTS: Record<string, string> = {
 // Keys whose values must never be returned to the client in cleartext.
 export const SECRET_SETTING_KEYS = new Set([
   'ai_api_key', 'research_api_key',
-  'strava_client_secret', 'strava_tokens',
+  'strava_client_secret', 'strava_tokens',   'strava_oauth_state',
   'hevy_api_key',
-  'polar_client_secret',   'polar_tokens',
-  'oura_client_secret',    'oura_tokens',
-  'whoop_client_secret',   'whoop_tokens',
-  'withings_client_secret','withings_tokens',
+  'polar_client_secret',   'polar_tokens',   'polar_oauth_state',
+  'oura_client_secret',    'oura_tokens',    'oura_oauth_state',
+  'whoop_client_secret',   'whoop_tokens',   'whoop_oauth_state',
+  'withings_client_secret','withings_tokens', 'withings_oauth_state',
 ])
 
 export function initSettings(): void {

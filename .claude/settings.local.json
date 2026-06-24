@@ -99,8 +99,10 @@
       "Bash(systemctl --user enable claude-remote.service)",
       "Bash(systemctl --user start claude-remote.service)",
       "Bash(systemctl --user status claude-remote.service)",
-      "Bash(tmux list-sessions *)",
-      "Bash(tmux capture-pane *)"
+      "Bash(tmux *)",
+      "Bash(sudo locale-gen *)",
+      "Bash(sudo update-locale *)",
+      "Bash(sudo sed -i *)"
     ]
   }
 }

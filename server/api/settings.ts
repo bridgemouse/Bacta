@@ -26,6 +26,23 @@ const SETTING_VALIDATORS: Record<string, (v: string) => boolean> = {
   mx4_custom_skills:   v => { try { return Array.isArray(JSON.parse(v)) } catch { return false } },
   vault_url:           v => v === '' || /^https?:\/\/[^\s]+$/.test(v),
   app_logo:            v => VALID_LOGOS.includes(v),
+
+  // Multi-device globals
+  base_url:               v => v === '' || /^https?:\/\/[^\s]+$/.test(v),
+  source_priority:        v => { try { return Array.isArray(JSON.parse(v)) } catch { return false } },
+  // Provider credentials (writeable via API for Settings UI)
+  strava_client_id:       v => v.length <= 200,
+  strava_client_secret:   v => v.length <= 400,
+  hevy_api_key:           v => v.length <= 400,
+  hevy_enabled:           v => v === 'true' || v === 'false',
+  polar_client_id:        v => v.length <= 200,
+  polar_client_secret:    v => v.length <= 400,
+  oura_client_id:         v => v.length <= 200,
+  oura_client_secret:     v => v.length <= 400,
+  whoop_client_id:        v => v.length <= 200,
+  whoop_client_secret:    v => v.length <= 400,
+  withings_client_id:     v => v.length <= 200,
+  withings_client_secret: v => v.length <= 400,
 }
 
 settingsRouter.get('/', (_req, res) => {

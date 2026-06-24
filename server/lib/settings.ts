@@ -1,6 +1,10 @@
 import db from '../db/client'
 
+export const PROVIDERS = ['strava', 'hevy', 'polar', 'oura', 'whoop', 'withings'] as const
+export type Provider = typeof PROVIDERS[number]
+
 export const SETTING_DEFAULTS: Record<string, string> = {
+  // AI / MX-4
   ai_provider:                    'google',
   ai_api_key:                     '',
   mx4_briefing_model:             'gemini-2.5-flash',
@@ -14,20 +18,53 @@ export const SETTING_DEFAULTS: Record<string, string> = {
     label:  'SYNC WIKI',
     prompt: 'Review your wiki pages and update them based on our conversation so far. Write any new patterns or findings worth preserving.',
   }]),
-  vault_enabled: 'false',
-  vault_url:     '',
-  research_provider: 'none',  // none | tavily | exa — scholarly backend is always on
-  research_api_key:  '',      // optional key for the web backend (masked)
-  app_logo: 'splash',
+  vault_enabled:     'false',
+  vault_url:         '',
+  research_provider: 'none',
+  research_api_key:  '',
+  app_logo:          'splash',
+
+  // Multi-device globals
+  base_url:        'http://bacta.home',
+  source_priority: JSON.stringify(['garmin']),
+
+  // Strava
+  strava_client_id:   '', strava_client_secret: '', strava_tokens: '',
+  strava_enabled:     'false', strava_last_sync: '', strava_oauth_state: '',
+
+  // Hevy
+  hevy_api_key:   '', hevy_enabled: 'false', hevy_last_sync: '',
+
+  // Polar
+  polar_client_id:    '', polar_client_secret: '', polar_tokens: '',
+  polar_enabled:      'false', polar_last_sync: '', polar_oauth_state: '',
+
+  // Oura
+  oura_client_id:     '', oura_client_secret: '', oura_tokens: '',
+  oura_enabled:       'false', oura_last_sync: '', oura_oauth_state: '',
+
+  // Whoop
+  whoop_client_id:    '', whoop_client_secret: '', whoop_tokens: '',
+  whoop_enabled:      'false', whoop_last_sync: '', whoop_oauth_state: '',
+
+  // Withings
+  withings_client_id: '', withings_client_secret: '', withings_tokens: '',
+  withings_enabled:   'false', withings_last_sync: '', withings_oauth_state: '',
 }
 
 // Keys whose values must never be returned to the client in cleartext.
-export const SECRET_SETTING_KEYS = new Set(['ai_api_key', 'research_api_key'])
+export const SECRET_SETTING_KEYS = new Set([
+  'ai_api_key', 'research_api_key',
+  'strava_client_secret', 'strava_tokens',
+  'hevy_api_key',
+  'polar_client_secret',   'polar_tokens',
+  'oura_client_secret',    'oura_tokens',
+  'whoop_client_secret',   'whoop_tokens',
+  'withings_client_secret','withings_tokens',
+])
 
 export function initSettings(): void {
-  const insert = db.prepare(
-    'INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)'
-  )
+  const insert = db.prepare('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)')
   for (const [key, value] of Object.entries(SETTING_DEFAULTS)) {
     insert.run(key, value)
   }

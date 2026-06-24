@@ -13,6 +13,7 @@ import pollRouter from './api/poll'
 import mx4Router from './api/mx4'
 import settingsRouter from './api/settings'
 import authRouter from './api/auth'
+import { integrationsRouter, callbackHandler } from './api/integrations'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './lib/auth'
 import { VALID_LOGOS } from './api/settings'
 import { scheduleNightly } from './lib/ai/scheduler'
@@ -90,6 +91,13 @@ app.use('/api/bloodwork', requireAuth, bloodworkRouter)
 app.use('/api/poll', requireAuth, aiLimiter, pollRouter)
 app.use('/api/mx4', requireAuth, aiLimiter, mx4Router)
 app.use('/api/settings', requireAuth, settingsRouter)
+
+// OAuth callbacks exempt from requireAuth — browser arrives from external redirect
+// CSRF state parameter is the guard inside callbackHandler
+app.get('/api/integrations/:provider/callback', callbackHandler)
+
+// All other integration routes require session auth
+app.use('/api/integrations', requireAuth, integrationsRouter)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {

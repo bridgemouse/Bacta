@@ -34,22 +34,22 @@ export function toTypeKey(sportType: string): string {
   return TYPE_MAP[sportType] ?? sportType.toLowerCase().replace(/\s+/g, '_')
 }
 
-const insertActivity = db.prepare(`
-  INSERT OR REPLACE INTO health_activities
-    (activity_id, source, date, start_time, name, type_key,
-     distance_m, duration_s, calories, avg_hr, elevation_m)
-  VALUES (?, 'strava', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`)
-
-const upsertSnapshot = db.prepare(`
-  INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source)
-  SELECT date, 'distance_m', SUM(distance_m), 'm', 'strava'
-  FROM health_activities
-  WHERE source = 'strava' AND distance_m IS NOT NULL
-  GROUP BY date
-`)
-
 export function processActivities(activities: StravaActivity[]): number {
+  const insertActivity = db.prepare(`
+    INSERT OR REPLACE INTO health_activities
+      (activity_id, source, date, start_time, name, type_key,
+       distance_m, duration_s, calories, avg_hr, elevation_m)
+    VALUES (?, 'strava', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+
+  const upsertSnapshot = db.prepare(`
+    INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source)
+    SELECT date, 'distance_m', SUM(distance_m), 'm', 'strava'
+    FROM health_activities
+    WHERE source = 'strava' AND distance_m IS NOT NULL
+    GROUP BY date
+  `)
+
   let count = 0
   const run = db.transaction((acts: StravaActivity[]) => {
     for (const act of acts) {

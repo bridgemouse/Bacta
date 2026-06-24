@@ -1,13 +1,13 @@
 import db from '../../../db/client'
 import { HevyWorkout } from './hevyService'
 
-const insertActivity = db.prepare(`
-  INSERT OR REPLACE INTO health_activities
-    (activity_id, source, date, start_time, name, type_key, duration_s)
-  VALUES (?, 'hevy', ?, ?, ?, 'strength_training', ?)
-`)
-
 export function processWorkouts(workouts: HevyWorkout[]): number {
+  const insertActivity = db.prepare(`
+    INSERT OR REPLACE INTO health_activities
+      (activity_id, source, date, start_time, name, type_key, duration_s)
+    VALUES (?, 'hevy', ?, ?, ?, 'strength_training', ?)
+  `)
+
   let count = 0
   const run = db.transaction((ws: HevyWorkout[]) => {
     for (const w of ws) {

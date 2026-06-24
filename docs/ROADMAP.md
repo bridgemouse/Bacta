@@ -124,7 +124,7 @@
 - Root cause: `queryDb` swallows SQLite errors silently (by design, to avoid schema leakage) — so MX-4 gets a generic failure and assumes the DB is down
 
 **Tests:**
-- 329 tests passing (159 server + 170 client, last verified Jun 23, 2026 — unchanged by voice guardrail work)
+- 363 tests passing (193 server + 170 client, last verified Jun 24, 2026 — 34 new tests from Plan 2 Phase 1 integration layer)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)
 
 ### Present but Untested (Never Run)
@@ -184,7 +184,22 @@
 - `server/lib/integrations/shared/sourceResolver.ts` — `resolveSource()` priority utility
 - 329 tests passing
 
-**Plan 2 (Server Integration Layer) — pending:** OAuth routes (`/api/integrations/:provider/authorize|callback|disconnect|sync|status`), credential storage in `app_settings`, per-provider `XxxService.ts` + `XxxProcessor.ts` for Polar, Oura, Whoop, Withings, Strava, Hevy.
+**Plan 2 Phase 1 (Strava + Hevy integration) — complete Jun 24, 2026, on `feature/multi-device`:**
+- `server/lib/integrations/shared/encryption.ts` — AES-256-GCM encrypt/decrypt; key from `BACTA_ENCRYPTION_KEY`
+- `server/lib/integrations/shared/types.ts` — `ProviderTokens`, `tokensExpired()`, `daysAgo()`, `toEpoch()`
+- `server/lib/settings.ts` — `PROVIDERS` const, all 6 provider setting defaults + `base_url` + `source_priority`; `SECRET_SETTING_KEYS` expanded (tokens, secrets, oauth_state for all 6 providers)
+- `server/api/settings.ts` — `ENCRYPTED_SETTING_KEYS` set; PUT handler encrypts client secrets + hevy_api_key at write
+- `server/lib/integrations/strava/` — OAuth, token refresh, paginated activity fetch, `health_activities` + daily distance rollup writes
+- `server/lib/integrations/hevy/` — API key auth, workout fetch, `health_activities` writes
+- `server/api/integrations.ts` — unified router: `GET /status`, `GET /:provider/authorize`, `GET /:provider/callback` (CSRF state), `GET /:provider/status`, `POST /:provider/disconnect`, `POST /:provider/sync` (accepts internal token OR session cookie)
+- `scripts/providers/strava/poller.py` + `scripts/providers/hevy/poller.py` — thin HTTP callers
+- `BACTA_ENCRYPTION_KEY` + `BACTA_INTERNAL_TOKEN` generated and written to `/opt/bacta/.env`
+- systemd `bacta-api.service` updated with `EnvironmentFile=/opt/bacta/.env`
+- 363 tests passing (193 server + 170 client); zero type errors
+
+**Plan 2 Phase 2 (Oura + Whoop) — pending.** PAT tokens deprecated Dec 2025 for Oura; Whoop uses v2 API with hourly token refresh.
+
+**Plan 2 Phase 3 (Polar + Withings) — pending.** Polar requires XML user-registration step at callback; Withings uses non-standard token endpoint.
 
 **Plan 3 (Frontend) — pending:** Collapsible rails across SettingsPage, INSTANCE rail (`base_url`), CONNECTED DEVICES rail with provider cards, DATA PRIORITY reorder, dynamic source strings in RecoveryPage/SleepPage/TrainingPage/LogEntry.
 

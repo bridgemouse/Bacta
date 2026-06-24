@@ -41,9 +41,12 @@ const insertActivity = db.prepare(`
   VALUES (?, 'strava', ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `)
 
-const insertSnapshot = db.prepare(`
+const upsertSnapshot = db.prepare(`
   INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source)
-  VALUES (?, 'distance_m', ?, 'm', 'strava')
+  SELECT date, 'distance_m', SUM(distance_m), 'm', 'strava'
+  FROM health_activities
+  WHERE source = 'strava' AND distance_m IS NOT NULL
+  GROUP BY date
 `)
 
 export function processActivities(activities: StravaActivity[]): number {
@@ -57,18 +60,18 @@ export function processActivities(activities: StravaActivity[]): number {
       insertActivity.run(
         String(act.id), date, act.start_date_local, act.name,
         toTypeKey(act.sport_type),
-        act.distance   || null,
-        act.moving_time || null,
+        act.distance > 0             ? act.distance             : null,
+        act.moving_time > 0          ? act.moving_time          : null,
         calories,
         avgHr,
-        act.total_elevation_gain || null,
+        act.total_elevation_gain > 0 ? act.total_elevation_gain : null,
       )
 
-      if (act.distance > 0) insertSnapshot.run(date, act.distance)
       count++
     }
   })
   run(activities)
+  upsertSnapshot.run()
   console.log(`[strava] processed ${count} activities`)
   return count
 }

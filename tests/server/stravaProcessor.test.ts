@@ -40,16 +40,17 @@ describe('stravaProcessor', () => {
     expect(rows[1].calories).toBeNull()
   })
 
-  it('processActivities writes distance rollup to health_snapshots', async () => {
+  it('processActivities writes daily distance rollup to health_snapshots (summed)', async () => {
     const { processActivities } = await import('../../server/lib/integrations/strava/stravaProcessor')
     const { default: db } = await import('../../server/db/client')
 
     processActivities([
-      { id: 2001, name: 'Long Run', sport_type: 'Run', start_date_local: '2026-06-22T06:00:00', distance: 15000, moving_time: 5400, total_elevation_gain: 100 },
+      { id: 4001, name: 'Morning Run', sport_type: 'Run', start_date_local: '2026-06-25T06:00:00', distance: 8000, moving_time: 2700, total_elevation_gain: 80 },
+      { id: 4002, name: 'Evening Run', sport_type: 'Run', start_date_local: '2026-06-25T18:00:00', distance: 5000, moving_time: 1800, total_elevation_gain: 30 },
     ])
 
-    const snap = db.prepare("SELECT value FROM health_snapshots WHERE date = '2026-06-22' AND metric = 'distance_m' AND source = 'strava'").get() as { value: number } | undefined
-    expect(snap?.value).toBe(15000)
+    const snap = db.prepare("SELECT value FROM health_snapshots WHERE date = '2026-06-25' AND metric = 'distance_m' AND source = 'strava'").get() as { value: number } | undefined
+    expect(snap?.value).toBe(13000) // 8000 + 5000
   })
 
   it('processActivities is idempotent — re-running same data does not duplicate rows', async () => {

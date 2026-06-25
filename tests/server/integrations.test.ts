@@ -93,4 +93,39 @@ describe('Integrations API', () => {
     const res = await request(app).get('/api/integrations/notaprovider/authorize')
     expect(res.status).toBe(400)
   })
+
+  it('GET /api/integrations/oura/authorize returns 400 when client_id not set', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/integrations/oura/authorize')
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/client_id/)
+  })
+
+  it('GET /api/integrations/oura/authorize returns { url } when configured', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('oura_client_id', 'ouri123')").run()
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('base_url', 'http://bacta.home')").run()
+
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/integrations/oura/authorize')
+    expect(res.status).toBe(200)
+    expect(res.body.url).toContain('cloud.ouraring.com/oauth/authorize')
+    expect(res.body.url).toContain('ouri123')
+  })
+
+  it('GET /api/integrations/whoop/authorize returns 400 when client_id not set', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/integrations/whoop/authorize')
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/client_id/)
+  })
+
+  it('POST /api/integrations/oura/sync returns 400 when provider not connected', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/integrations/oura/sync')
+      .set('Authorization', 'Bearer test-internal-token')
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/not connected/)
+  })
 })

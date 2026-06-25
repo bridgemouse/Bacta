@@ -8,6 +8,10 @@ import { getAuthUrl as stravaAuthUrl, exchangeCode as stravaExchange, refreshTok
 import { processActivities } from '../lib/integrations/strava/stravaProcessor'
 import { fetchWorkoutsSince } from '../lib/integrations/hevy/hevyService'
 import { processWorkouts } from '../lib/integrations/hevy/hevyProcessor'
+import { getAuthUrl as ouraAuthUrl, exchangeCode as ouraExchange, refreshTokens as ouraRefresh, fetchOuraData } from '../lib/integrations/oura/ouraService'
+import { processOuraData } from '../lib/integrations/oura/ouraProcessor'
+import { getAuthUrl as whoopAuthUrl, exchangeCode as whoopExchange, refreshTokens as whoopRefresh, fetchWhoopData } from '../lib/integrations/whoop/whoopService'
+import { processWhoopData } from '../lib/integrations/whoop/whoopProcessor'
 
 const router = Router()
 const OAUTH_PROVIDERS = new Set<Provider>(['strava', 'polar', 'oura', 'whoop', 'withings'])
@@ -89,7 +93,9 @@ router.get('/:provider/authorize', (req: Request, res: Response) => {
   let url: string
   switch (provider) {
     case 'strava': url = stravaAuthUrl(clientId, redirectUri, state); break
-    // Phases 2 and 3 providers added here later
+    case 'oura':  url = ouraAuthUrl (clientId, redirectUri, state); break
+    case 'whoop': url = whoopAuthUrl(clientId, redirectUri, state); break
+    // Phase 3 providers added here later
     default: return void res.status(400).json({ error: 'Provider not yet implemented' })
   }
 
@@ -145,7 +151,31 @@ async function runSync(provider: Provider): Promise<number> {
       return processWorkouts(workouts)
     }
 
-    // Phases 2 and 3 providers added here later
+    case 'oura': {
+      const tokens = getTokens('oura')
+      if (!tokens) throw new Error('Oura not connected')
+      const clientId     = getSetting('oura_client_id')     ?? ''
+      const clientSecret = decrypt(getSetting('oura_client_secret') ?? '') ?? ''
+      const fresh = await ouraRefresh(clientId, clientSecret, tokens)
+      if (fresh !== tokens) saveTokens('oura', fresh)
+      const today = new Date().toISOString().slice(0, 10)
+      const data  = await fetchOuraData(fresh.access_token, daysAgo(30), today)
+      return processOuraData(data)
+    }
+
+    case 'whoop': {
+      const tokens = getTokens('whoop')
+      if (!tokens) throw new Error('Whoop not connected')
+      const clientId     = getSetting('whoop_client_id')     ?? ''
+      const clientSecret = decrypt(getSetting('whoop_client_secret') ?? '') ?? ''
+      const fresh = await whoopRefresh(clientId, clientSecret, tokens)
+      if (fresh !== tokens) saveTokens('whoop', fresh)
+      const today = new Date().toISOString().slice(0, 10)
+      const data  = await fetchWhoopData(fresh.access_token, daysAgo(30), today)
+      return processWhoopData(data)
+    }
+
+    // Phase 3 providers added here later
     default:
       throw new Error(`Sync not yet implemented for ${provider}`)
   }
@@ -185,7 +215,13 @@ export const callbackHandler: RequestHandler = async (req: Request, res: Respons
       case 'strava':
         tokens = await stravaExchange(clientId, clientSecret, code, redirectUri)
         break
-      // Phases 2 and 3 providers added here later
+      case 'oura':
+        tokens = await ouraExchange(clientId, clientSecret, code, redirectUri)
+        break
+      case 'whoop':
+        tokens = await whoopExchange(clientId, clientSecret, code, redirectUri)
+        break
+      // Phase 3 providers added here later
       default:
         return void res.redirect(`${baseUrl}/#/settings?error=${provider}`)
     }

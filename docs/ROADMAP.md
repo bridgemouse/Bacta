@@ -124,7 +124,7 @@
 - Root cause: `queryDb` swallows SQLite errors silently (by design, to avoid schema leakage) — so MX-4 gets a generic failure and assumes the DB is down
 
 **Tests:**
-- 363 tests passing (193 server + 170 client, last verified Jun 24, 2026 — 34 new tests from Plan 2 Phase 1 integration layer)
+- 407 tests passing (237 server + 170 client, last verified Jun 24, 2026 — Plan 2 Phases 1–3 integration layer: 6 providers, 44 new server tests)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)
 
 ### Present but Untested (Never Run)
@@ -197,9 +197,19 @@
 - systemd `bacta-api.service` updated with `EnvironmentFile=/opt/bacta/.env`
 - 363 tests passing (193 server + 170 client); zero type errors
 
-**Plan 2 Phase 2 (Oura + Whoop) — pending.** PAT tokens deprecated Dec 2025 for Oura; Whoop uses v2 API with hourly token refresh.
+**Plan 2 Phase 2 (Oura + Whoop) — complete Jun 24, 2026, on `feature/multi-device`:**
+- `server/lib/integrations/oura/` — OAuth (HTTP Basic auth for tokens), token refresh, parallel fetch of sleep/readiness/activity; processor writes 11 metrics to `health_snapshots` (source=`'oura'`)
+- `server/lib/integrations/whoop/` — OAuth v2 (form-body creds, hourly expiry), parallel fetch of recovery/sleep/workout; processor writes recovery + sleep snapshots + workout activities (source=`'whoop'`)
+- `scripts/providers/oura/poller.py` + `scripts/providers/whoop/poller.py`
+- `server/api/integrations.ts` extended: authorize/callback/runSync switches now handle oura + whoop
+- 385 tests passing (215 server + 170 client); zero type errors
 
-**Plan 2 Phase 3 (Polar + Withings) — pending.** Polar requires XML user-registration step at callback; Withings uses non-standard token endpoint.
+**Plan 2 Phase 3 (Polar + Withings) — complete Jun 24, 2026, on `feature/multi-device`:**
+- `server/lib/integrations/polar/` — OAuth (HTTP Basic auth, long-lived tokens, XML user-registration at callback), parallel fetch of exercises/sleep/nightly-recharge; processor writes sleep metrics + nightly recharge + exercises (source=`'polar'`)
+- `server/lib/integrations/withings/` — OAuth (non-standard `action=requesttoken` endpoint, wrapped `{status,body}` responses), measurement fetch (weight_kg, resting_hr, spo2); processor uses `value * 10^unit` formula (source=`'withings'`)
+- `scripts/providers/polar/poller.py` + `scripts/providers/withings/poller.py`
+- `server/api/integrations.ts` extended: all 3 switch statements now cover all 6 providers
+- 407 tests passing (237 server + 170 client); zero type errors
 
 **Plan 3 (Frontend) — pending:** Collapsible rails across SettingsPage, INSTANCE rail (`base_url`), CONNECTED DEVICES rail with provider cards, DATA PRIORITY reorder, dynamic source strings in RecoveryPage/SleepPage/TrainingPage/LogEntry.
 

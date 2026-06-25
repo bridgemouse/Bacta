@@ -128,4 +128,49 @@ describe('Integrations API', () => {
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/not connected/)
   })
+
+  describe('polar', () => {
+    it('GET /api/integrations/polar/authorize returns 400 without client_id', async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('base_url', 'http://bacta.home')").run()
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('polar_client_id', '')").run()
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/integrations/polar/authorize')
+      expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/client_id/)
+    })
+
+    it('GET /api/integrations/polar/authorize returns { url } when configured', async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('base_url', 'http://bacta.home')").run()
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('polar_client_id', 'pol123')").run()
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/integrations/polar/authorize')
+      expect(res.status).toBe(200)
+      expect(res.body.url).toContain('flow.polar.com')
+      expect(res.body.url).toContain('pol123')
+    })
+  })
+
+  describe('withings', () => {
+    it('GET /api/integrations/withings/authorize returns 400 without client_id', async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('base_url', 'http://bacta.home')").run()
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('withings_client_id', '')").run()
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/integrations/withings/authorize')
+      expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/client_id/)
+    })
+
+    it('POST /api/integrations/withings/sync returns 400 when not connected', async () => {
+      const { app } = await import('../../server/index')
+      const token = process.env.BACTA_INTERNAL_TOKEN ?? ''
+      const res = await request(app)
+        .post('/api/integrations/withings/sync')
+        .set('Authorization', `Bearer ${token}`)
+      expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/not connected/)
+    })
+  })
 })

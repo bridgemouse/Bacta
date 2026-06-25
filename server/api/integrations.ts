@@ -12,6 +12,10 @@ import { getAuthUrl as ouraAuthUrl, exchangeCode as ouraExchange, refreshTokens 
 import { processOuraData } from '../lib/integrations/oura/ouraProcessor'
 import { getAuthUrl as whoopAuthUrl, exchangeCode as whoopExchange, refreshTokens as whoopRefresh, fetchWhoopData } from '../lib/integrations/whoop/whoopService'
 import { processWhoopData } from '../lib/integrations/whoop/whoopProcessor'
+import { getAuthUrl as polarAuthUrl, exchangeCode as polarExchange, refreshTokens as polarRefresh, fetchPolarData } from '../lib/integrations/polar/polarService'
+import { processPolarData } from '../lib/integrations/polar/polarProcessor'
+import { getAuthUrl as withingsAuthUrl, exchangeCode as withingsExchange, refreshTokens as withingsRefresh, fetchWithingsData } from '../lib/integrations/withings/withingsService'
+import { processWithingsData } from '../lib/integrations/withings/withingsProcessor'
 
 const router = Router()
 const OAUTH_PROVIDERS = new Set<Provider>(['strava', 'polar', 'oura', 'whoop', 'withings'])
@@ -95,7 +99,8 @@ router.get('/:provider/authorize', (req: Request, res: Response) => {
     case 'strava': url = stravaAuthUrl(clientId, redirectUri, state); break
     case 'oura':  url = ouraAuthUrl (clientId, redirectUri, state); break
     case 'whoop': url = whoopAuthUrl(clientId, redirectUri, state); break
-    // Phase 3 providers added here later
+    case 'polar':    url = polarAuthUrl   (clientId, redirectUri, state); break
+    case 'withings': url = withingsAuthUrl(clientId, redirectUri, state); break
     default: return void res.status(400).json({ error: 'Provider not yet implemented' })
   }
 
@@ -175,7 +180,30 @@ async function runSync(provider: Provider): Promise<number> {
       return processWhoopData(data)
     }
 
-    // Phase 3 providers added here later
+    case 'polar': {
+      const tokens = getTokens('polar')
+      if (!tokens) throw new Error('Polar not connected')
+      const clientId     = getSetting('polar_client_id')     ?? ''
+      const clientSecret = decrypt(getSetting('polar_client_secret') ?? '') ?? ''
+      const fresh = await polarRefresh(clientId, clientSecret, tokens)
+      if (fresh !== tokens) saveTokens('polar', fresh)
+      const today = new Date().toISOString().slice(0, 10)
+      const data  = await fetchPolarData(fresh.access_token, daysAgo(30), today)
+      return processPolarData(data)
+    }
+
+    case 'withings': {
+      const tokens = getTokens('withings')
+      if (!tokens) throw new Error('Withings not connected')
+      const clientId     = getSetting('withings_client_id')     ?? ''
+      const clientSecret = decrypt(getSetting('withings_client_secret') ?? '') ?? ''
+      const fresh = await withingsRefresh(clientId, clientSecret, tokens)
+      if (fresh !== tokens) saveTokens('withings', fresh)
+      const today = new Date().toISOString().slice(0, 10)
+      const groups = await fetchWithingsData(fresh.access_token, daysAgo(30), today)
+      return processWithingsData(groups)
+    }
+
     default:
       throw new Error(`Sync not yet implemented for ${provider}`)
   }
@@ -221,7 +249,12 @@ export const callbackHandler: RequestHandler = async (req: Request, res: Respons
       case 'whoop':
         tokens = await whoopExchange(clientId, clientSecret, code, redirectUri)
         break
-      // Phase 3 providers added here later
+      case 'polar':
+        tokens = await polarExchange(clientId, clientSecret, code, redirectUri)
+        break
+      case 'withings':
+        tokens = await withingsExchange(clientId, clientSecret, code, redirectUri)
+        break
       default:
         return void res.redirect(`${baseUrl}/#/settings?error=${provider}`)
     }

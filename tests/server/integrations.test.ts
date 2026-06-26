@@ -173,4 +173,25 @@ describe('Integrations API', () => {
       expect(res.body.error).toMatch(/not connected/)
     })
   })
+
+  it('GET /api/integrations/status shows hevy as connected when enabled and api_key set', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('hevy_enabled', 'true')").run()
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('hevy_api_key', 'test-key-abc')").run()
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/integrations/status')
+    expect(res.status).toBe(200)
+    expect(res.body.hevy.connected).toBe(true)
+    // Clean up
+    db.prepare("DELETE FROM app_settings WHERE key IN ('hevy_enabled', 'hevy_api_key')").run()
+  })
+
+  it('GET /api/integrations/status shows hevy as disconnected when api_key missing', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("DELETE FROM app_settings WHERE key IN ('hevy_enabled', 'hevy_api_key')").run()
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/integrations/status')
+    expect(res.status).toBe(200)
+    expect(res.body.hevy.connected).toBe(false)
+  })
 })

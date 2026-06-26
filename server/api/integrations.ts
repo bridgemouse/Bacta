@@ -57,8 +57,11 @@ router.get('/status', (_req: Request, res: Response) => {
   for (const p of PROVIDERS) {
     const tokens  = getTokens(p)
     const enabled = getSetting(`${p}_enabled`)
+    const isConnected = p === 'hevy'
+      ? enabled === 'true' && !!getSetting('hevy_api_key')
+      : enabled === 'true' && !!tokens
     out[p] = {
-      connected: enabled === 'true' && !!tokens,
+      connected: isConnected,
       lastSync:  getSetting(`${p}_last_sync`) || null,
     }
   }
@@ -71,8 +74,11 @@ router.get('/:provider/status', (req: Request, res: Response) => {
   if (!PROVIDERS.includes(provider)) return void res.status(400).json({ error: 'Unknown provider' })
   const tokens  = getTokens(provider)
   const enabled = getSetting(`${provider}_enabled`)
+  const isConnected = provider === 'hevy'
+    ? enabled === 'true' && !!getSetting('hevy_api_key')
+    : enabled === 'true' && !!tokens
   res.json({
-    connected: enabled === 'true' && !!tokens,
+    connected: isConnected,
     lastSync:  getSetting(`${provider}_last_sync`) || null,
     enabled:   enabled === 'true',
   })

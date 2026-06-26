@@ -129,6 +129,9 @@ export function SettingsPage() {
   const [syncErrors, setSyncErrors] = useState<Record<string, string>>({})
   const [connectErrors, setConnectErrors] = useState<Record<string, string>>({})
   const [baseUrlInput, setBaseUrlInput] = useState('')
+  const [priorityList, setPriorityList] = useState<string[]>([
+    'garmin', 'strava', 'hevy', 'oura', 'whoop', 'polar', 'withings',
+  ])
 
   const refreshStatus = async () => {
     const res = await fetch('/api/integrations/status')
@@ -139,6 +142,16 @@ export function SettingsPage() {
     fetch('/api/settings').then(r => r.json()).then(d => {
       setSettings(d)
       setBaseUrlInput(d.base_url ?? '')
+      if (d.source_priority) {
+        try {
+          const saved = JSON.parse(d.source_priority) as string[]
+          if (Array.isArray(saved) && saved.length > 0) {
+            const ALL = ['garmin', 'strava', 'hevy', 'oura', 'whoop', 'polar', 'withings']
+            const rest = ALL.filter(p => !saved.includes(p))
+            setPriorityList([...saved, ...rest])
+          }
+        } catch { /* keep default */ }
+      }
     })
     fetch('/api/settings/custom-skills').then(r => r.json()).then(d => setSkills(d.skills ?? []))
     refreshStatus()
@@ -248,6 +261,15 @@ export function SettingsPage() {
       const existing = prev[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }
       return { ...prev, [provider]: { ...existing, [field]: value } }
     })
+  }
+
+  const movePriority = async (index: number, dir: -1 | 1) => {
+    const swapIdx = index + dir
+    if (swapIdx < 0 || swapIdx >= priorityList.length) return
+    const next = [...priorityList]
+    ;[next[index], next[swapIdx]] = [next[swapIdx], next[index]]
+    setPriorityList(next)
+    await save('source_priority', JSON.stringify(next))
   }
 
   async function addSkill() {
@@ -1124,6 +1146,58 @@ export function SettingsPage() {
           />
         )
       })}
+
+      <Rail label="DATA PRIORITY" accent={MX4_COLOR} />
+      <div style={cardStyle}>
+        {priorityList.map((p, i) => (
+          <div key={p} style={i === priorityList.length - 1 ? rowStyleLast : rowStyle}>
+            <span style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              letterSpacing: '0.08em',
+              color: COLORS.text,
+            }}>
+              {p.toUpperCase()}
+            </span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={() => movePriority(i, -1)}
+                disabled={i === 0}
+                aria-label={`Move ${p} up`}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  background: 'none',
+                  border: `1px solid ${COLORS.line}`,
+                  borderRadius: 4,
+                  color: i === 0 ? COLORS.textMuted : COLORS.textSecondary,
+                  padding: '2px 8px',
+                  cursor: i === 0 ? 'default' : 'pointer',
+                }}
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => movePriority(i, 1)}
+                disabled={i === priorityList.length - 1}
+                aria-label={`Move ${p} down`}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  background: 'none',
+                  border: `1px solid ${COLORS.line}`,
+                  borderRadius: 4,
+                  color: i === priorityList.length - 1 ? COLORS.textMuted : COLORS.textSecondary,
+                  padding: '2px 8px',
+                  cursor: i === priorityList.length - 1 ? 'default' : 'pointer',
+                }}
+              >
+                ↓
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Rail 7: GARMIN */}
       <Rail label="GARMIN" accent={MX4_COLOR} />

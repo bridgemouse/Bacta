@@ -191,6 +191,18 @@ garminRouter.get('/activities/:id/legs', (req, res) => {
   res.json({ legs })
 })
 
+// GET /api/garmin/sources — latest data source per metric (must be before /:metric wildcard)
+garminRouter.get('/sources', (_req, res) => {
+  const rows = db.prepare(
+    `SELECT metric, source FROM health_snapshots gs
+     WHERE date = (SELECT MAX(date) FROM health_snapshots WHERE metric = gs.metric)
+     GROUP BY metric`
+  ).all() as Array<{ metric: string; source: string }>
+  const out: Record<string, string> = {}
+  for (const row of rows) out[row.metric] = row.source ?? 'garmin'
+  res.json(out)
+})
+
 // GET /api/garmin/:metric — single metric, optional date range
 garminRouter.get('/:metric', (req, res) => {
   const { metric } = req.params

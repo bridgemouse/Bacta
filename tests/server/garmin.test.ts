@@ -197,3 +197,24 @@ describe('Phase B endpoints', () => {
     expect(res.body.weeks[0]).toMatchObject({ week: expect.any(String), avg_hr: expect.any(Number) })
   })
 })
+
+describe('sources endpoint', () => {
+  it('GET /api/garmin/sources returns metric-to-source map', async () => {
+    const { default: db } = await import('../../server/db/client')
+    const today = new Date().toISOString().slice(0, 10)
+    db.prepare(
+      `INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source)
+       VALUES (?, 'readiness_score', 82, 'score', 'oura')`
+    ).run(today)
+    db.prepare(
+      `INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source)
+       VALUES (?, 'hrv', 47, 'ms', 'garmin')`
+    ).run(today)
+
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/sources')
+    expect(res.status).toBe(200)
+    expect(res.body.readiness_score).toBe('oura')
+    expect(res.body.hrv).toBe('garmin')
+  })
+})

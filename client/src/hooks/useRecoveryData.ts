@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchSummary, fetchTrend } from '../lib/garminApi'
+import { fetchSummary, fetchTrend, fetchSources } from '../lib/garminApi'
 import { RECOVERY } from '../lib/stubData'
 
 const arrAvg = (a: number[]) =>
@@ -61,16 +61,30 @@ const INITIAL: RecoveryData = {
   recoveryTimeTrend: [],
 }
 
-export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
+export function useRecoveryData(): { data: RecoveryData; loading: boolean; sources: Record<string, string> } {
   const [data, setData] = useState<RecoveryData>(INITIAL)
   const [loading, setLoading] = useState(true)
+  const [sources, setSources] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [summary, hrvTrend, rhrTrend, battTrend, stressTrend, respTrend, scoreTrend, stressMaxTrend, sleepStressTrend, recoveryTimeTrend, spo2TrendData, sleepHrTrendData] =
-          await Promise.all([
+        const [
+          summary,
+          hrvTrend,
+          rhrTrend,
+          battTrend,
+          stressTrend,
+          respTrend,
+          scoreTrend,
+          stressMaxTrend,
+          sleepStressTrend,
+          recoveryTimeTrend,
+          spo2TrendData,
+          sleepHrTrendData,
+          sourcesData,
+        ] = await Promise.all([
             fetchSummary(),
             fetchTrend('hrv'),
             fetchTrend('resting_hr'),
@@ -83,8 +97,10 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
             fetchTrend('recovery_time_h'),
             fetchTrend('spo2_avg'),
             fetchTrend('sleep_hr'),
+            fetchSources(),
           ])
         if (cancelled) return
+        setSources(sourcesData)
 
         const stressAvg = summary.stress_avg ?? RECOVERY.stress.value
         const stressLabel =
@@ -192,5 +208,5 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean } {
     return () => { cancelled = true }
   }, [])
 
-  return { data, loading }
+  return { data, loading, sources }
 }

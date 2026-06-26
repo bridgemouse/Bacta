@@ -21,6 +21,23 @@ import { hexA } from '../lib/hexA'
 
 const A = SECTION_ACCENTS.recovery
 
+function SourceBadge({ source }: { source?: string }) {
+  if (!source || source === 'garmin') return null
+  return (
+    <span style={{
+      background: hexA(COLORS.mx4Amber, 0.15),
+      color: COLORS.mx4Amber,
+      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontSize: 9,
+      padding: '1px 5px',
+      borderRadius: 3,
+      letterSpacing: '0.06em',
+    }}>
+      {source.toUpperCase()}
+    </span>
+  )
+}
+
 const SCORE_INFO: CardInfo = {
   title: 'Recovery Score',
   description: "Garmin's Training Readiness index (0–100). Synthesizes overnight HRV, sleep quality, Body Battery, acute load, and stress history. 60+ = ready for hard work · 40–59 = moderate effort · below 40 = rest or light activity.",
@@ -110,7 +127,7 @@ const SUBTEXT: CSSProperties = {
 }
 
 function RecoveryOverview() {
-  const { data: rec } = useRecoveryData()
+  const { data: rec, sources } = useRecoveryData()
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('recovery')
   const { isOpen: scoreOpen, handleTap: scoreTap } = useCardInfoOverlay('rec-score', SCORE_INFO, A)
   const { isOpen: hrvOpen, handleTap: hrvTap } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
@@ -216,6 +233,7 @@ function RecoveryOverview() {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 32, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{rec.hrv.value}</span>
               <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: COLORS.textMuted }}>ms</span>
+              <SourceBadge source={sources['hrv']} />
               {rec.hrv.avg != null && <Delta value={rec.hrv.value - rec.hrv.avg} unit=" ms" size={10} />}
             </div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginTop: 4 }}>vs {rec.hrv.avg}ms week avg</div>
@@ -266,7 +284,10 @@ function RecoveryOverview() {
           <Bracket color={A} inset={6} op={0.28} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, paddingLeft: 3 }}>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>BODY BATTERY · TODAY</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>BODY BATTERY · TODAY</span>
+              <SourceBadge source={sources['body_battery_wake']} />
+            </span>
             {rec.batteryConsumed != null && (
               <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.amber }}>−{rec.batteryConsumed} used</span>
             )}
@@ -324,6 +345,7 @@ function RecoveryOverview() {
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, paddingLeft: 3 }}>
             <span style={{ fontFamily: FONT_MONO, fontSize: 30, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{rec.rhr.value}</span>
             <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: COLORS.textMuted }}>bpm</span>
+            <SourceBadge source={sources['resting_hr']} />
           </div>
           <Sparkline data={rec.rhr.trend} accent={A} h={20} sw={1.5} />
         </HeadlineCard>

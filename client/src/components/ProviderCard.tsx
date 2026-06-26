@@ -136,12 +136,18 @@ export function ProviderCard({
                 ...btnBase,
                 background: syncStatus === 'synced'
                   ? hexA(COLORS.mx4Green, 0.15)
+                  : syncStatus === 'error'
+                  ? hexA(COLORS.mx4Amber, 0.15)
                   : hexA(MX4_COLOR, 0.15),
-                color: syncStatus === 'synced' ? COLORS.mx4Green : MX4_COLOR,
+                color: syncStatus === 'synced'
+                  ? COLORS.mx4Green
+                  : syncStatus === 'error'
+                  ? COLORS.mx4Amber
+                  : MX4_COLOR,
                 opacity: syncStatus === 'syncing' ? 0.6 : 1,
               }}
             >
-              {syncStatus === 'syncing' ? 'SYNCING…' : syncStatus === 'synced' ? 'SYNCED ✓' : 'SYNC NOW'}
+              {syncStatus === 'syncing' ? 'SYNCING…' : syncStatus === 'synced' ? 'SYNCED ✓' : syncStatus === 'error' ? 'RETRY' : 'SYNC NOW'}
             </button>
             <button
               onClick={onDisconnect}

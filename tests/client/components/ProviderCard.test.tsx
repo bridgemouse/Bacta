@@ -79,6 +79,12 @@ describe('ProviderCard', () => {
     expect(screen.getByText('SYNCED ✓')).toBeInTheDocument()
   })
 
+  it('shows RETRY with error when syncStatus=error', () => {
+    render(<ProviderCard {...defaultProps} connected={true} syncStatus="error" syncError="Sync failed: 401" />)
+    expect(screen.getByText('RETRY')).toBeInTheDocument()
+    expect(screen.getByText('Sync failed: 401')).toBeInTheDocument()
+  })
+
   it('shows connectError text when provided', () => {
     render(<ProviderCard {...defaultProps} connectError="OAuth failed — check credentials." />)
     expect(screen.getByText('OAuth failed — check credentials.')).toBeInTheDocument()

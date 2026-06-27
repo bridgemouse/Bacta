@@ -204,6 +204,7 @@ function RecoveryOverview() {
             <StatusCore accent={A} size={6} />
             <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: A }}>{rec.score.state.toUpperCase()}</span>
           </div>
+          <SourceBadge source={sources['recovery_score']} />
           <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 13.5, lineHeight: 1.5, color: COLORS.textSecondary }}>
             {rec.score.value >= 60
               ? <><strong style={{ color: COLORS.text, fontWeight: 700 }}>Systems restored.</strong> Cleared for a high-intensity session today.</>
@@ -376,17 +377,27 @@ function RecoveryOverview() {
             data={rec.sleepStressTrend}
             info={SLEEP_STRESS_INFO} />
         )}
-        <HealthStatusTile label="Respiration" value={rec.resp.value} unit="br/m" accent={A}
-          inRange={rec.resp.value >= 12 && rec.resp.value <= 20}
-          sub="12–20 normal"
-          data={rec.resp.trend}
-          info={{ description: 'Breaths per minute at rest. A rise of 1–2 above your baseline often signals illness before other symptoms appear.' }} />
+        <div style={{ position: 'relative' }}>
+          <HealthStatusTile label="Respiration" value={rec.resp.value} unit="br/m" accent={A}
+            inRange={rec.resp.value >= 12 && rec.resp.value <= 20}
+            sub="12–20 normal"
+            data={rec.resp.trend}
+            info={{ description: 'Breaths per minute at rest. A rise of 1–2 above your baseline often signals illness before other symptoms appear.' }} />
+          <div style={{ position: 'absolute', top: 8, right: 8 }}>
+            <SourceBadge source={sources['resp_avg']} />
+          </div>
+        </div>
         {rec.spo2.value != null && (
-          <HealthStatusTile label="SpO₂" value={rec.spo2.value} unit="%" accent={A}
-            inRange={rec.spo2.value >= 95}
-            sub={rec.spo2.value >= 97 ? 'excellent' : 'normal'}
-            data={rec.spo2Trend}
-            info={{ description: 'Percentage of hemoglobin carrying oxygen. Above 95% normal, 97%+ excellent. Drops below 90% may indicate sleep-disordered breathing.' }} />
+          <div style={{ position: 'relative' }}>
+            <HealthStatusTile label="SpO₂" value={rec.spo2.value} unit="%" accent={A}
+              inRange={rec.spo2.value >= 95}
+              sub={rec.spo2.value >= 97 ? 'excellent' : 'normal'}
+              data={rec.spo2Trend}
+              info={{ description: 'Percentage of hemoglobin carrying oxygen. Above 95% normal, 97%+ excellent. Drops below 90% may indicate sleep-disordered breathing.' }} />
+            <div style={{ position: 'absolute', top: 8, right: 8 }}>
+              <SourceBadge source={sources['spo2_avg']} />
+            </div>
+          </div>
         )}
         {rec.sleepHrNight != null && (
           <HealthStatusTile label="Sleep HR" value={rec.sleepHrNight} unit="bpm" accent={A}

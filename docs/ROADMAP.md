@@ -209,9 +209,17 @@
 - `server/lib/integrations/withings/` — OAuth (non-standard `action=requesttoken` endpoint, wrapped `{status,body}` responses), measurement fetch (weight_kg, resting_hr, spo2); processor uses `value * 10^unit` formula (source=`'withings'`)
 - `scripts/providers/polar/poller.py` + `scripts/providers/withings/poller.py`
 - `server/api/integrations.ts` extended: all 3 switch statements now cover all 6 providers
-- 407 tests passing (237 server + 170 client); zero type errors
+- 407 tests passing (237 server + 170 client); zero type errors (Plan 2 baseline — 445 after Plan 3)
 
-**Plan 3 (Frontend) — pending:** Collapsible rails across SettingsPage, INSTANCE rail (`base_url`), CONNECTED DEVICES rail with provider cards, DATA PRIORITY reorder, dynamic source strings in RecoveryPage/SleepPage/TrainingPage/LogEntry.
+**Plan 3 (Settings UI + Source Attribution) — complete Jun 25–26, 2026, on `feature/multi-device`:**
+- `client/src/components/ProviderCard.tsx` — new shared component; OAuth (Client ID + Secret) and API-key (single input) flows; connected/disconnected states; `syncStatus` union (`idle | syncing | synced | error`) with SYNC NOW / SYNCED ✓ / RETRY / amber-error states; DISCONNECT button
+- `SettingsPage.tsx` — three new rails: INSTANCE (`base_url` text input, save-on-blur, SAVED indicator), CONNECTED DEVICES (one ProviderCard per provider, Hevy uses API-key flow, others use OAuth), DATA PRIORITY (up/down reorder for `source_priority` JSON array with 7 providers)
+- `server/api/integrations.ts` — Hevy connected-status fix: `GET /status` and `GET /:provider/status` now check `getSetting('hevy_api_key')` for Hevy (not tokens, which are always null for Hevy)
+- `server/api/garmin.ts` — `GET /api/garmin/sources` route (before `/:metric` wildcard); returns `{metric: source}` map for latest reading of each metric
+- `client/src/lib/garminApi.ts` — `fetchSources(): Promise<Record<string, string>>` helper; returns `{}` on error
+- `useRecoveryData` + `useSleepData` hooks — `sources: Record<string, string>` added to return shape; `fetchSources()` called in `Promise.all`
+- `RecoveryPage.tsx` + `SleepPage.tsx` — file-local `SourceBadge` component (amber pill, invisible for Garmin data); badges on HRV, RHR, Body Battery, Recovery Score, SpO₂, Respiration (Recovery); Sleep Score, Sleep HR, SpO₂ (Sleep)
+- 445 tests passing (205 client + 240 server); zero type errors
 
 **Providers:** Polar, Oura, Whoop, Withings, Strava, Hevy — all direct OAuth 2.0 (no intermediary). Fitbit skipped (API deprecated Sept 2026). Apple Health / Google Health Connect deferred to native app.
 

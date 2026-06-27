@@ -27,7 +27,7 @@ function SourceBadge({ source }: { source?: string }) {
     <span style={{
       background: hexA(COLORS.mx4Amber, 0.15),
       color: COLORS.mx4Amber,
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontFamily: FONT_MONO,
       fontSize: 9,
       padding: '1px 5px',
       borderRadius: 3,

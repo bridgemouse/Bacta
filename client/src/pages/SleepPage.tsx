@@ -27,7 +27,7 @@ function SourceBadge({ source }: { source?: string }) {
     <span style={{
       background: hexA(COLORS.mx4Amber, 0.15),
       color: COLORS.mx4Amber,
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontFamily: FONT_MONO,
       fontSize: 9,
       padding: '1px 5px',
       borderRadius: 3,
@@ -394,11 +394,9 @@ function SleepOverview() {
             <HealthStatusTile label="Heart Rate" value={slp.sleepHr} unit="bpm" accent={A}
               data={slp.sleepHrTrend}
               info={SLEEP_HR_INFO} />
-            {sources['sleep_hr'] && sources['sleep_hr'] !== 'garmin' && (
-              <span style={{ position: 'absolute', top: 8, right: 10 }}>
-                <SourceBadge source={sources['sleep_hr']} />
-              </span>
-            )}
+            <span style={{ position: 'absolute', top: 8, right: 10 }}>
+              <SourceBadge source={sources['sleep_hr']} />
+            </span>
           </div>
         )}
         <HealthStatusTile label="Respiration" value={slp.resp.avg} unit="br/m" accent={A}
@@ -418,11 +416,9 @@ function SleepOverview() {
               sub={slp.spo2.avg >= 97 ? 'excellent' : 'normal'}
               data={slp.sleepSpo2Trend}
               info={SPO2_INFO} />
-            {sources['sleep_spo2'] && sources['sleep_spo2'] !== 'garmin' && (
-              <span style={{ position: 'absolute', top: 8, right: 10 }}>
-                <SourceBadge source={sources['sleep_spo2']} />
-              </span>
-            )}
+            <span style={{ position: 'absolute', top: 8, right: 10 }}>
+              <SourceBadge source={sources['sleep_spo2']} />
+            </span>
           </div>
         )}
       </div>

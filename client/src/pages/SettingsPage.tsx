@@ -130,6 +130,7 @@ export function SettingsPage() {
   const [syncErrors, setSyncErrors] = useState<Record<string, string>>({})
   const [connectErrors, setConnectErrors] = useState<Record<string, string>>({})
   const [baseUrlInput, setBaseUrlInput] = useState('')
+  const [garminStatus, setGarminStatus] = useState<{ connected: boolean; lastSync: string | null }>({ connected: false, lastSync: null })
   const [priorityList, setPriorityList] = useState<string[]>([...PRIORITY_ALL])
 
   const refreshStatus = async () => {
@@ -152,6 +153,7 @@ export function SettingsPage() {
       }
     })
     fetch('/api/settings/custom-skills').then(r => r.json()).then(d => setSkills(d.skills ?? []))
+    fetch('/api/garmin/status').then(r => r.json()).then(d => setGarminStatus(d))
     refreshStatus()
 
     // Handle OAuth callback redirect — provider redirects back to /#/settings?connected=X
@@ -1119,6 +1121,17 @@ export function SettingsPage() {
       </div>
 
       <Rail label="CONNECTED DEVICES" accent={MX4_COLOR} />
+      <ProviderCard
+        provider="garmin"
+        readOnly
+        isOAuth={false}
+        connected={garminStatus.connected}
+        lastSync={garminStatus.lastSync}
+        clientId="" clientSecret="" apiKey=""
+        onClientIdChange={() => {}} onClientSecretChange={() => {}} onApiKeyChange={() => {}}
+        onConnect={() => {}} onDisconnect={() => {}} onSync={() => {}}
+        syncStatus="idle" syncError="" connectError=""
+      />
       {ALL_INTEGRATION_PROVIDERS.map(provider => {
         const status = integrationStatus[provider] ?? { connected: false, lastSync: null }
         const inputs = providerInputs[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }

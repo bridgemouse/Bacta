@@ -2,6 +2,7 @@ import { COLORS, FONT_MONO, FONT_UI, MX4_COLOR } from '../theme'
 import { hexA } from '../lib/hexA'
 
 const PROVIDER_LABELS: Record<string, string> = {
+  garmin: 'GARMIN',
   strava: 'STRAVA',
   hevy: 'HEVY',
   oura: 'OURA',
@@ -29,6 +30,7 @@ export interface ProviderCardProps {
   syncStatus: ProviderSyncStatus
   syncError: string
   connectError: string
+  readOnly?: boolean
 }
 
 const inputStyle: React.CSSProperties = {
@@ -73,6 +75,7 @@ export function ProviderCard({
   syncStatus,
   syncError,
   connectError,
+  readOnly = false,
 }: ProviderCardProps) {
   const label = PROVIDER_LABELS[provider] ?? provider.toUpperCase()
 
@@ -128,99 +131,107 @@ export function ProviderCard({
               LAST SYNC {lastSyncLabel}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button
-              onClick={onSync}
-              disabled={syncStatus === 'syncing'}
-              style={{
-                ...btnBase,
-                background: syncStatus === 'synced'
-                  ? hexA(COLORS.mx4Green, 0.15)
-                  : syncStatus === 'error'
-                  ? hexA(COLORS.mx4Amber, 0.15)
-                  : hexA(MX4_COLOR, 0.15),
-                color: syncStatus === 'synced'
-                  ? COLORS.mx4Green
-                  : syncStatus === 'error'
-                  ? COLORS.mx4Amber
-                  : MX4_COLOR,
-                opacity: syncStatus === 'syncing' ? 0.6 : 1,
-              }}
-            >
-              {syncStatus === 'syncing' ? 'SYNCING…' : syncStatus === 'synced' ? 'SYNCED ✓' : syncStatus === 'error' ? 'RETRY' : 'SYNC NOW'}
-            </button>
-            <button
-              onClick={onDisconnect}
-              style={{
-                ...btnBase,
-                background: hexA(COLORS.mx4Red, 0.1),
-                color: COLORS.mx4Red,
-              }}
-            >
-              DISCONNECT
-            </button>
-          </div>
-          {syncError && (
-            <div style={{
-              fontFamily: FONT_UI,
-              fontSize: 11,
-              color: COLORS.mx4Red,
-              marginTop: 6,
-            }}>
-              {syncError}
-            </div>
+          {!readOnly && (
+            <>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button
+                  onClick={onSync}
+                  disabled={syncStatus === 'syncing'}
+                  style={{
+                    ...btnBase,
+                    background: syncStatus === 'synced'
+                      ? hexA(COLORS.mx4Green, 0.15)
+                      : syncStatus === 'error'
+                      ? hexA(COLORS.mx4Amber, 0.15)
+                      : hexA(MX4_COLOR, 0.15),
+                    color: syncStatus === 'synced'
+                      ? COLORS.mx4Green
+                      : syncStatus === 'error'
+                      ? COLORS.mx4Amber
+                      : MX4_COLOR,
+                    opacity: syncStatus === 'syncing' ? 0.6 : 1,
+                  }}
+                >
+                  {syncStatus === 'syncing' ? 'SYNCING…' : syncStatus === 'synced' ? 'SYNCED ✓' : syncStatus === 'error' ? 'RETRY' : 'SYNC NOW'}
+                </button>
+                <button
+                  onClick={onDisconnect}
+                  style={{
+                    ...btnBase,
+                    background: hexA(COLORS.mx4Red, 0.1),
+                    color: COLORS.mx4Red,
+                  }}
+                >
+                  DISCONNECT
+                </button>
+              </div>
+              {syncError && (
+                <div style={{
+                  fontFamily: FONT_UI,
+                  fontSize: 11,
+                  color: COLORS.mx4Red,
+                  marginTop: 6,
+                }}>
+                  {syncError}
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (
         <div>
-          {isOAuth ? (
+          {!readOnly && (
             <>
-              <input
-                placeholder="Client ID"
-                value={clientId}
-                onChange={e => onClientIdChange(e.target.value)}
-                style={inputStyle}
-                autoComplete="off"
-              />
-              <input
-                type="password"
-                placeholder="Client Secret"
-                value={clientSecret}
-                onChange={e => onClientSecretChange(e.target.value)}
-                style={inputStyle}
-                autoComplete="new-password"
-              />
+              {isOAuth ? (
+                <>
+                  <input
+                    placeholder="Client ID"
+                    value={clientId}
+                    onChange={e => onClientIdChange(e.target.value)}
+                    style={inputStyle}
+                    autoComplete="off"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Client Secret"
+                    value={clientSecret}
+                    onChange={e => onClientSecretChange(e.target.value)}
+                    style={inputStyle}
+                    autoComplete="new-password"
+                  />
+                </>
+              ) : (
+                <input
+                  type="password"
+                  placeholder="API Key"
+                  value={apiKey}
+                  onChange={e => onApiKeyChange(e.target.value)}
+                  style={inputStyle}
+                  autoComplete="new-password"
+                />
+              )}
+              <button
+                onClick={onConnect}
+                style={{
+                  ...btnBase,
+                  marginTop: 10,
+                  background: hexA(MX4_COLOR, 0.15),
+                  color: MX4_COLOR,
+                }}
+              >
+                CONNECT
+              </button>
+              {connectError && (
+                <div style={{
+                  fontFamily: FONT_UI,
+                  fontSize: 11,
+                  color: COLORS.mx4Red,
+                  marginTop: 6,
+                }}>
+                  {connectError}
+                </div>
+              )}
             </>
-          ) : (
-            <input
-              type="password"
-              placeholder="API Key"
-              value={apiKey}
-              onChange={e => onApiKeyChange(e.target.value)}
-              style={inputStyle}
-              autoComplete="new-password"
-            />
-          )}
-          <button
-            onClick={onConnect}
-            style={{
-              ...btnBase,
-              marginTop: 10,
-              background: hexA(MX4_COLOR, 0.15),
-              color: MX4_COLOR,
-            }}
-          >
-            CONNECT
-          </button>
-          {connectError && (
-            <div style={{
-              fontFamily: FONT_UI,
-              fontSize: 11,
-              color: COLORS.mx4Red,
-              marginTop: 6,
-            }}>
-              {connectError}
-            </div>
           )}
         </div>
       )}

@@ -26,6 +26,9 @@ const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST
 
 export const app = express()
 app.disable('x-powered-by')
+// Bacta is served behind Nginx Proxy Manager which adds X-Forwarded-For.
+// Trusting the first proxy hop makes express-rate-limit work correctly on LAN.
+app.set('trust proxy', 1)
 
 // Security headers + CSP. The app uses inline styles everywhere and loads
 // Google Fonts; scripts/connections are same-origin only.

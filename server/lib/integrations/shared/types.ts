@@ -16,3 +16,7 @@ export function daysAgo(n: number): string {
 export function toEpoch(dateStr: string): number {
   return Math.floor(new Date(dateStr).getTime() / 1000)
 }
+
+export function basicAuth(clientId: string, clientSecret: string): string {
+  return 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+}

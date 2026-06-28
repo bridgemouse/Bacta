@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import db from '../db/client'
-import { setSetting, getSetting, SETTING_DEFAULTS, SECRET_SETTING_KEYS } from '../lib/settings'
+import { setSetting, getSetting, SETTING_DEFAULTS, SECRET_SETTING_KEYS, PROVIDERS } from '../lib/settings'
 import { scheduleNightly } from '../lib/ai/scheduler'
 import { testVaultConnection, resetVaultClient } from '../lib/ai/vaultClient'
 import { encrypt } from '../lib/integrations/shared/encryption'
@@ -121,6 +121,19 @@ settingsRouter.put('/:key', (req, res) => {
   }
   if (key === 'vault_enabled' || key === 'vault_url') {
     resetVaultClient()
+  }
+  // Auto-sync source_priority when a provider is enabled or disabled via Settings UI
+  const enabledMatch = key.match(/^(.+)_enabled$/)
+  if (enabledMatch && PROVIDERS.includes(enabledMatch[1] as typeof PROVIDERS[number])) {
+    const provider = enabledMatch[1]
+    try {
+      const current: string[] = JSON.parse(getSetting('source_priority') ?? '["garmin"]')
+      if (value === 'true' && !current.includes(provider)) {
+        setSetting('source_priority', JSON.stringify([...current, provider]))
+      } else if (value === 'false') {
+        setSetting('source_priority', JSON.stringify(current.filter(p => p !== provider)))
+      }
+    } catch { /* leave unchanged */ }
   }
   res.json({ ok: true })
 })

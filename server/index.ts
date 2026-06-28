@@ -73,8 +73,13 @@ const loginLimiter = rateLimit({
 
 // Auth gate: enforced only once a PIN is configured, so a fresh box / the test
 // suite stay open until the user secures it. Health + auth endpoints are exempt.
+// Accepts BACTA_INTERNAL_TOKEN Bearer header so pollers and scheduled syncs
+// can reach protected routes without a browser session.
 function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
   if (!isAuthConfigured()) return next()
+  const internal = process.env.BACTA_INTERNAL_TOKEN ?? ''
+  const bearer = (req.headers.authorization ?? '').replace('Bearer ', '')
+  if (internal && bearer === internal) return next()
   const token = parseCookies(req.headers.cookie)[SESSION_COOKIE]
   if (verifyToken(token)) return next()
   res.status(401).json({ error: 'Authentication required' })

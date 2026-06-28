@@ -46,6 +46,29 @@ function saveTokens(provider: Provider, tokens: ProviderTokens): void {
   setSetting(`${provider}_tokens`, encrypt(JSON.stringify(tokens)))
 }
 
+function isConnected(provider: Provider): boolean {
+  const enabled = getSetting(`${provider}_enabled`)
+  return provider === 'hevy'
+    ? enabled === 'true' && !!getSetting('hevy_api_key')
+    : enabled === 'true' && !!getTokens(provider)
+}
+
+function addToSourcePriority(provider: Provider): void {
+  try {
+    const current: string[] = JSON.parse(getSetting('source_priority') ?? '["garmin"]')
+    if (!current.includes(provider)) {
+      setSetting('source_priority', JSON.stringify([...current, provider]))
+    }
+  } catch { /* leave unchanged */ }
+}
+
+function removeFromSourcePriority(provider: Provider): void {
+  try {
+    const current: string[] = JSON.parse(getSetting('source_priority') ?? '["garmin"]')
+    setSetting('source_priority', JSON.stringify(current.filter(p => p !== provider)))
+  } catch { /* leave unchanged */ }
+}
+
 function getRedirectUri(provider: Provider): string {
   const base = getSetting('base_url') || 'http://localhost:3001'
   return `${base}/api/integrations/${provider}/callback`
@@ -55,13 +78,8 @@ function getRedirectUri(provider: Provider): string {
 router.get('/status', (_req: Request, res: Response) => {
   const out: Record<string, { connected: boolean; lastSync: string | null }> = {}
   for (const p of PROVIDERS) {
-    const tokens  = getTokens(p)
-    const enabled = getSetting(`${p}_enabled`)
-    const isConnected = p === 'hevy'
-      ? enabled === 'true' && !!getSetting('hevy_api_key')
-      : enabled === 'true' && !!tokens
     out[p] = {
-      connected: isConnected,
+      connected: isConnected(p),
       lastSync:  getSetting(`${p}_last_sync`) || null,
     }
   }
@@ -72,15 +90,10 @@ router.get('/status', (_req: Request, res: Response) => {
 router.get('/:provider/status', (req: Request, res: Response) => {
   const provider = req.params.provider as Provider
   if (!PROVIDERS.includes(provider)) return void res.status(400).json({ error: 'Unknown provider' })
-  const tokens  = getTokens(provider)
-  const enabled = getSetting(`${provider}_enabled`)
-  const isConnected = provider === 'hevy'
-    ? enabled === 'true' && !!getSetting('hevy_api_key')
-    : enabled === 'true' && !!tokens
   res.json({
-    connected: isConnected,
+    connected: isConnected(provider),
     lastSync:  getSetting(`${provider}_last_sync`) || null,
-    enabled:   enabled === 'true',
+    enabled:   getSetting(`${provider}_enabled`) === 'true',
   })
 })
 
@@ -97,7 +110,7 @@ router.get('/:provider/authorize', (req: Request, res: Response) => {
   if (!clientId) return void res.status(400).json({ error: `${provider}_client_id not configured` })
 
   const state = randomUUID()
-  setSetting(`${provider}_oauth_state`, state)
+  setSetting(`${provider}_oauth_state`, encrypt(state))
   const redirectUri = getRedirectUri(provider)
 
   let url: string
@@ -120,6 +133,7 @@ router.post('/:provider/disconnect', (req: Request, res: Response) => {
   setSetting(`${provider}_tokens`,   '')
   setSetting(`${provider}_enabled`,  'false')
   setSetting(`${provider}_last_sync`, '')
+  removeFromSourcePriority(provider)
   console.log(`[integrations] ${provider} disconnected`)
   res.json({ ok: true })
 })
@@ -234,7 +248,8 @@ export const callbackHandler: RequestHandler = async (req: Request, res: Respons
     return void res.status(400).json({ error: 'Missing code or state' })
   }
 
-  const savedState = getSetting(`${provider}_oauth_state`)
+  const rawState   = getSetting(`${provider}_oauth_state`)
+  const savedState = rawState ? decrypt(rawState) : null
   if (!savedState || state !== savedState) {
     return void res.status(400).json({ error: 'State mismatch — possible CSRF' })
   }
@@ -268,6 +283,7 @@ export const callbackHandler: RequestHandler = async (req: Request, res: Respons
     saveTokens(provider, tokens)
     setSetting(`${provider}_enabled`, 'true')
     setSetting(`${provider}_oauth_state`, '')  // clear used state
+    addToSourcePriority(provider)
     console.log(`[integrations] ${provider} connected successfully`)
     res.redirect(`${baseUrl}/#/settings?connected=${provider}`)
   } catch (err) {

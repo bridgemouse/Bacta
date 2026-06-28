@@ -19,8 +19,9 @@ const PROVIDER_LABELS: Record<string, string> = {
   google: 'Gemini', anthropic: 'Claude', openai: 'OpenAI',
 }
 
-const OAUTH_PROVIDERS = new Set(['strava', 'polar', 'oura', 'whoop', 'withings'])
 const ALL_INTEGRATION_PROVIDERS = ['strava', 'hevy', 'oura', 'whoop', 'polar', 'withings'] as const
+const OAUTH_PROVIDERS = new Set<string>(ALL_INTEGRATION_PROVIDERS.filter(p => p !== 'hevy'))
+const PRIORITY_ALL = ['garmin', ...ALL_INTEGRATION_PROVIDERS] as const
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error'
 
@@ -129,9 +130,7 @@ export function SettingsPage() {
   const [syncErrors, setSyncErrors] = useState<Record<string, string>>({})
   const [connectErrors, setConnectErrors] = useState<Record<string, string>>({})
   const [baseUrlInput, setBaseUrlInput] = useState('')
-  const [priorityList, setPriorityList] = useState<string[]>([
-    'garmin', 'strava', 'hevy', 'oura', 'whoop', 'polar', 'withings',
-  ])
+  const [priorityList, setPriorityList] = useState<string[]>([...PRIORITY_ALL])
 
   const refreshStatus = async () => {
     const res = await fetch('/api/integrations/status')
@@ -146,8 +145,7 @@ export function SettingsPage() {
         try {
           const saved = JSON.parse(d.source_priority) as string[]
           if (Array.isArray(saved) && saved.length > 0) {
-            const ALL = ['garmin', 'strava', 'hevy', 'oura', 'whoop', 'polar', 'withings']
-            const rest = ALL.filter(p => !saved.includes(p))
+            const rest = [...PRIORITY_ALL].filter(p => !saved.includes(p))
             setPriorityList([...saved, ...rest])
           }
         } catch { /* keep default */ }

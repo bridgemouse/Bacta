@@ -1,11 +1,7 @@
-import { ProviderTokens, tokensExpired } from '../shared/types'
+import { ProviderTokens, tokensExpired, basicAuth } from '../shared/types'
 
 const TOKEN_URL = 'https://api.ouraring.com/oauth/token'
 const API_BASE  = 'https://api.ouraring.com'
-
-function basicAuth(clientId: string, clientSecret: string): string {
-  return 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-}
 
 export function getAuthUrl(clientId: string, redirectUri: string, state: string): string {
   const p = new URLSearchParams({

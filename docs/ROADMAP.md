@@ -104,8 +104,27 @@
 - Removed hardcoded metric list from `mx4/system-prompt.md` (same self-discovery pattern)
 - Added `## Chat` section to `mx4/system-prompt.md` — MX-4 now knows conversational replies are proportional and non-repetitive; tool use unconstrained; briefing structure reserved for briefings
 
+**MX-4 chat engagement (Jun 23, 2026):**
+- Rewrote `## Chat` section in `mx4/system-prompt.md` — original was all restraint rules; MX-4 was responding "Noted" to conversational observations
+- Added positive engagement mandate: ban on "Noted", curiosity applies in chat, corroborate/contradict data, use DB as background awareness not a report dump
+- Added concrete good/bad examples (same mechanism as the Voice register examples — models follow examples more reliably than prose rules)
+- Completed depersonalization of `mx4/system-prompt.md`: all "Ethan" references replaced with "the user"; personal context (name, profile, goals) belongs in HEARTBEAT.md (gitignored)
+
+**MX-4 voice guardrails + context injection (Jun 23, 2026):**
+- Created `docs/MX4_DROID_VOICE.md` — canonical speech patterns grounded in verbatim TC-99 (*Masters of Evil*) and Two-Boots (*Maul: Shadow Lords*) quotes; 10 modeled MX-4 scenarios covering direct opinion, Two-Boots deference, TC-99 unprompted surfacing, dry acknowledgment, protocol transparency
+- `server/lib/ai/prompt.ts` — now injects `mx4_personal_identity_record.md` and `MX4_DROID_VOICE.md` alongside `MX4_REFERENCE.md` on every run (briefings + chat); Gemini 1M context window makes this essentially free
+- `mx4/system-prompt.md` — 4 rounds of voice tightening: direct address ("speak to the person, not about their system"), opinion framing ("That's not a good idea" over protocol citations), Two-Boots deference examples ("Your call"), TC-99 unprompted surfacing, expanded banned phrase list, chat output format clarified (no JSON, no ## headers, no summary/body labels)
+- Stale `mx4/wiki/reference/MX4_REFERENCE.md` removed — redundant with authoritative injection, was feeding contradictory stale table names as low-trust wiki content
+- Wiki pattern pages cleared via Settings — breaks the adjective-drift feedback loop; MX-4 rebuilds pages under new voice guardrails on next briefing run
+
+**MX4_REFERENCE.md table name fix (Jun 23, 2026):**
+- `MX4_REFERENCE.md` still referenced `garmin_snapshots`, `garmin_activities`, `garmin_activity_legs` — not updated during the multi-device table rename
+- Since this doc is injected into MX-4's system prompt every run, he generated SQL against non-existent tables; Recovery and Home briefings reported "Biometric Database Inaccessible"
+- Fixed all 5 stale references to `health_snapshots`, `health_activities`, `health_activity_legs`
+- Root cause: `queryDb` swallows SQLite errors silently (by design, to avoid schema leakage) — so MX-4 gets a generic failure and assumes the DB is down
+
 **Tests:**
-- 324 tests passing (154 server + 170 client, last verified Jun 18, 2026)
+- 407 tests passing (237 server + 170 client, last verified Jun 24, 2026 — Plan 2 Phases 1–3 integration layer: 6 providers, 44 new server tests)
 - Coverage: all page components, all viz components, all hooks (server-mocked), all API routes, settings CRUD, AI provider, MX-4 tools, chat API, wiki module, orchestrator, wrap session, message compression, vault client, custom skills API, toolLabel (13 cases), categorizeError (7 cases), useChat SSE parsing (5 cases)
 
 ### Present but Untested (Never Run)
@@ -150,12 +169,63 @@
 **Path:** Define what "daily log" means for this user (caffeine? mood? readiness? supplements?) → build input form (possibly in AskSheet or a dedicated input view) → wire to `manual_inputs` table → build `DailyLogPage.tsx`.  
 **DB ready:** `manual_inputs` table has `readiness` (1–5), `caffeine_mg`, `supplements` columns.
 
-### Open Wearables Integration
+### Multi-Device Wearables Integration
 
-**Scope:** Expand Bacta's data pipeline beyond Garmin via [Open Wearables](https://github.com/the-momentum/open-wearables) — supports Polar, Wahoo, Oura, Whoop, and others. Garmin integration stays as-is (Open Wearables does not cover Garmin's proprietary API).  
-**Data layer impact:** The current `garmin_snapshots` / `garmin_activities` schema has no `source` column. Adding additional devices requires either (a) a unified `snapshots` table with a `source TEXT` column, or (b) separate per-device tables. Decision needed before implementation.  
-**Path:** Research Open Wearables API surface → design schema extension → build device-specific pollers → wire into existing MX-4 tool/query patterns.  
-**Blocker:** Needs a dedicated design + research session before any code is written.
+**Branch:** `feature/multi-device` — Plan 1 (Foundation) complete Jun 23, 2026.
+
+**Plan 1 complete:**
+- `garmin_snapshots` → `health_snapshots` (+ `source TEXT NOT NULL DEFAULT 'garmin'`, `UNIQUE(date, metric, source)`)
+- `garmin_activities` → `health_activities` (composite PK `activity_id TEXT + source TEXT`)
+- `garmin_activity_legs` → `health_activity_legs` (+ `source` column)
+- Idempotent migrations in `server/db/migrate.ts` — existing Garmin data preserved
+- All Python pollers updated to new table names; Garmin scripts relocated to `scripts/providers/garmin/`
+- `scripts/health_poller.py` dispatcher — runs Garmin always + OAuth providers when enabled
+- `server/lib/integrations/shared/metricMap.ts` — canonical metric registry + `PROVIDER_LABELS`
+- `server/lib/integrations/shared/sourceResolver.ts` — `resolveSource()` priority utility
+- 329 tests passing
+
+**Plan 2 Phase 1 (Strava + Hevy integration) — complete Jun 24, 2026, on `feature/multi-device`:**
+- `server/lib/integrations/shared/encryption.ts` — AES-256-GCM encrypt/decrypt; key from `BACTA_ENCRYPTION_KEY`
+- `server/lib/integrations/shared/types.ts` — `ProviderTokens`, `tokensExpired()`, `daysAgo()`, `toEpoch()`
+- `server/lib/settings.ts` — `PROVIDERS` const, all 6 provider setting defaults + `base_url` + `source_priority`; `SECRET_SETTING_KEYS` expanded (tokens, secrets, oauth_state for all 6 providers)
+- `server/api/settings.ts` — `ENCRYPTED_SETTING_KEYS` set; PUT handler encrypts client secrets + hevy_api_key at write
+- `server/lib/integrations/strava/` — OAuth, token refresh, paginated activity fetch, `health_activities` + daily distance rollup writes
+- `server/lib/integrations/hevy/` — API key auth, workout fetch, `health_activities` writes
+- `server/api/integrations.ts` — unified router: `GET /status`, `GET /:provider/authorize`, `GET /:provider/callback` (CSRF state), `GET /:provider/status`, `POST /:provider/disconnect`, `POST /:provider/sync` (accepts internal token OR session cookie)
+- `scripts/providers/strava/poller.py` + `scripts/providers/hevy/poller.py` — thin HTTP callers
+- `BACTA_ENCRYPTION_KEY` + `BACTA_INTERNAL_TOKEN` generated and written to `/opt/bacta/.env`
+- systemd `bacta-api.service` updated with `EnvironmentFile=/opt/bacta/.env`
+- 363 tests passing (193 server + 170 client); zero type errors
+
+**Plan 2 Phase 2 (Oura + Whoop) — complete Jun 24, 2026, on `feature/multi-device`:**
+- `server/lib/integrations/oura/` — OAuth (HTTP Basic auth for tokens), token refresh, parallel fetch of sleep/readiness/activity; processor writes 11 metrics to `health_snapshots` (source=`'oura'`)
+- `server/lib/integrations/whoop/` — OAuth v2 (form-body creds, hourly expiry), parallel fetch of recovery/sleep/workout; processor writes recovery + sleep snapshots + workout activities (source=`'whoop'`)
+- `scripts/providers/oura/poller.py` + `scripts/providers/whoop/poller.py`
+- `server/api/integrations.ts` extended: authorize/callback/runSync switches now handle oura + whoop
+- 385 tests passing (215 server + 170 client); zero type errors
+
+**Plan 2 Phase 3 (Polar + Withings) — complete Jun 24, 2026, on `feature/multi-device`:**
+- `server/lib/integrations/polar/` — OAuth (HTTP Basic auth, long-lived tokens, XML user-registration at callback), parallel fetch of exercises/sleep/nightly-recharge; processor writes sleep metrics + nightly recharge + exercises (source=`'polar'`)
+- `server/lib/integrations/withings/` — OAuth (non-standard `action=requesttoken` endpoint, wrapped `{status,body}` responses), measurement fetch (weight_kg, resting_hr, spo2); processor uses `value * 10^unit` formula (source=`'withings'`)
+- `scripts/providers/polar/poller.py` + `scripts/providers/withings/poller.py`
+- `server/api/integrations.ts` extended: all 3 switch statements now cover all 6 providers
+- 407 tests passing (237 server + 170 client); zero type errors (Plan 2 baseline — 445 after Plan 3)
+
+**Plan 3 (Settings UI + Source Attribution) — complete Jun 25–26, 2026, on `feature/multi-device`:**
+- `client/src/components/ProviderCard.tsx` — new shared component; OAuth (Client ID + Secret) and API-key (single input) flows; connected/disconnected states; `syncStatus` union (`idle | syncing | synced | error`) with SYNC NOW / SYNCED ✓ / RETRY / amber-error states; DISCONNECT button; `noCredentials` prop for poller-managed providers
+- `SettingsPage.tsx` — three new rails: INSTANCE (`base_url` text input, save-on-blur, SAVED indicator), CONNECTED DEVICES (one ProviderCard per provider — Garmin first with no credential form, Hevy uses API-key flow, others use OAuth), DATA PRIORITY (up/down reorder for `source_priority` JSON array with 7 providers)
+- `server/api/integrations.ts` — Hevy connected-status fix; `isConnected()` helper; Garmin as full peer in PROVIDERS (sync fires poller detached, lastSync falls back to DB MAX(date)); `oauth_state` encrypted at write/decrypted at compare; `addToSourcePriority`/`removeFromSourcePriority` called on connect/disconnect
+- `server/lib/settings.ts` — Garmin added to PROVIDERS with `garmin_enabled: 'true'` + `garmin_last_sync` defaults; `basicAuth()` extracted to `shared/types.ts`
+- `server/api/garmin.ts` — `GET /api/garmin/sources` route; returns `{metric: source}` map
+- `client/src/lib/garminApi.ts` — `fetchSources(): Promise<Record<string, string>>` helper
+- `useRecoveryData` + `useSleepData` hooks — `sources: Record<string, string>` added; `fetchSources()` called in `Promise.all`
+- `RecoveryPage.tsx` + `SleepPage.tsx` — file-local `SourceBadge` (amber pill, invisible for Garmin data); badges on HRV, RHR, Body Battery, Recovery Score, SpO₂, Respiration (Recovery); Sleep Score, Sleep HR, SpO₂ (Sleep)
+- `server/index.ts` — `requireAuth` accepts `BACTA_INTERNAL_TOKEN` Bearer header; `trust proxy: 1` for NPM `X-Forwarded-For` (was silently 500ing MX-4 refresh)
+- 445 tests passing (205 client + 240 server); zero type errors
+
+**Providers:** Polar, Oura, Whoop, Withings, Strava, Hevy — all direct OAuth 2.0 (no intermediary). Fitbit skipped (API deprecated Sept 2026). Apple Health / Google Health Connect deferred to native app.
+
+**Open Wearables** — deferred as optional upstream adapter, not a v1 dependency.
 
 ### Docker Support
 
@@ -192,6 +262,6 @@
 
 **`MX4Card` deprecated component.** `client/src/components/MX4Card.tsx` exports `MX4Card` which returns `null`. It's deprecated and left in place to avoid import breakage. Once no imports of `MX4Card` (the deprecated version, not `MX4Briefing`) exist, it can be removed.
 
-**Legacy EAV activity metrics.** `act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr` rows exist in `garmin_snapshots` from before the `garmin_activities` table existed. They're no longer written but still queried by nothing. They could be removed from VALID_METRICS and eventually deleted from the DB.
+**Legacy EAV activity metrics.** `act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr` rows exist in `health_snapshots` from before the `health_activities` table existed. They're no longer written but still queried by nothing. They could be removed from VALID_METRICS and eventually deleted from the DB.
 
 **`mx4/sections.py` section IDs don't match API route section names.** The sections in `sections.py` are `recovery`, `sleep-quality`, `training-week`, `vo2-fitness`. The section names in `insights.ts` VALID_SECTIONS are `home`, `recovery`, `training`, `sleep`, `nutrition`, `bloodwork`, `dailylog`. These naming schemes don't align. A decision is needed about what section IDs the orchestrator should use.

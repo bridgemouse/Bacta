@@ -18,7 +18,7 @@ def main():
 
     since = str(date.today() - timedelta(days=days))
     rows = db.execute(
-        "SELECT activity_id, date FROM garmin_activities WHERE type_key='multi_sport' AND date >= ? ORDER BY date DESC",
+        "SELECT activity_id, date FROM health_activities WHERE type_key='multi_sport' AND date >= ? ORDER BY date DESC",
         (since,)
     ).fetchall()
 
@@ -26,7 +26,7 @@ def main():
 
     for act_id, act_date in rows:
         existing = db.execute(
-            'SELECT COUNT(*) FROM garmin_activity_legs WHERE activity_id = ?', (act_id,)
+            'SELECT COUNT(*) FROM health_activity_legs WHERE activity_id = ?', (act_id,)
         ).fetchone()[0]
         if existing > 0:
             print(f'  {act_date} ({act_id}): already has {existing} legs, skipping')

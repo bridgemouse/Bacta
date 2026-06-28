@@ -15,7 +15,7 @@ describe('MX-4 Tools', () => {
     const { default: db } = await import('../../server/db/client')
     const today = new Date().toISOString().slice(0, 10)
     db.prepare(
-      'INSERT INTO garmin_snapshots (date, metric, value, unit) VALUES (?, ?, ?, ?)'
+      'INSERT INTO health_snapshots (date, metric, value, unit) VALUES (?, ?, ?, ?)'
     ).run(today, 'hrv', 52, 'ms')
     fs.mkdirSync(TEST_WIKI_DIR, { recursive: true })
   })
@@ -28,14 +28,14 @@ describe('MX-4 Tools', () => {
     it('returns rows for a valid SELECT', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
       const today = new Date().toISOString().slice(0, 10)
-      const result = await queryDb.execute!({ sql: `SELECT value FROM garmin_snapshots WHERE metric = 'hrv' AND date = '${today}'` }) as any
+      const result = await queryDb.execute!({ sql: `SELECT value FROM health_snapshots WHERE metric = 'hrv' AND date = '${today}'` }) as any
       expect(result.rows).toHaveLength(1)
       expect(result.rows[0].value).toBe(52)
     })
 
     it('returns error for non-SELECT statement', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
-      const result = await queryDb.execute!({ sql: 'DROP TABLE garmin_snapshots' }) as any
+      const result = await queryDb.execute!({ sql: 'DROP TABLE health_snapshots' }) as any
       expect(result.error).toMatch(/SELECT/)
     })
 
@@ -69,37 +69,37 @@ describe('MX-4 Tools', () => {
     it('rejects UPDATE and does not mutate data', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
       const { default: db } = await import('../../server/db/client')
-      const before = db.prepare("SELECT value FROM garmin_snapshots WHERE metric='hrv'").get() as any
-      const result = await queryDb.execute!({ sql: "UPDATE garmin_snapshots SET value=0 WHERE metric='hrv'" }) as any
+      const before = db.prepare("SELECT value FROM health_snapshots WHERE metric='hrv'").get() as any
+      const result = await queryDb.execute!({ sql: "UPDATE health_snapshots SET value=0 WHERE metric='hrv'" }) as any
       expect(result.error).toMatch(/SELECT/)
-      const after = db.prepare("SELECT value FROM garmin_snapshots WHERE metric='hrv'").get() as any
+      const after = db.prepare("SELECT value FROM health_snapshots WHERE metric='hrv'").get() as any
       expect(after.value).toBe(before.value)
     })
 
     it('rejects DELETE', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
-      const result = await queryDb.execute!({ sql: 'DELETE FROM garmin_snapshots' }) as any
+      const result = await queryDb.execute!({ sql: 'DELETE FROM health_snapshots' }) as any
       expect(result.error).toMatch(/SELECT/)
     })
 
     it('rejects multiple statements (injection via ;)', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
-      const result = await queryDb.execute!({ sql: 'SELECT 1; DROP TABLE garmin_snapshots' }) as any
+      const result = await queryDb.execute!({ sql: 'SELECT 1; DROP TABLE health_snapshots' }) as any
       expect(result.error).toBeDefined()
       const { default: db } = await import('../../server/db/client')
-      const exists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_snapshots'").get()
+      const exists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='health_snapshots'").get()
       expect(exists).toBeTruthy()
     })
 
     it('rejects a write smuggled inside a CTE', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
-      const result = await queryDb.execute!({ sql: "WITH x AS (SELECT 1) DELETE FROM garmin_snapshots" }) as any
+      const result = await queryDb.execute!({ sql: "WITH x AS (SELECT 1) DELETE FROM health_snapshots" }) as any
       expect(result.error).toBeDefined()
     })
 
     it('allows a read-only WITH ... SELECT', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
-      const result = await queryDb.execute!({ sql: "WITH x AS (SELECT value FROM garmin_snapshots WHERE metric='hrv') SELECT * FROM x" }) as any
+      const result = await queryDb.execute!({ sql: "WITH x AS (SELECT value FROM health_snapshots WHERE metric='hrv') SELECT * FROM x" }) as any
       expect(result.rows).toBeDefined()
       expect(result.error).toBeUndefined()
     })

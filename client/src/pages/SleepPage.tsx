@@ -21,6 +21,23 @@ import { hexA } from '../lib/hexA'
 
 const A = SECTION_ACCENTS.sleep
 
+function SourceBadge({ source }: { source?: string }) {
+  if (!source || source === 'garmin') return null
+  return (
+    <span style={{
+      background: hexA(COLORS.mx4Amber, 0.15),
+      color: COLORS.mx4Amber,
+      fontFamily: FONT_MONO,
+      fontSize: 9,
+      padding: '1px 5px',
+      borderRadius: 3,
+      letterSpacing: '0.06em',
+    }}>
+      {source.toUpperCase()}
+    </span>
+  )
+}
+
 const HERO_INFO: CardInfo = {
   title: 'Sleep Score & Duration',
   description: "Your Sleep Score (0–100) is Garmin's composite of duration, stage quality, and recovery value. Duration shown is time actually asleep — not time in bed.",
@@ -158,7 +175,7 @@ const SUBTEXT: CSSProperties = {
 }
 
 function SleepOverview() {
-  const { data: slp } = useSleepData()
+  const { data: slp, sources } = useSleepData()
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('sleep')
   const { isOpen: heroOpen, handleTap: heroTap } = useCardInfoOverlay('slp-hero', HERO_INFO, A)
   const { isOpen: archOpen, handleTap: archTap } = useCardInfoOverlay('slp-arch', ARCH_INFO, A)
@@ -235,6 +252,7 @@ function SleepOverview() {
         <Gauge value={slp.score.value} max={100} accent={A} size={98} stroke={6}>
           <span style={{ fontFamily: FONT_MONO, fontSize: 26, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{slp.score.value}</span>
           <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, letterSpacing: '0.12em', color: A, marginTop: 2 }}>{slp.score.state.toUpperCase()}</span>
+          <SourceBadge source={sources['sleep_score']} />
         </Gauge>
         {heroOpen && <InfoOverlay info={HERO_INFO} accent={A} radius={13} onClick={heroTap} />}
       </div>
@@ -372,9 +390,14 @@ function SleepOverview() {
       <Rail label="OVERNIGHT VITALS" accent={A} right="WHILE ASLEEP" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
         {slp.sleepHr != null && (
-          <HealthStatusTile label="Heart Rate" value={slp.sleepHr} unit="bpm" accent={A}
-            data={slp.sleepHrTrend}
-            info={SLEEP_HR_INFO} />
+          <div style={{ position: 'relative' }}>
+            <HealthStatusTile label="Heart Rate" value={slp.sleepHr} unit="bpm" accent={A}
+              data={slp.sleepHrTrend}
+              info={SLEEP_HR_INFO} />
+            <span style={{ position: 'absolute', top: 8, right: 10 }}>
+              <SourceBadge source={sources['sleep_hr']} />
+            </span>
+          </div>
         )}
         <HealthStatusTile label="Respiration" value={slp.resp.avg} unit="br/m" accent={A}
           inRange={slp.resp.avg >= 12 && slp.resp.avg <= 20}
@@ -387,11 +410,16 @@ function SleepOverview() {
             info={SLEEP_STRESS_INFO} />
         )}
         {slp.spo2.avg != null && (
-          <HealthStatusTile label="SpO₂" value={slp.spo2.avg} unit="%" accent={A}
-            inRange={slp.spo2.avg >= 95}
-            sub={slp.spo2.avg >= 97 ? 'excellent' : 'normal'}
-            data={slp.sleepSpo2Trend}
-            info={SPO2_INFO} />
+          <div style={{ position: 'relative' }}>
+            <HealthStatusTile label="SpO₂" value={slp.spo2.avg} unit="%" accent={A}
+              inRange={slp.spo2.avg >= 95}
+              sub={slp.spo2.avg >= 97 ? 'excellent' : 'normal'}
+              data={slp.sleepSpo2Trend}
+              info={SPO2_INFO} />
+            <span style={{ position: 'absolute', top: 8, right: 10 }}>
+              <SourceBadge source={sources['sleep_spo2']} />
+            </span>
+          </div>
         )}
       </div>
     </>

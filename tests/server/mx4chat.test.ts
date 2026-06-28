@@ -283,12 +283,12 @@ describe('toolLabel', () => {
   })
 
   it('extracts metric from queryDb SQL', () => {
-    expect(toolLabel('queryDb', { sql: "SELECT date, value FROM garmin_snapshots WHERE metric = 'hrv' ORDER BY date DESC LIMIT 30" }))
+    expect(toolLabel('queryDb', { sql: "SELECT date, value FROM health_snapshots WHERE metric = 'hrv' ORDER BY date DESC LIMIT 30" }))
       .toBe('PULLING TELEMETRY ON hrv')
   })
 
   it('falls back for queryDb with no metric match', () => {
-    expect(toolLabel('queryDb', { sql: 'SELECT * FROM garmin_activities' }))
+    expect(toolLabel('queryDb', { sql: 'SELECT * FROM health_activities' }))
       .toBe('PULLING TELEMETRY')
   })
 

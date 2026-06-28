@@ -1,12 +1,25 @@
 import { Router } from 'express'
 import db from '../db/client'
-import { setSetting, getSetting, SETTING_DEFAULTS, SECRET_SETTING_KEYS } from '../lib/settings'
+import { setSetting, getSetting, SETTING_DEFAULTS, SECRET_SETTING_KEYS, PROVIDERS } from '../lib/settings'
 import { scheduleNightly } from '../lib/ai/scheduler'
 import { testVaultConnection, resetVaultClient } from '../lib/ai/vaultClient'
+import { encrypt } from '../lib/integrations/shared/encryption'
 
 const settingsRouter = Router()
 
 export const VALID_LOGOS = ['capsule','splash','splat','crown','bloom','orb','vortex','beaker']
+
+// Keys stored in encrypted form — must be encrypted before setSetting() and decrypted on use.
+// Note: ai_api_key and research_api_key are in SECRET_SETTING_KEYS for masking but NOT encrypted
+// (they are used directly by the AI subsystem, not through decrypt()).
+const ENCRYPTED_SETTING_KEYS = new Set([
+  'strava_client_secret',
+  'hevy_api_key',
+  'polar_client_secret',
+  'oura_client_secret',
+  'whoop_client_secret',
+  'withings_client_secret',
+])
 
 // Per-key value validators. Only keys present here may be written via the API;
 // anything else (including auth_* secrets) is rejected.
@@ -26,6 +39,23 @@ const SETTING_VALIDATORS: Record<string, (v: string) => boolean> = {
   mx4_custom_skills:   v => { try { return Array.isArray(JSON.parse(v)) } catch { return false } },
   vault_url:           v => v === '' || /^https?:\/\/[^\s]+$/.test(v),
   app_logo:            v => VALID_LOGOS.includes(v),
+
+  // Multi-device globals
+  base_url:               v => v === '' || /^https?:\/\/[^\s]+$/.test(v),
+  source_priority:        v => { try { return Array.isArray(JSON.parse(v)) } catch { return false } },
+  // Provider credentials (writeable via API for Settings UI)
+  strava_client_id:       v => v.length <= 200,
+  strava_client_secret:   v => v.length <= 400,
+  hevy_api_key:           v => v.length <= 400,
+  hevy_enabled:           v => v === 'true' || v === 'false',
+  polar_client_id:        v => v.length <= 200,
+  polar_client_secret:    v => v.length <= 400,
+  oura_client_id:         v => v.length <= 200,
+  oura_client_secret:     v => v.length <= 400,
+  whoop_client_id:        v => v.length <= 200,
+  whoop_client_secret:    v => v.length <= 400,
+  withings_client_id:     v => v.length <= 200,
+  withings_client_secret: v => v.length <= 400,
 }
 
 settingsRouter.get('/', (_req, res) => {
@@ -84,12 +114,26 @@ settingsRouter.put('/:key', (req, res) => {
   if (!validate(value)) {
     return res.status(400).json({ error: 'invalid value for ' + key })
   }
-  setSetting(key, value)
+  const storedValue = ENCRYPTED_SETTING_KEYS.has(key) ? encrypt(value) : value
+  setSetting(key, storedValue)
   if (key === 'mx4_nightly_time' || key === 'mx4_nightly_enabled') {
     scheduleNightly()
   }
   if (key === 'vault_enabled' || key === 'vault_url') {
     resetVaultClient()
+  }
+  // Auto-sync source_priority when a provider is enabled or disabled via Settings UI
+  const enabledMatch = key.match(/^(.+)_enabled$/)
+  if (enabledMatch && PROVIDERS.includes(enabledMatch[1] as typeof PROVIDERS[number])) {
+    const provider = enabledMatch[1]
+    try {
+      const current: string[] = JSON.parse(getSetting('source_priority') ?? '["garmin"]')
+      if (value === 'true' && !current.includes(provider)) {
+        setSetting('source_priority', JSON.stringify([...current, provider]))
+      } else if (value === 'false') {
+        setSetting('source_priority', JSON.stringify(current.filter(p => p !== provider)))
+      }
+    } catch { /* leave unchanged */ }
   }
   res.json({ ok: true })
 })

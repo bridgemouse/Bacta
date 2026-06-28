@@ -8,23 +8,23 @@ import {
   archiveWikiPageSync,
 } from './wiki'
 
-const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the Garmin biometric database.
+const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the health biometric database.
 
 Schema:
-  garmin_snapshots(date TEXT, metric TEXT, value REAL, unit TEXT, source_json TEXT)
-  garmin_activities(date TEXT, activity_id TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
+  health_snapshots(date TEXT, metric TEXT, source TEXT, value REAL, unit TEXT, source_json TEXT)
+  health_activities(date TEXT, activity_id TEXT, source TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
   mx4_briefings(section TEXT, content_json TEXT, generated_at TEXT, model TEXT)
     — section values: 'recovery', 'sleep', 'training', 'home'
     — content_json is a JSON string: { tone, headline, summary, body, recommendation, flags }
     — Query example: SELECT section, content_json FROM mx4_briefings WHERE section IN ('recovery','sleep','training')
 
-garmin_snapshots uses EAV format — one row per metric per day. ALWAYS filter by metric name:
-  SELECT date, value FROM garmin_snapshots WHERE metric = 'hrv' ORDER BY date DESC LIMIT 30
+health_snapshots uses EAV format — one row per metric per day. ALWAYS filter by metric name:
+  SELECT date, value FROM health_snapshots WHERE metric = 'hrv' ORDER BY date DESC LIMIT 30
 
 Never use column names like sleep_score or hrv as column selectors — they are VALUES in the metric column.
 
 For the full metric catalog (names, units, typical ranges, sparse flags) see MX4_REFERENCE.md in your context.
-To discover what metrics are actually present in the DB: SELECT DISTINCT metric FROM garmin_snapshots ORDER BY metric`
+To discover what metrics are actually present in the DB: SELECT DISTINCT metric FROM health_snapshots ORDER BY metric`
 
 export const queryDb = tool({
   description: QUERY_DB_DESCRIPTION,

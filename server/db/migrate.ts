@@ -3,20 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import { initSettings } from '../lib/settings'
 
-const NEW_ACTIVITY_COLS = [
-  'aerobic_te REAL',
-  'anaerobic_te REAL',
-  'recovery_time_h REAL',
-  'zone1_s INTEGER',
-  'zone2_s INTEGER',
-  'zone3_s INTEGER',
-  'zone4_s INTEGER',
-  'zone5_s INTEGER',
-  'run_cadence INTEGER',
-  'run_stride_cm REAL',
-  'run_vert_osc_cm REAL',
-  'run_gct_ms INTEGER',
-]
+// NEW_ACTIVITY_COLS: columns are now part of health_activities schema from the start
+// (legacy ALTER TABLE loop removed — garmin_activities no longer exists post-migration)
 
 export function migrate() {
   const schema = fs.readFileSync(
@@ -25,18 +13,66 @@ export function migrate() {
   )
   db.exec(schema)
 
-  // Add new columns to existing prod DB — SQLite doesn't support ADD COLUMN IF NOT EXISTS
-  for (const col of NEW_ACTIVITY_COLS) {
-    try {
-      db.exec(`ALTER TABLE garmin_activities ADD COLUMN ${col}`)
-    } catch (e: unknown) {
-      if (!(e instanceof Error) || !e.message.includes('duplicate column name')) throw e
-      // column already exists, idempotent
-    }
+  // Rename garmin_snapshots → health_snapshots (idempotent)
+  const hasOldSnapshots = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_snapshots'"
+  ).get()
+  if (hasOldSnapshots) {
+    db.exec(`
+      INSERT OR IGNORE INTO health_snapshots
+        (id, date, metric, value, unit, source_json, created_at)
+      SELECT id, date, metric, value, unit, source_json, created_at
+      FROM garmin_snapshots
+    `)
+    db.exec('DROP TABLE garmin_snapshots')
+    console.log('[db] migrated garmin_snapshots → health_snapshots')
   }
 
-  // garmin_activity_legs is a new table — CREATE TABLE IF NOT EXISTS handles idempotency
-  // (schema.sql already ran above via db.exec(schema))
+  // Rename garmin_activities → health_activities (idempotent)
+  const hasOldActivities = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_activities'"
+  ).get()
+  if (hasOldActivities) {
+    db.exec(`
+      INSERT OR IGNORE INTO health_activities
+        (activity_id, date, start_time, name, type_key, distance_m, duration_s,
+         calories, avg_hr, elevation_m, aerobic_te, anaerobic_te, recovery_time_h,
+         zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+         run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, created_at)
+      SELECT
+        CAST(activity_id AS TEXT), date, start_time, name, type_key, distance_m, duration_s,
+        calories, avg_hr, elevation_m, aerobic_te, anaerobic_te, recovery_time_h,
+        zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+        run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, created_at
+      FROM garmin_activities
+    `)
+    db.exec('DROP TABLE garmin_activities')
+    console.log('[db] migrated garmin_activities → health_activities')
+  }
+
+  // Rename garmin_activity_legs → health_activity_legs (idempotent)
+  const hasOldLegs = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_activity_legs'"
+  ).get()
+  if (hasOldLegs) {
+    db.exec(`
+      INSERT OR IGNORE INTO health_activity_legs
+        (leg_id, activity_id, leg_index, type_key, start_time, duration_s, distance_m,
+         calories, avg_hr, max_hr, aerobic_te, anaerobic_te, training_load,
+         body_battery_diff, zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+         run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, run_power_w,
+         row_stroke_rate, row_power_w, row_strokes, created_at)
+      SELECT
+        leg_id, CAST(activity_id AS TEXT), leg_index, type_key, start_time, duration_s,
+        distance_m, calories, avg_hr, max_hr, aerobic_te, anaerobic_te, training_load,
+        body_battery_diff, zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+        run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, run_power_w,
+        row_stroke_rate, row_power_w, row_strokes, created_at
+      FROM garmin_activity_legs
+    `)
+    db.exec('DROP TABLE garmin_activity_legs')
+    console.log('[db] migrated garmin_activity_legs → health_activity_legs')
+  }
 
   // Add section column to mx4_chat_messages — tracks which section a message belongs to
   try {

@@ -45,8 +45,8 @@ let syncStartedAt: number | null = null
 // GET /api/garmin/summary — latest available value per metric
 garminRouter.get('/summary', (_req, res) => {
   const rows = db.prepare(
-    `SELECT metric, value FROM garmin_snapshots gs
-     WHERE date = (SELECT MAX(date) FROM garmin_snapshots WHERE metric = gs.metric)`
+    `SELECT metric, value FROM health_snapshots gs
+     WHERE date = (SELECT MAX(date) FROM health_snapshots WHERE metric = gs.metric)`
   ).all() as Array<{ metric: string; value: number }>
 
   const summary: Record<string, number> = {}
@@ -64,7 +64,7 @@ garminRouter.get('/activities', (req, res) => {
             aerobic_te, anaerobic_te, recovery_time_h,
             zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
             run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms
-     FROM garmin_activities WHERE date >= ? ORDER BY start_time DESC`
+     FROM health_activities WHERE date >= ? ORDER BY start_time DESC`
   ).all(since)
   res.json({ activities: rows })
 })
@@ -99,7 +99,7 @@ garminRouter.get('/weekly-volume', (req, res) => {
   const rows = db.prepare(
     `SELECT strftime('%Y-%W', date) AS week,
             ROUND(SUM(duration_s) / 3600.0, 2) AS hours
-     FROM garmin_activities
+     FROM health_activities
      GROUP BY week
      ORDER BY MIN(date) DESC
      LIMIT ?`
@@ -113,7 +113,7 @@ garminRouter.get('/weekly-intensity', (_req, res) => {
     `SELECT
        COALESCE(SUM(CASE WHEN metric = 'intensity_mod_min' THEN value ELSE 0 END), 0) AS moderate,
        COALESCE(SUM(CASE WHEN metric = 'intensity_vig_min' THEN value ELSE 0 END), 0) AS vigorous
-     FROM garmin_snapshots
+     FROM health_snapshots
      WHERE metric IN ('intensity_mod_min', 'intensity_vig_min')
        AND date >= date('now', '-' || CAST((CAST(strftime('%w', 'now') AS INTEGER) + 6) % 7 AS TEXT) || ' days')`
   ).get() as { moderate: number; vigorous: number }
@@ -126,7 +126,7 @@ garminRouter.get('/weekly-avg-hr', (req, res) => {
   const rows = db.prepare(
     `SELECT strftime('%Y-%W', date) AS week,
             CAST(ROUND(AVG(avg_hr), 0) AS INTEGER) AS avg_hr
-     FROM garmin_activities
+     FROM health_activities
      WHERE avg_hr IS NOT NULL AND avg_hr > 0
      GROUP BY week
      ORDER BY MIN(date) DESC
@@ -140,7 +140,7 @@ garminRouter.get('/sleep-hypno', (_req, res) => {
   const EMPTY = { hypno: [], startLocal: null, endLocal: null }
   try {
     const row = db.prepare(
-      `SELECT source_json FROM garmin_snapshots WHERE metric = 'sleep_score' ORDER BY date DESC LIMIT 1`
+      `SELECT source_json FROM health_snapshots WHERE metric = 'sleep_score' ORDER BY date DESC LIMIT 1`
     ).get() as { source_json: string } | undefined
 
     if (!row) { res.json(EMPTY); return }
@@ -174,8 +174,8 @@ garminRouter.get('/sleep-hypno', (_req, res) => {
 
 // GET /api/garmin/activities/:id/legs — legs for a multisport activity
 garminRouter.get('/activities/:id/legs', (req, res) => {
-  const activityId = Number(req.params.id)
-  if (!Number.isFinite(activityId)) {
+  const activityId = req.params.id
+  if (!activityId) {
     res.status(400).json({ error: 'Invalid activity ID' })
     return
   }
@@ -186,9 +186,21 @@ garminRouter.get('/activities/:id/legs', (req, res) => {
             zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
             run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, run_power_w,
             row_stroke_rate, row_power_w, row_strokes
-     FROM garmin_activity_legs WHERE activity_id = ? ORDER BY leg_index`
+     FROM health_activity_legs WHERE activity_id = ? ORDER BY leg_index`
   ).all(activityId)
   res.json({ legs })
+})
+
+// GET /api/garmin/sources — latest data source per metric (must be before /:metric wildcard)
+garminRouter.get('/sources', (_req, res) => {
+  const rows = db.prepare(
+    `SELECT metric, source FROM health_snapshots gs
+     WHERE date = (SELECT MAX(date) FROM health_snapshots WHERE metric = gs.metric)
+     GROUP BY metric`
+  ).all() as Array<{ metric: string; source: string }>
+  const out: Record<string, string> = {}
+  for (const row of rows) out[row.metric] = row.source ?? 'garmin'
+  res.json(out)
 })
 
 // GET /api/garmin/:metric — single metric, optional date range
@@ -203,7 +215,7 @@ garminRouter.get('/:metric', (req, res) => {
 
   if (from && to) {
     const rows = db.prepare(
-      'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? AND date BETWEEN ? AND ? ORDER BY date'
+      'SELECT date, metric, value, unit FROM health_snapshots WHERE metric = ? AND date BETWEEN ? AND ? ORDER BY date'
     ).all(metric, from as string, to as string)
     res.json({ rows })
     return
@@ -212,7 +224,7 @@ garminRouter.get('/:metric', (req, res) => {
   // Latest available value for this metric — per-metric MAX(date), robust to
   // timezone (user is EST) and to metrics that arrive at different times.
   const row = db.prepare(
-    'SELECT date, metric, value, unit FROM garmin_snapshots WHERE metric = ? ORDER BY date DESC LIMIT 1'
+    'SELECT date, metric, value, unit FROM health_snapshots WHERE metric = ? ORDER BY date DESC LIMIT 1'
   ).get(metric) as { date: string; metric: string; value: number; unit: string } | undefined
 
   res.json(row ?? { metric, value: null, unit: null })

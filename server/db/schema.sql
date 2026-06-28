@@ -1,12 +1,13 @@
-CREATE TABLE IF NOT EXISTS garmin_snapshots (
+CREATE TABLE IF NOT EXISTS health_snapshots (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   date        TEXT NOT NULL,
   metric      TEXT NOT NULL,
   value       REAL,
   unit        TEXT,
+  source      TEXT NOT NULL DEFAULT 'garmin',
   source_json TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(date, metric)
+  UNIQUE(date, metric, source)
 );
 
 CREATE TABLE IF NOT EXISTS macrofactor_snapshots (
@@ -29,8 +30,9 @@ CREATE TABLE IF NOT EXISTS manual_inputs (
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS garmin_activities (
-  activity_id      INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS health_activities (
+  activity_id      TEXT NOT NULL,
+  source           TEXT NOT NULL DEFAULT 'garmin',
   date             TEXT NOT NULL,
   start_time       TEXT NOT NULL,
   name             TEXT NOT NULL,
@@ -52,13 +54,15 @@ CREATE TABLE IF NOT EXISTS garmin_activities (
   run_stride_cm    REAL,
   run_vert_osc_cm  REAL,
   run_gct_ms       INTEGER,
-  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (activity_id, source)
 );
-CREATE INDEX IF NOT EXISTS idx_garmin_activities_date ON garmin_activities(date);
+CREATE INDEX IF NOT EXISTS idx_health_activities_date ON health_activities(date);
 
-CREATE TABLE IF NOT EXISTS garmin_activity_legs (
+CREATE TABLE IF NOT EXISTS health_activity_legs (
   leg_id            INTEGER PRIMARY KEY,
-  activity_id       INTEGER NOT NULL,
+  activity_id       TEXT NOT NULL,
+  source            TEXT NOT NULL DEFAULT 'garmin',
   leg_index         INTEGER NOT NULL,
   type_key          TEXT NOT NULL,
   start_time        TEXT NOT NULL,
@@ -85,9 +89,9 @@ CREATE TABLE IF NOT EXISTS garmin_activity_legs (
   row_power_w       INTEGER,
   row_strokes       INTEGER,
   created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(activity_id, leg_index)
+  UNIQUE(activity_id, source, leg_index)
 );
-CREATE INDEX IF NOT EXISTS idx_garmin_activity_legs_activity ON garmin_activity_legs(activity_id);
+CREATE INDEX IF NOT EXISTS idx_health_activity_legs_activity ON health_activity_legs(activity_id);
 
 CREATE TABLE IF NOT EXISTS blood_work (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -13,6 +13,7 @@ import pollRouter from './api/poll'
 import mx4Router from './api/mx4'
 import settingsRouter from './api/settings'
 import authRouter from './api/auth'
+import { integrationsRouter, callbackHandler } from './api/integrations'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './lib/auth'
 import { VALID_LOGOS } from './api/settings'
 import { scheduleNightly } from './lib/ai/scheduler'
@@ -25,6 +26,9 @@ const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST
 
 export const app = express()
 app.disable('x-powered-by')
+// Bacta is served behind Nginx Proxy Manager which adds X-Forwarded-For.
+// Trusting the first proxy hop makes express-rate-limit work correctly on LAN.
+app.set('trust proxy', 1)
 
 // Security headers + CSP. The app uses inline styles everywhere and loads
 // Google Fonts; scripts/connections are same-origin only.
@@ -72,8 +76,13 @@ const loginLimiter = rateLimit({
 
 // Auth gate: enforced only once a PIN is configured, so a fresh box / the test
 // suite stay open until the user secures it. Health + auth endpoints are exempt.
+// Accepts BACTA_INTERNAL_TOKEN Bearer header so pollers and scheduled syncs
+// can reach protected routes without a browser session.
 function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
   if (!isAuthConfigured()) return next()
+  const internal = process.env.BACTA_INTERNAL_TOKEN ?? ''
+  const bearer = (req.headers.authorization ?? '').replace('Bearer ', '')
+  if (internal && bearer === internal) return next()
   const token = parseCookies(req.headers.cookie)[SESSION_COOKIE]
   if (verifyToken(token)) return next()
   res.status(401).json({ error: 'Authentication required' })
@@ -90,6 +99,13 @@ app.use('/api/bloodwork', requireAuth, bloodworkRouter)
 app.use('/api/poll', requireAuth, aiLimiter, pollRouter)
 app.use('/api/mx4', requireAuth, aiLimiter, mx4Router)
 app.use('/api/settings', requireAuth, settingsRouter)
+
+// OAuth callbacks exempt from requireAuth — browser arrives from external redirect
+// CSRF state parameter is the guard inside callbackHandler
+app.get('/api/integrations/:provider/callback', callbackHandler)
+
+// All other integration routes require session auth
+app.use('/api/integrations', requireAuth, integrationsRouter)
 
 // Serve built React app in production
 if (process.env.NODE_ENV === 'production') {

@@ -164,3 +164,10 @@ export async function fetchWeeklyIntensity(): Promise<{ moderate: number; vigoro
   if (!res.ok) return { moderate: 0, vigorous: 0 }
   return res.json() as Promise<{ moderate: number; vigorous: number }>
 }
+
+/** Per-metric data source for the latest reading. Only present for metrics in health_snapshots. */
+export async function fetchSources(): Promise<Record<string, string>> {
+  const res = await fetch('/api/garmin/sources')
+  if (!res.ok) return {}
+  return res.json() as Promise<Record<string, string>>
+}

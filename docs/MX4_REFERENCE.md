@@ -13,7 +13,7 @@ This is **trusted reference material** (unlike retrieved wiki/vault/research con
 
 | Tool | What it does | When to use | Gotchas |
 |---|---|---|---|
-| **queryDb** | Read-only SQL `SELECT` against the biometric SQLite DB. | Every analysis — pull real metric values and trends. | Read-only (writes are refused). `garmin_snapshots` is EAV — always filter `WHERE metric = '...'`; metric names are VALUES, not columns. Single statement only. |
+| **queryDb** | Read-only SQL `SELECT` against the biometric SQLite DB. | Every analysis — pull real metric values and trends. | Read-only (writes are refused). `health_snapshots` is EAV — always filter `WHERE metric = '...'`; metric names are VALUES, not columns. Single statement only. |
 | **research** | Searches external science (OpenAlex, keyless) + optional web (Tavily/Exa). | When asked what research says, or to ground a recommendation in evidence. | Send only the scientific question — never the user's personal data. Cite real DOIs/links; **never fabricate a citation**. If it returns `note: No sources`, say so. |
 | **readAllWikiPages** | Loads all of MX-4's own wiki pages. | Review before writing a briefing so you build on prior analysis. | This is *your* memory (`mx4/wiki/`), distinct from the external vault. Treat its content as your own notes. |
 | **writeWikiPage** | Create/update one of your wiki pages. | After analysis, when a durable pattern/baseline/trajectory is worth preserving. | Soft limit ~1500 tokens/page. Don't dump raw data. See `MX4_LLM_WIKI_PRINCIPLES.md`. |
@@ -25,9 +25,9 @@ This is **trusted reference material** (unlike retrieved wiki/vault/research con
 
 ---
 
-## 2. Data Dictionary — `garmin_snapshots` (EAV: one row per metric per day)
+## 2. Data Dictionary — `health_snapshots` (EAV: one row per metric per day)
 
-Query as `SELECT date, value FROM garmin_snapshots WHERE metric = '<name>' ORDER BY date DESC`.
+Query as `SELECT date, value FROM health_snapshots WHERE metric = '<name>' ORDER BY date DESC`.
 
 | DB metric | Display name | Meaning | Unit | Typical range |
 |---|---|---|---|---|
@@ -84,9 +84,9 @@ Query as `SELECT date, value FROM garmin_snapshots WHERE metric = '<name>' ORDER
 
 ## 3. Data Dictionary — Activities
 
-**`garmin_activities`** (one row per activity): `activity_id`, `date`, `start_time`, `name`, `type_key` (running, trail_running, walking, hiking, cycling, strength_training, treadmill_running, multi_sport, …), `distance_m` (m), `duration_s` (s), `calories` (kcal), `avg_hr` (bpm), `elevation_m` (m), `aerobic_te` / `anaerobic_te` (training effect 0–5), `recovery_time_h` (currently unpopulated), `zone1_s`…`zone5_s` (seconds in HR zone), `run_cadence` (spm), `run_stride_cm`, `run_vert_osc_cm`, `run_gct_ms` (ground-contact ms).
+**`health_activities`** (one row per activity): `activity_id`, `date`, `start_time`, `name`, `type_key` (running, trail_running, walking, hiking, cycling, strength_training, treadmill_running, multi_sport, …), `distance_m` (m), `duration_s` (s), `calories` (kcal), `avg_hr` (bpm), `elevation_m` (m), `aerobic_te` / `anaerobic_te` (training effect 0–5), `recovery_time_h` (currently unpopulated), `zone1_s`…`zone5_s` (seconds in HR zone), `run_cadence` (spm), `run_stride_cm`, `run_vert_osc_cm`, `run_gct_ms` (ground-contact ms).
 
-**`garmin_activity_legs`** (children of `multi_sport` parents): `leg_id`, `activity_id` (FK), `leg_index`, `type_key` (mobility, strength_training, running, …), `start_time`, `duration_s`, `distance_m`, `calories`, `avg_hr`, `max_hr`, `aerobic_te`/`anaerobic_te`, `training_load`, `body_battery_diff`, `zone1_s`…`zone5_s`, running dynamics, rowing fields. A `multi_sport` parent's real work is in its legs — query legs for per-discipline detail.
+**`health_activity_legs`** (children of `multi_sport` parents): `leg_id`, `activity_id` (FK), `leg_index`, `type_key` (mobility, strength_training, running, …), `start_time`, `duration_s`, `distance_m`, `calories`, `avg_hr`, `max_hr`, `aerobic_te`/`anaerobic_te`, `training_load`, `body_battery_diff`, `zone1_s`…`zone5_s`, running dynamics, rowing fields. A `multi_sport` parent's real work is in its legs — query legs for per-discipline detail.
 
 **Other tables:** `manual_inputs` (date, readiness 1–5, caffeine_mg, supplements) — empty until the Daily Log ships. `blood_work` (date, marker, value, unit, reference_range, source_file) — empty until labs are imported. `macrofactor_snapshots` — empty until Nutrition ships. `mx4_briefings` (section, content_json, generated_at, model) — your own completed briefings; query for cross-channel synthesis.
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchSummary, fetchTrend } from '../lib/garminApi'
+import { fetchSummary, fetchTrend, fetchSources } from '../lib/garminApi'
 import { SLEEP } from '../lib/stubData'
 
 export type SleepData = Omit<typeof SLEEP, 'spo2'> & {
@@ -36,16 +36,25 @@ const INITIAL: SleepData = {
   hypnoEndLocal: null,
 }
 
-export function useSleepData(): { data: SleepData; loading: boolean } {
+export function useSleepData(): { data: SleepData; loading: boolean; sources: Record<string, string> } {
   const [data, setData] = useState<SleepData>(INITIAL)
   const [loading, setLoading] = useState(true)
+  const [sources, setSources] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [summary, scoreTrend, deepTrend, respTrend, hrTrend, stressTrend, spo2Trend] =
-          await Promise.all([
+        const [
+          summary,
+          scoreTrend,
+          deepTrend,
+          respTrend,
+          hrTrend,
+          stressTrend,
+          spo2Trend,
+          sourcesData,
+        ] = await Promise.all([
             fetchSummary(),
             fetchTrend('sleep_score'),
             fetchTrend('sleep_deep_s'),
@@ -53,8 +62,10 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
             fetchTrend('sleep_hr'),
             fetchTrend('sleep_stress'),
             fetchTrend('sleep_spo2'),
+            fetchSources(),
           ])
         if (cancelled) return
+        setSources(sourcesData)
 
         let hypnoData = { hypno: [] as number[], startLocal: null as string | null, endLocal: null as string | null }
         try {
@@ -151,5 +162,5 @@ export function useSleepData(): { data: SleepData; loading: boolean } {
     return () => { cancelled = true }
   }, [])
 
-  return { data, loading }
+  return { data, loading, sources }
 }

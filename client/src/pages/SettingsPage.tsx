@@ -6,6 +6,8 @@ import { APP_VERSION } from '../version'
 import { COLORS, FONT_MONO, FONT_UI, MX4_COLOR } from '../theme'
 import { hexA } from '../lib/hexA'
 import { LOGO_OPTIONS, DEFAULT_LOGO, logoSrc, type LogoKey } from '../hooks/useAppLogo'
+import { ProviderCard } from '../components/ProviderCard'
+import type { ProviderSyncStatus } from '../components/ProviderCard'
 
 const MODELS_BY_PROVIDER: Record<string, string[]> = {
   google:    ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.5-flash'],
@@ -16,6 +18,11 @@ const MODELS_BY_PROVIDER: Record<string, string[]> = {
 const PROVIDER_LABELS: Record<string, string> = {
   google: 'Gemini', anthropic: 'Claude', openai: 'OpenAI',
 }
+
+const ALL_INTEGRATION_PROVIDERS = ['garmin', 'strava', 'hevy', 'oura', 'whoop', 'polar', 'withings'] as const
+const NON_OAUTH_PROVIDERS = new Set(['garmin', 'hevy'])
+const OAUTH_PROVIDERS = new Set<string>(ALL_INTEGRATION_PROVIDERS.filter(p => !NON_OAUTH_PROVIDERS.has(p)))
+const PRIORITY_ALL = ALL_INTEGRATION_PROVIDERS
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error'
 
@@ -114,10 +121,53 @@ export function SettingsPage() {
   const [vaultTestDetails, setVaultTestDetails] = useState<{ domains?: number; page_count?: number } | null>(null)
   const [webKeyInput, setWebKeyInput] = useState('')
   const [webKeyFocused, setWebKeyFocused] = useState(false)
+  const [integrationStatus, setIntegrationStatus] = useState<
+    Record<string, { connected: boolean; lastSync: string | null }>
+  >({})
+  const [providerInputs, setProviderInputs] = useState<
+    Record<string, { clientId: string; clientSecret: string; apiKey: string }>
+  >({})
+  const [syncStatuses, setSyncStatuses] = useState<Record<string, ProviderSyncStatus>>({})
+  const [syncErrors, setSyncErrors] = useState<Record<string, string>>({})
+  const [connectErrors, setConnectErrors] = useState<Record<string, string>>({})
+  const [baseUrlInput, setBaseUrlInput] = useState('')
+  const [priorityList, setPriorityList] = useState<string[]>([...PRIORITY_ALL])
+
+  const refreshStatus = async () => {
+    const res = await fetch('/api/integrations/status')
+    if (res.ok) setIntegrationStatus(await res.json())
+  }
 
   useEffect(() => {
-    fetch('/api/settings').then(r => r.json()).then(setSettings)
+    fetch('/api/settings').then(r => r.json()).then(d => {
+      setSettings(d)
+      setBaseUrlInput(d.base_url ?? '')
+      if (d.source_priority) {
+        try {
+          const saved = JSON.parse(d.source_priority) as string[]
+          if (Array.isArray(saved) && saved.length > 0) {
+            const rest = [...PRIORITY_ALL].filter(p => !saved.includes(p))
+            setPriorityList([...saved, ...rest])
+          }
+        } catch { /* keep default */ }
+      }
+    })
     fetch('/api/settings/custom-skills').then(r => r.json()).then(d => setSkills(d.skills ?? []))
+    refreshStatus()
+
+    // Handle OAuth callback redirect — provider redirects back to /#/settings?connected=X
+    const hashQuery = window.location.hash.split('?')[1]
+    if (hashQuery) {
+      const params = new URLSearchParams(hashQuery)
+      const connected = params.get('connected')
+      const err = params.get('error')
+      if (connected || err) {
+        window.history.replaceState(null, '', window.location.pathname + '#/settings')
+      }
+      if (err) {
+        setConnectErrors(prev => ({ ...prev, [err]: 'OAuth failed — check credentials and try again.' }))
+      }
+    }
   }, [])
 
   const save = async (key: string, value: string) => {
@@ -142,6 +192,89 @@ export function SettingsPage() {
 
   async function deleteSkill(index: number) {
     await saveSkills(skills.filter((_, i) => i !== index))
+  }
+
+  const connectProvider = async (provider: string) => {
+    const inputs = providerInputs[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }
+    setConnectErrors(prev => ({ ...prev, [provider]: '' }))
+
+    if (provider === 'garmin') {
+      await save('garmin_enabled', 'true')
+      await refreshStatus()
+      return
+    }
+
+    if (provider === 'hevy') {
+      if (!inputs.apiKey) {
+        setConnectErrors(prev => ({ ...prev, hevy: 'API key is required.' }))
+        return
+      }
+      await save('hevy_api_key', inputs.apiKey)
+      await save('hevy_enabled', 'true')
+      await refreshStatus()
+      return
+    }
+
+    if (!inputs.clientId || !inputs.clientSecret) {
+      setConnectErrors(prev => ({ ...prev, [provider]: 'Client ID and Client Secret are required.' }))
+      return
+    }
+    await save(`${provider}_client_id`, inputs.clientId)
+    await save(`${provider}_client_secret`, inputs.clientSecret)
+
+    const res = await fetch(`/api/integrations/${provider}/authorize`)
+    if (!res.ok) {
+      const data = await res.json() as { error?: string }
+      setConnectErrors(prev => ({ ...prev, [provider]: data.error ?? 'Failed to start OAuth flow.' }))
+      return
+    }
+    const { url } = await res.json() as { url: string }
+    window.location.href = url
+  }
+
+  const disconnectProvider = async (provider: string) => {
+    await fetch(`/api/integrations/${provider}/disconnect`, { method: 'POST' })
+    await refreshStatus()
+  }
+
+  const syncProvider = async (provider: string) => {
+    setSyncStatuses(prev => ({ ...prev, [provider]: 'syncing' }))
+    setSyncErrors(prev => ({ ...prev, [provider]: '' }))
+    try {
+      const res = await fetch(`/api/integrations/${provider}/sync`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        setSyncErrors(prev => ({ ...prev, [provider]: data.error ?? 'Sync failed.' }))
+        setSyncStatuses(prev => ({ ...prev, [provider]: 'error' }))
+      } else {
+        setSyncStatuses(prev => ({ ...prev, [provider]: 'synced' }))
+        await refreshStatus()
+        setTimeout(() => setSyncStatuses(prev => ({ ...prev, [provider]: 'idle' })), 3000)
+      }
+    } catch {
+      setSyncErrors(prev => ({ ...prev, [provider]: 'Network error.' }))
+      setSyncStatuses(prev => ({ ...prev, [provider]: 'error' }))
+    }
+  }
+
+  const setProviderInput = (
+    provider: string,
+    field: 'clientId' | 'clientSecret' | 'apiKey',
+    value: string,
+  ) => {
+    setProviderInputs(prev => {
+      const existing = prev[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }
+      return { ...prev, [provider]: { ...existing, [field]: value } }
+    })
+  }
+
+  const movePriority = async (index: number, dir: -1 | 1) => {
+    const swapIdx = index + dir
+    if (swapIdx < 0 || swapIdx >= priorityList.length) return
+    const next = [...priorityList]
+    ;[next[index], next[swapIdx]] = [next[swapIdx], next[index]]
+    setPriorityList(next)
+    await save('source_priority', JSON.stringify(next))
   }
 
   async function addSkill() {
@@ -968,6 +1101,109 @@ export function SettingsPage() {
       </div>
 
       <SecurityRail />
+
+      <Rail label="INSTANCE" accent={MX4_COLOR} />
+      <div style={cardStyle}>
+        <div style={rowStyleLast}>
+          <span style={labelStyle}>Base URL</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+            <input
+              value={baseUrlInput}
+              onChange={e => setBaseUrlInput(e.target.value)}
+              onBlur={() => {
+                if (baseUrlInput !== settings.base_url) save('base_url', baseUrlInput)
+              }}
+              placeholder="http://bacta.home"
+              style={{ ...selectStyle, width: 220, padding: '6px 10px' }}
+            />
+            {savedKey === 'base_url' && (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.mx4Green }}>
+                SAVED
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Rail label="CONNECTED DEVICES" accent={MX4_COLOR} />
+      {ALL_INTEGRATION_PROVIDERS.map(provider => {
+        const status = integrationStatus[provider] ?? { connected: false, lastSync: null }
+        const inputs = providerInputs[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }
+        return (
+          <ProviderCard
+            key={provider}
+            provider={provider}
+            isOAuth={OAUTH_PROVIDERS.has(provider)}
+            noCredentials={provider === 'garmin'}
+            connected={status.connected}
+            lastSync={status.lastSync}
+            clientId={inputs.clientId}
+            clientSecret={inputs.clientSecret}
+            apiKey={inputs.apiKey}
+            onClientIdChange={v => setProviderInput(provider, 'clientId', v)}
+            onClientSecretChange={v => setProviderInput(provider, 'clientSecret', v)}
+            onApiKeyChange={v => setProviderInput(provider, 'apiKey', v)}
+            onConnect={() => connectProvider(provider)}
+            onDisconnect={() => disconnectProvider(provider)}
+            onSync={() => syncProvider(provider)}
+            syncStatus={syncStatuses[provider] ?? 'idle'}
+            syncError={syncErrors[provider] ?? ''}
+            connectError={connectErrors[provider] ?? ''}
+          />
+        )
+      })}
+
+      <Rail label="DATA PRIORITY" accent={MX4_COLOR} />
+      <div style={cardStyle}>
+        {priorityList.map((p, i) => (
+          <div key={p} style={i === priorityList.length - 1 ? rowStyleLast : rowStyle}>
+            <span style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              letterSpacing: '0.08em',
+              color: COLORS.text,
+            }}>
+              {p.toUpperCase()}
+            </span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={() => movePriority(i, -1)}
+                disabled={i === 0}
+                aria-label={`Move ${p} up`}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  background: 'none',
+                  border: `1px solid ${COLORS.line}`,
+                  borderRadius: 4,
+                  color: i === 0 ? COLORS.textMuted : COLORS.textSecondary,
+                  padding: '2px 8px',
+                  cursor: i === 0 ? 'default' : 'pointer',
+                }}
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => movePriority(i, 1)}
+                disabled={i === priorityList.length - 1}
+                aria-label={`Move ${p} down`}
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 11,
+                  background: 'none',
+                  border: `1px solid ${COLORS.line}`,
+                  borderRadius: 4,
+                  color: i === priorityList.length - 1 ? COLORS.textMuted : COLORS.textSecondary,
+                  padding: '2px 8px',
+                  cursor: i === priorityList.length - 1 ? 'default' : 'pointer',
+                }}
+              >
+                ↓
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Rail 7: GARMIN */}
       <Rail label="GARMIN" accent={MX4_COLOR} />

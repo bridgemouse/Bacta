@@ -191,14 +191,6 @@ garminRouter.get('/activities/:id/legs', (req, res) => {
   res.json({ legs })
 })
 
-// GET /api/garmin/status — connected if health_snapshots contains garmin data (must be before /:metric wildcard)
-garminRouter.get('/status', (_req, res) => {
-  const row = db.prepare(
-    `SELECT COUNT(*) as count, MAX(date) as last_date FROM health_snapshots WHERE source = 'garmin'`
-  ).get() as { count: number; last_date: string | null }
-  res.json({ connected: row.count > 0, lastSync: row.last_date })
-})
-
 // GET /api/garmin/sources — latest data source per metric (must be before /:metric wildcard)
 garminRouter.get('/sources', (_req, res) => {
   const rows = db.prepare(

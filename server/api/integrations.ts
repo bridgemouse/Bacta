@@ -1,5 +1,8 @@
 import { Router, Request, Response, RequestHandler } from 'express'
 import { randomUUID } from 'crypto'
+import { spawn } from 'child_process'
+import path from 'path'
+import db from '../db/client'
 import { getSetting, setSetting, PROVIDERS, Provider } from '../lib/settings'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from '../lib/auth'
 import { encrypt, decrypt } from '../lib/integrations/shared/encryption'
@@ -48,9 +51,9 @@ function saveTokens(provider: Provider, tokens: ProviderTokens): void {
 
 function isConnected(provider: Provider): boolean {
   const enabled = getSetting(`${provider}_enabled`)
-  return provider === 'hevy'
-    ? enabled === 'true' && !!getSetting('hevy_api_key')
-    : enabled === 'true' && !!getTokens(provider)
+  if (provider === 'garmin') return enabled === 'true'
+  if (provider === 'hevy')   return enabled === 'true' && !!getSetting('hevy_api_key')
+  return enabled === 'true' && !!getTokens(provider)
 }
 
 function addToSourcePriority(provider: Provider): void {
@@ -78,10 +81,13 @@ function getRedirectUri(provider: Provider): string {
 router.get('/status', (_req: Request, res: Response) => {
   const out: Record<string, { connected: boolean; lastSync: string | null }> = {}
   for (const p of PROVIDERS) {
-    out[p] = {
-      connected: isConnected(p),
-      lastSync:  getSetting(`${p}_last_sync`) || null,
+    let lastSync = getSetting(`${p}_last_sync`) || null
+    if (p === 'garmin' && !lastSync) {
+      const row = db.prepare(`SELECT MAX(date) as d FROM health_snapshots WHERE source = 'garmin'`)
+        .get() as { d: string | null }
+      lastSync = row?.d ?? null
     }
+    out[p] = { connected: isConnected(p), lastSync }
   }
   res.json(out)
 })
@@ -158,6 +164,14 @@ async function runSync(provider: Provider): Promise<number> {
   const since = daysAgo(30)
 
   switch (provider) {
+    case 'garmin': {
+      // Garmin is managed by the Python poller — fire and forget, return immediately
+      const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
+      spawn('python3', [script], { stdio: 'ignore', detached: true }).unref()
+      setSetting('garmin_last_sync', new Date().toISOString())
+      return 0
+    }
+
     case 'strava': {
       const tokens = getTokens('strava')
       if (!tokens) throw new Error('Strava not connected')

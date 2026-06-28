@@ -19,9 +19,10 @@ const PROVIDER_LABELS: Record<string, string> = {
   google: 'Gemini', anthropic: 'Claude', openai: 'OpenAI',
 }
 
-const ALL_INTEGRATION_PROVIDERS = ['strava', 'hevy', 'oura', 'whoop', 'polar', 'withings'] as const
-const OAUTH_PROVIDERS = new Set<string>(ALL_INTEGRATION_PROVIDERS.filter(p => p !== 'hevy'))
-const PRIORITY_ALL = ['garmin', ...ALL_INTEGRATION_PROVIDERS] as const
+const ALL_INTEGRATION_PROVIDERS = ['garmin', 'strava', 'hevy', 'oura', 'whoop', 'polar', 'withings'] as const
+const NON_OAUTH_PROVIDERS = new Set(['garmin', 'hevy'])
+const OAUTH_PROVIDERS = new Set<string>(ALL_INTEGRATION_PROVIDERS.filter(p => !NON_OAUTH_PROVIDERS.has(p)))
+const PRIORITY_ALL = ALL_INTEGRATION_PROVIDERS
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error'
 
@@ -130,7 +131,6 @@ export function SettingsPage() {
   const [syncErrors, setSyncErrors] = useState<Record<string, string>>({})
   const [connectErrors, setConnectErrors] = useState<Record<string, string>>({})
   const [baseUrlInput, setBaseUrlInput] = useState('')
-  const [garminStatus, setGarminStatus] = useState<{ connected: boolean; lastSync: string | null }>({ connected: false, lastSync: null })
   const [priorityList, setPriorityList] = useState<string[]>([...PRIORITY_ALL])
 
   const refreshStatus = async () => {
@@ -153,7 +153,6 @@ export function SettingsPage() {
       }
     })
     fetch('/api/settings/custom-skills').then(r => r.json()).then(d => setSkills(d.skills ?? []))
-    fetch('/api/garmin/status').then(r => r.json()).then(d => setGarminStatus(d))
     refreshStatus()
 
     // Handle OAuth callback redirect — provider redirects back to /#/settings?connected=X
@@ -198,6 +197,12 @@ export function SettingsPage() {
   const connectProvider = async (provider: string) => {
     const inputs = providerInputs[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }
     setConnectErrors(prev => ({ ...prev, [provider]: '' }))
+
+    if (provider === 'garmin') {
+      await save('garmin_enabled', 'true')
+      await refreshStatus()
+      return
+    }
 
     if (provider === 'hevy') {
       if (!inputs.apiKey) {
@@ -1121,17 +1126,6 @@ export function SettingsPage() {
       </div>
 
       <Rail label="CONNECTED DEVICES" accent={MX4_COLOR} />
-      <ProviderCard
-        provider="garmin"
-        readOnly
-        isOAuth={false}
-        connected={garminStatus.connected}
-        lastSync={garminStatus.lastSync}
-        clientId="" clientSecret="" apiKey=""
-        onClientIdChange={() => {}} onClientSecretChange={() => {}} onApiKeyChange={() => {}}
-        onConnect={() => {}} onDisconnect={() => {}} onSync={() => {}}
-        syncStatus="idle" syncError="" connectError=""
-      />
       {ALL_INTEGRATION_PROVIDERS.map(provider => {
         const status = integrationStatus[provider] ?? { connected: false, lastSync: null }
         const inputs = providerInputs[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }
@@ -1140,6 +1134,7 @@ export function SettingsPage() {
             key={provider}
             provider={provider}
             isOAuth={OAUTH_PROVIDERS.has(provider)}
+            noCredentials={provider === 'garmin'}
             connected={status.connected}
             lastSync={status.lastSync}
             clientId={inputs.clientId}

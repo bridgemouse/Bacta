@@ -1,6 +1,6 @@
 import db from '../db/client'
 
-export const PROVIDERS = ['strava', 'hevy', 'polar', 'oura', 'whoop', 'withings'] as const
+export const PROVIDERS = ['garmin', 'strava', 'hevy', 'polar', 'oura', 'whoop', 'withings'] as const
 export type Provider = typeof PROVIDERS[number]
 
 export const SETTING_DEFAULTS: Record<string, string> = {
@@ -27,6 +27,10 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   // Multi-device globals
   base_url:        'http://bacta.home',
   source_priority: JSON.stringify(['garmin']),
+
+  // Garmin (primary; managed by garmin_poller.py — no OAuth, no API key)
+  garmin_enabled:   'true',
+  garmin_last_sync: '',
 
   // Strava
   strava_client_id:   '', strava_client_secret: '', strava_tokens: '',

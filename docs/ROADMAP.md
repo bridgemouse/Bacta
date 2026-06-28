@@ -212,13 +212,15 @@
 - 407 tests passing (237 server + 170 client); zero type errors (Plan 2 baseline — 445 after Plan 3)
 
 **Plan 3 (Settings UI + Source Attribution) — complete Jun 25–26, 2026, on `feature/multi-device`:**
-- `client/src/components/ProviderCard.tsx` — new shared component; OAuth (Client ID + Secret) and API-key (single input) flows; connected/disconnected states; `syncStatus` union (`idle | syncing | synced | error`) with SYNC NOW / SYNCED ✓ / RETRY / amber-error states; DISCONNECT button
-- `SettingsPage.tsx` — three new rails: INSTANCE (`base_url` text input, save-on-blur, SAVED indicator), CONNECTED DEVICES (one ProviderCard per provider, Hevy uses API-key flow, others use OAuth), DATA PRIORITY (up/down reorder for `source_priority` JSON array with 7 providers)
-- `server/api/integrations.ts` — Hevy connected-status fix: `GET /status` and `GET /:provider/status` now check `getSetting('hevy_api_key')` for Hevy (not tokens, which are always null for Hevy)
-- `server/api/garmin.ts` — `GET /api/garmin/sources` route (before `/:metric` wildcard); returns `{metric: source}` map for latest reading of each metric
-- `client/src/lib/garminApi.ts` — `fetchSources(): Promise<Record<string, string>>` helper; returns `{}` on error
-- `useRecoveryData` + `useSleepData` hooks — `sources: Record<string, string>` added to return shape; `fetchSources()` called in `Promise.all`
-- `RecoveryPage.tsx` + `SleepPage.tsx` — file-local `SourceBadge` component (amber pill, invisible for Garmin data); badges on HRV, RHR, Body Battery, Recovery Score, SpO₂, Respiration (Recovery); Sleep Score, Sleep HR, SpO₂ (Sleep)
+- `client/src/components/ProviderCard.tsx` — new shared component; OAuth (Client ID + Secret) and API-key (single input) flows; connected/disconnected states; `syncStatus` union (`idle | syncing | synced | error`) with SYNC NOW / SYNCED ✓ / RETRY / amber-error states; DISCONNECT button; `noCredentials` prop for poller-managed providers
+- `SettingsPage.tsx` — three new rails: INSTANCE (`base_url` text input, save-on-blur, SAVED indicator), CONNECTED DEVICES (one ProviderCard per provider — Garmin first with no credential form, Hevy uses API-key flow, others use OAuth), DATA PRIORITY (up/down reorder for `source_priority` JSON array with 7 providers)
+- `server/api/integrations.ts` — Hevy connected-status fix; `isConnected()` helper; Garmin as full peer in PROVIDERS (sync fires poller detached, lastSync falls back to DB MAX(date)); `oauth_state` encrypted at write/decrypted at compare; `addToSourcePriority`/`removeFromSourcePriority` called on connect/disconnect
+- `server/lib/settings.ts` — Garmin added to PROVIDERS with `garmin_enabled: 'true'` + `garmin_last_sync` defaults; `basicAuth()` extracted to `shared/types.ts`
+- `server/api/garmin.ts` — `GET /api/garmin/sources` route; returns `{metric: source}` map
+- `client/src/lib/garminApi.ts` — `fetchSources(): Promise<Record<string, string>>` helper
+- `useRecoveryData` + `useSleepData` hooks — `sources: Record<string, string>` added; `fetchSources()` called in `Promise.all`
+- `RecoveryPage.tsx` + `SleepPage.tsx` — file-local `SourceBadge` (amber pill, invisible for Garmin data); badges on HRV, RHR, Body Battery, Recovery Score, SpO₂, Respiration (Recovery); Sleep Score, Sleep HR, SpO₂ (Sleep)
+- `server/index.ts` — `requireAuth` accepts `BACTA_INTERNAL_TOKEN` Bearer header; `trust proxy: 1` for NPM `X-Forwarded-For` (was silently 500ing MX-4 refresh)
 - 445 tests passing (205 client + 240 server); zero type errors
 
 **Providers:** Polar, Oura, Whoop, Withings, Strava, Hevy — all direct OAuth 2.0 (no intermediary). Fitbit skipped (API deprecated Sept 2026). Apple Health / Google Health Connect deferred to native app.

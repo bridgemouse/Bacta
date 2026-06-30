@@ -1,5 +1,7 @@
 # Bacta — Current State & Roadmap
 
+> **Issue tracking:** Discrete bugs and polish items are tracked as [GitHub Issues](https://github.com/bridgemouse/Bacta/issues). Labels: `bug`, `enhancement`, `polish`. This roadmap covers milestones and section-level progress only.
+
 ## Feature Inventory (as of Jun 16, 2026)
 
 ### Complete and Live
@@ -143,7 +145,10 @@
 ## Immediate Priorities
 
 1. **v1.0 release-readiness sweep — DONE (2026-06-17).** Executed on branch `e2e-release-sweep`; report at `docs/release-test/findings-2026-06-17.md`. Shipped: app auth (PIN→token), read-only `queryDb`, prompt-injection defense, helmet/CSP + input validation + rate limits, the provider-agnostic `research` tool, `docs/MX4_REFERENCE.md` (injected), DB backup+restore, failure notifications, the `recovery_time_h` unit fix, and data cleanup. MX-4 verified end-to-end (grounded briefings, vault use, real research citations, zero persona hard-fails).
-2. **Post-sweep infrastructure runbook (operator-executed)** — `docs/SECURITY.md` §4 + `docs/OPERATIONS.md` §1. Includes the PHI git-history scrub + force-push, firewall/Tailscale, encryption at rest, systemd hardening, NFS/vault-MCP lockdown, TLS, and installing the backup timer + off-box copy. *(Runner hardening removed — self-hosted runner decommissioned 2026-06-17; CI now runs on GitHub cloud runners only.)*
+2. **Multi-device integration — DONE (2026-06-28, PR #6 merged to main).** Plans 1–3 complete: table migrations, 6-provider OAuth/API-key integration layer, Settings UI (CONNECTED DEVICES + DATA PRIORITY rails), source badges on Recovery + Sleep, Garmin as full peer. 445 tests. See below for full detail.
+3. **Post-sweep infrastructure runbook (operator-executed)** — `docs/SECURITY.md` §4 + `docs/OPERATIONS.md` §1. Includes the PHI git-history scrub + force-push, firewall/Tailscale, encryption at rest, systemd hardening, NFS/vault-MCP lockdown, TLS, and installing the backup timer + off-box copy. *(Runner hardening removed — self-hosted runner decommissioned 2026-06-17; CI now runs on GitHub cloud runners only.)*
+4. **Tag v1.1.0** — multi-device integration is a meaningful milestone worth a version tag.
+5. **LogEntry Phase C** — expand the activity log panel with training effect bars and HR zone distribution. Currently behind `hasContent = false` flag in `LogEntry.tsx`.
 
 > ⚠️ **PHI in git (still requires the operator):** `mx4/wiki/` and `mx4/HEARTBEAT.md` are now untracked + gitignored, but they remain in history. Run the `git filter-repo` scrub + force-push from `docs/SECURITY.md` §4.1 before pushing to any shared remote, and rotate exposed secrets.
 
@@ -170,6 +175,8 @@
 **DB ready:** `manual_inputs` table has `readiness` (1–5), `caffeine_mg`, `supplements` columns.
 
 ### Multi-Device Wearables Integration
+
+**Status: MERGED to `main` as PR #6 on 2026-06-28.** Plans 1–3 complete.
 
 **Branch:** `feature/multi-device` — Plan 1 (Foundation) complete Jun 23, 2026.
 

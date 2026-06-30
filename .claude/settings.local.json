@@ -102,7 +102,10 @@
       "Bash(tmux *)",
       "Bash(sudo locale-gen *)",
       "Bash(sudo update-locale *)",
-      "Bash(sudo sed -i *)"
+      "Bash(sudo sed -i *)",
+      "Bash(systemctl status *)",
+      "Bash(systemctl --user status claude-remote)",
+      "Bash(systemctl *)"
     ]
   }
 }

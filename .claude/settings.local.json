@@ -65,6 +65,7 @@
       "Skill(run)",
       "Skill(bacta-component)",
       "Skill(bacta-wrap)",
+      "Skill(bacta-headless)",
       "Bash(systemctl is-enabled *)",
       "Bash(systemctl is-active *)",
       "Bash(systemctl list-timers *)",

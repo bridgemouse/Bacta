@@ -198,6 +198,18 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - `get_heart_rates(d)` returns minute-by-minute HR values — NOT zone minutes. For HR zone data use `get_activity_hr_in_timezones(activityId)` → field `secsInZone` per zone; aggregate across all activities for the day and divide by 60 for minutes
 - `multi_sport` activities are containers — `get_activity_hr_in_timezones(parent_id)` returns empty. Use `_child_activity_ids(c, act_id)` (defined in `garmin_poller.py`) which reads `metadataDTO.childIds` from the activity summary; query zones on each child instead
 
+## Subagents & Deferred Tools
+
+`WebSearch`, `WebFetch`, and several MCP tools are **deferred** — their schemas are not pre-loaded into context. Calling them without loading the schema first silently fails with `InputValidationError` (0 tool uses, agent exits immediately). This affects **forked agents** most: a fork inherits the parent's context snapshot, so if the parent hasn't loaded a deferred tool's schema, the fork can't use it either.
+
+**Fix:** Call `ToolSearch("select:WebSearch,WebFetch")` (or whichever deferred tools are needed) **before** spawning any fork that requires them. The fork then inherits the loaded schemas.
+
+- Use a **fork** (`subagent_type: "fork"`) for tasks that need codebase context — it shares the cache and inherits loaded tools.
+- Use a **fresh agent** (`subagent_type: "general-purpose"`) for web research when WebSearch hasn't been pre-loaded in the current session.
+- This is not a permissions issue — `WebSearch` is in the allowlist. It is purely a schema-loading issue.
+
+---
+
 ## Server & DB Gotchas
 
 - Query the DB via the `bacta-sqlite` MCP — ask Claude to run any SQL against `health_snapshots`, `health_activities`, etc. directly. No Python wrapper needed. (`sqlite3` CLI is not installed on LXC 109.)

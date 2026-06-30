@@ -93,11 +93,17 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
     if (!liveData?.body) return
     // Ensure ## headers are on their own lines (model sometimes omits newlines in JSON output)
     const body = liveData.body.replace(/([^\n])(##\s)/g, '$1\n\n$2').trim()
+    // If the ## DIRECTIVE section has no content (orchestrator prompt artifact),
+    // inject the recommendation field as fallback directive body
+    const directiveEmpty = /##\s*DIRECTIVE\s*$/.test(body)
+    const seededContent = directiveEmpty && liveData.recommendation
+      ? `${body}\n${liveData.recommendation}`
+      : body
     try {
       await fetch('/api/mx4/chat/seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, content: body, section }),
+        body: JSON.stringify({ sessionId, content: seededContent, section }),
       })
     } catch {
       // Non-fatal — open AskSheet anyway

@@ -1,6 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, afterEach } from 'vitest'
 import { TransmissionPanel, MX4Briefing } from '../../../client/src/components/MX4Card'
 import { BRIEFS } from '../../../client/src/lib/stubData'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('TransmissionPanel', () => {
   it('renders the assessment text', () => {
@@ -94,5 +99,42 @@ describe('MX4Briefing', () => {
       <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} />
     )
     expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
+  })
+})
+
+describe('MX4Briefing — handleFullAnalysis', () => {
+  it('normalizes literal \\N escape sequences in body before seeding to chat', async () => {
+    // liveData.body contains literal backslash-N sequences (model output artifact)
+    // After clicking FULL ANALYSIS, the seeded content must have real newlines instead
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ ok: true }),
+    } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const briefing = {
+      tone: 'POSITIVE' as const,
+      headline: 'Training load nominal.',
+      summary: 'Load is elevated. Reduce intensity.',
+      body: '## ASSESSMENT\\NLoad is elevated.\\N\\N## DIRECTIVE\\NReduce intensity by 15%.',
+      recommendation: 'Rest tomorrow.',
+      flags: [],
+      generated_at: 'ts-1',
+    }
+
+    render(
+      <MX4Briefing accent="#fb923c" brief={BRIEFS.home} liveData={briefing} section="training" />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('FULL ANALYSIS ›'))
+    })
+
+    const seedCall = fetchMock.mock.calls.find(([url]: [string]) => url === '/api/mx4/chat/seed')
+    expect(seedCall).toBeDefined()
+
+    const seedBody = JSON.parse(seedCall![1].body as string) as { content: string }
+    // literal \N (backslash + uppercase N) must be absent — replaced with real newlines
+    expect(seedBody.content).not.toMatch(/\\N/)
   })
 })

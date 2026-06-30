@@ -61,7 +61,6 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const flags = liveData?.flags ?? []
 
   const { openAskSheet } = useAskSheet()
-  const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
 
   const [refreshState, setRefreshState] = useState<'idle' | 'running'>('idle')
 
@@ -91,6 +90,9 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return
+    // Computed at click time so it matches useChat's sessionId when AskSheet re-renders on open.
+    // Computing at render time causes a mismatch after UTC midnight if MX4Card hasn't re-rendered.
+    const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
     // Ensure ## headers are on their own lines (model sometimes omits newlines in JSON output)
     const body = liveData.body.replace(/([^\n])(##\s)/g, '$1\n\n$2').trim()
     try {

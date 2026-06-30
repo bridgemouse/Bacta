@@ -1,6 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, afterEach } from 'vitest'
 import { TransmissionPanel, MX4Briefing } from '../../../client/src/components/MX4Card'
 import { BRIEFS } from '../../../client/src/lib/stubData'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+})
 
 describe('TransmissionPanel', () => {
   it('renders the assessment text', () => {
@@ -94,5 +100,48 @@ describe('MX4Briefing', () => {
       <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} />
     )
     expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
+  })
+})
+
+describe('MX4Briefing — handleFullAnalysis session ID at click time', () => {
+  it('seeds using the UTC date at click time, not the stale date from render time', async () => {
+    // Bug: sessionId is computed at render time. After UTC midnight (8pm EDT), if MX4Card
+    // has not re-rendered since before midnight but AskSheet's useChat re-renders when it
+    // opens, the seed goes to yesterday's session while messages load from today's — the
+    // seeded content never appears.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ ok: true }),
+    } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+
+    vi.useFakeTimers()
+    // Render at 23:58 UTC (2026-06-29)
+    vi.setSystemTime(new Date('2026-06-29T23:58:00Z'))
+
+    const briefing = {
+      tone: 'POSITIVE' as const,
+      headline: 'Systems nominal.',
+      summary: 'All systems nominal.',
+      body: '## ASSESSMENT\nHRV trending up.\n\n## DIRECTIVE\nTrain as planned.',
+      recommendation: 'Train as planned.',
+      flags: [],
+      generated_at: '2026-06-29T23:50:00Z',
+    }
+    render(<MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={briefing} section="home" />)
+
+    // Advance past UTC midnight — now 2026-06-30
+    vi.setSystemTime(new Date('2026-06-30T00:02:00Z'))
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('FULL ANALYSIS ›'))
+    })
+
+    const seedCall = fetchMock.mock.calls.find(([url]: [string]) => url === '/api/mx4/chat/seed')
+    expect(seedCall).toBeDefined()
+
+    const seedBody = JSON.parse(seedCall![1].body as string) as { sessionId: string }
+    // Must use 2026-06-30 (click time), not 2026-06-29 (stale render time)
+    expect(seedBody.sessionId).toBe('chat-2026-06-30')
   })
 })

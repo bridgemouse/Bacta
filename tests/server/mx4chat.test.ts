@@ -8,6 +8,13 @@ vi.mock('../../server/lib/ai/orchestrator', () => ({
   loadSystemPrompt: vi.fn().mockReturnValue('You are MX-4.'),
 }))
 
+vi.mock('../../server/lib/ai/vaultClient', () => ({
+  getVaultTools: vi.fn().mockResolvedValue({}),
+  isVaultEnabled: vi.fn().mockReturnValue(false),
+  resetVaultClient: vi.fn(),
+  testVaultConnection: vi.fn().mockResolvedValue({ ok: true }),
+}))
+
 vi.mock('../../server/lib/ai/wiki', () => ({
   readAllWikiPagesSync: vi.fn().mockReturnValue(''),
   loadHeartbeat: vi.fn().mockReturnValue(''),
@@ -227,6 +234,23 @@ describe('MX-4 Chat API', () => {
       'SELECT section FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 1'
     ).get('seed-section-test') as { section: string | null } | undefined
     expect(row?.section).toBe('training')
+  })
+
+  it('POST /api/mx4/chat responds normally when vault is configured but getVaultTools throws', async () => {
+    // Bug: getVaultTools() is called unconditionally; if vault is enabled but unreachable,
+    // it throws and the outer try-catch sends a generic error SSE instead of MX-4 responding.
+    const vaultMod = await import('../../server/lib/ai/vaultClient')
+    vi.mocked(vaultMod.isVaultEnabled).mockReturnValueOnce(true)
+    vi.mocked(vaultMod.getVaultTools).mockRejectedValueOnce(new Error('ECONNREFUSED vault.local'))
+
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'What is Garmin Run Coach?', sessionId: 'vault-fail-session' })
+
+    expect(res.status).toBe(200)
+    expect(res.text).not.toContain('"error"')
+    expect(res.text).toContain('[DONE]')
   })
 })
 

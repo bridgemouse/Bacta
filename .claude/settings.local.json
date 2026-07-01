@@ -106,7 +106,16 @@
       "Bash(sudo sed -i *)",
       "Bash(systemctl status *)",
       "Bash(systemctl --user status claude-remote)",
-      "Bash(systemctl *)"
+      "Bash(systemctl *)",
+      "Bash(claude update *)",
+      "Bash(sudo npm install -g @anthropic-ai/claude-code@latest)",
+      "Bash(gh pr *)",
+      "Skill(code-review)",
+      "Bash(gh issue *)",
+      "Bash(gh label *)",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:dev.to)",
+      "Skill(bacta-issues)"
     ]
   }
 }

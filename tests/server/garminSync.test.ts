@@ -40,12 +40,27 @@ describe('clampSyncInterval', () => {
     const { clampSyncInterval } = await import('../../server/lib/garminSync')
     expect(clampSyncInterval(45.6)).toBe(46)
   })
+
+  it('caps values at 24h so the cron hour field stays representable', async () => {
+    const { clampSyncInterval } = await import('../../server/lib/garminSync')
+    expect(clampSyncInterval(999999)).toBe(1440)
+  })
 })
 
 describe('buildSyncCronExpr', () => {
-  it('builds an every-N-minutes cron expression', async () => {
+  it('builds an every-N-minutes cron expression for sub-hour intervals', async () => {
     const { buildSyncCronExpr } = await import('../../server/lib/garminSync')
     expect(buildSyncCronExpr(30)).toBe('*/30 * * * *')
+  })
+
+  it('uses the hour field for intervals of an hour or more', async () => {
+    // Bug: `*/120 * * * *` is not representable in cron's 0-59 minute field —
+    // node-cron expands '*' to '0-59' first, so a step of 120 collapses to
+    // just minute 0, silently firing every hour instead of every 2 hours.
+    const { buildSyncCronExpr } = await import('../../server/lib/garminSync')
+    expect(buildSyncCronExpr(60)).toBe('0 */1 * * *')
+    expect(buildSyncCronExpr(120)).toBe('0 */2 * * *')
+    expect(buildSyncCronExpr(240)).toBe('0 */4 * * *')
   })
 })
 

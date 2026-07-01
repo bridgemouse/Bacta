@@ -8,7 +8,7 @@ import { getModel } from '../lib/ai/provider'
 import { readAllWikiPagesSync, loadHeartbeat, resetWikiPatternPages, resetAllWikiPages } from '../lib/ai/wiki'
 import { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage } from '../lib/ai/tools'
 import { research } from '../lib/ai/research'
-import { getVaultTools } from '../lib/ai/vaultClient'
+import { getVaultTools, isVaultEnabled } from '../lib/ai/vaultClient'
 import { getSetting } from '../lib/settings'
 import db from '../db/client'
 
@@ -227,12 +227,13 @@ mx4Router.post('/chat', async (req, res) => {
   res.setHeader('Connection', 'keep-alive')
 
   try {
+    const vaultTools = isVaultEnabled() ? await getVaultTools().catch(() => ({})) : {}
     const result = streamText({
       model: getModel('chat'),
       system,
       messages: [...history, { role: 'user' as const, content: message.trim() }],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tools: { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage, research, ...await getVaultTools() } as any,
+      tools: { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage, research, ...vaultTools } as any,
       stopWhen: stepCountIs(8),
     })
 

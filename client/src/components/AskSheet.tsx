@@ -106,7 +106,7 @@ export function AskSheet({ open, onClose, accent, section }: AskSheetProps) {
 
   return (
     <Sheet open={open} onClose={onClose} maxHeight="88%">
-      <SheetShell accent={accent}>
+      <SheetShell accent={accent} onClose={onClose}>
         <SheetHeader
           accent={accent}
           title="MX-4"

@@ -1,6 +1,14 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, afterEach } from 'vitest'
 import { TransmissionPanel, MX4Briefing } from '../../../client/src/components/MX4Card'
 import { BRIEFS } from '../../../client/src/lib/stubData'
+import { ToastProvider } from '../../../client/src/lib/ToastContext'
+import { ToastContainer } from '../../../client/src/components/ToastContainer'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+})
 
 describe('TransmissionPanel', () => {
   it('renders the assessment text', () => {
@@ -94,5 +102,52 @@ describe('MX4Briefing', () => {
       <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} />
     )
     expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
+  })
+})
+
+describe('MX4Briefing — handleRefresh error toast', () => {
+  const liveBriefing = {
+    tone: 'POSITIVE' as const,
+    headline: 'Systems nominal.',
+    summary: 'Everything looks good today.',
+    body: '## DIRECTIVE\nKeep it up.',
+    recommendation: 'Train as planned.',
+    flags: [],
+  }
+
+  it('shows a toast with the categorized error when the section run fails', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/mx4/run/home') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) } as Response)
+      }
+      if (url === '/api/insights/home') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ generated_at: undefined }) } as Response)
+      }
+      if (url === '/api/mx4/run/home/status') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ error: 'No AI provider configured. Check Settings → Intelligence.' }),
+        } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.useFakeTimers()
+
+    render(
+      <ToastProvider>
+        <ToastContainer />
+        <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} section="home" />
+      </ToastProvider>
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+
+    expect(screen.getByText(/No AI provider configured/)).toBeInTheDocument()
   })
 })

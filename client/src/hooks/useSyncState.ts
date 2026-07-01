@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useToast } from '../lib/ToastContext'
 
 export type SyncStatus = 'idle' | 'running' | 'done' | 'error'
 
@@ -11,6 +12,7 @@ export function useSyncState() {
   const [state, setState] = useState<SyncState>({ status: 'idle', elapsed: null })
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const reloadRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { showToast } = useToast()
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -25,10 +27,12 @@ export function useSyncState() {
         stopPolling()
         if (data.status === 'done') {
           reloadRef.current = setTimeout(() => window.location.reload(), 3000)
+        } else {
+          showToast('Garmin sync failed. Try again from Settings.', 'error')
         }
       }
     } catch { /* ignore network errors during polling */ }
-  }, [stopPolling])
+  }, [stopPolling, showToast])
 
   const startSync = useCallback(async () => {
     if (state.status === 'running') return
@@ -38,9 +42,10 @@ export function useSyncState() {
       pollRef.current = setInterval(pollStatus, 2000)
     } catch {
       setState({ status: 'error', elapsed: null })
+      showToast('Could not reach the server to start a Garmin sync.', 'error')
       setTimeout(() => setState({ status: 'idle', elapsed: null }), 3000)
     }
-  }, [state.status, pollStatus])
+  }, [state.status, pollStatus, showToast])
 
   useEffect(() => () => {
     stopPolling()

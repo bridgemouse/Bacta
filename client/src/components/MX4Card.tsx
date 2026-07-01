@@ -10,6 +10,7 @@ import { COLORS, FONT_MONO, FONT_UI, toneColor } from '../theme'
 import type { Brief } from '../lib/stubData'
 import type { BriefingResult } from '../lib/briefing'
 import { useAskSheet } from '../lib/AskSheetContext'
+import { useToast } from '../lib/ToastContext'
 
 // ─── New API ─────────────────────────────────────────────────────
 interface TransmissionPanelProps {
@@ -61,6 +62,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const flags = liveData?.flags ?? []
 
   const { openAskSheet } = useAskSheet()
+  const { showToast } = useToast()
   const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
 
   const [refreshState, setRefreshState] = useState<'idle' | 'running'>('idle')
@@ -79,6 +81,16 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
         if (d.generated_at !== originalAt) {
           onRefresh?.()
           break
+        }
+        try {
+          const statusRes = await fetch(`/api/mx4/run/${section}/status`)
+          const statusData = await statusRes.json() as { error: string | null }
+          if (statusData.error) {
+            showToast(statusData.error, 'error')
+            break
+          }
+        } catch {
+          // ignore status-check failures — fall through to the next poll attempt
         }
         attempts++
       }

@@ -97,6 +97,10 @@ const mx4Router = Router()
 // concurrent orchestrator runs and rack up AI spend (OPS-M2).
 let orchestratorRunning = false
 
+// Last categorized failure per section, surfaced via GET /run/:section/status
+// so the client can show a toast instead of the fire-and-forget run failing silently.
+const sectionRunErrors: Record<string, string | null> = {}
+
 mx4Router.post('/run', (_req, res) => {
   if (orchestratorRunning) {
     res.status(409).json({ ok: false, error: 'A run is already in progress' })
@@ -128,6 +132,7 @@ mx4Router.post('/run/:section', (req, res) => {
     return
   }
   orchestratorRunning = true
+  sectionRunErrors[section] = null
   res.status(202).json({ ok: true })
   setImmediate(async () => {
     try {
@@ -139,10 +144,18 @@ mx4Router.post('/run/:section', (req, res) => {
       }
     } catch (err) {
       console.error(`[mx4] section run error (${section}):`, err)
+      sectionRunErrors[section] = categorizeError(err)
     } finally {
       orchestratorRunning = false
     }
   })
+})
+
+// GET /api/mx4/run/:section/status — last categorized failure for a section's most
+// recent run, if any. Lets the client surface a toast for the fire-and-forget /run/:section.
+mx4Router.get('/run/:section/status', (req, res) => {
+  const { section } = req.params
+  res.json({ error: sectionRunErrors[section] ?? null })
 })
 
 mx4Router.get('/chat/:sessionId', (req, res) => {

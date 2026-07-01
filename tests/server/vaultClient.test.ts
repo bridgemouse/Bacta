@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 
 process.env.DB_PATH = ':memory:'
 
+const connectMock = vi.fn()
+
+vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
+  Client: class { connect = connectMock },
+}))
+vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({
+  SSEClientTransport: vi.fn(),
+}))
+
 describe('vaultClient', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')
@@ -66,5 +75,21 @@ describe('vaultClient', () => {
     resetVaultClient()
     const tools = await getVaultTools()
     expect(tools).toEqual({})
+  })
+
+  it('retries connecting on the next call after a failed connect instead of reusing a broken client', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('vault_enabled', 'true')").run()
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('vault_url', 'http://vault.local')").run()
+    const { resetVaultClient, getVaultTools } = await import('../../server/lib/ai/vaultClient')
+    resetVaultClient()
+
+    connectMock.mockRejectedValueOnce(new Error('ECONNREFUSED'))
+    await expect(getVaultTools()).rejects.toThrow('ECONNREFUSED')
+
+    connectMock.mockResolvedValueOnce(undefined)
+    const tools = await getVaultTools()
+    expect(Object.keys(tools)).toContain('search_wiki')
+    expect(connectMock).toHaveBeenCalledTimes(2)
   })
 })

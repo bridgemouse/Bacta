@@ -71,7 +71,14 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
     if (!section || refreshState === 'running') return
     setRefreshState('running')
     try {
-      await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
+      const triggerRes = await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
+      if (triggerRes.status === 409) {
+        // Another run (e.g. the nightly full orchestrator) is already in progress —
+        // this click didn't start anything, so don't poll for it or surface a stale
+        // error left over from a previous, unrelated run of this section.
+        showToast('MX-4 is already running. Try again shortly.', 'error')
+        return
+      }
       const originalAt = liveData?.generated_at
       let attempts = 0
       while (attempts < 24) {

@@ -150,4 +150,45 @@ describe('MX4Briefing — handleRefresh error toast', () => {
 
     expect(screen.getByText(/No AI provider configured/)).toBeInTheDocument()
   })
+
+  it('does not poll for status when the trigger is rejected as already-running (409)', async () => {
+    // Bug: sectionRunErrors is only cleared on the accepted-request path. A 409-rejected
+    // click would otherwise poll /run/:section/status and could surface a stale error
+    // left over from a previous, unrelated failed run of this section.
+    const statusMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ error: 'stale error from a previous run' }),
+    } as Response)
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/mx4/run/home') {
+        return Promise.resolve({ ok: false, status: 409, json: () => Promise.resolve({ ok: false }) } as Response)
+      }
+      if (url === '/api/mx4/run/home/status') {
+        return statusMock()
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.useFakeTimers()
+
+    render(
+      <ToastProvider>
+        <ToastContainer />
+        <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} section="home" />
+      </ToastProvider>
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+
+    expect(screen.getByText(/already running/i)).toBeInTheDocument()
+    expect(screen.queryByText(/stale error from a previous run/)).not.toBeInTheDocument()
+
+    // Advance well past a poll interval — status must never be checked for a rejected trigger.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(statusMock).not.toHaveBeenCalled()
+  })
 })

@@ -89,6 +89,11 @@ export function SheetShell({ accent, children, onClose }: SheetShellProps) {
     setDragging(false)
     if (dragY > DRAG_DISMISS_THRESHOLD) {
       onClose?.()
+      // Sheet only unmounts SheetShell ~340ms after close, so a quick reopen
+      // within that window would otherwise render with this drag offset still
+      // applied. Clear it after the close transition finishes rather than
+      // immediately, so the dismiss animation itself isn't disturbed.
+      setTimeout(() => setDragY(0), 300)
     } else {
       setDragY(0)
     }

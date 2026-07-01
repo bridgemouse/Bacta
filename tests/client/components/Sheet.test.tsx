@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { Sheet, SheetShell } from '../../../client/src/components/Sheet'
 
 function renderSheet(onClose: () => void) {
@@ -46,5 +46,30 @@ describe('SheetShell drag-to-dismiss', () => {
     fireEvent.pointerUp(handle, { clientY: 0, pointerId: 1 })
 
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('clears the drag offset after dismissing so a quick reopen renders fully open', () => {
+    // Bug: Sheet only unmounts SheetShell ~340ms after close. A rapid
+    // close-then-reopen within that window previously kept rendering with
+    // the stale dragged-down offset instead of translateY(0).
+    vi.useFakeTimers()
+    const onClose = vi.fn()
+    renderSheet(onClose)
+    const handle = screen.getByTestId('sheet-drag-handle')
+    const shell = handle.parentElement as HTMLElement
+
+    fireEvent.pointerDown(handle, { clientY: 0, pointerId: 1 })
+    fireEvent.pointerMove(handle, { clientY: 120, pointerId: 1 })
+    fireEvent.pointerUp(handle, { clientY: 120, pointerId: 1 })
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(shell.style.transform).toBe('translateY(120px)')
+
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(shell.style.transform).toBe('translateY(0px)')
+    vi.useRealTimers()
   })
 })

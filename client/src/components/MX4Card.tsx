@@ -10,6 +10,7 @@ import { COLORS, FONT_MONO, FONT_UI, toneColor } from '../theme'
 import type { Brief } from '../lib/stubData'
 import type { BriefingResult } from '../lib/briefing'
 import { useAskSheet } from '../lib/AskSheetContext'
+import { getChatSessionId } from '../lib/chatSession'
 
 // ─── New API ─────────────────────────────────────────────────────
 interface TransmissionPanelProps {
@@ -61,7 +62,6 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const flags = liveData?.flags ?? []
 
   const { openAskSheet } = useAskSheet()
-  const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
 
   const [refreshState, setRefreshState] = useState<'idle' | 'running'>('idle')
 
@@ -94,6 +94,9 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return
+    // Computed at click time so it matches useChat's sessionId when AskSheet re-renders on open.
+    // Computing at render time causes a mismatch after UTC midnight if MX4Card hasn't re-rendered.
+    const sessionId = getChatSessionId()
     // Normalize literal \N sequences the model occasionally emits instead of real newlines,
     // then ensure ## headers always start on their own line
     const body = liveData.body

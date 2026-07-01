@@ -188,6 +188,11 @@ function SleepOverview() {
   const awakeInBed = slp.duration.inBed - slp.duration.mins
   const debtH = slp.sleepDebt != null ? Math.floor(slp.sleepDebt / 60) : 0
   const debtM = slp.sleepDebt != null ? slp.sleepDebt % 60 : 0
+  // Restoration across the same trailing week the debt figure covers (7 * 8h target),
+  // so the bar's fill matches what the card's label/color/text describe.
+  const weeklyRestoredPct = slp.sleepDebt == null
+    ? 100
+    : Math.max(0, Math.min(100, Math.round((1 - slp.sleepDebt / (7 * 480)) * 100)))
   const totalMins = slp.stages.reduce((s, st) => s + st.mins, 0) || slp.duration.mins
   const deepMins = slp.stages.find(s => s.key === 'deep')?.mins ?? 0
   const remMins = slp.stages.find(s => s.key === 'rem')?.mins ?? 0
@@ -288,7 +293,7 @@ function SleepOverview() {
             {slp.sleepDebt == null || slp.sleepDebt === 0 ? '0 min' : debtH > 0 ? `${debtH}h ${String(debtM).padStart(2, '0')}m` : `${debtM}m`}
           </div>
           <div style={{ width: '100%', height: 4, borderRadius: 2, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden', marginBottom: 4 }}>
-            <div style={{ width: `${Math.min(100, Math.round((slp.duration.mins / 480) * 100))}%`, height: '100%', background: slp.sleepDebt === 0 ? COLORS.green : A, borderRadius: 2 }} />
+            <div style={{ width: `${weeklyRestoredPct}%`, height: '100%', background: slp.sleepDebt === 0 ? COLORS.green : A, borderRadius: 2 }} />
           </div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: slp.sleepDebt === 0 ? COLORS.green : A, fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 3 }}>
             {slp.sleepDebt == null || slp.sleepDebt === 0 ? 'FULLY RESTORED' : 'ACCUMULATING OVER 7D'}

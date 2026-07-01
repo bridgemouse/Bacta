@@ -1,5 +1,5 @@
 // All imports at top
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import type { MX4Mood } from './primitives/MX4Sigil'
@@ -63,11 +63,21 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
 
   const { openAskSheet } = useAskSheet()
 
-  const [refreshState, setRefreshState] = useState<'idle' | 'running'>('idle')
+  const [refreshState, setRefreshState] = useState<'idle' | 'running' | 'error'>('idle')
+  const errorResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (errorResetRef.current) clearTimeout(errorResetRef.current)
+  }, [])
 
   async function handleRefresh() {
     if (!section || refreshState === 'running') return
+    if (errorResetRef.current) {
+      clearTimeout(errorResetRef.current)
+      errorResetRef.current = null
+    }
     setRefreshState('running')
+    let succeeded = false
     try {
       await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
       // Fetch current API state as baseline — liveData prop may be null or stale
@@ -81,14 +91,18 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
         const d = await res.json()
         if (d.generated_at !== originalAt) {
           onRefresh?.()
+          succeeded = true
           break
         }
         attempts++
       }
     } catch {
-      // non-fatal
+      // handled by succeeded flag below
     } finally {
-      setRefreshState('idle')
+      setRefreshState(succeeded ? 'idle' : 'error')
+      if (!succeeded) {
+        errorResetRef.current = setTimeout(() => setRefreshState('idle'), 4000)
+      }
     }
   }
 
@@ -312,11 +326,11 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
               fontSize: 9,
               fontWeight: 700,
               letterSpacing: '0.12em',
-              color: refreshState === 'running' ? COLORS.textMuted : accent,
+              color: refreshState === 'running' ? COLORS.textMuted : refreshState === 'error' ? COLORS.mx4Red : accent,
               flexShrink: 0,
             }}
           >
-            {refreshState === 'running' ? 'RUNNING ›' : 'REFRESH ›'}
+            {refreshState === 'running' ? 'RUNNING ›' : refreshState === 'error' ? 'FAILED ›' : 'REFRESH ›'}
           </button>
         )}
         <span style={{ marginLeft: 'auto' }}>

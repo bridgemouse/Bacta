@@ -128,4 +128,50 @@ describe('MX4Briefing — handleRefresh failure feedback', () => {
 
     expect(screen.getByText('FAILED ›')).toBeInTheDocument()
   })
+
+  it('does not let a stale failed-attempt timer clobber a genuinely in-flight retry', async () => {
+    // Bug: the 4s auto-reset-to-idle timer from a failed attempt was never cancelled,
+    // so it could fire mid-retry and revert the button to REFRESH while a second
+    // request was still actively polling in the background.
+    vi.useFakeTimers()
+    let callCount = 0
+    const fetchMock = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        // First attempt's POST fails immediately.
+        return Promise.reject(new Error('network error'))
+      }
+      // Second attempt: never resolves, simulating a still in-flight request.
+      return new Promise(() => {})
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} section="home" />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+    expect(screen.getByText('FAILED ›')).toBeInTheDocument()
+
+    // Retry 1s into the first attempt's 4s auto-reset window.
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByText('FAILED ›'))
+    })
+    expect(screen.getByText('RUNNING ›')).toBeInTheDocument()
+
+    // Advance past the first attempt's original 4s-from-failure mark.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3500)
+    })
+
+    // Must still show RUNNING — the stale timer must not have reset it to idle.
+    expect(screen.getByText('RUNNING ›')).toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
 })

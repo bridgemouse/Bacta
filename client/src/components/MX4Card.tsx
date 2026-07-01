@@ -1,5 +1,5 @@
 // All imports at top
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import type { MX4Mood } from './primitives/MX4Sigil'
@@ -64,9 +64,18 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
 
   const [refreshState, setRefreshState] = useState<'idle' | 'running' | 'error'>('idle')
+  const errorResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (errorResetRef.current) clearTimeout(errorResetRef.current)
+  }, [])
 
   async function handleRefresh() {
     if (!section || refreshState === 'running') return
+    if (errorResetRef.current) {
+      clearTimeout(errorResetRef.current)
+      errorResetRef.current = null
+    }
     setRefreshState('running')
     let succeeded = false
     try {
@@ -89,7 +98,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
     } finally {
       setRefreshState(succeeded ? 'idle' : 'error')
       if (!succeeded) {
-        setTimeout(() => setRefreshState('idle'), 4000)
+        errorResetRef.current = setTimeout(() => setRefreshState('idle'), 4000)
       }
     }
   }

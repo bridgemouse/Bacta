@@ -204,3 +204,40 @@ describe('MX4Briefing — handleFullAnalysis', () => {
     expect(seedBody.content).not.toMatch(/\\N/)
   })
 })
+
+describe('MX4Briefing — handleFullAnalysis directive fallback', () => {
+  it('injects recommendation into seeded content when ## DIRECTIVE section has no body', async () => {
+    // Root cause: orchestrator prompt says "End with ## DIRECTIVE." — model generates
+    // the header but no content. Client-side fallback injects the recommendation field.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ ok: true }),
+    } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const briefing = {
+      tone: 'CAUTION' as const,
+      headline: 'Sleep light — protect tomorrow night.',
+      summary: 'Sleep was adequate but shallow.',
+      body: '## ASSESSMENT\nDuration was 7h 32m but deep sleep ran short.\n\n## DIRECTIVE',
+      recommendation: 'No screens after 22:30. Consistent wake time is key.',
+      flags: [],
+      generated_at: 'ts-1',
+    }
+
+    render(
+      <MX4Briefing accent="#a78bfa" brief={BRIEFS.home} liveData={briefing} section="sleep" />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('FULL ANALYSIS ›'))
+    })
+
+    const seedCall = fetchMock.mock.calls.find(([url]: [string]) => url === '/api/mx4/chat/seed')
+    expect(seedCall).toBeDefined()
+
+    const seedBody = JSON.parse(seedCall![1].body as string) as { content: string }
+    // recommendation must appear in the seeded content as fallback directive body
+    expect(seedBody.content).toContain('No screens after 22:30')
+  })
+})

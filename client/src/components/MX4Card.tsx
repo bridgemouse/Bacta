@@ -1,5 +1,5 @@
 // All imports at top
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { MX4Sigil } from './primitives/MX4Sigil'
 import type { MX4Mood } from './primitives/MX4Sigil'
@@ -10,6 +10,8 @@ import { COLORS, FONT_MONO, FONT_UI, toneColor } from '../theme'
 import type { Brief } from '../lib/stubData'
 import type { BriefingResult } from '../lib/briefing'
 import { useAskSheet } from '../lib/AskSheetContext'
+import { useToast } from '../lib/ToastContext'
+import { getChatSessionId } from '../lib/chatSession'
 
 // ─── New API ─────────────────────────────────────────────────────
 interface TransmissionPanelProps {
@@ -61,16 +63,38 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const flags = liveData?.flags ?? []
 
   const { openAskSheet } = useAskSheet()
-  const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
+  const { showToast } = useToast()
 
-  const [refreshState, setRefreshState] = useState<'idle' | 'running'>('idle')
+  const [refreshState, setRefreshState] = useState<'idle' | 'running' | 'error'>('idle')
+  const errorResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (errorResetRef.current) clearTimeout(errorResetRef.current)
+  }, [])
 
   async function handleRefresh() {
     if (!section || refreshState === 'running') return
+    if (errorResetRef.current) {
+      clearTimeout(errorResetRef.current)
+      errorResetRef.current = null
+    }
     setRefreshState('running')
+    let succeeded = false
     try {
-      await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
-      const originalAt = liveData?.generated_at
+      const triggerRes = await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
+      if (triggerRes.status === 409) {
+        // Another run (e.g. the nightly full orchestrator) is already in progress —
+        // this click didn't start anything, so don't poll for it or surface a stale
+        // error left over from a previous, unrelated run of this section. Not a
+        // failure of this click, so don't flash the FAILED state either.
+        showToast('MX-4 is already running. Try again shortly.', 'error')
+        succeeded = true
+        return
+      }
+      // Fetch current API state as baseline — liveData prop may be null or stale
+      const baselineRes = await fetch(`/api/insights/${section}`)
+      const baseline = await baselineRes.json() as { generated_at?: string }
+      const originalAt = baseline.generated_at
       let attempts = 0
       while (attempts < 24) {
         await new Promise(r => setTimeout(r, 10_000))
@@ -78,26 +102,53 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
         const d = await res.json()
         if (d.generated_at !== originalAt) {
           onRefresh?.()
+          succeeded = true
           break
+        }
+        try {
+          const statusRes = await fetch(`/api/mx4/run/${section}/status`)
+          const statusData = await statusRes.json() as { error: string | null }
+          if (statusData.error) {
+            showToast(statusData.error, 'error')
+            break
+          }
+        } catch {
+          // ignore status-check failures — fall through to the next poll attempt
         }
         attempts++
       }
     } catch {
-      // non-fatal
+      // handled by succeeded flag below
     } finally {
-      setRefreshState('idle')
+      setRefreshState(succeeded ? 'idle' : 'error')
+      if (!succeeded) {
+        errorResetRef.current = setTimeout(() => setRefreshState('idle'), 4000)
+      }
     }
   }
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return
-    // Ensure ## headers are on their own lines (model sometimes omits newlines in JSON output)
-    const body = liveData.body.replace(/([^\n])(##\s)/g, '$1\n\n$2').trim()
+    // Computed at click time so it matches useChat's sessionId when AskSheet re-renders on open.
+    // Computing at render time causes a mismatch after UTC midnight if MX4Card hasn't re-rendered.
+    const sessionId = getChatSessionId()
+    // Normalize literal \N sequences the model occasionally emits instead of real newlines,
+    // then ensure ## headers always start on their own line
+    const body = liveData.body
+      .replace(/\\N/g, '\n')
+      .replace(/([^\n])(##\s)/g, '$1\n\n$2')
+      .trim()
+    // If the ## DIRECTIVE section has no content (orchestrator prompt artifact),
+    // inject the recommendation field as fallback directive body
+    const directiveEmpty = /##\s*DIRECTIVE\s*$/.test(body)
+    const seededContent = directiveEmpty && liveData.recommendation
+      ? `${body}\n${liveData.recommendation}`
+      : body
     try {
       await fetch('/api/mx4/chat/seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, content: body, section }),
+        body: JSON.stringify({ sessionId, content: seededContent, section }),
       })
     } catch {
       // Non-fatal — open AskSheet anyway
@@ -296,11 +347,11 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
               fontSize: 9,
               fontWeight: 700,
               letterSpacing: '0.12em',
-              color: refreshState === 'running' ? COLORS.textMuted : accent,
+              color: refreshState === 'running' ? COLORS.textMuted : refreshState === 'error' ? COLORS.mx4Red : accent,
               flexShrink: 0,
             }}
           >
-            {refreshState === 'running' ? 'RUNNING ›' : 'REFRESH ›'}
+            {refreshState === 'running' ? 'RUNNING ›' : refreshState === 'error' ? 'FAILED ›' : 'REFRESH ›'}
           </button>
         )}
         <span style={{ marginLeft: 'auto' }}>

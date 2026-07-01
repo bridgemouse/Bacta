@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { getChatSessionId } from '../lib/chatSession'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -8,7 +9,7 @@ export interface ChatMessage {
 }
 
 export function useChat(section?: string) {
-  const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
+  const sessionId = getChatSessionId()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)

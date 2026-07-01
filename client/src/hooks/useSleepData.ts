@@ -40,6 +40,13 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
   const [data, setData] = useState<SleepData>(INITIAL)
   const [loading, setLoading] = useState(true)
   const [sources, setSources] = useState<Record<string, string>>({})
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setRefreshTrigger(n => n + 1)
+    window.addEventListener('bacta:sync-complete', handler)
+    return () => window.removeEventListener('bacta:sync-complete', handler)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -160,7 +167,7 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [refreshTrigger])
 
   return { data, loading, sources }
 }

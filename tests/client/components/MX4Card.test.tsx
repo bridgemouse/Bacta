@@ -3,7 +3,23 @@ import { vi, afterEach } from 'vitest'
 import { TransmissionPanel, MX4Briefing } from '../../../client/src/components/MX4Card'
 import { BRIEFS } from '../../../client/src/lib/stubData'
 
+const OLD_BRIEFING = { generated_at: 'ts-old', tone: 'POSITIVE' as const, headline: 'Old headline', body: 'Old body', recommendation: 'Old rec', flags: [] }
+const NEW_BRIEFING = { generated_at: 'ts-new', tone: 'POSITIVE' as const, headline: 'New headline', body: 'New body', recommendation: 'New rec', flags: [] }
+
+function makeFetch(responses: Array<object>) {
+  let getCallCount = 0
+  return vi.fn().mockImplementation((_url: string, opts?: RequestInit) => {
+    if (opts?.method === 'POST') {
+      return Promise.resolve({ ok: true, status: 202, json: () => Promise.resolve({ ok: true }) } as Response)
+    }
+    const resp = responses[Math.min(getCallCount, responses.length - 1)]
+    getCallCount++
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(resp) } as Response)
+  })
+}
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -77,6 +93,56 @@ describe('TransmissionPanel', () => {
   })
 })
 
+describe('MX4Briefing — handleRefresh', () => {
+  it('does not call onRefresh prematurely when liveData has no generated_at but an old briefing exists in the API', async () => {
+    // Scenario: user visits page before liveData prop loads (liveData=undefined), but the DB
+    // already has an old briefing. handleRefresh should NOT call onRefresh just because the
+    // polling found an existing briefing — it should establish a proper baseline first.
+    vi.stubGlobal('fetch', makeFetch([OLD_BRIEFING, OLD_BRIEFING]))
+    vi.useFakeTimers()
+
+    const onRefresh = vi.fn()
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={undefined} section="home" onRefresh={onRefresh} />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+
+    // Advance 10 seconds → triggers the first poll (returns OLD_BRIEFING with same ts as baseline)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+
+    // onRefresh must NOT be called — the poll returned the same timestamp as the baseline
+    expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it('calls onRefresh when polling detects a genuinely new briefing', async () => {
+    // Baseline fetch returns old briefing; first poll also returns old; second poll returns new
+    vi.stubGlobal('fetch', makeFetch([OLD_BRIEFING, OLD_BRIEFING, NEW_BRIEFING]))
+    vi.useFakeTimers()
+
+    const onRefresh = vi.fn()
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={OLD_BRIEFING} section="home" onRefresh={onRefresh} />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+
+    // First poll → still old briefing → no call
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(onRefresh).not.toHaveBeenCalled()
+
+    // Second poll → new briefing detected → onRefresh called
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('MX4Briefing', () => {
   const liveBriefing = {
     tone: 'POSITIVE' as const,
@@ -99,6 +165,43 @@ describe('MX4Briefing', () => {
       <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} />
     )
     expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
+  })
+})
+
+describe('MX4Briefing — handleFullAnalysis', () => {
+  it('normalizes literal \\N escape sequences in body before seeding to chat', async () => {
+    // liveData.body contains literal backslash-N sequences (model output artifact)
+    // After clicking FULL ANALYSIS, the seeded content must have real newlines instead
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ ok: true }),
+    } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const briefing = {
+      tone: 'POSITIVE' as const,
+      headline: 'Training load nominal.',
+      summary: 'Load is elevated. Reduce intensity.',
+      body: '## ASSESSMENT\\NLoad is elevated.\\N\\N## DIRECTIVE\\NReduce intensity by 15%.',
+      recommendation: 'Rest tomorrow.',
+      flags: [],
+      generated_at: 'ts-1',
+    }
+
+    render(
+      <MX4Briefing accent="#fb923c" brief={BRIEFS.home} liveData={briefing} section="training" />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('FULL ANALYSIS ›'))
+    })
+
+    const seedCall = fetchMock.mock.calls.find(([url]: [string]) => url === '/api/mx4/chat/seed')
+    expect(seedCall).toBeDefined()
+
+    const seedBody = JSON.parse(seedCall![1].body as string) as { content: string }
+    // literal \N (backslash + uppercase N) must be absent — replaced with real newlines
+    expect(seedBody.content).not.toMatch(/\\N/)
   })
 })
 

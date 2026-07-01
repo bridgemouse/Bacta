@@ -8,6 +8,7 @@ import { NutritionPage } from './pages/NutritionPage'
 import { BloodWorkPage } from './pages/BloodWorkPage'
 import { DailyLogPage } from './pages/DailyLogPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { LogsPage } from './pages/LogsPage'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/bloodwork" element={<BloodWorkPage />} />
         <Route path="/dailylog"  element={<DailyLogPage />} />
         <Route path="/settings"  element={<SettingsPage />} />
+        <Route path="/settings/logs" element={<LogsPage />} />
       </Routes>
     </AuthGate>
   )

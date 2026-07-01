@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 import path from 'path'
 import cron, { type ScheduledTask } from 'node-cron'
 import { getSetting } from './settings'
+import { logEvent } from './logger'
 
 export type SyncStatus = 'idle' | 'running' | 'done' | 'error'
 
@@ -22,9 +23,12 @@ export function triggerGarminSync(): { ok: boolean; status: SyncStatus } {
   const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
   syncStatus = 'running'
   syncStartedAt = Date.now()
+  logEvent('garmin', 'info', 'Sync triggered')
   const child = spawn('python3', [script], { stdio: 'ignore' })
   child.on('close', (code) => {
     syncStatus = code === 0 ? 'done' : 'error'
+    logEvent('garmin', code === 0 ? 'info' : 'error',
+      code === 0 ? 'Sync completed successfully' : `Sync failed (exit code ${code})`)
     // Auto-reset to idle after 90s so the button returns to ready state
     setTimeout(() => { syncStatus = 'idle'; syncStartedAt = null }, 90_000)
   })

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { EventEmitter } from 'events'
 
 process.env.DB_PATH = ':memory:'
@@ -9,6 +9,11 @@ const spawnMock = vi.fn(() => {
   return child
 })
 vi.mock('child_process', () => ({ spawn: spawnMock }))
+
+beforeAll(async () => {
+  const { migrate } = await import('../../server/db/migrate')
+  migrate()
+})
 
 describe('clampSyncInterval', () => {
   it('passes through a valid interval unchanged', async () => {

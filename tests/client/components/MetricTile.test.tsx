@@ -90,6 +90,11 @@ describe('SystemCard', () => {
     expect(screen.getByText('SLEEP')).toBeInTheDocument()
   })
 
+  it('renders the numeric score inside the ring dial', () => {
+    render(<SystemCard tile={ringTile} index={3} />)
+    expect(screen.getByText('82')).toBeInTheDocument()
+  })
+
   it('renders dailylog label for dots tile', () => {
     render(<SystemCard tile={dotsTile} index={6} />)
     expect(screen.getByText('DAILY LOG')).toBeInTheDocument()

@@ -70,7 +70,10 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
     setRefreshState('running')
     try {
       await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
-      const originalAt = liveData?.generated_at
+      // Fetch current API state as baseline — liveData prop may be null or stale
+      const baselineRes = await fetch(`/api/insights/${section}`)
+      const baseline = await baselineRes.json() as { generated_at?: string }
+      const originalAt = baseline.generated_at
       let attempts = 0
       while (attempts < 24) {
         await new Promise(r => setTimeout(r, 10_000))

@@ -25,6 +25,25 @@ export function loadSystemPrompt(): string {
   }
 }
 
+// Same-day activities already reflect their impact in the metrics a briefing
+// narrates (elevated HR, drained body battery, etc). Without this, MX-4 has
+// no way to know the data snapshot isn't the day's starting baseline.
+export function buildActivityContext(dateStr: string): string {
+  const rows = db.prepare(
+    `SELECT name, start_time, duration_s FROM health_activities WHERE date = ? ORDER BY start_time`
+  ).all(dateStr) as { name: string; start_time: string; duration_s: number | null }[]
+
+  if (rows.length === 0) return ''
+
+  const lines = rows.map(r => {
+    const time = r.start_time.includes('T') ? r.start_time.split('T')[1].slice(0, 5) : r.start_time
+    const minutes = r.duration_s ? ` (${Math.round(r.duration_s / 60)} min)` : ''
+    return `- ${time} — ${r.name}${minutes}`
+  })
+
+  return `\n\nToday's Logged Activities (already occurred before this data snapshot — the metrics above already reflect their impact; do not describe post-activity numbers as the day's starting baseline):\n${lines.join('\n')}`
+}
+
 async function runSection(
   sectionId: string,
   sectionName: string,
@@ -37,6 +56,7 @@ async function runSection(
   const modelId = (model as unknown as { modelId?: string }).modelId ?? getSetting('mx4_briefing_model') ?? 'unknown'
 
   const systemWithContext = assembleSystemPrompt(systemPrompt, heartbeat, wikiContext)
+  const activityContext = buildActivityContext(new Date().toISOString().slice(0, 10))
 
   const sectionPrompt = `You are generating MX-4's ${sectionName} briefing.
 
@@ -44,7 +64,7 @@ Section focus: ${promptAddendum}
 
 Use queryDb to pull the last 30 days of relevant metrics. ${isVaultEnabled() ? 'Use get_wiki_index then read_wiki_page or search_wiki to pull personal context from the connected vault.' : ''} Use readAllWikiPages if you need to review accumulated MX-4 knowledge.
 
-Produce a complete analysis in your voice. Cover: what the data shows today, how it compares to the 30-day trend, what it means for the user's current training block, and one specific recommendation.`
+Produce a complete analysis in your voice. Cover: what the data shows today, how it compares to the 30-day trend, what it means for the user's current training block, and one specific recommendation.${activityContext}`
 
   const { text: fullAnalysis } = await generateText({
     model,

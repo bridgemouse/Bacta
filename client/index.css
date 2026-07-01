@@ -47,3 +47,6 @@ body {
 @keyframes mx4blink       { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes mx4glowbreathe { 0%,100% { box-shadow: 0 0 8px var(--mx4-accent,#2bc4e8); } 50% { box-shadow: 0 0 20px var(--mx4-accent,#2bc4e8); } }
 @keyframes mx4shimmer     { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Generic data-refresh transition — referenced by FadeValue.tsx */
+@keyframes valueFadeIn    { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }

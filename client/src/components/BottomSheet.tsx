@@ -29,7 +29,7 @@ export function BottomSheet({ open, onClose, currentSection }: BottomSheetProps)
 
   return (
     <Sheet open={open} onClose={onClose} maxHeight="86%">
-      <SheetShell accent={MX4_COLOR}>
+      <SheetShell accent={MX4_COLOR} onClose={onClose}>
         <SheetHeader
           accent={MX4_COLOR}
           title="ALL SYSTEMS"

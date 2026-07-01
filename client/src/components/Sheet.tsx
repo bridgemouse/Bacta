@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
 import { COLORS, FONT_MONO } from '../theme'
 import { hexA } from '../lib/hexA'
 import { bactaTexture } from '../lib/bactaTexture'
@@ -64,9 +64,41 @@ export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps
 interface SheetShellProps {
   accent: string
   children: ReactNode
+  onClose?: () => void
 }
 
-export function SheetShell({ accent, children }: SheetShellProps) {
+const DRAG_DISMISS_THRESHOLD = 80
+
+export function SheetShell({ accent, children, onClose }: SheetShellProps) {
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const startYRef = useRef(0)
+
+  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    setDragging(true)
+    startYRef.current = e.clientY
+  }
+
+  function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragging) return
+    setDragY(Math.max(0, e.clientY - startYRef.current))
+  }
+
+  function handlePointerUp() {
+    if (!dragging) return
+    setDragging(false)
+    if (dragY > DRAG_DISMISS_THRESHOLD) {
+      onClose?.()
+      // Sheet only unmounts SheetShell ~340ms after close, so a quick reopen
+      // within that window would otherwise render with this drag offset still
+      // applied. Clear it after the close transition finishes rather than
+      // immediately, so the dismiss animation itself isn't disturbed.
+      setTimeout(() => setDragY(0), 300)
+    } else {
+      setDragY(0)
+    }
+  }
+
   return (
     <div
       style={{
@@ -81,13 +113,30 @@ export function SheetShell({ accent, children }: SheetShellProps) {
         flexDirection: 'column',
         maxHeight: '100%',
         color: COLORS.text,
+        transform: `translateY(${dragY}px)`,
+        transition: dragging ? 'none' : 'transform 0.25s ease',
       }}
     >
       <div
         style={{ position: 'absolute', inset: 0, ...bactaTexture(accent), pointerEvents: 'none', opacity: 0.7 }}
       />
-      {/* Grab handle */}
-      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingTop: 9 }}>
+      {/* Grab handle — drag down to dismiss */}
+      <div
+        data-testid="sheet-drag-handle"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
+          position: 'relative',
+          display: 'flex',
+          justifyContent: 'center',
+          paddingTop: 9,
+          paddingBottom: 8,
+          touchAction: 'none',
+          cursor: 'grab',
+        }}
+      >
         <span style={{ width: 38, height: 4, borderRadius: 4, background: hexA(accent, 0.4) }} />
       </div>
       {children}

@@ -60,6 +60,7 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
           hrTrend,
           stressTrend,
           spo2Trend,
+          sleepSTrend,
           sourcesData,
         ] = await Promise.all([
             fetchSummary(),
@@ -69,6 +70,7 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
             fetchTrend('sleep_hr'),
             fetchTrend('sleep_stress'),
             fetchTrend('sleep_spo2'),
+            fetchTrend('sleep_s'),
             fetchSources(),
           ])
         if (cancelled) return
@@ -100,7 +102,12 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
         const totalForPct = deepMins + lightMins + remMins || 1
         const deepTrendMins = deepTrend.map(v => Math.round(v / 60))
 
-        const sleepDebt = totalMins > 0 ? Math.max(0, 480 - totalMins) : undefined
+        // Cumulative debt over the trailing week: sum of each night's shortfall vs the
+        // 8h target. A well-rested night clamps to 0 rather than offsetting other nights'
+        // debt, matching how sleep debt is conventionally understood to accumulate.
+        const sleepDebt = sleepSTrend.length > 0
+          ? sleepSTrend.reduce((sum, s) => sum + Math.max(0, 480 - Math.round(s / 60)), 0)
+          : totalMins > 0 ? Math.max(0, 480 - totalMins) : undefined
         const deepRatio = totalMins > 0 ? Math.round(deepMins / totalMins * 100) : undefined
         const remRatio  = totalMins > 0 ? Math.round(remMins  / totalMins * 100) : undefined
 

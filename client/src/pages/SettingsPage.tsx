@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
 import { Rail } from '../components/viz/Rail'
 import { SecurityRail } from '../components/SecurityRail'
@@ -102,6 +103,7 @@ const selectStyle: React.CSSProperties = {
 }
 
 export function SettingsPage() {
+  const navigate = useNavigate()
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [clearedKey, setClearedKey] = useState<string | null>(null)
@@ -1203,6 +1205,18 @@ export function SettingsPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Rail: DIAGNOSTICS */}
+      <Rail label="DIAGNOSTICS" accent={MX4_COLOR} />
+
+      <div style={cardStyle}>
+        <div onClick={() => navigate('/settings/logs')} style={{ ...rowStyleLast, cursor: 'pointer' }}>
+          <span style={labelStyle}>Application logs</span>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: MX4_COLOR }}>
+            VIEW LOGS ›
+          </span>
+        </div>
       </div>
 
       {/* Rail 7: GARMIN */}

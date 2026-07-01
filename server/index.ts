@@ -12,6 +12,7 @@ import bloodworkRouter from './api/bloodwork'
 import pollRouter from './api/poll'
 import mx4Router from './api/mx4'
 import settingsRouter from './api/settings'
+import logsRouter from './api/logs'
 import authRouter from './api/auth'
 import { integrationsRouter, callbackHandler } from './api/integrations'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './lib/auth'
@@ -99,6 +100,7 @@ app.use('/api/bloodwork', requireAuth, bloodworkRouter)
 app.use('/api/poll', requireAuth, aiLimiter, pollRouter)
 app.use('/api/mx4', requireAuth, aiLimiter, mx4Router)
 app.use('/api/settings', requireAuth, settingsRouter)
+app.use('/api/logs', requireAuth, logsRouter)
 
 // OAuth callbacks exempt from requireAuth — browser arrives from external redirect
 // CSRF state parameter is the guard inside callbackHandler

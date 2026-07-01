@@ -127,20 +127,12 @@ export function SystemCard({ tile, index, onClick }: SystemCardProps) {
       {/* Corner bracket decoration */}
       <Bracket color={accent} inset={5} op={0.4} radius={3} size={9} />
 
-      {/* Ring positioned at top-right for ring viz */}
-      {hasRing && (
-        <span style={{ position: 'absolute', top: 10, right: 10 }}>
-          <Ring progress={tile.ring!} accent={accent} size={38} stroke={3} />
-        </span>
-      )}
-
       {/* Header: sigil chip + label + index */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 7,
-          paddingRight: hasRing ? 44 : 0,
         }}
       >
         <span
@@ -175,36 +167,45 @@ export function SystemCard({ tile, index, onClick }: SystemCardProps) {
         </span>
       </div>
 
-      {/* Value + sub */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-          <span
+      {/* Value + sub, paired inline with the ring dial when present */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 22,
+                fontWeight: 700,
+                color: COLORS.text,
+                lineHeight: 1,
+              }}
+            >
+              {tile.value}
+            </span>
+            {tile.unit && (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, color: COLORS.textMuted }}>
+                {tile.unit}
+              </span>
+            )}
+          </div>
+          <div
             style={{
               fontFamily: FONT_MONO,
-              fontSize: 22,
-              fontWeight: 700,
-              color: COLORS.text,
-              lineHeight: 1,
+              fontSize: 9,
+              color: COLORS.textSecondary,
+              marginTop: 3,
             }}
           >
-            {tile.value}
-          </span>
-          {tile.unit && (
-            <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, color: COLORS.textMuted }}>
-              {tile.unit}
+            {tile.sub}
+          </div>
+        </div>
+        {hasRing && (
+          <Ring progress={tile.ring!} accent={accent} size={38} stroke={3}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: COLORS.text }}>
+              {Math.round(tile.ring! * 100)}
             </span>
-          )}
-        </div>
-        <div
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 9,
-            color: COLORS.textSecondary,
-            marginTop: 3,
-          }}
-        >
-          {tile.sub}
-        </div>
+          </Ring>
+        )}
       </div>
 
       {/* Viz */}

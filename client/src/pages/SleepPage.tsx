@@ -89,8 +89,8 @@ const EFFICIENCY_INFO: CardInfo = {
   source: 'Garmin Venu 4 · accelerometer',
 }
 const DEBT_INFO: CardInfo = {
-  title: 'Sleep Debt',
-  description: 'Shortfall vs your 8h target. Short-term debt is partially recoverable; chronic debt compounds across cognition and metabolism.',
+  title: 'Sleep Debt · 7-Day',
+  description: 'Cumulative shortfall vs your 8h target, summed across the trailing 7 nights. A well-rested night clamps to zero rather than offsetting other nights’ debt — short-term debt is partially recoverable, but chronic debt compounds across cognition and metabolism.',
   source: 'Bacta-computed · Garmin sleep duration',
 }
 const SLEEP_HR_INFO: CardInfo = {
@@ -188,6 +188,11 @@ function SleepOverview() {
   const awakeInBed = slp.duration.inBed - slp.duration.mins
   const debtH = slp.sleepDebt != null ? Math.floor(slp.sleepDebt / 60) : 0
   const debtM = slp.sleepDebt != null ? slp.sleepDebt % 60 : 0
+  // Restoration across the same trailing week the debt figure covers (7 * 8h target),
+  // so the bar's fill matches what the card's label/color/text describe.
+  const weeklyRestoredPct = slp.sleepDebt == null
+    ? 100
+    : Math.max(0, Math.min(100, Math.round((1 - slp.sleepDebt / (7 * 480)) * 100)))
   const totalMins = slp.stages.reduce((s, st) => s + st.mins, 0) || slp.duration.mins
   const deepMins = slp.stages.find(s => s.key === 'deep')?.mins ?? 0
   const remMins = slp.stages.find(s => s.key === 'rem')?.mins ?? 0
@@ -283,15 +288,15 @@ function SleepOverview() {
         }}>
           <Bracket color={A} inset={6} op={0.35} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
-          <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 5, paddingLeft: 3 }}>Sleep Debt</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 5, paddingLeft: 3 }}>Sleep Debt · 7D</div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: COLORS.text, lineHeight: 1, marginBottom: 4, paddingLeft: 3 }}>
             {slp.sleepDebt == null || slp.sleepDebt === 0 ? '0 min' : debtH > 0 ? `${debtH}h ${String(debtM).padStart(2, '0')}m` : `${debtM}m`}
           </div>
           <div style={{ width: '100%', height: 4, borderRadius: 2, background: hexA(COLORS.textMuted, 0.12), overflow: 'hidden', marginBottom: 4 }}>
-            <div style={{ width: `${Math.min(100, Math.round((slp.duration.mins / 480) * 100))}%`, height: '100%', background: slp.sleepDebt === 0 ? COLORS.green : A, borderRadius: 2 }} />
+            <div style={{ width: `${weeklyRestoredPct}%`, height: '100%', background: slp.sleepDebt === 0 ? COLORS.green : A, borderRadius: 2 }} />
           </div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: slp.sleepDebt === 0 ? COLORS.green : A, fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 3 }}>
-            {slp.sleepDebt == null || slp.sleepDebt === 0 ? 'FULLY RESTORED' : 'BELOW 8H GOAL'}
+            {slp.sleepDebt == null || slp.sleepDebt === 0 ? 'FULLY RESTORED' : 'ACCUMULATING OVER 7D'}
           </div>
           {debtOpen && <InfoOverlay info={DEBT_INFO} accent={A} radius={10} compact onClick={debtTap} />}
         </div>

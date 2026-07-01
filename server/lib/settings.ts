@@ -31,6 +31,9 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   // Garmin (primary; managed by garmin_poller.py — no OAuth, no API key)
   garmin_enabled:   'true',
   garmin_last_sync: '',
+  // Minutes between automatic background syncs; 0 disables. Floored to a
+  // 15-minute minimum in garminSync.ts to avoid hammering the Garmin API.
+  garmin_background_sync_min: '60',
 
   // Strava
   strava_client_id:   '', strava_client_secret: '', strava_tokens: '',

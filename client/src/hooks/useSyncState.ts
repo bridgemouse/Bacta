@@ -26,7 +26,7 @@ export function useSyncState() {
       if (data.status === 'done' || data.status === 'error') {
         stopPolling()
         if (data.status === 'done') {
-          reloadRef.current = setTimeout(() => window.location.reload(), 3000)
+          reloadRef.current = setTimeout(() => window.dispatchEvent(new CustomEvent('bacta:sync-complete')), 3000)
         } else {
           showToast('Garmin sync failed. Try again from Settings.', 'error')
         }

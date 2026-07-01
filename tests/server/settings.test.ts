@@ -180,4 +180,36 @@ describe('Settings API', () => {
     expect(parsed).toHaveProperty('tag')
     expect(row.value).not.toContain('my-secret-value')
   })
+
+  it('GET /api/settings includes garmin_background_sync_min default', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/settings')
+    expect(res.body.garmin_background_sync_min).toBe('60')
+  })
+
+  it('PUT /api/settings/garmin_background_sync_min accepts a valid interval', async () => {
+    const { app } = await import('../../server/index')
+    const putRes = await request(app).put('/api/settings/garmin_background_sync_min').send({ value: '30' })
+    expect(putRes.status).toBe(200)
+    const getRes = await request(app).get('/api/settings')
+    expect(getRes.body.garmin_background_sync_min).toBe('30')
+  })
+
+  it('PUT /api/settings/garmin_background_sync_min accepts 0 to disable', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/garmin_background_sync_min').send({ value: '0' })
+    expect(res.status).toBe(200)
+  })
+
+  it('PUT /api/settings/garmin_background_sync_min rejects an interval below the 15-minute minimum', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/garmin_background_sync_min').send({ value: '5' })
+    expect(res.status).toBe(400)
+  })
+
+  it('PUT /api/settings/garmin_background_sync_min rejects a non-numeric value', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).put('/api/settings/garmin_background_sync_min').send({ value: 'often' })
+    expect(res.status).toBe(400)
+  })
 })

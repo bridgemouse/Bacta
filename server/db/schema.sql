@@ -125,3 +125,12 @@ CREATE TABLE IF NOT EXISTS mx4_chat_messages (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_chat_session ON mx4_chat_messages(session_id, created_at);
+
+CREATE TABLE IF NOT EXISTS app_logs (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  source     TEXT NOT NULL,
+  level      TEXT NOT NULL,
+  message    TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_app_logs_source_created ON app_logs(source, created_at);

@@ -101,4 +101,19 @@ describe('runOrchestrator', () => {
       expect(mockGenerateText).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('logging', () => {
+    it('records an mx4-source log entry for the run', async () => {
+      vi.clearAllMocks()
+      const { generateText } = await import('ai')
+      vi.mocked(generateText).mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+      await runOrchestrator()
+
+      const { default: db } = await import('../../server/db/client')
+      const rows = db.prepare("SELECT level, message FROM app_logs WHERE source = 'mx4'").all() as { level: string; message: string }[]
+      expect(rows.length).toBeGreaterThan(0)
+    })
+  })
 })

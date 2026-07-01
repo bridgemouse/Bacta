@@ -94,8 +94,12 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return
-    // Ensure ## headers are on their own lines (model sometimes omits newlines in JSON output)
-    const body = liveData.body.replace(/([^\n])(##\s)/g, '$1\n\n$2').trim()
+    // Normalize literal \N sequences the model occasionally emits instead of real newlines,
+    // then ensure ## headers always start on their own line
+    const body = liveData.body
+      .replace(/\\N/g, '\n')
+      .replace(/([^\n])(##\s)/g, '$1\n\n$2')
+      .trim()
     try {
       await fetch('/api/mx4/chat/seed', {
         method: 'POST',

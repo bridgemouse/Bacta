@@ -1,6 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, afterEach } from 'vitest'
 import { TransmissionPanel, MX4Briefing } from '../../../client/src/components/MX4Card'
 import { BRIEFS } from '../../../client/src/lib/stubData'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('TransmissionPanel', () => {
   it('renders the assessment text', () => {
@@ -94,5 +99,33 @@ describe('MX4Briefing', () => {
       <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} />
     )
     expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
+  })
+})
+
+describe('MX4Briefing — handleRefresh failure feedback', () => {
+  const liveBriefing = {
+    tone: 'POSITIVE' as const,
+    headline: 'Systems nominal.',
+    summary: 'Everything looks good today.',
+    body: '## DIRECTIVE\nKeep it up.',
+    recommendation: 'Train as planned.',
+    flags: [],
+  }
+
+  it('shows a FAILED state instead of silently reverting to REFRESH when the request errors', async () => {
+    // Bug: the catch block was silent and finally always reset state to 'idle',
+    // so a failed regeneration looked identical to a successful one.
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network error'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} section="home" />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+
+    expect(screen.getByText('FAILED ›')).toBeInTheDocument()
   })
 })

@@ -63,11 +63,12 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const { openAskSheet } = useAskSheet()
   const sessionId = `chat-${new Date().toISOString().slice(0, 10)}`
 
-  const [refreshState, setRefreshState] = useState<'idle' | 'running'>('idle')
+  const [refreshState, setRefreshState] = useState<'idle' | 'running' | 'error'>('idle')
 
   async function handleRefresh() {
     if (!section || refreshState === 'running') return
     setRefreshState('running')
+    let succeeded = false
     try {
       await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
       const originalAt = liveData?.generated_at
@@ -78,14 +79,18 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
         const d = await res.json()
         if (d.generated_at !== originalAt) {
           onRefresh?.()
+          succeeded = true
           break
         }
         attempts++
       }
     } catch {
-      // non-fatal
+      // handled by succeeded flag below
     } finally {
-      setRefreshState('idle')
+      setRefreshState(succeeded ? 'idle' : 'error')
+      if (!succeeded) {
+        setTimeout(() => setRefreshState('idle'), 4000)
+      }
     }
   }
 
@@ -296,11 +301,11 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
               fontSize: 9,
               fontWeight: 700,
               letterSpacing: '0.12em',
-              color: refreshState === 'running' ? COLORS.textMuted : accent,
+              color: refreshState === 'running' ? COLORS.textMuted : refreshState === 'error' ? COLORS.mx4Red : accent,
               flexShrink: 0,
             }}
           >
-            {refreshState === 'running' ? 'RUNNING ›' : 'REFRESH ›'}
+            {refreshState === 'running' ? 'RUNNING ›' : refreshState === 'error' ? 'FAILED ›' : 'REFRESH ›'}
           </button>
         )}
         <span style={{ marginLeft: 'auto' }}>

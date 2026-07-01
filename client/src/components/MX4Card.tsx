@@ -70,7 +70,10 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
     setRefreshState('running')
     try {
       await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
-      const originalAt = liveData?.generated_at
+      // Fetch current API state as baseline — liveData prop may be null or stale
+      const baselineRes = await fetch(`/api/insights/${section}`)
+      const baseline = await baselineRes.json() as { generated_at?: string }
+      const originalAt = baseline.generated_at
       let attempts = 0
       while (attempts < 24) {
         await new Promise(r => setTimeout(r, 10_000))
@@ -91,13 +94,23 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return
-    // Ensure ## headers are on their own lines (model sometimes omits newlines in JSON output)
-    const body = liveData.body.replace(/([^\n])(##\s)/g, '$1\n\n$2').trim()
+    // Normalize literal \N sequences the model occasionally emits instead of real newlines,
+    // then ensure ## headers always start on their own line
+    const body = liveData.body
+      .replace(/\\N/g, '\n')
+      .replace(/([^\n])(##\s)/g, '$1\n\n$2')
+      .trim()
+    // If the ## DIRECTIVE section has no content (orchestrator prompt artifact),
+    // inject the recommendation field as fallback directive body
+    const directiveEmpty = /##\s*DIRECTIVE\s*$/.test(body)
+    const seededContent = directiveEmpty && liveData.recommendation
+      ? `${body}\n${liveData.recommendation}`
+      : body
     try {
       await fetch('/api/mx4/chat/seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, content: body, section }),
+        body: JSON.stringify({ sessionId, content: seededContent, section }),
       })
     } catch {
       // Non-fatal — open AskSheet anyway

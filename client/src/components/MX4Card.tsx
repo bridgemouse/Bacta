@@ -10,6 +10,7 @@ import { COLORS, FONT_MONO, FONT_UI, toneColor } from '../theme'
 import type { Brief } from '../lib/stubData'
 import type { BriefingResult } from '../lib/briefing'
 import { useAskSheet } from '../lib/AskSheetContext'
+import { useToast } from '../lib/ToastContext'
 import { getChatSessionId } from '../lib/chatSession'
 
 // ─── New API ─────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const flags = liveData?.flags ?? []
 
   const { openAskSheet } = useAskSheet()
+  const { showToast } = useToast()
 
   const [refreshState, setRefreshState] = useState<'idle' | 'running' | 'error'>('idle')
   const errorResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -79,7 +81,16 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
     setRefreshState('running')
     let succeeded = false
     try {
-      await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
+      const triggerRes = await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
+      if (triggerRes.status === 409) {
+        // Another run (e.g. the nightly full orchestrator) is already in progress —
+        // this click didn't start anything, so don't poll for it or surface a stale
+        // error left over from a previous, unrelated run of this section. Not a
+        // failure of this click, so don't flash the FAILED state either.
+        showToast('MX-4 is already running. Try again shortly.', 'error')
+        succeeded = true
+        return
+      }
       // Fetch current API state as baseline — liveData prop may be null or stale
       const baselineRes = await fetch(`/api/insights/${section}`)
       const baseline = await baselineRes.json() as { generated_at?: string }
@@ -93,6 +104,16 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
           onRefresh?.()
           succeeded = true
           break
+        }
+        try {
+          const statusRes = await fetch(`/api/mx4/run/${section}/status`)
+          const statusData = await statusRes.json() as { error: string | null }
+          if (statusData.error) {
+            showToast(statusData.error, 'error')
+            break
+          }
+        } catch {
+          // ignore status-check failures — fall through to the next poll attempt
         }
         attempts++
       }

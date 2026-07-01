@@ -11,9 +11,15 @@ async function getClient(): Promise<Client | null> {
   if (_client) return _client
 
   const url = getSetting('vault_url') ?? ''
-  _client = new Client({ name: 'bacta-mx4', version: '1.0.0' }, { capabilities: {} })
+  const client = new Client({ name: 'bacta-mx4', version: '1.0.0' }, { capabilities: {} })
   const transport = new SSEClientTransport(new URL(`${url}/sse`))
-  await _client.connect(transport)
+  try {
+    await client.connect(transport)
+  } catch (e) {
+    _client = null
+    throw e
+  }
+  _client = client
   return _client
 }
 

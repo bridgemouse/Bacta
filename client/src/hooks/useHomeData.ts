@@ -16,6 +16,13 @@ const STUB: HomeTileData = {
 export function useHomeData(): { data: HomeTileData; loading: boolean } {
   const [data, setData] = useState<HomeTileData>(STUB)
   const [loading, setLoading] = useState(true)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setRefreshTrigger(n => n + 1)
+    window.addEventListener('bacta:sync-complete', handler)
+    return () => window.removeEventListener('bacta:sync-complete', handler)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -72,7 +79,7 @@ export function useHomeData(): { data: HomeTileData; loading: boolean } {
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [refreshTrigger])
 
   return { data, loading }
 }

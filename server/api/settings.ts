@@ -2,6 +2,7 @@ import { Router } from 'express'
 import db from '../db/client'
 import { setSetting, getSetting, SETTING_DEFAULTS, SECRET_SETTING_KEYS, PROVIDERS } from '../lib/settings'
 import { scheduleNightly } from '../lib/ai/scheduler'
+import { scheduleGarminBackgroundSync } from '../lib/garminSync'
 import { testVaultConnection, resetVaultClient } from '../lib/ai/vaultClient'
 import { encrypt } from '../lib/integrations/shared/encryption'
 
@@ -36,6 +37,7 @@ const SETTING_VALIDATORS: Record<string, (v: string) => boolean> = {
   mx4_nightly_time:   v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
   mx4_chat_compression_threshold: v => /^\d{1,3}$/.test(v) && +v >= 4 && +v <= 200,
   mx4_home_rerun_mode: v => ['home_only', 'all_sections'].includes(v),
+  garmin_background_sync_min: v => /^\d{1,4}$/.test(v) && (+v === 0 || +v >= 15),
   mx4_custom_skills:   v => { try { return Array.isArray(JSON.parse(v)) } catch { return false } },
   vault_url:           v => v === '' || /^https?:\/\/[^\s]+$/.test(v),
   app_logo:            v => VALID_LOGOS.includes(v),
@@ -118,6 +120,9 @@ settingsRouter.put('/:key', (req, res) => {
   setSetting(key, storedValue)
   if (key === 'mx4_nightly_time' || key === 'mx4_nightly_enabled') {
     scheduleNightly()
+  }
+  if (key === 'garmin_background_sync_min') {
+    scheduleGarminBackgroundSync()
   }
   if (key === 'vault_enabled' || key === 'vault_url') {
     resetVaultClient()

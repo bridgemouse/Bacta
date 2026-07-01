@@ -1,7 +1,6 @@
 import { Router } from 'express'
-import { spawn } from 'child_process'
-import path from 'path'
 import db from '../db/client'
+import { getSyncState, triggerGarminSync } from '../lib/garminSync'
 
 const garminRouter = Router()
 
@@ -37,11 +36,6 @@ const VALID_METRICS = [
   'hrzone_1_min', 'hrzone_2_min', 'hrzone_3_min', 'hrzone_4_min', 'hrzone_5_min',
 ]
 
-// In-memory sync state — resets on server restart, which is fine
-type SyncStatus = 'idle' | 'running' | 'done' | 'error'
-let syncStatus: SyncStatus = 'idle'
-let syncStartedAt: number | null = null
-
 // GET /api/garmin/summary — latest available value per metric
 garminRouter.get('/summary', (_req, res) => {
   const rows = db.prepare(
@@ -71,26 +65,12 @@ garminRouter.get('/activities', (req, res) => {
 
 // GET /api/garmin/sync/status — current sync state
 garminRouter.get('/sync/status', (_req, res) => {
-  const elapsed = syncStartedAt != null ? Math.round((Date.now() - syncStartedAt) / 1000) : null
-  res.json({ status: syncStatus, elapsed })
+  res.json(getSyncState())
 })
 
 // POST /api/garmin/sync — spawn poller, track completion
 garminRouter.post('/sync', (_req, res) => {
-  if (syncStatus === 'running') {
-    res.status(202).json({ ok: true, status: 'running' })
-    return
-  }
-  const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
-  syncStatus = 'running'
-  syncStartedAt = Date.now()
-  const child = spawn('python3', [script], { stdio: 'ignore' })
-  child.on('close', (code) => {
-    syncStatus = code === 0 ? 'done' : 'error'
-    // Auto-reset to idle after 90s so the button returns to ready state
-    setTimeout(() => { syncStatus = 'idle'; syncStartedAt = null }, 90_000)
-  })
-  res.status(202).json({ ok: true, status: 'running' })
+  res.status(202).json(triggerGarminSync())
 })
 
 // GET /api/garmin/weekly-volume?weeks=6

@@ -10,6 +10,7 @@ import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
 import { wrapSession } from './wrap'
 import { notifyFailure } from '../notify'
+import { logEvent } from '../logger'
 import db from '../../db/client'
 import fs from 'fs'
 import path from 'path'
@@ -73,7 +74,7 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
   const { object } = await generateObject({
     model,
     schema: BriefingResultSchema,
-    prompt: `Extract a structured briefing from this analysis.\n\n- summary: 3–5 punchy prose sentences (no headers) — key finding, implication, directive. This is what appears on the card.\n- body: full structured markdown. Each section MUST start on its own line. Format:\n\n## SECTION HEADER\nContent here.\n\n## NEXT SECTION\nContent here.\n\nBold all metric values: **60ms**, **452**. Bullet lists with - prefix. End with ## DIRECTIVE.\n- Preserve MX-4's voice throughout.\n\nAnalysis:\n\n${fullAnalysis}`,
+    prompt: `Extract a structured briefing from this analysis.\n\n- summary: 3–5 punchy prose sentences (no headers) — key finding, implication, directive. This is what appears on the card.\n- body: full structured markdown. Each section MUST start on its own line. Format:\n\n## SECTION HEADER\nContent here.\n\n## NEXT SECTION\nContent here.\n\nBold all metric values: **60ms**, **452**. Bullet lists with - prefix. Final section MUST be ## DIRECTIVE with 2–3 specific action items — never leave it empty.\n- Preserve MX-4's voice throughout.\n\nAnalysis:\n\n${fullAnalysis}`,
   })
 
   const briefing: BriefingResult = object
@@ -95,10 +96,12 @@ export async function runSectionById(sectionId: string): Promise<void> {
 
   await runSection(section.id, section.name, section.promptAddendum, wikiContext, heartbeat, systemPrompt)
   console.log(`[mx4] ${sectionId} briefing written`)
+  logEvent('mx4', 'info', `${sectionId} briefing written`)
 }
 
 export async function runOrchestrator(): Promise<void> {
   console.log('[mx4] orchestrator run started', new Date().toISOString())
+  logEvent('mx4', 'info', 'Nightly orchestrator run started')
 
   const systemPrompt = loadSystemPrompt()
   const wikiContext  = readAllWikiPagesSync()
@@ -113,18 +116,21 @@ export async function runOrchestrator(): Promise<void> {
       try {
         await runSection(section.id, section.name, section.promptAddendum, wikiContext, heartbeat, systemPrompt)
         console.log(`[mx4] ${section.id} briefing written`)
+        logEvent('mx4', 'info', `${section.id} briefing written`)
         break
       } catch (e: unknown) {
         attempts++
         const message = e instanceof Error ? e.message : String(e)
         if (message.includes('quota') || message.includes('rate') || message.includes('429')) {
           console.error(`[mx4] ${section.id} usage limit error — aborting run`)
+          logEvent('mx4', 'error', `${section.id} usage limit error — aborting run: ${message}`)
           errors.push({ section: section.id, error: message })
           rateLimitHit = true
           break
         }
         if (attempts >= 3) {
           console.error(`[mx4] ${section.id} failed after 3 attempts: ${message}`)
+          logEvent('mx4', 'error', `${section.id} failed after 3 attempts: ${message}`)
           errors.push({ section: section.id, error: message })
         } else {
           await new Promise(r => setTimeout(r, 30_000))
@@ -136,12 +142,14 @@ export async function runOrchestrator(): Promise<void> {
 
   if (errors.length > 0) {
     console.error('[mx4] run completed with errors:', errors)
+    logEvent('mx4', 'error', `Run completed with errors: ${errors.map(e => `${e.section}: ${e.error}`).join('; ')}`)
     await notifyFailure(
       'nightly MX-4 run failed',
       errors.map(e => `${e.section}: ${e.error}`).join('; ') + (rateLimitHit ? ' (usage limit)' : ''),
     )
   } else {
     console.log('[mx4] orchestrator run complete')
+    logEvent('mx4', 'info', 'Orchestrator run complete')
   }
 
   // Compact any wiki pages that have grown past the token limit.

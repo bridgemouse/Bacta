@@ -1224,14 +1224,22 @@ export function SettingsPage() {
 
       <div style={cardStyle}>
         <div style={rowStyleLast}>
-          <span style={{
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            letterSpacing: '0.12em',
-            color: COLORS.textMuted,
-          }}>
-            SYNC PREFERENCES — COMING SOON
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={labelStyle}>Background sync</span>
+            {savedBadge('garmin_background_sync_min')}
+          </div>
+          <select
+            value={settings['garmin_background_sync_min'] ?? '60'}
+            onChange={e => save('garmin_background_sync_min', e.target.value)}
+            style={selectStyle}
+          >
+            <option value="0">Off</option>
+            <option value="15">Every 15 min</option>
+            <option value="30">Every 30 min</option>
+            <option value="60">Every hour</option>
+            <option value="120">Every 2 hours</option>
+            <option value="240">Every 4 hours</option>
+          </select>
         </div>
       </div>
 

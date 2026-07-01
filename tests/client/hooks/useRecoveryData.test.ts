@@ -1,5 +1,5 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { renderHook, waitFor, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../../client/src/lib/garminApi', () => ({
   fetchSummary: vi.fn(),
@@ -18,6 +18,10 @@ beforeEach(() => {
   mockFetchSummary.mockResolvedValue({})
   mockFetchTrend.mockResolvedValue([])
   mockFetchSources.mockResolvedValue({})
+})
+
+afterEach(() => {
+  vi.clearAllMocks()
 })
 
 describe('useRecoveryData — sources', () => {
@@ -71,5 +75,24 @@ describe('useRecoveryData — sources', () => {
 
     expect(result.current).toHaveProperty('sources')
     expect(typeof result.current.sources).toBe('object')
+  })
+})
+
+describe('useRecoveryData — sync refresh', () => {
+  it('refetches Body Battery when bacta:sync-complete event fires', async () => {
+    mockFetchSummary.mockResolvedValue({ body_battery_current: 85, body_battery_wake: 90 })
+
+    const { result } = renderHook(() => useRecoveryData())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.data.battery.now).toBe(85)
+
+    // Simulate new data arriving after sync
+    mockFetchSummary.mockResolvedValue({ body_battery_current: 60, body_battery_wake: 90 })
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('bacta:sync-complete'))
+    })
+
+    await waitFor(() => expect(result.current.data.battery.now).toBe(60))
   })
 })

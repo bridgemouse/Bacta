@@ -66,6 +66,13 @@ const INITIAL: TrainingData = {
 export function useTrainingData(): { data: TrainingData; loading: boolean } {
   const [data, setData] = useState<TrainingData>(INITIAL)
   const [loading, setLoading] = useState(true)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setRefreshTrigger(n => n + 1)
+    window.addEventListener('bacta:sync-complete', handler)
+    return () => window.removeEventListener('bacta:sync-complete', handler)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -198,7 +205,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [refreshTrigger])
 
   return { data, loading }
 }

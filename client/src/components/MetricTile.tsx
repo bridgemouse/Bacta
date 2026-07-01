@@ -3,6 +3,7 @@ import { Sigil } from './primitives/Sigil'
 import { Sparkline } from './primitives/Sparkline'
 import { Ring } from './primitives/Ring'
 import { ReadinessDots } from './primitives/ReadinessDots'
+import { FadeValue } from './primitives/FadeValue'
 import { hexA } from '../lib/hexA'
 import { COLORS, FONT_MONO, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
 import type { SectionKey } from '../theme'
@@ -171,17 +172,19 @@ export function SystemCard({ tile, index, onClick }: SystemCardProps) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-            <span
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 22,
-                fontWeight: 700,
-                color: COLORS.text,
-                lineHeight: 1,
-              }}
-            >
-              {tile.value}
-            </span>
+            <FadeValue value={tile.value}>
+              <span
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: COLORS.text,
+                  lineHeight: 1,
+                }}
+              >
+                {tile.value}
+              </span>
+            </FadeValue>
             {tile.unit && (
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, color: COLORS.textMuted }}>
                 {tile.unit}
@@ -201,9 +204,11 @@ export function SystemCard({ tile, index, onClick }: SystemCardProps) {
         </div>
         {hasRing && (
           <Ring progress={tile.ring!} accent={accent} size={38} stroke={3}>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: COLORS.text }}>
-              {Math.round(tile.ring! * 100)}
-            </span>
+            <FadeValue value={Math.round(tile.ring! * 100)}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, color: COLORS.text }}>
+                {Math.round(tile.ring! * 100)}
+              </span>
+            </FadeValue>
           </Ring>
         )}
       </div>

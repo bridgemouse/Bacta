@@ -83,6 +83,18 @@ describe('App', () => {
     expect(screen.queryByText(/HR ZONES/)).not.toBeInTheDocument()
   })
 
+  test('does not show title/source text in Resting HR overlay on /recovery (compact pair card)', async () => {
+    renderApp('/recovery')
+    await userEvent.click(screen.getByText('48'))
+    expect(screen.queryByText('RESTING HEART RATE')).not.toBeInTheDocument()
+  })
+
+  test('does not show title/source text in Stress overlay on /recovery (compact pair card)', async () => {
+    renderApp('/recovery')
+    await userEvent.click(screen.getByText('28'))
+    expect(screen.queryByText('STRESS SCORE')).not.toBeInTheDocument()
+  })
+
   // SettingsPage's mount-time fetches don't guard on res.ok before calling
   // .json() (pre-existing, unrelated to these tests), so the module-wide
   // { ok: false } default stub throws unhandled rejections on this route —

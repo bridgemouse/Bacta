@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { COLORS, FONT_MONO, MX4_COLOR, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
 import type { SectionKey } from '../theme'
 import { Sheet, SheetShell, SheetHeader } from './Sheet'
@@ -8,6 +7,7 @@ import { NavIcon } from './primitives/NavIcon'
 import { Bracket } from './primitives/Bracket'
 import { FTelemetry } from './primitives/FTelemetry'
 import { hexA } from '../lib/hexA'
+import { useTransitionNavigate } from '../lib/useTransitionNavigate'
 
 const SECTION_KEYS: Exclude<SectionKey, 'home'>[] = [
   'recovery', 'training', 'sleep', 'nutrition', 'bloodwork', 'dailylog',
@@ -20,7 +20,7 @@ interface BottomSheetProps {
 }
 
 export function BottomSheet({ open, onClose, currentSection }: BottomSheetProps) {
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
 
   const handleNav = (section: SectionKey) => {
     navigate(section === 'home' ? '/' : `/${section}`)

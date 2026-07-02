@@ -49,6 +49,38 @@ def safe(obj, *keys, default=None):
     return obj if obj is not None else default
 
 
+def extract_activity_summary_fields(dto, type_key):
+    """Pull the #41 expansion fields out of a get_activity() summaryDTO payload.
+    Broadly-applicable fields are returned for any type_key; active_sets/
+    total_exercise_reps only apply to strength_training (absent otherwise)."""
+    def r(val, digits=None):
+        if val is None:
+            return None
+        return round(val, digits) if digits is not None else round(val)
+
+    is_strength = type_key == 'strength_training'
+
+    return {
+        'max_hr':                r(dto.get('maxHR')),
+        'min_hr':                r(dto.get('minHR')),
+        'training_load':         dto.get('activityTrainingLoad'),
+        'body_battery_diff':     r(dto.get('differenceBodyBattery')),
+        'moving_duration_s':     dto.get('movingDuration'),
+        'elapsed_duration_s':    dto.get('elapsedDuration'),
+        'avg_speed_mps':         dto.get('averageSpeed'),
+        'max_speed_mps':         dto.get('maxSpeed'),
+        'training_effect_label': dto.get('trainingEffectLabel'),
+        'steps':                 r(dto.get('steps')),
+        'bmr_calories':          r(dto.get('bmrCalories')),
+        'moderate_intensity_min': dto.get('moderateIntensityMinutes'),
+        'vigorous_intensity_min': dto.get('vigorousIntensityMinutes'),
+        'avg_power_w':           r(dto.get('averagePower')),
+        'normalized_power_w':    r(dto.get('normalizedPower')),
+        'active_sets':           r(dto.get('activeSets')) if is_strength else None,
+        'total_exercise_reps':   r(dto.get('totalExerciseReps')) if is_strength else None,
+    }
+
+
 def _child_activity_ids(c, act_id):
     """Return child activity IDs for a multi_sport container, or [] if unavailable."""
     try:
@@ -419,20 +451,25 @@ def sync_range(db, c, start, end):
                 except Exception:
                     pass
 
-            # Run dynamics — from get_activity() summaryDTO, run-type only
+            # Run dynamics + #41 expansion fields — both come from get_activity() summaryDTO.
+            # Run dynamics only populate for run-type activities; expansion fields are
+            # extracted for every type (extract_activity_summary_fields is type-aware).
             run_cadence = run_stride_cm = run_vert_osc_cm = run_gct_ms = None
-            if is_run and act_id:
+            summary_fields = extract_activity_summary_fields({}, type_key)
+            if act_id:
                 try:
                     act_data = c.get_activity(act_id) or {}
                     dto = act_data.get('summaryDTO') or {}
-                    cadence  = dto.get('averageRunCadence')
-                    stride   = dto.get('strideLength')         # returned in cm
-                    vert_osc = dto.get('verticalOscillation')  # returned in cm
-                    gct_ms   = dto.get('groundContactTime')
-                    run_cadence     = round(cadence) if cadence is not None else None
-                    run_stride_cm   = round(stride, 1) if stride is not None else None
-                    run_vert_osc_cm = round(vert_osc, 1) if vert_osc is not None else None
-                    run_gct_ms      = round(gct_ms) if gct_ms is not None else None
+                    summary_fields = extract_activity_summary_fields(dto, type_key)
+                    if is_run:
+                        cadence  = dto.get('averageRunCadence')
+                        stride   = dto.get('strideLength')         # returned in cm
+                        vert_osc = dto.get('verticalOscillation')  # returned in cm
+                        gct_ms   = dto.get('groundContactTime')
+                        run_cadence     = round(cadence) if cadence is not None else None
+                        run_stride_cm   = round(stride, 1) if stride is not None else None
+                        run_vert_osc_cm = round(vert_osc, 1) if vert_osc is not None else None
+                        run_gct_ms      = round(gct_ms) if gct_ms is not None else None
                     time.sleep(SLEEP_BETWEEN)
                 except Exception:
                     pass
@@ -442,8 +479,14 @@ def sync_range(db, c, start, end):
                 '(activity_id, date, start_time, name, type_key, distance_m, duration_s, '
                 'calories, avg_hr, elevation_m, aerobic_te, anaerobic_te, recovery_time_h, '
                 'zone1_s, zone2_s, zone3_s, zone4_s, zone5_s, '
-                'run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms) '
-                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, '
+                'max_hr, min_hr, training_load, body_battery_diff, '
+                'moving_duration_s, elapsed_duration_s, avg_speed_mps, max_speed_mps, '
+                'training_effect_label, steps, bmr_calories, '
+                'moderate_intensity_min, vigorous_intensity_min, '
+                'avg_power_w, normalized_power_w, active_sets, total_exercise_reps) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '
+                '?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (act_id, d,
                  safe(act, 'startTimeLocal'), safe(act, 'activityName'),
                  type_key,
@@ -451,7 +494,16 @@ def sync_range(db, c, start, end):
                  safe(act, 'calories'), safe(act, 'averageHR'), safe(act, 'elevationGain'),
                  aerobic_te, anaerobic_te, recovery_time_h,
                  zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
-                 run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms)
+                 run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms,
+                 summary_fields['max_hr'], summary_fields['min_hr'],
+                 summary_fields['training_load'], summary_fields['body_battery_diff'],
+                 summary_fields['moving_duration_s'], summary_fields['elapsed_duration_s'],
+                 summary_fields['avg_speed_mps'], summary_fields['max_speed_mps'],
+                 summary_fields['training_effect_label'], summary_fields['steps'],
+                 summary_fields['bmr_calories'],
+                 summary_fields['moderate_intensity_min'], summary_fields['vigorous_intensity_min'],
+                 summary_fields['avg_power_w'], summary_fields['normalized_power_w'],
+                 summary_fields['active_sets'], summary_fields['total_exercise_reps'])
             )
 
             # For multisport containers, fetch and store per-leg data

@@ -57,11 +57,40 @@ CREATE TABLE health_activities (
   run_stride_cm    REAL,
   run_vert_osc_cm  REAL,
   run_gct_ms       INTEGER,              -- ground contact time in ms
+  max_hr                 INTEGER,        -- from get_activity() summaryDTO.maxHR
+  min_hr                 INTEGER,        -- summaryDTO.minHR
+  training_load          REAL,           -- summaryDTO.activityTrainingLoad
+  body_battery_diff      INTEGER,        -- summaryDTO.differenceBodyBattery
+  moving_duration_s      REAL,           -- summaryDTO.movingDuration (excludes stopped time)
+  elapsed_duration_s     REAL,           -- summaryDTO.elapsedDuration (wall-clock, includes stops)
+  avg_speed_mps          REAL,           -- summaryDTO.averageSpeed, meters/second
+  max_speed_mps          REAL,           -- summaryDTO.maxSpeed, meters/second
+  training_effect_label  TEXT,           -- summaryDTO.trainingEffectLabel, e.g. 'TEMPO_TRAINING', 'RECOVERY'
+  steps                  INTEGER,        -- summaryDTO.steps
+  bmr_calories           INTEGER,        -- summaryDTO.bmrCalories (calories from basal metabolism during the activity)
+  moderate_intensity_min REAL,           -- summaryDTO.moderateIntensityMinutes
+  vigorous_intensity_min REAL,           -- summaryDTO.vigorousIntensityMinutes
+  avg_power_w            INTEGER,        -- summaryDTO.averagePower — power-meter activities only, NULL otherwise
+  normalized_power_w     INTEGER,        -- summaryDTO.normalizedPower — power-meter activities only
+  active_sets            INTEGER,        -- summaryDTO.activeSets — strength_training only, NULL otherwise
+  total_exercise_reps    INTEGER,        -- summaryDTO.totalExerciseReps — strength_training only
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (activity_id, source)
 );
 CREATE INDEX idx_health_activities_date ON health_activities(date);
 ```
+
+**#41 per-activity field expansion (2026-07-02).** All fields above from `max_hr` through `total_exercise_reps` come from a single `get_activity(activity_id)` call's `summaryDTO`, extracted by `extract_activity_summary_fields(dto, type_key)` in `scripts/garmin_poller.py` (imported by `garmin_ingest.py` — the two scripts otherwise duplicate logic per their differing conventions, but this helper is shared since it's pure and type-agnostic). Inventory was done against live `running` and `strength_training` activities; fields present in both dicts are populated for every `type_key`, fields absent from a given type's `summaryDTO` resolve to `NULL` via `.get()` (e.g. `active_sets`/`total_exercise_reps` are `NULL` for non-strength activities; `avg_power_w`/`normalized_power_w` are `NULL` for activities without a power meter).
+
+Explicitly deferred, not included in this migration:
+- GPS start/end coordinates (`startLatitude`/`startLongitude`/`endLatitude`/`endLongitude`) — low narrative value without a map view; no map view exists yet.
+- `minElevation`/`maxElevation`/`avgElevation` — redundant with the existing `elevation_m` (elevationGain) column for MX-4's purposes.
+- Weather fields (`averageTemperature`, etc.) — requires a separate `get_activity_weather()` call per activity; deferred to keep this migration to a single additional API call per activity.
+- `recoveryHeartRate`, `waterEstimated`, `minActivityLapDuration` — low value / not meaningfully actionable.
+- Structured per-set exercise detail (`get_activity_exercise_sets()` — individual set/rep/weight/exercise-name rows) and splits/laps (`get_activity_splits()`/`get_activity_split_summaries()`) — repeating data that would need a new child table (`health_activity_legs`-style), out of scope for this pass; noted as a natural follow-up.
+- GPS track points / second-by-second streams — explicitly out of scope per the schema (would need a dedicated time-series design).
+- Mirroring these same fields onto `health_activity_legs` (multi-sport children) — `max_hr`/`training_load`/`body_battery_diff` already existed there from an earlier pass; the other 14 new fields are not yet mirrored onto legs, deferred as a follow-up.
+- Only `running` and `strength_training` were inventoried directly against the live API; `cycling`/`hiking`/`multi_sport` were not separately verified — the extraction function is type-agnostic so it should behave the same, but hasn't been spot-checked against those types' real payloads.
 
 ### `health_activity_legs`
 

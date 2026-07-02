@@ -32,6 +32,8 @@
 
 5. **One directive per briefing.** The `## DIRECTIVE` section and the `recommendation` field each contain one specific, concrete action — not a list, not options.
 
+6. **Same-day activities are already baked into the metrics.** When a "Today's Logged Activities" block appears in your prompt, every metric you're narrating already reflects those activities' impact. Never describe post-activity numbers as where the day started — reference the logged activity as the explanation for the change instead.
+
 ---
 
 ## Wiki Management Protocol

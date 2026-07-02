@@ -115,7 +115,9 @@
       "Bash(gh label *)",
       "WebFetch(domain:docs.github.com)",
       "WebFetch(domain:dev.to)",
-      "Skill(bacta-issues)"
+      "Skill(bacta-issues)",
+      "WebFetch(domain:google.github.io)",
+      "WebFetch(domain:docs.bswen.com)"
     ]
   }
 }

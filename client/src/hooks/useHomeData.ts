@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchSummary, TRAINING_STATUS } from '../lib/garminApi'
+import { getCachedData, setCachedData } from '../lib/sectionDataCache'
 
 export interface HomeTileData {
   recovery: { value: string; sub: string }
@@ -13,9 +14,12 @@ const STUB: HomeTileData = {
   sleep:    { value: '8.1', sub: 'Score 82', ring: 0.82 },
 }
 
+const CACHE_KEY = 'home'
+
 export function useHomeData(): { data: HomeTileData; loading: boolean } {
-  const [data, setData] = useState<HomeTileData>(STUB)
-  const [loading, setLoading] = useState(true)
+  const cached = getCachedData<HomeTileData>(CACHE_KEY)
+  const [data, setData] = useState<HomeTileData>(cached ?? STUB)
+  const [loading, setLoading] = useState(!cached)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
@@ -56,7 +60,7 @@ export function useHomeData(): { data: HomeTileData; loading: boolean } {
             : `HRV ${hrv}ms`
           : STUB.recovery.sub
 
-        setData({
+        const next: HomeTileData = {
           recovery: {
             value: String(s.body_battery_current ?? s.body_battery_wake ?? 74),
             sub:   hrvSub,
@@ -70,7 +74,9 @@ export function useHomeData(): { data: HomeTileData; loading: boolean } {
             sub:   `Score ${sleepScore}`,
             ring:  sleepScore / 100,
           },
-        })
+        }
+        setData(next)
+        setCachedData(CACHE_KEY, next)
       } catch {
         // keep stub on error
       } finally {

@@ -87,7 +87,7 @@ export interface Activity {
 }
 
 export const TRAINING = {
-  status:    { value: 'Productive', sub: 'Block 4 of 8', trend: [50, 50, 51, 51, 51, 52, 52] },
+  status:    { value: 'Productive', sub: '', trend: [50, 50, 51, 51, 51, 52, 52] },
   vo2max:    { value: 52, unit: 'mL/kg/min', delta: +1, fitnessAge: 31 },
   load:      { value: 342, low: 280, high: 420, state: 'Optimal', trend: [280, 300, 260, 320, 340, 310, 342] },
   endurance: { value: 71, state: 'Trained', trend: [64, 66, 65, 68, 69, 70, 71] },

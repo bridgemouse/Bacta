@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Rail } from './viz/Rail'
 import { COLORS, MX4_COLOR, FONT_MONO, FONT_UI } from '../theme'
 import { hexA } from '../lib/hexA'
 
-// Settings SECURITY rail: set or change the app PIN, and lock the device.
+// Settings SECURITY content: set or change the app PIN, and lock the device.
 // Self-contained so it can drop into the large SettingsPage with one line.
+// Renders content only (no Rail label) — SettingsPage wraps it in a CollapsibleSection.
 export function SecurityRail() {
   const [configured, setConfigured] = useState(false)
   const [currentPin, setCurrentPin] = useState('')
@@ -61,7 +61,6 @@ export function SecurityRail() {
 
   return (
     <>
-      <Rail label="SECURITY" accent={MX4_COLOR} />
       <div style={card}>
         <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.textSecondary }}>
           {configured

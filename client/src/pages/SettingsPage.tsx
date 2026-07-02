@@ -60,6 +60,26 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   )
 }
 
+/** Settings-only wrapper: makes a Rail-labeled group collapsible without touching the shared Rail component. */
+export function CollapsibleSection({ label, accent, children }: { label: string; accent: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(o => !o) } }}
+        style={{ cursor: 'pointer' }}
+      >
+        <Rail label={label} accent={accent} right={open ? '−' : '+'} />
+      </div>
+      {open && children}
+    </div>
+  )
+}
+
 const cardStyle: React.CSSProperties = {
   background: COLORS.surface,
   borderRadius: 12,
@@ -108,11 +128,11 @@ export function SettingsPage() {
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [clearedKey, setClearedKey] = useState<string | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState('')
-  const [apiKeyFocused, setApiKeyFocused] = useState(false)
+  const [apiKeyFocused, setApiKeyFocused] = useState(true)
   const [testStatus, setTestStatus] = useState<TestStatus>('idle')
   const [testError, setTestError] = useState('')
   const [skills, setSkills] = useState<Array<{ label: string; prompt: string }>>([])
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(true)
   const [newLabel, setNewLabel] = useState('')
   const [newPrompt, setNewPrompt] = useState('')
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -122,7 +142,7 @@ export function SettingsPage() {
   const [vaultTestError, setVaultTestError] = useState('')
   const [vaultTestDetails, setVaultTestDetails] = useState<{ domains?: number; page_count?: number } | null>(null)
   const [webKeyInput, setWebKeyInput] = useState('')
-  const [webKeyFocused, setWebKeyFocused] = useState(false)
+  const [webKeyFocused, setWebKeyFocused] = useState(true)
   const [integrationStatus, setIntegrationStatus] = useState<
     Record<string, { connected: boolean; lastSync: string | null }>
   >({})
@@ -385,7 +405,7 @@ export function SettingsPage() {
   return (
     <AppShell section="settings">
       {/* Rail: APPEARANCE */}
-      <Rail label="APPEARANCE" accent={MX4_COLOR} />
+      <CollapsibleSection label="APPEARANCE" accent={MX4_COLOR}>
       <div style={{ ...cardStyle, padding: '12px 16px' }}>
         <div style={{ fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted, marginBottom: 10, letterSpacing: '0.05em' }}>
           App icon — re-add to home screen to apply
@@ -425,10 +445,10 @@ export function SettingsPage() {
           </div>
         )}
       </div>
+      </CollapsibleSection>
 
       {/* Rail 1: AI PROVIDER */}
-      <Rail label="AI PROVIDER" accent={MX4_COLOR} />
-
+      <CollapsibleSection label="AI PROVIDER" accent={MX4_COLOR}>
       <div style={cardStyle}>
         {/* Provider segmented control */}
         <div style={rowStyle}>
@@ -525,10 +545,10 @@ export function SettingsPage() {
           </div>
         )}
       </div>
+      </CollapsibleSection>
 
       {/* Rail 2: MX-4 INTELLIGENCE */}
-      <Rail label="MX-4 INTELLIGENCE" accent={MX4_COLOR} />
-
+      <CollapsibleSection label="MX-4 INTELLIGENCE" accent={MX4_COLOR}>
       <div style={cardStyle}>
         {/* Briefing model */}
         <div style={rowStyle}>
@@ -656,10 +676,10 @@ export function SettingsPage() {
           />
         </div>
       </div>
+      </CollapsibleSection>
 
       {/* Rail 3: VAULT */}
-      <Rail label="VAULT" accent={MX4_COLOR} />
-
+      <CollapsibleSection label="VAULT" accent={MX4_COLOR}>
       <div style={cardStyle}>
         <div style={vaultEnabled ? rowStyle : rowStyleLast}>
           <span style={labelStyle}>Connect LLM-Wiki</span>
@@ -742,10 +762,10 @@ export function SettingsPage() {
           </>
         )}
       </div>
+      </CollapsibleSection>
 
       {/* Rail 4: WEB SEARCH */}
-      <Rail label="WEB SEARCH" accent={MX4_COLOR} />
-
+      <CollapsibleSection label="WEB SEARCH" accent={MX4_COLOR}>
       <div style={cardStyle}>
         {/* Provider selector */}
         <div style={rowStyle}>
@@ -824,10 +844,10 @@ export function SettingsPage() {
           </div>
         </div>
       </div>
+      </CollapsibleSection>
 
       {/* Rail 5: CUSTOM SKILLS */}
-      <Rail label="CUSTOM SKILLS" accent={MX4_COLOR} />
-
+      <CollapsibleSection label="CUSTOM SKILLS" accent={MX4_COLOR}>
       <div style={cardStyle}>
         {skills.map((skill, i) => {
           const isLocked = i === 0
@@ -1054,10 +1074,10 @@ export function SettingsPage() {
           </div>
         )}
       </div>
+      </CollapsibleSection>
 
       {/* Rail 6: DATA MANAGEMENT */}
-      <Rail label="DATA MANAGEMENT" accent={COLORS.mx4Red} />
-
+      <CollapsibleSection label="DATA MANAGEMENT" accent={COLORS.mx4Red}>
       <div style={cardStyle}>
         {[
           {
@@ -1101,10 +1121,14 @@ export function SettingsPage() {
           </div>
         ))}
       </div>
+      </CollapsibleSection>
 
-      <SecurityRail />
+      <CollapsibleSection label="SECURITY" accent={MX4_COLOR}>
+        <SecurityRail />
+      </CollapsibleSection>
 
-      <Rail label="INSTANCE" accent={MX4_COLOR} />
+      {/* Rail: INSTANCE */}
+      <CollapsibleSection label="INSTANCE" accent={MX4_COLOR}>
       <div style={cardStyle}>
         <div style={rowStyleLast}>
           <span style={labelStyle}>Base URL</span>
@@ -1126,8 +1150,9 @@ export function SettingsPage() {
           </div>
         </div>
       </div>
+      </CollapsibleSection>
 
-      <Rail label="CONNECTED DEVICES" accent={MX4_COLOR} />
+      <CollapsibleSection label="CONNECTED DEVICES" accent={MX4_COLOR}>
       {ALL_INTEGRATION_PROVIDERS.map(provider => {
         const status = integrationStatus[provider] ?? { connected: false, lastSync: null }
         const inputs = providerInputs[provider] ?? { clientId: '', clientSecret: '', apiKey: '' }
@@ -1154,8 +1179,9 @@ export function SettingsPage() {
           />
         )
       })}
+      </CollapsibleSection>
 
-      <Rail label="DATA PRIORITY" accent={MX4_COLOR} />
+      <CollapsibleSection label="DATA PRIORITY" accent={MX4_COLOR}>
       <div style={cardStyle}>
         {priorityList.map((p, i) => (
           <div key={p} style={i === priorityList.length - 1 ? rowStyleLast : rowStyle}>
@@ -1206,10 +1232,10 @@ export function SettingsPage() {
           </div>
         ))}
       </div>
+      </CollapsibleSection>
 
       {/* Rail: DIAGNOSTICS */}
-      <Rail label="DIAGNOSTICS" accent={MX4_COLOR} />
-
+      <CollapsibleSection label="DIAGNOSTICS" accent={MX4_COLOR}>
       <div style={cardStyle}>
         <div onClick={() => navigate('/settings/logs')} style={{ ...rowStyleLast, cursor: 'pointer' }}>
           <span style={labelStyle}>Application logs</span>
@@ -1218,10 +1244,10 @@ export function SettingsPage() {
           </span>
         </div>
       </div>
+      </CollapsibleSection>
 
       {/* Rail 7: GARMIN */}
-      <Rail label="GARMIN" accent={MX4_COLOR} />
-
+      <CollapsibleSection label="GARMIN" accent={MX4_COLOR}>
       <div style={cardStyle}>
         <div style={rowStyleLast}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -1242,6 +1268,7 @@ export function SettingsPage() {
           </select>
         </div>
       </div>
+      </CollapsibleSection>
 
       <div style={{
         textAlign: 'center', padding: '20px 0 8px',

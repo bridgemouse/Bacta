@@ -17,8 +17,8 @@ export type SleepData = Omit<typeof SLEEP, 'spo2'> & {
   archDeepScore?: number
   archRemScore?: number
   archAwakePenalty?: number
-  hypnoStartLocal: string | null
-  hypnoEndLocal: string | null
+  hypnoStartLocal: number | null
+  hypnoEndLocal: number | null
 }
 
 const INITIAL: SleepData = {
@@ -76,11 +76,11 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
         if (cancelled) return
         setSources(sourcesData)
 
-        let hypnoData = { hypno: [] as number[], startLocal: null as string | null, endLocal: null as string | null }
+        let hypnoData = { hypno: [] as number[], startLocal: null as number | null, endLocal: null as number | null }
         try {
           const hypnoRes = await fetch('/api/garmin/sleep-hypno')
           if (hypnoRes.ok) {
-            const json = await hypnoRes.json() as { hypno: number[]; startLocal: string | null; endLocal: string | null }
+            const json = await hypnoRes.json() as { hypno: number[]; startLocal: number | null; endLocal: number | null }
             if (json.hypno && json.hypno.length === 24) {
               hypnoData = json
             }

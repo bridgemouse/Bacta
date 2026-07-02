@@ -18,6 +18,7 @@ import { Bracket } from '../components/primitives/Bracket'
 import { Sparkline } from '../components/primitives/Sparkline'
 
 import { hexA } from '../lib/hexA'
+import { computeHypnoAxisLabels } from '../lib/hypnoLabels'
 
 const A = SECTION_ACCENTS.sleep
 
@@ -322,24 +323,9 @@ function SleepOverview() {
         </div>
         <SleepDepth hypno={slp.hypno} accent={A} h={80} />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: 12 }}>
-          {(() => {
-            const fallback = ['23:00', '01:00', '03:00', '05:00', '07:00']
-            if (!slp.hypnoStartLocal || !slp.hypnoEndLocal) {
-              return fallback.map(t => (
-                <span key={t} style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{t}</span>
-              ))
-            }
-            const startMs = new Date(slp.hypnoStartLocal).getTime()
-            const endMs = new Date(slp.hypnoEndLocal).getTime()
-            const labels = [0, 1, 2, 3, 4].map(i => {
-              const ms = startMs + (i / 4) * (endMs - startMs)
-              const d = new Date(ms)
-              return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-            })
-            return labels.map(t => (
-              <span key={t} style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{t}</span>
-            ))
-          })()}
+          {computeHypnoAxisLabels(slp.hypnoStartLocal, slp.hypnoEndLocal).map((t, i) => (
+            <span key={i} style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted }}>{t}</span>
+          ))}
         </div>
         <StageDistribution stages={slp.stages} />
         {archOpen && <InfoOverlay info={ARCH_INFO} accent={A} radius={12} onClick={archTap} />}

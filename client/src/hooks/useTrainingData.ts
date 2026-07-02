@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchSummary, fetchTrend, fetchActivities, fetchWeeklyVolume, fetchWeeklyAvgHr, fetchWeeklyIntensity, TRAINING_STATUS, type GarminActivity, type WeeklyVolume, type WeeklyAvgHr } from '../lib/garminApi'
 import { TRAINING } from '../lib/stubData'
+import { getCachedData, setCachedData } from '../lib/sectionDataCache'
 
 export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
   activities: GarminActivity[]
@@ -41,6 +42,11 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
   activityHrByWeek: WeeklyAvgHr[] | null
 }
 
+function formatShortDate(dateStr: string): string {
+  const [year, month, dom] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, dom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 const ZONE_META = [
   { zone: 1, label: 'Warm Up',   color: '#56657a' },
   { zone: 2, label: 'Easy',      color: '#4ade80' },
@@ -63,9 +69,12 @@ const INITIAL: TrainingData = {
   activityHrByWeek: null,
 }
 
+const CACHE_KEY = 'training'
+
 export function useTrainingData(): { data: TrainingData; loading: boolean } {
-  const [data, setData] = useState<TrainingData>(INITIAL)
-  const [loading, setLoading] = useState(true)
+  const cached = getCachedData<TrainingData>(CACHE_KEY)
+  const [data, setData] = useState<TrainingData>(cached ?? INITIAL)
+  const [loading, setLoading] = useState(!cached)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
@@ -99,6 +108,10 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
         const statusLabel = statusN != null
           ? (TRAINING_STATUS[Math.round(statusN)] ?? 'Maintaining')
           : TRAINING.status.value
+
+        const statusSub = summary.training_status_n_date
+          ? `as of ${formatShortDate(summary.training_status_n_date)}`
+          : ''
 
         const trainingLoad = summary.training_load
         const loadMin  = summary.training_load_min ?? TRAINING.load.low
@@ -151,11 +164,11 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             })()
           : []
 
-        setData({
+        const next: TrainingData = {
           ...TRAINING,
           status: {
             value: statusLabel,
-            sub:   TRAINING.status.sub,
+            sub:   statusSub,
             trend: TRAINING.status.trend,
           },
           vo2max: {
@@ -196,7 +209,9 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           loadRatio,
           weeklyVolume: weeklyVolume.length ? weeklyVolume : null,
           activityHrByWeek: activityHrByWeek.length ? activityHrByWeek : null,
-        })
+        }
+        setData(next)
+        setCachedData(CACHE_KEY, next)
       } catch {
         // keep stub on error
       } finally {

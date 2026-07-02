@@ -82,4 +82,16 @@ describe('App', () => {
     renderApp('/training')
     expect(screen.queryByText(/HR ZONES/)).not.toBeInTheDocument()
   })
+
+  test('does not show title/source text in Resting HR overlay on /recovery (compact pair card)', async () => {
+    renderApp('/recovery')
+    await userEvent.click(screen.getByText('48'))
+    expect(screen.queryByText('RESTING HEART RATE')).not.toBeInTheDocument()
+  })
+
+  test('does not show title/source text in Stress overlay on /recovery (compact pair card)', async () => {
+    renderApp('/recovery')
+    await userEvent.click(screen.getByText('28'))
+    expect(screen.queryByText('STRESS SCORE')).not.toBeInTheDocument()
+  })
 })

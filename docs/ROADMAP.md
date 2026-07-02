@@ -1,6 +1,6 @@
 # Bacta — Current State & Roadmap
 
-> **Issue tracking:** Discrete bugs and polish items are tracked as [GitHub Issues](https://github.com/bridgemouse/Bacta/issues). Labels: `bug`, `enhancement`, `polish`, plus gating labels `blocked`/`needs-design`/`needs-human-decision` (filtered out of `bacta-headless`'s queue). File issues with the `/bacta-issues` skill — it converts freeform notes into triage-gated issues ready for `bacta-headless` to pick up. This roadmap covers milestones and section-level progress only.
+> **Issue tracking:** Discrete bugs and polish items are tracked as [GitHub Issues](https://github.com/bridgemouse/Bacta/issues). Labels: `bug`, `enhancement`, `polish`, plus gating labels `blocked`/`needs-design`/`needs-human-decision` (filtered out of `bacta-headless`'s queue). File issues with the `/bacta-issues` skill — it converts freeform notes into triage-gated issues ready for `bacta-headless` to pick up. Review and merge the resulting PRs with the `/bacta-pr-review` skill — codifies the fresh-context `/code-review`-per-PR + fix-confirmed-bugs-in-branch pattern that caught real bugs in ~2/3 of the first PR backlog. This roadmap covers milestones and section-level progress only.
 
 ## Feature Inventory (as of Jun 16, 2026)
 

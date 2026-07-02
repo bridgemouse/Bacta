@@ -56,7 +56,11 @@ async function runSection(
   const modelId = (model as unknown as { modelId?: string }).modelId ?? getSetting('mx4_briefing_model') ?? 'unknown'
 
   const systemWithContext = assembleSystemPrompt(systemPrompt, heartbeat, wikiContext)
-  const activityContext = buildActivityContext(new Date().toISOString().slice(0, 10))
+  // health_activities.date is the Garmin startTimeLocal calendar date (local
+  // wall-clock day), so "today" here must also be the local date — .toISOString()
+  // is UTC and rolls over hours before the local day ends, silently missing
+  // same-day activities on every evening run.
+  const activityContext = buildActivityContext(new Date().toLocaleDateString('en-CA'))
 
   const sectionPrompt = `You are generating MX-4's ${sectionName} briefing.
 

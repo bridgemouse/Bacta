@@ -39,12 +39,16 @@ const VALID_METRICS = [
 // GET /api/garmin/summary — latest available value per metric
 garminRouter.get('/summary', (_req, res) => {
   const rows = db.prepare(
-    `SELECT metric, value FROM health_snapshots gs
+    `SELECT metric, value, date FROM health_snapshots gs
      WHERE date = (SELECT MAX(date) FROM health_snapshots WHERE metric = gs.metric)`
-  ).all() as Array<{ metric: string; value: number }>
+  ).all() as Array<{ metric: string; value: number; date: string }>
 
-  const summary: Record<string, number> = {}
-  for (const row of rows) summary[row.metric] = row.value
+  const summary: Record<string, number | string> = {}
+  for (const row of rows) {
+    summary[row.metric] = row.value
+    // training_status_n's snapshot date drives the Training status card's freshness sub-label
+    if (row.metric === 'training_status_n') summary.training_status_n_date = row.date
+  }
   res.json(summary)
 })
 

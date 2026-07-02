@@ -10,9 +10,12 @@ const NEW_BRIEFING = { generated_at: 'ts-new', tone: 'POSITIVE' as const, headli
 
 function makeFetch(responses: Array<object>) {
   let getCallCount = 0
-  return vi.fn().mockImplementation((_url: string, opts?: RequestInit) => {
+  return vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
     if (opts?.method === 'POST') {
       return Promise.resolve({ ok: true, status: 202, json: () => Promise.resolve({ ok: true }) } as Response)
+    }
+    if (url === '/api/settings') {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
     }
     const resp = responses[Math.min(getCallCount, responses.length - 1)]
     getCallCount++
@@ -142,6 +145,90 @@ describe('MX4Briefing — handleRefresh', () => {
     // Second poll → new briefing detected → onRefresh called
     await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
     expect(onRefresh).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('MX4Briefing — refresh-all staged progress', () => {
+  it('advances the progress bar as recovery/sleep/training/home briefings complete, in refresh-all mode', async () => {
+    // mx4_home_rerun_mode = 'all_sections' means clicking REFRESH on Home triggers a full
+    // orchestrator run (recovery -> sleep -> training -> home, in that order per SECTIONS).
+    // The progress bar should reflect how many of the 4 briefings have a new generated_at
+    // versus the pre-run baseline, reaching 75% once only home remains and 100% once home lands.
+    const baseline: Record<string, string> = { recovery: 'r-old', sleep: 's-old', training: 't-old', home: 'h-old' }
+    let stage = 0 // how many sections have completed so far
+    const order = ['recovery', 'sleep', 'training', 'home']
+
+    const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
+      if (opts?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 202, json: () => Promise.resolve({ ok: true }) } as Response)
+      }
+      if (url === '/api/settings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ mx4_home_rerun_mode: 'all_sections' }) } as Response)
+      }
+      if (url === '/api/mx4/run/home/status') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ error: null }) } as Response)
+      }
+      const match = url.match(/^\/api\/insights\/(\w+)$/)
+      if (match) {
+        const s = match[1]
+        const idx = order.indexOf(s)
+        const done = idx !== -1 && idx < stage
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ generated_at: done ? `${s}-new` : baseline[s] }),
+        } as Response)
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.useFakeTimers()
+
+    const onRefresh = vi.fn()
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={{ ...OLD_BRIEFING, generated_at: 'h-old' }} section="home" onRefresh={onRefresh} />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+
+    // Baseline captured (nothing done yet) — poll 1: recovery completes
+    stage = 1
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(screen.getByText(/25%/)).toBeInTheDocument()
+
+    // Poll 2: sleep completes
+    stage = 2
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(screen.getByText(/50%/)).toBeInTheDocument()
+
+    // Poll 3: training completes — only home's briefing remains
+    stage = 3
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(screen.getByText(/75%/)).toBeInTheDocument()
+
+    // Poll 4: home completes — run finishes, onRefresh fires, button returns to idle
+    stage = 4
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('REFRESH ›')).toBeInTheDocument()
+  })
+
+  it('does not show a staged progress bar for per-section (non refresh-all) regeneration', async () => {
+    vi.stubGlobal('fetch', makeFetch([OLD_BRIEFING, OLD_BRIEFING]))
+    vi.useFakeTimers()
+
+    render(
+      <MX4Briefing accent="#fb923c" brief={BRIEFS.home} liveData={OLD_BRIEFING} section="training" />
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('REFRESH ›'))
+    })
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+
+    expect(screen.getByText('RUNNING ›')).toBeInTheDocument()
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument()
   })
 })
 
@@ -290,14 +377,20 @@ describe('MX4Briefing — handleRefresh failure feedback', () => {
     // so it could fire mid-retry and revert the button to REFRESH while a second
     // request was still actively polling in the background.
     vi.useFakeTimers()
-    let callCount = 0
-    const fetchMock = vi.fn().mockImplementation(() => {
-      callCount++
-      if (callCount === 1) {
-        // First attempt's POST fails immediately.
-        return Promise.reject(new Error('network error'))
+    let postCallCount = 0
+    const fetchMock = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (url === '/api/settings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
       }
-      // Second attempt: never resolves, simulating a still in-flight request.
+      if (opts?.method === 'POST') {
+        postCallCount++
+        if (postCallCount === 1) {
+          // First attempt's POST fails immediately.
+          return Promise.reject(new Error('network error'))
+        }
+      }
+      // Second attempt's POST (and anything after it) never resolves, simulating
+      // a still in-flight request.
       return new Promise(() => {})
     })
     vi.stubGlobal('fetch', fetchMock)

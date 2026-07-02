@@ -11,6 +11,7 @@ Shows a progress indicator. Adds small sleeps between calls to avoid rate limits
 import os, json, sqlite3, sys, time, argparse
 from datetime import date, timedelta
 from garminconnect import Garmin
+from garmin_poller import extract_activity_summary_fields
 
 DB_PATH = os.environ.get('BACTA_DB', '/opt/bacta/data/bacta.db')
 TOKEN_DIR = os.path.expanduser('~/.garminconnect')
@@ -318,22 +319,51 @@ def sync_range_bulk(db, store, c, start, end):
     time.sleep(SLEEP_PER_CALL)
 
     # Activities
+    # NOTE: pre-existing gap (not introduced by #41) — this bulk-ingest path stores fewer
+    # columns than garmin_poller.py's sync_range (no aerobic_te/zones/run-dynamics here).
+    # Out of scope for #41; only the new expansion fields below are added to close that gap
+    # incrementally, per the issue's requirement that ingest and poller both populate them.
     try:
         acts = c.get_activities_by_date(start, end)
         for act in (acts or []):
             d = (safe(act, 'startTimeLocal') or '')[:10]
             if not d:
                 continue
+            act_id = safe(act, 'activityId')
+            type_key = safe(act, 'activityType', 'typeKey') or 'other'
+            summary_fields = extract_activity_summary_fields({}, type_key)
+            if act_id:
+                try:
+                    act_data = c.get_activity(act_id) or {}
+                    summary_fields = extract_activity_summary_fields(
+                        act_data.get('summaryDTO') or {}, type_key)
+                    time.sleep(SLEEP_PER_CALL)
+                except Exception:
+                    pass
             db.execute(
                 'INSERT OR REPLACE INTO health_activities '
-                '(activity_id, date, start_time, name, type_key, distance_m, duration_s, calories, avg_hr, elevation_m) '
-                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                (safe(act, 'activityId'), d,
+                '(activity_id, date, start_time, name, type_key, distance_m, duration_s, calories, avg_hr, elevation_m, '
+                'max_hr, min_hr, training_load, body_battery_diff, '
+                'moving_duration_s, elapsed_duration_s, avg_speed_mps, max_speed_mps, '
+                'training_effect_label, steps, bmr_calories, '
+                'moderate_intensity_min, vigorous_intensity_min, '
+                'avg_power_w, normalized_power_w, active_sets, total_exercise_reps) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (act_id, d,
                  safe(act, 'startTimeLocal'), safe(act, 'activityName'),
-                 safe(act, 'activityType', 'typeKey') or 'other',
+                 type_key,
                  safe(act, 'distance'), safe(act, 'duration'),
                  safe(act, 'calories'), safe(act, 'averageHR'),
-                 safe(act, 'elevationGain'))
+                 safe(act, 'elevationGain'),
+                 summary_fields['max_hr'], summary_fields['min_hr'],
+                 summary_fields['training_load'], summary_fields['body_battery_diff'],
+                 summary_fields['moving_duration_s'], summary_fields['elapsed_duration_s'],
+                 summary_fields['avg_speed_mps'], summary_fields['max_speed_mps'],
+                 summary_fields['training_effect_label'], summary_fields['steps'],
+                 summary_fields['bmr_calories'],
+                 summary_fields['moderate_intensity_min'], summary_fields['vigorous_intensity_min'],
+                 summary_fields['avg_power_w'], summary_fields['normalized_power_w'],
+                 summary_fields['active_sets'], summary_fields['total_exercise_reps'])
             )
         db.commit()
         print(f'  activities:         {len(acts or []):4d} rows')

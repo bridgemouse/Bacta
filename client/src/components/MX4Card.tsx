@@ -66,11 +66,17 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   const { showToast } = useToast()
 
   const [refreshState, setRefreshState] = useState<'idle' | 'running' | 'error'>('idle')
+  const [refreshProgress, setRefreshProgress] = useState<number | null>(null)
   const errorResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => () => {
     if (errorResetRef.current) clearTimeout(errorResetRef.current)
   }, [])
+
+  // Refresh-all ("mx4_home_rerun_mode" = all_sections) runs recovery -> sleep -> training -> home
+  // in that fixed order (see server/lib/ai/sections.ts SECTIONS) — home is always last, so once
+  // recovery/sleep/training are all done, only home's own briefing remains.
+  const REFRESH_ALL_STAGES = ['recovery', 'sleep', 'training', 'home']
 
   async function handleRefresh() {
     if (!section || refreshState === 'running') return
@@ -79,8 +85,20 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
       errorResetRef.current = null
     }
     setRefreshState('running')
+    setRefreshProgress(null)
     let succeeded = false
     try {
+      let isFullRun = false
+      if (section === 'home') {
+        try {
+          const settingsRes = await fetch('/api/settings')
+          const settings = await settingsRes.json() as Record<string, string>
+          isFullRun = settings.mx4_home_rerun_mode === 'all_sections'
+        } catch {
+          // treat as home-only regeneration if the settings fetch fails
+        }
+      }
+
       const triggerRes = await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
       if (triggerRes.status === 409) {
         // Another run (e.g. the nightly full orchestrator) is already in progress —
@@ -91,16 +109,30 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
         succeeded = true
         return
       }
+
+      const trackedSections = isFullRun ? REFRESH_ALL_STAGES : [section]
+      const fetchGeneratedAt = async (s: string) => {
+        const res = await fetch(`/api/insights/${s}`)
+        const d = await res.json() as { generated_at?: string }
+        return d.generated_at
+      }
+
       // Fetch current API state as baseline — liveData prop may be null or stale
-      const baselineRes = await fetch(`/api/insights/${section}`)
-      const baseline = await baselineRes.json() as { generated_at?: string }
-      const originalAt = baseline.generated_at
+      const baseline: Record<string, string | undefined> = {}
+      await Promise.all(trackedSections.map(async s => { baseline[s] = await fetchGeneratedAt(s) }))
+
       let attempts = 0
       while (attempts < 24) {
         await new Promise(r => setTimeout(r, 10_000))
-        const res = await fetch(`/api/insights/${section}`)
-        const d = await res.json()
-        if (d.generated_at !== originalAt) {
+        const current: Record<string, string | undefined> = {}
+        await Promise.all(trackedSections.map(async s => { current[s] = await fetchGeneratedAt(s) }))
+
+        if (isFullRun) {
+          const doneCount = trackedSections.filter(s => current[s] !== baseline[s]).length
+          setRefreshProgress(Math.round((doneCount / trackedSections.length) * 100))
+        }
+
+        if (current[section] !== baseline[section]) {
           onRefresh?.()
           succeeded = true
           break
@@ -121,6 +153,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
       // handled by succeeded flag below
     } finally {
       setRefreshState(succeeded ? 'idle' : 'error')
+      setRefreshProgress(null)
       if (!succeeded) {
         errorResetRef.current = setTimeout(() => setRefreshState('idle'), 4000)
       }
@@ -169,6 +202,18 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
         overflow: 'hidden',
       }}
     >
+      {refreshProgress !== null && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: hexA(accent, 0.15) }}>
+          <div
+            style={{
+              height: '100%',
+              width: `${refreshProgress}%`,
+              background: accent,
+              transition: 'width 0.3s linear',
+            }}
+          />
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 15px 11px' }}>
         <MX4Sigil color={accent} size={19} spin mood={activeMood} />
@@ -351,7 +396,9 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
               flexShrink: 0,
             }}
           >
-            {refreshState === 'running' ? 'RUNNING ›' : refreshState === 'error' ? 'FAILED ›' : 'REFRESH ›'}
+            {refreshState === 'running'
+              ? (refreshProgress !== null ? `RUNNING · ${refreshProgress}% ›` : 'RUNNING ›')
+              : refreshState === 'error' ? 'FAILED ›' : 'REFRESH ›'}
           </button>
         )}
         <span style={{ marginLeft: 'auto' }}>

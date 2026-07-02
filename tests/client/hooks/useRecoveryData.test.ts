@@ -9,12 +9,14 @@ vi.mock('../../../client/src/lib/garminApi', () => ({
 
 import { fetchSummary, fetchTrend, fetchSources } from '../../../client/src/lib/garminApi'
 import { useRecoveryData } from '../../../client/src/hooks/useRecoveryData'
+import { clearCachedData } from '../../../client/src/lib/sectionDataCache'
 
 const mockFetchSummary = fetchSummary as ReturnType<typeof vi.fn>
 const mockFetchTrend = fetchTrend as ReturnType<typeof vi.fn>
 const mockFetchSources = fetchSources as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
+  clearCachedData()
   mockFetchSummary.mockResolvedValue({})
   mockFetchTrend.mockResolvedValue([])
   mockFetchSources.mockResolvedValue({})

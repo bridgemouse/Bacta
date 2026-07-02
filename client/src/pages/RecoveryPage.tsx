@@ -339,7 +339,7 @@ function RecoveryOverview() {
 
       {/* RHR + Stress pair */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 9 }}>
-        <HeadlineCard accent={A} label="Resting HR"
+        <HeadlineCard accent={A} label="Resting HR" compact
           info={{ title: 'Resting Heart Rate', description: 'Measured during your deepest sleep. A downward trend over weeks is a reliable signal of growing cardiovascular fitness.', source: 'Garmin Venu 4 · sleep detection' }}
           foot={<Delta value={rec.rhr.value - (rec.rhr.avg ?? rec.rhr.value)} unit=" bpm" lowerBetter size={9.5} />}
         >
@@ -350,7 +350,7 @@ function RecoveryOverview() {
           </div>
           <Sparkline data={rec.rhr.trend} accent={A} h={20} sw={1.5} />
         </HeadlineCard>
-        <HeadlineCard accent={A} label="Stress"
+        <HeadlineCard accent={A} label="Stress" compact
           info={{ title: 'Stress Score', description: '0–25 rest, 26–50 low, 51–75 medium, 76–100 high. Consistently low overnight is one of the strongest recovery signals.', source: 'Garmin Venu 4 · HRV-derived' }}
           foot={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

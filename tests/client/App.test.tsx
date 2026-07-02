@@ -82,4 +82,37 @@ describe('App', () => {
     renderApp('/training')
     expect(screen.queryByText(/HR ZONES/)).not.toBeInTheDocument()
   })
+
+  // SettingsPage's mount-time fetches don't guard on res.ok before calling
+  // .json() (pre-existing, unrelated to these tests), so the module-wide
+  // { ok: false } default stub throws unhandled rejections on this route —
+  // give it real, resolvable JSON responses instead.
+  function stubSettingsFetch() {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    }))
+  }
+
+  test('API key fields default to masked (password), not plaintext, on /settings', async () => {
+    stubSettingsFetch()
+    renderApp('/settings')
+    await userEvent.click(screen.getByText('AI PROVIDER'))
+    await userEvent.click(screen.getByText('WEB SEARCH'))
+
+    const keyInputs = screen.getAllByPlaceholderText('Enter key…')
+    expect(keyInputs).toHaveLength(2)
+    for (const input of keyInputs) {
+      expect(input).toHaveAttribute('type', 'password')
+    }
+  })
+
+  test('custom skills add-form is collapsed behind "ADD SKILL" by default on /settings', async () => {
+    stubSettingsFetch()
+    renderApp('/settings')
+    await userEvent.click(screen.getByText('CUSTOM SKILLS'))
+
+    expect(screen.getByText(/ADD SKILL/)).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('LABEL')).not.toBeInTheDocument()
+  })
 })

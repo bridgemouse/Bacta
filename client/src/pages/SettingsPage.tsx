@@ -128,11 +128,11 @@ export function SettingsPage() {
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [clearedKey, setClearedKey] = useState<string | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState('')
-  const [apiKeyFocused, setApiKeyFocused] = useState(true)
+  const [apiKeyFocused, setApiKeyFocused] = useState(false)
   const [testStatus, setTestStatus] = useState<TestStatus>('idle')
   const [testError, setTestError] = useState('')
   const [skills, setSkills] = useState<Array<{ label: string; prompt: string }>>([])
-  const [showAddForm, setShowAddForm] = useState(true)
+  const [showAddForm, setShowAddForm] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const [newPrompt, setNewPrompt] = useState('')
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -142,7 +142,7 @@ export function SettingsPage() {
   const [vaultTestError, setVaultTestError] = useState('')
   const [vaultTestDetails, setVaultTestDetails] = useState<{ domains?: number; page_count?: number } | null>(null)
   const [webKeyInput, setWebKeyInput] = useState('')
-  const [webKeyFocused, setWebKeyFocused] = useState(true)
+  const [webKeyFocused, setWebKeyFocused] = useState(false)
   const [integrationStatus, setIntegrationStatus] = useState<
     Record<string, { connected: boolean; lastSync: string | null }>
   >({})

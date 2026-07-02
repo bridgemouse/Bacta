@@ -82,6 +82,35 @@ export function migrate() {
     // column already exists, idempotent
   }
 
+  // Expand health_activities with additional per-activity fields (#41)
+  const NEW_ACTIVITY_COLUMNS: Array<[string, string]> = [
+    ['max_hr', 'INTEGER'],
+    ['min_hr', 'INTEGER'],
+    ['training_load', 'REAL'],
+    ['body_battery_diff', 'INTEGER'],
+    ['moving_duration_s', 'REAL'],
+    ['elapsed_duration_s', 'REAL'],
+    ['avg_speed_mps', 'REAL'],
+    ['max_speed_mps', 'REAL'],
+    ['training_effect_label', 'TEXT'],
+    ['steps', 'INTEGER'],
+    ['bmr_calories', 'INTEGER'],
+    ['moderate_intensity_min', 'REAL'],
+    ['vigorous_intensity_min', 'REAL'],
+    ['avg_power_w', 'INTEGER'],
+    ['normalized_power_w', 'INTEGER'],
+    ['active_sets', 'INTEGER'],
+    ['total_exercise_reps', 'INTEGER'],
+  ]
+  for (const [col, type] of NEW_ACTIVITY_COLUMNS) {
+    try {
+      db.exec(`ALTER TABLE health_activities ADD COLUMN ${col} ${type}`)
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || !e.message.includes('duplicate column name')) throw e
+      // column already exists, idempotent
+    }
+  }
+
   initSettings()
 
   console.log('[db] migrations complete')

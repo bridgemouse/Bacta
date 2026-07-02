@@ -116,4 +116,80 @@ describe('runOrchestrator', () => {
       expect(rows.length).toBeGreaterThan(0)
     })
   })
+
+  describe('same-day activity context', () => {
+    const today = new Date().toLocaleDateString('en-CA')
+
+    afterEach(async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare("DELETE FROM health_activities WHERE source = 'test-activity-context'").run()
+    })
+
+    it('includes same-day activities with their timestamps in the section prompt', async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare(
+        `INSERT OR REPLACE INTO health_activities (activity_id, source, date, start_time, name, type_key, duration_s)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run('act-same-day-1', 'test-activity-context', today, `${today}T07:30:00`, 'Morning Walk', 'walking', 1800)
+
+      vi.clearAllMocks()
+      const { generateText } = await import('ai')
+      const mockGenerateText = vi.mocked(generateText)
+      mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runSectionById } = await import('../../server/lib/ai/orchestrator')
+      await runSectionById('recovery')
+
+      const promptArg = mockGenerateText.mock.calls[0][0].prompt as string
+      expect(promptArg).toContain('Morning Walk')
+      expect(promptArg).toContain('07:30')
+    })
+
+    it('omits the activity-context block when no activities were logged today', async () => {
+      vi.clearAllMocks()
+      const { generateText } = await import('ai')
+      const mockGenerateText = vi.mocked(generateText)
+      mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runSectionById } = await import('../../server/lib/ai/orchestrator')
+      await runSectionById('recovery')
+
+      const promptArg = mockGenerateText.mock.calls[0][0].prompt as string
+      expect(promptArg).not.toContain("Today's Logged Activities")
+    })
+
+    it('looks up activities by the local calendar date, not the UTC date', async () => {
+      // health_activities.date is Garmin's startTimeLocal calendar date (local
+      // wall-clock day). 23:30 America/New_York on 2026-07-02 is already
+      // 2026-07-03 in UTC — a naive `.toISOString()` "today" would look up the
+      // wrong (empty) date and silently drop the activity from the prompt.
+      const originalTz = process.env.TZ
+      process.env.TZ = 'America/New_York'
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-07-03T03:30:00Z')) // 23:30 EDT on 2026-07-02
+
+      try {
+        const { default: db } = await import('../../server/db/client')
+        db.prepare(
+          `INSERT OR REPLACE INTO health_activities (activity_id, source, date, start_time, name, type_key, duration_s)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).run('act-late-evening', 'test-activity-context', '2026-07-02', '2026-07-02T19:00:00', 'Evening Run', 'running', 2400)
+
+        vi.clearAllMocks()
+        const { generateText } = await import('ai')
+        const mockGenerateText = vi.mocked(generateText)
+        mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+        const { runSectionById } = await import('../../server/lib/ai/orchestrator')
+        await runSectionById('recovery')
+
+        const promptArg = mockGenerateText.mock.calls[0][0].prompt as string
+        expect(promptArg).toContain('Evening Run')
+      } finally {
+        // outer afterEach cleans up rows with source = 'test-activity-context'
+        vi.useRealTimers()
+        process.env.TZ = originalTz
+      }
+    })
+  })
 })

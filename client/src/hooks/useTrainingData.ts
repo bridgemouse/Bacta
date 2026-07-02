@@ -42,6 +42,11 @@ export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
   activityHrByWeek: WeeklyAvgHr[] | null
 }
 
+function formatShortDate(dateStr: string): string {
+  const [year, month, dom] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, dom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 const ZONE_META = [
   { zone: 1, label: 'Warm Up',   color: '#56657a' },
   { zone: 2, label: 'Easy',      color: '#4ade80' },
@@ -104,6 +109,10 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           ? (TRAINING_STATUS[Math.round(statusN)] ?? 'Maintaining')
           : TRAINING.status.value
 
+        const statusSub = summary.training_status_n_date
+          ? `as of ${formatShortDate(summary.training_status_n_date)}`
+          : ''
+
         const trainingLoad = summary.training_load
         const loadMin  = summary.training_load_min ?? TRAINING.load.low
         const loadMax  = summary.training_load_max ?? TRAINING.load.high
@@ -159,7 +168,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           ...TRAINING,
           status: {
             value: statusLabel,
-            sub:   TRAINING.status.sub,
+            sub:   statusSub,
             trend: TRAINING.status.trend,
           },
           vo2max: {

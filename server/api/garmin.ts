@@ -39,12 +39,16 @@ const VALID_METRICS = [
 // GET /api/garmin/summary — latest available value per metric
 garminRouter.get('/summary', (_req, res) => {
   const rows = db.prepare(
-    `SELECT metric, value FROM health_snapshots gs
+    `SELECT metric, value, date FROM health_snapshots gs
      WHERE date = (SELECT MAX(date) FROM health_snapshots WHERE metric = gs.metric)`
-  ).all() as Array<{ metric: string; value: number }>
+  ).all() as Array<{ metric: string; value: number; date: string }>
 
-  const summary: Record<string, number> = {}
-  for (const row of rows) summary[row.metric] = row.value
+  const summary: Record<string, number | string> = {}
+  for (const row of rows) {
+    summary[row.metric] = row.value
+    // training_status_n's snapshot date drives the Training status card's freshness sub-label
+    if (row.metric === 'training_status_n') summary.training_status_n_date = row.date
+  }
   res.json(summary)
 })
 
@@ -129,18 +133,24 @@ garminRouter.get('/sleep-hypno', (_req, res) => {
     const dto = obj.dailySleepDTO
     const startMs: number = dto.sleepStartTimestampGMT
     const endMs: number = dto.sleepEndTimestampGMT
-    const startLocal: string | null = dto.sleepStartTimestampLocal ?? null
-    const endLocal: string | null = dto.sleepEndTimestampLocal ?? null
+    const startLocal: number | null = dto.sleepStartTimestampLocal ?? null
+    const endLocal: number | null = dto.sleepEndTimestampLocal ?? null
     const levels: Array<{ startGMT: string; endGMT: string; activityLevel: number }> = obj.sleepLevels
 
     if (!startMs || !endMs || !Array.isArray(levels)) { res.json(EMPTY); return }
+
+    // Garmin's sleepLevels[].startGMT/endGMT strings have no timezone suffix
+    // despite the name — they're UTC. Without an explicit 'Z', `new Date()`
+    // parses them as local server time, which shifts every segment boundary
+    // by the server's UTC offset and breaks the resampling below.
+    const parseGmt = (s: string) => new Date(`${s}Z`).getTime()
 
     const blockMs = (endMs - startMs) / 24
     const hypno: number[] = []
     for (let i = 0; i < 24; i++) {
       const midMs = startMs + (i + 0.5) * blockMs
       const seg = levels.find(s =>
-        new Date(s.startGMT).getTime() <= midMs && midMs < new Date(s.endGMT).getTime()
+        parseGmt(s.startGMT) <= midMs && midMs < parseGmt(s.endGMT)
       )
       const garminLevel = seg !== undefined ? seg.activityLevel : 3
       hypno.push(3 - garminLevel)

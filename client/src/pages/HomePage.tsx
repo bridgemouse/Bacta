@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useTransitionNavigate } from '../lib/useTransitionNavigate'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
 import { SystemCard } from '../components/MetricTile'
@@ -128,7 +128,7 @@ function HomeContent({ onNavigate }: { onNavigate: (path: string) => void }) {
 }
 
 export function HomePage() {
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
 
   return (
     <AppShell section="home" hasTabs>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useTransitionNavigate } from '../lib/useTransitionNavigate'
 import { AppShell } from '../components/AppShell'
 import { Rail } from '../components/viz/Rail'
 import { SecurityRail } from '../components/SecurityRail'
@@ -123,7 +123,7 @@ const selectStyle: React.CSSProperties = {
 }
 
 export function SettingsPage() {
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [clearedKey, setClearedKey] = useState<string | null>(null)

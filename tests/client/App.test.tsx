@@ -1,7 +1,7 @@
 // tests/client/App.test.tsx
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../../client/src/App'
 
@@ -13,6 +13,11 @@ global.ResizeObserver = class {
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+})
+
+afterEach(() => {
+  // @ts-expect-error test cleanup of a browser API not in jsdom's Document type
+  delete document.startViewTransition
 })
 
 function renderApp(initialPath = '/') {
@@ -40,6 +45,22 @@ describe('App', () => {
     await userEvent.click(navBtn)
     expect(screen.getByText('ALL SYSTEMS')).toBeInTheDocument()
     expect(screen.getByText('Recovery')).toBeInTheDocument()
+  })
+
+  test('uses a view transition when navigating via a Home section tile', async () => {
+    // Regression: HomePage's own section tiles (RECOVERY/TRAINING/SLEEP/...) are
+    // the primary way users move between sections, but used plain react-router
+    // useNavigate() directly instead of useTransitionNavigate() — so every tile
+    // click skipped the crossfade entirely, unlike AppShell's back-chevron and
+    // BottomSheet's nav-sheet items which were correctly wired in #37/PR #47.
+    const startViewTransition = vi.fn((cb: () => void) => cb())
+    // @ts-expect-error jsdom does not implement the View Transitions API
+    document.startViewTransition = startViewTransition
+
+    renderApp('/')
+    await userEvent.click(screen.getByRole('button', { name: /RECOVERY/ }))
+
+    expect(startViewTransition).toHaveBeenCalledTimes(1)
   })
 
   test('renders recovery page on /recovery route', () => {

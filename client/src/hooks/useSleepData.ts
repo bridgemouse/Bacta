@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchSummary, fetchTrend, fetchSources } from '../lib/garminApi'
 import { SLEEP } from '../lib/stubData'
+import { getCachedData, setCachedData } from '../lib/sectionDataCache'
 
 export type SleepData = Omit<typeof SLEEP, 'spo2'> & {
   spo2: { avg: number | null; low: number | null; unit: string }
@@ -36,10 +37,14 @@ const INITIAL: SleepData = {
   hypnoEndLocal: null,
 }
 
+const CACHE_KEY = 'sleep'
+type SleepCache = { data: SleepData; sources: Record<string, string> }
+
 export function useSleepData(): { data: SleepData; loading: boolean; sources: Record<string, string> } {
-  const [data, setData] = useState<SleepData>(INITIAL)
-  const [loading, setLoading] = useState(true)
-  const [sources, setSources] = useState<Record<string, string>>({})
+  const cached = getCachedData<SleepCache>(CACHE_KEY)
+  const [data, setData] = useState<SleepData>(cached?.data ?? INITIAL)
+  const [loading, setLoading] = useState(!cached)
+  const [sources, setSources] = useState<Record<string, string>>(cached?.sources ?? {})
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
@@ -123,7 +128,7 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
           archScore = Math.round((archDeepScore * 0.4 + archRemScore * 0.4 + archAwakePenalty * 0.2) * 100)
         }
 
-        setData({
+        const next: SleepData = {
           ...SLEEP,
           hypno: hypnoData.hypno.length === 24 ? hypnoData.hypno : SLEEP.hypno,
           duration: {
@@ -165,7 +170,9 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
           sleepSpo2Trend:   spo2Trend,
           hypnoStartLocal:  hypnoData.startLocal,
           hypnoEndLocal:    hypnoData.endLocal,
-        })
+        }
+        setData(next)
+        setCachedData<SleepCache>(CACHE_KEY, { data: next, sources: sourcesData })
       } catch {
         // keep stub on error
       } finally {

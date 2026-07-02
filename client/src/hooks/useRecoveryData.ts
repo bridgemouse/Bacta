@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchSummary, fetchTrend, fetchSources } from '../lib/garminApi'
 import { RECOVERY } from '../lib/stubData'
+import { getCachedData, setCachedData } from '../lib/sectionDataCache'
 
 const arrAvg = (a: number[]) =>
   a.length ? a.reduce((s, v) => s + v, 0) / a.length : null
@@ -61,10 +62,14 @@ const INITIAL: RecoveryData = {
   recoveryTimeTrend: [],
 }
 
+const CACHE_KEY = 'recovery'
+type RecoveryCache = { data: RecoveryData; sources: Record<string, string> }
+
 export function useRecoveryData(): { data: RecoveryData; loading: boolean; sources: Record<string, string> } {
-  const [data, setData] = useState<RecoveryData>(INITIAL)
-  const [loading, setLoading] = useState(true)
-  const [sources, setSources] = useState<Record<string, string>>({})
+  const cached = getCachedData<RecoveryCache>(CACHE_KEY)
+  const [data, setData] = useState<RecoveryData>(cached?.data ?? INITIAL)
+  const [loading, setLoading] = useState(!cached)
+  const [sources, setSources] = useState<Record<string, string>>(cached?.sources ?? {})
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
@@ -142,7 +147,7 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean; sourc
           sub: `${roundedSlope >= 0 ? '+' : ''}${roundedSlope.toFixed(1)} ms/day`,
         }
 
-        setData({
+        const next: RecoveryData = {
           score: {
             value: summary.recovery_score ?? RECOVERY.score.value,
             state: (summary.recovery_score ?? 0) >= 80 ? 'Optimal'
@@ -204,7 +209,9 @@ export function useRecoveryData(): { data: RecoveryData; loading: boolean; sourc
           sleepHrTrend:     sleepHrTrendData.length ? sleepHrTrendData : [],
           recoveryTimeH:    recoveryTimeHConverted,
           recoveryTimeTrend: recoveryTimeTrendConverted,
-        })
+        }
+        setData(next)
+        setCachedData<RecoveryCache>(CACHE_KEY, { data: next, sources: sourcesData })
       } catch {
         // keep stub data on error
       } finally {

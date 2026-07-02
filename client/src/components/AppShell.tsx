@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { COLORS, MX4_COLOR, SECTION_ACCENTS } from '../theme'
 import type { SectionKey } from '../theme'
 import { TabContext } from '../lib/TabContext'
@@ -10,6 +9,7 @@ import { BottomSheet } from './BottomSheet'
 import { AskSheet } from './AskSheet'
 import { bactaTexture } from '../lib/bactaTexture'
 import { AskSheetContext } from '../lib/AskSheetContext'
+import { useTransitionNavigate } from '../lib/useTransitionNavigate'
 
 interface AppShellProps {
   section: SectionKey
@@ -18,7 +18,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ section, hasTabs = false, children }: AppShellProps) {
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
   const [navOpen, setNavOpen] = useState(false)
   const [askOpen, setAskOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('overview')

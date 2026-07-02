@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchSummary, fetchTrend, fetchActivities, fetchWeeklyVolume, fetchWeeklyAvgHr, fetchWeeklyIntensity, TRAINING_STATUS, type GarminActivity, type WeeklyVolume, type WeeklyAvgHr } from '../lib/garminApi'
 import { TRAINING } from '../lib/stubData'
+import { getCachedData, setCachedData } from '../lib/sectionDataCache'
 
 export type TrainingData = Omit<typeof TRAINING, 'activities' | 'vo2max'> & {
   activities: GarminActivity[]
@@ -68,9 +69,12 @@ const INITIAL: TrainingData = {
   activityHrByWeek: null,
 }
 
+const CACHE_KEY = 'training'
+
 export function useTrainingData(): { data: TrainingData; loading: boolean } {
-  const [data, setData] = useState<TrainingData>(INITIAL)
-  const [loading, setLoading] = useState(true)
+  const cached = getCachedData<TrainingData>(CACHE_KEY)
+  const [data, setData] = useState<TrainingData>(cached ?? INITIAL)
+  const [loading, setLoading] = useState(!cached)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
@@ -160,7 +164,7 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
             })()
           : []
 
-        setData({
+        const next: TrainingData = {
           ...TRAINING,
           status: {
             value: statusLabel,
@@ -205,7 +209,9 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           loadRatio,
           weeklyVolume: weeklyVolume.length ? weeklyVolume : null,
           activityHrByWeek: activityHrByWeek.length ? activityHrByWeek : null,
-        })
+        }
+        setData(next)
+        setCachedData(CACHE_KEY, next)
       } catch {
         // keep stub on error
       } finally {

@@ -50,3 +50,9 @@ body {
 
 /* Generic data-refresh transition — referenced by FadeValue.tsx */
 @keyframes valueFadeIn    { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Section route transitions — driven by document.startViewTransition() in useTransitionNavigate.ts */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}

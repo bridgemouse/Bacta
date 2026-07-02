@@ -67,7 +67,7 @@ gh issue list --repo bridgemouse/bacta --label polish --state open \
 
 **Remove from queue without comment** any issue carrying: `blocked`, `needs-design`, `needs-human-decision`, `wontfix`.
 
-**Cap:** Process at most 6 issues per session. Quality over quantity — a solid draft PR beats three half-finished ones.
+**Cap:** Process at most 8 issues per session. Quality over quantity — a solid draft PR beats three half-finished ones.
 
 ---
 
@@ -331,7 +331,7 @@ After each issue (any outcome):
 1. Return to main: `git checkout main`
 2. Record the outcome: `DONE #<number> PR #<pr>` / `DRAFT #<number>` / `SKIP #<number>`
 3. Check stopping conditions:
-   - 6 issues processed → write session summary (Phase 9) and stop
+   - 8 issues processed → write session summary (Phase 9) and stop
    - Main has diverged since session start → stop, write session summary
    - Context feels stretched (deep into many iterations) → stop, write session summary
 
@@ -381,7 +381,7 @@ Then run `bacta-wrap` Steps 1–4 only (type check, tests, Playwright cleanup). 
 | 3 identical tool calls in a row | Abort issue. Draft PR. Next issue. |
 | UI change without visual check | Not done. Run Playwright. |
 | Type errors after implementation | Fix before PR. Never commit type errors. |
-| 6 issues processed | Write session summary. Stop. |
+| 8 issues processed | Write session summary. Stop. |
 | Context running low | Write session summary. Stop cleanly. |
 | Tempted to push to main | Create a PR instead. |
 | Tempted to merge | That is the human's job. Stop. |

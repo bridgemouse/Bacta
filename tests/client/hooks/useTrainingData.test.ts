@@ -25,6 +25,7 @@ import {
   fetchWeeklyIntensity,
 } from '../../../client/src/lib/garminApi'
 import { useTrainingData } from '../../../client/src/hooks/useTrainingData'
+import { clearCachedData } from '../../../client/src/lib/sectionDataCache'
 
 const mockFetchSummary = fetchSummary as ReturnType<typeof vi.fn>
 const mockFetchTrend = fetchTrend as ReturnType<typeof vi.fn>
@@ -34,6 +35,7 @@ const mockFetchWeeklyAvgHr = fetchWeeklyAvgHr as ReturnType<typeof vi.fn>
 const mockFetchWeeklyIntensity = fetchWeeklyIntensity as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
+  clearCachedData()
   mockFetchSummary.mockResolvedValue({})
   mockFetchTrend.mockResolvedValue([])
   mockFetchActivities.mockResolvedValue([])
@@ -63,5 +65,19 @@ describe('useTrainingData — status sub-label', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(result.current.data.status.sub).toBe('as of Jun 30')
+  })
+
+  it('does not carry a previous test\'s cached data into a fresh mount (shared section cache is cleared per test)', () => {
+    // useTrainingData now seeds initial render state from the module-level
+    // sectionDataCache (added alongside the view-transition nav cache). If
+    // beforeEach didn't clear it, this mount would incorrectly inherit the
+    // 'as of Jun 30' value written by the previous test's successful fetch,
+    // even though this render's own fetch never resolves.
+    mockFetchSummary.mockReturnValue(new Promise(() => {}))
+
+    const { result } = renderHook(() => useTrainingData())
+
+    expect(result.current.loading).toBe(true)
+    expect(result.current.data.status.sub).not.toBe('as of Jun 30')
   })
 })

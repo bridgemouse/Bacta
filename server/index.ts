@@ -145,7 +145,13 @@ if (process.env.NODE_ENV === 'production') {
   // iOS also requests these variants
   app.get('/apple-touch-icon-precomposed.png', (_req, res) => res.redirect('/apple-touch-icon.png'))
 
-  app.use(express.static(clientDir, { etag: false }))
+  // index: false — otherwise express.static serves index.html directly for GET /
+  // using its own default Cache-Control (public, max-age=0 + Last-Modified),
+  // bypassing the explicit no-store below entirely. iOS Safari's standalone PWA
+  // mode can hold onto that cached shell (with a stale JS bundle reference)
+  // indefinitely instead of revalidating, so a new deploy silently never reaches
+  // the device. Forcing every request through the catch-all guarantees no-store.
+  app.use(express.static(clientDir, { etag: false, index: false }))
   app.get('/{*splat}', (_req, res) => {
     res.set('Cache-Control', 'no-store')
     res.sendFile(path.join(clientDir, 'index.html'))

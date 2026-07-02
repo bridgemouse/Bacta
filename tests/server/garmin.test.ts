@@ -125,7 +125,8 @@ describe('sleep-hypno endpoint', () => {
     const startMs = new Date('2026-06-12T23:14:00Z').getTime()
     const endMs = new Date('2026-06-13T07:22:00Z').getTime()
     const midMs = (startMs + endMs) / 2
-    const midStr = new Date(midMs).toISOString().replace('T', ' ').slice(0, 19)
+    // Garmin's real GMT format: no timezone suffix, meant to be read as UTC
+    const midStr = new Date(midMs).toISOString().slice(0, -1)
     const sourceJson = JSON.stringify({
       dailySleepDTO: {
         sleepStartTimestampGMT: startMs,
@@ -134,8 +135,8 @@ describe('sleep-hypno endpoint', () => {
         sleepEndTimestampLocal: '2026-06-13T07:22:00',
       },
       sleepLevels: [
-        { startGMT: new Date(startMs).toISOString().replace('T', ' ').slice(0, 19), endGMT: new Date(midMs).toISOString().replace('T', ' ').slice(0, 19), activityLevel: 0 },
-        { startGMT: midStr, endGMT: new Date(endMs).toISOString().replace('T', ' ').slice(0, 19), activityLevel: 2 },
+        { startGMT: new Date(startMs).toISOString().slice(0, -1), endGMT: new Date(midMs).toISOString().slice(0, -1), activityLevel: 0 },
+        { startGMT: midStr, endGMT: new Date(endMs).toISOString().slice(0, -1), activityLevel: 2 },
       ],
     })
     db.prepare(
@@ -163,6 +164,44 @@ describe('sleep-hypno endpoint', () => {
     const res = await request(app).get('/api/garmin/sleep-hypno')
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ hypno: [], startLocal: null, endLocal: null })
+  })
+
+  it('matches sleep-level segments as UTC regardless of server timezone', async () => {
+    // Real bug: Garmin's sleepLevels[].startGMT/endGMT strings have no
+    // timezone suffix. On a server whose local TZ isn't UTC, `new
+    // Date(str)` parses them as LOCAL time, shifting every segment boundary
+    // by the server's UTC offset. A single segment spanning the whole
+    // night should therefore match every one of the 24 resampled buckets —
+    // including the first, which is the one that broke under the old
+    // (non-UTC-aware) parsing.
+    const originalTz = process.env.TZ
+    process.env.TZ = 'America/New_York'
+    try {
+      const { default: db } = await import('../../server/db/client')
+      const startMs = Date.UTC(2026, 5, 30, 2, 16, 50)
+      const endMs = Date.UTC(2026, 5, 30, 9, 53, 50)
+      const sourceJson = JSON.stringify({
+        dailySleepDTO: {
+          sleepStartTimestampGMT: startMs,
+          sleepEndTimestampGMT: endMs,
+          sleepStartTimestampLocal: startMs - 4 * 3600 * 1000,
+          sleepEndTimestampLocal: endMs - 4 * 3600 * 1000,
+        },
+        sleepLevels: [
+          { startGMT: '2026-06-30T02:16:50.0', endGMT: '2026-06-30T09:53:50.0', activityLevel: 0 },
+        ],
+      })
+      db.prepare(
+        `INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
+      ).run('2026-06-30', 'sleep_score', 90, 'score', sourceJson)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/garmin/sleep-hypno')
+      expect(res.status).toBe(200)
+      expect(res.body.hypno[0]).toBe(3)
+    } finally {
+      process.env.TZ = originalTz
+    }
   })
 })
 

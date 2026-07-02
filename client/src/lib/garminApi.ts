@@ -30,6 +30,7 @@ export interface GarminSummary {
   training_load_min?: number
   training_load_max?: number
   training_status_n?: number
+  training_status_n_date?: string
   intensity_mod_min?: number
   intensity_vig_min?: number
   vo2max?: number

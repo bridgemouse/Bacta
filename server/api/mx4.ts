@@ -254,7 +254,18 @@ mx4Router.post('/chat', async (req, res) => {
   res.setHeader('Connection', 'keep-alive')
 
   try {
-    const vaultTools = isVaultEnabled() ? await getVaultTools().catch(() => ({})) : {}
+    const vaultTools = isVaultEnabled()
+      ? await getVaultTools().catch((vaultErr: unknown) => {
+          const detail = vaultErr instanceof Error ? vaultErr.message : String(vaultErr)
+          console.error('[mx4] vault tools unavailable:', vaultErr)
+          try {
+            logEvent('mx4-chat', 'error', `Vault tools unavailable (session ${sessionId}): ${detail}`)
+          } catch (logErr: unknown) {
+            console.error('[mx4] failed to log vault tool failure:', logErr)
+          }
+          return {}
+        })
+      : {}
     const result = streamText({
       model: getModel('chat'),
       system,

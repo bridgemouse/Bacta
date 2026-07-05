@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { getSetting } from '../settings'
+import { logEvent } from '../logger'
 
 // Provider-agnostic research tool for MX-4.
 //
@@ -104,7 +105,14 @@ async function searchWeb(query: string, limit: number): Promise<Source[]> {
         abstract: typeof r.text === 'string' ? r.text.slice(0, 600) : null,
       }))
     }
-  } catch {
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error(`[mx4] research: ${provider} web search failed:`, e)
+    try {
+      logEvent('mx4-research', 'error', `${provider} web search failed for query "${query}": ${detail}`)
+    } catch (logErr: unknown) {
+      console.error('[mx4] failed to log research failure:', logErr)
+    }
     return []  // web backend is best-effort; scholarly still returns
   }
   return []
@@ -121,7 +129,14 @@ export const research = tool({
     const out: { scholarly: Source[]; web: Source[]; note?: string } = { scholarly: [], web: [] }
     try {
       out.scholarly = await searchOpenAlex(query, n)
-    } catch {
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e)
+      console.error('[mx4] research: OpenAlex search failed:', e)
+      try {
+        logEvent('mx4-research', 'error', `OpenAlex search failed for query "${query}": ${detail}`)
+      } catch (logErr: unknown) {
+        console.error('[mx4] failed to log research failure:', logErr)
+      }
       out.note = 'Scholarly backend (OpenAlex) was unreachable; results may be incomplete.'
     }
     out.web = await searchWeb(query, n)

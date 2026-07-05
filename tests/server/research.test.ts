@@ -56,4 +56,17 @@ describe('MX-4 research tool', () => {
     expect(result.scholarly).toEqual([])
     expect(result.note).toMatch(/No sources/i)
   })
+
+  it('logs a failure when the OpenAlex search throws, before degrading to the note', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+    const { research } = await import('../../server/lib/ai/research')
+    await research.execute!({ query: 'deep sleep recovery' }, {} as any)
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT source, level, message FROM app_logs WHERE source = 'mx4-research' ORDER BY id DESC LIMIT 5"
+    ).all() as { source: string; level: string; message: string }[]
+
+    expect(rows.some(r => r.level === 'error' && r.message.includes('OpenAlex') && r.message.includes('network down'))).toBe(true)
+  })
 })

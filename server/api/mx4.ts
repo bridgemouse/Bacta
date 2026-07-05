@@ -208,6 +208,19 @@ mx4Router.post('/chat/seed', (req, res) => {
   res.json({ ok: true })
 })
 
+// On a failed/empty turn, the user's message was already persisted but no assistant
+// reply follows it. Left in place, the next request's history would end on two
+// consecutive user turns — malformed input to the AI provider that reproduces this
+// failure on every later turn in the session. Removing the orphaned row lets the
+// user simply retry with clean history instead.
+function removeOrphanedUserTurn(rowId: number | bigint): void {
+  try {
+    db.prepare('DELETE FROM mx4_chat_messages WHERE id = ?').run(rowId)
+  } catch (e: unknown) {
+    console.error('[mx4] failed to remove orphaned user turn:', e)
+  }
+}
+
 mx4Router.post('/chat', async (req, res) => {
   const { message, sessionId, section } = req.body as { message?: string; sessionId?: string; section?: string }
 
@@ -216,7 +229,7 @@ mx4Router.post('/chat', async (req, res) => {
     return
   }
 
-  db.prepare(
+  const userMessage = db.prepare(
     'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
   ).run(sessionId, 'user', message.trim(), section ?? null)
 
@@ -266,22 +279,13 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
-      const errorMessage = categorizeError(new Error('no response'))
-      // Persist a placeholder assistant reply so history stays well-formed (no
-      // orphaned consecutive user turns) — otherwise every later turn in this
-      // session fails the same way.
-      db.prepare(
-        'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
-      ).run(sessionId, 'assistant', `[MX-4 ERROR] ${errorMessage}`, section ?? null)
-      res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
+      removeOrphanedUserTurn(userMessage.lastInsertRowid)
+      res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
     }
   } catch (e: unknown) {
     console.error('[mx4] chat stream error:', e)
-    const errorMessage = categorizeError(e)
-    db.prepare(
-      'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
-    ).run(sessionId, 'assistant', `[MX-4 ERROR] ${errorMessage}`, section ?? null)
-    res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
+    removeOrphanedUserTurn(userMessage.lastInsertRowid)
+    res.write(`data: ${JSON.stringify({ error: categorizeError(e) })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')

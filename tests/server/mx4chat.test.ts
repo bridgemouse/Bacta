@@ -261,7 +261,6 @@ describe('MX-4 Chat API', () => {
     vi.mocked(streamText).mockImplementationOnce(() => ({
       fullStream: (async function* () {
         yield { type: 'tool-call', toolName: 'research', input: { query: 'heatwave raleigh' } }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       })(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any)
@@ -276,8 +275,10 @@ describe('MX-4 Chat API', () => {
       'SELECT role FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at ASC'
     ).all(sessionId) as { role: string }[]
 
-    // History must not end on an orphaned user turn with no assistant reply.
-    expect(rows[rows.length - 1].role).toBe('assistant')
+    // The failed turn must leave no trace — no orphaned user message and no
+    // fabricated assistant reply (a placeholder would be fed back to the model
+    // as if MX-4 said it, and rendered in the UI as genuine MX-4 dialogue).
+    expect(rows).toHaveLength(0)
 
     // Second turn in the same session (normal response) must succeed, not repeat the failure.
     const res2 = await request(app)

@@ -10,6 +10,7 @@ import { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPag
 import { research } from '../lib/ai/research'
 import { getVaultTools, isVaultEnabled } from '../lib/ai/vaultClient'
 import { getSetting } from '../lib/settings'
+import { logEvent } from '../lib/logger'
 import db from '../db/client'
 
 export function toolLabel(toolName: string, args: Record<string, unknown>): string {
@@ -266,6 +267,7 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
+      logEvent('mx4', 'error', `Chat turn produced no response (session ${sessionId})`)
       res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
     }
   } catch (e: unknown) {

@@ -3,7 +3,7 @@ import db from '../db/client'
 
 const logsRouter = Router()
 
-const KNOWN_SOURCES = ['garmin', 'mx4']
+const KNOWN_SOURCES = ['garmin', 'mx4', 'mx4-chat']
 const DEFAULT_LIMIT = 100
 const MAX_LIMIT = 500
 

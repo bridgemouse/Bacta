@@ -267,7 +267,13 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
-      logEvent('mx4', 'error', `Chat turn produced no response (session ${sessionId})`)
+      // Own source ('mx4-chat', not 'mx4') so frequent chat-failure logging can't crowd
+      // the nightly orchestrator's low-volume 'mx4' history out of the default Logs view.
+      try {
+        logEvent('mx4-chat', 'error', `Chat turn produced no response (session ${sessionId})`)
+      } catch (logErr: unknown) {
+        console.error('[mx4] failed to log empty-response event:', logErr)
+      }
       res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
     }
   } catch (e: unknown) {

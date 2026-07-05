@@ -242,7 +242,6 @@ describe('MX-4 Chat API', () => {
       fullStream: (async function* () {
         yield { type: 'tool-call', toolName: 'research', input: { query: 'heatwave raleigh' } }
         // no text-delta parts — the tool loop exhausts its step budget with no final text
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       })(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any)
@@ -257,7 +256,7 @@ describe('MX-4 Chat API', () => {
 
     const { default: db } = await import('../../server/db/client')
     const rows = db.prepare(
-      "SELECT source, level, message FROM app_logs WHERE source = 'mx4' ORDER BY id DESC LIMIT 5"
+      "SELECT source, level, message FROM app_logs WHERE source = 'mx4-chat' ORDER BY id DESC LIMIT 5"
     ).all() as { source: string; level: string; message: string }[]
 
     expect(rows.some(r => r.level === 'error' && r.message.includes('empty-response-session'))).toBe(true)

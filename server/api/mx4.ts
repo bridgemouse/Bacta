@@ -266,11 +266,22 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
-      res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
+      const errorMessage = categorizeError(new Error('no response'))
+      // Persist a placeholder assistant reply so history stays well-formed (no
+      // orphaned consecutive user turns) — otherwise every later turn in this
+      // session fails the same way.
+      db.prepare(
+        'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
+      ).run(sessionId, 'assistant', `[MX-4 ERROR] ${errorMessage}`, section ?? null)
+      res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
     }
   } catch (e: unknown) {
     console.error('[mx4] chat stream error:', e)
-    res.write(`data: ${JSON.stringify({ error: categorizeError(e) })}\n\n`)
+    const errorMessage = categorizeError(e)
+    db.prepare(
+      'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
+    ).run(sessionId, 'assistant', `[MX-4 ERROR] ${errorMessage}`, section ?? null)
+    res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')

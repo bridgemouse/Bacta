@@ -27,6 +27,9 @@ jobs:
       - name: Type check (client)
         run: npx tsc --noEmit
 
+      - name: Build client
+        run: npm run build:client
+
       - name: Run server tests
         run: npm run test:server
 

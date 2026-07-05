@@ -278,6 +278,44 @@ describe('MX-4 Chat API', () => {
     expect(res.text).not.toContain('"error"')
     expect(res.text).toContain('[DONE]')
   })
+
+  it('POST /api/mx4/chat leaves session in a working state after an empty-response turn (no orphaned user message)', async () => {
+    const { streamText } = await import('ai')
+    const sessionId = 'orphan-recovery-session'
+
+    // First turn: tool loop produces no final text — the failure path from #51.
+    vi.mocked(streamText).mockImplementationOnce(() => ({
+      fullStream: (async function* () {
+        yield { type: 'tool-call', toolName: 'research', input: { query: 'heatwave raleigh' } }
+      })(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any)
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'look up the heatwave in raleigh', sessionId })
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      'SELECT role FROM mx4_chat_messages WHERE session_id = ? ORDER BY created_at ASC'
+    ).all(sessionId) as { role: string }[]
+
+    // The failed turn must leave no trace — no orphaned user message and no
+    // fabricated assistant reply (a placeholder would be fed back to the model
+    // as if MX-4 said it, and rendered in the UI as genuine MX-4 dialogue).
+    expect(rows).toHaveLength(0)
+
+    // Second turn in the same session (normal response) must succeed, not repeat the failure.
+    const res2 = await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'try again', sessionId })
+
+    expect(res2.status).toBe(200)
+    expect(res2.text).not.toContain('"error"')
+    expect(res2.text).toContain('Hello ')
+    expect(res2.text).toContain('from MX-4.')
+  })
 })
 
 describe('categorizeError', () => {

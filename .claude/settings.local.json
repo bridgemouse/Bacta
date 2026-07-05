@@ -117,7 +117,21 @@
       "WebFetch(domain:dev.to)",
       "Skill(bacta-issues)",
       "WebFetch(domain:google.github.io)",
-      "WebFetch(domain:docs.bswen.com)"
+      "WebFetch(domain:docs.bswen.com)",
+      "Bash(rm -f /opt/bacta/*.png)",
+      "Bash(sort -n -t: -k1)",
+      "Bash(mkdir -p /tmp/no-dot-test)",
+      "Bash(cp -r /opt/bacta/.worktrees/issue-51-no-logging/dist /tmp/no-dot-test/dist)",
+      "Read(//tmp/**)",
+      "Bash(gh gist *)",
+      "Bash(gh run *)",
+      "Bash(rm -rf /tmp/ci-sim)",
+      "Bash(cp -r /opt/bacta /tmp/ci-sim)",
+      "Bash(rm -rf dist node_modules/.cache .worktrees)",
+      "Bash(sudo -n -l)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(/home/wheat/.local/bin/claude *)"
     ]
   }
 }

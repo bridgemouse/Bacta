@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { spawn } from 'child_process'
 import db from '../db/client'
 import { setSetting, getSetting, SETTING_DEFAULTS, SECRET_SETTING_KEYS, PROVIDERS } from '../lib/settings'
 import { scheduleNightly } from '../lib/ai/scheduler'
@@ -91,6 +92,14 @@ settingsRouter.post('/test-connection', async (_req, res) => {
 settingsRouter.post('/test-vault-connection', async (_req, res) => {
   const result = await testVaultConnection()
   res.json(result)
+})
+
+// The process handling this request is the one being restarted, so respond
+// before spawning — detached + unref so the restart survives this process exiting.
+settingsRouter.post('/restart', (_req, res) => {
+  res.status(202).json({ ok: true })
+  const child = spawn('sudo', ['systemctl', 'restart', 'bacta-api'], { stdio: 'ignore', detached: true })
+  child.unref()
 })
 
 settingsRouter.get('/custom-skills', (_req, res) => {

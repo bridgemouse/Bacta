@@ -153,6 +153,7 @@ export function SettingsPage() {
   const [syncErrors, setSyncErrors] = useState<Record<string, string>>({})
   const [connectErrors, setConnectErrors] = useState<Record<string, string>>({})
   const [baseUrlInput, setBaseUrlInput] = useState('')
+  const [restartStatus, setRestartStatus] = useState<'idle' | 'restarting'>('idle')
   const [priorityList, setPriorityList] = useState<string[]>([...PRIORITY_ALL])
 
   const refreshStatus = async () => {
@@ -382,6 +383,12 @@ export function SettingsPage() {
     await fetch(endpoint, { method: 'DELETE' })
     setClearedKey(key)
     setTimeout(() => setClearedKey(null), 2500)
+  }
+
+  async function restartBacta() {
+    if (!window.confirm('Restart Bacta?\n\nThis briefly interrupts the API — the app will be unreachable for a few seconds while the service restarts.')) return
+    setRestartStatus('restarting')
+    await fetch('/api/settings/restart', { method: 'POST' })
   }
 
   const vaultEnabled = settings['vault_enabled'] === 'true'
@@ -1130,7 +1137,7 @@ export function SettingsPage() {
       {/* Rail: INSTANCE */}
       <CollapsibleSection label="INSTANCE" accent={MX4_COLOR}>
       <div style={cardStyle}>
-        <div style={rowStyleLast}>
+        <div style={rowStyle}>
           <span style={labelStyle}>Base URL</span>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
             <input
@@ -1148,6 +1155,28 @@ export function SettingsPage() {
               </span>
             )}
           </div>
+        </div>
+        <div style={rowStyleLast}>
+          <span style={{ ...labelStyle, color: COLORS.text }}>Restart Bacta</span>
+          <button
+            onClick={restartBacta}
+            disabled={restartStatus === 'restarting'}
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              letterSpacing: '0.08em',
+              padding: '5px 12px',
+              borderRadius: 7,
+              border: `1px solid ${hexA(COLORS.mx4Red, 0.5)}`,
+              background: hexA(COLORS.mx4Red, 0.1),
+              color: COLORS.mx4Red,
+              cursor: restartStatus === 'restarting' ? 'default' : 'pointer',
+              opacity: restartStatus === 'restarting' ? 0.6 : 1,
+              flexShrink: 0,
+            }}
+          >
+            {restartStatus === 'restarting' ? 'RESTARTING…' : 'RESTART ›'}
+          </button>
         </div>
       </div>
       </CollapsibleSection>

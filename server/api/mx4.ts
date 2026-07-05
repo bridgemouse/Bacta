@@ -292,8 +292,14 @@ mx4Router.post('/chat', async (req, res) => {
     }
   } catch (e: unknown) {
     console.error('[mx4] chat stream error:', e)
+    const categorized = categorizeError(e)
+    try {
+      logEvent('mx4-chat', 'error', `Chat turn threw (session ${sessionId}): ${categorized}`)
+    } catch (logErr: unknown) {
+      console.error('[mx4] failed to log chat stream error:', logErr)
+    }
     removeOrphanedUserTurn(userMessage.lastInsertRowid)
-    res.write(`data: ${JSON.stringify({ error: categorizeError(e) })}\n\n`)
+    res.write(`data: ${JSON.stringify({ error: categorized })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')

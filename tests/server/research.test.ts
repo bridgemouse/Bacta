@@ -56,4 +56,73 @@ describe('MX-4 research tool', () => {
     expect(result.scholarly).toEqual([])
     expect(result.note).toMatch(/No sources/i)
   })
+
+  it('logs a failure when the OpenAlex search throws, before degrading to the note', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+    const { research } = await import('../../server/lib/ai/research')
+    await research.execute!({ query: 'deep sleep recovery' }, {} as any)
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT source, level, message FROM app_logs WHERE source = 'mx4-research' ORDER BY id DESC LIMIT 5"
+    ).all() as { source: string; level: string; message: string }[]
+
+    expect(rows.some(r => r.level === 'error' && r.message.includes('OpenAlex') && r.message.includes('network down'))).toBe(true)
+  })
+
+  it('logs a failure when the web (Tavily/Exa) search throws', async () => {
+    const { setSetting } = await import('../../server/lib/settings')
+    setSetting('research_provider', 'tavily')
+    setSetting('research_api_key', 'test-key')
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('openalex')) return { ok: true, json: async () => ({ results: [] }) }
+      throw new Error('tavily unreachable')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { research } = await import('../../server/lib/ai/research')
+    await research.execute!({ query: 'garmin run coach specs' }, {} as any)
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT source, level, message FROM app_logs WHERE source = 'mx4-research' ORDER BY id DESC LIMIT 5"
+    ).all() as { source: string; level: string; message: string }[]
+
+    expect(rows.some(r => r.level === 'error' && r.message.includes('tavily') && r.message.includes('tavily unreachable'))).toBe(true)
+
+    setSetting('research_provider', 'none')
+    setSetting('research_api_key', '')
+  })
+
+  it('logs the underlying network cause instead of the generic "fetch failed" message', async () => {
+    const causeErr = new Error('fetch failed')
+    ;(causeErr as Error & { cause?: unknown }).cause = new Error('getaddrinfo ENOTFOUND api.openalex.org')
+    vi.stubGlobal('fetch', vi.fn(async () => { throw causeErr }))
+
+    const { research } = await import('../../server/lib/ai/research')
+    await research.execute!({ query: 'HRV baseline drift' }, {} as any)
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT message FROM app_logs WHERE source = 'mx4-research' ORDER BY id DESC LIMIT 5"
+    ).all() as { message: string }[]
+
+    expect(rows.some(r => r.message.includes('ENOTFOUND'))).toBe(true)
+  })
+
+  it('logs a real detail (not "[object Object]") when the search rejects with a plain error-shaped object', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw { code: -32000, message: 'rate limited' } }))
+
+    const { research } = await import('../../server/lib/ai/research')
+    await research.execute!({ query: 'sleep architecture review' }, {} as any)
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT message FROM app_logs WHERE source = 'mx4-research' ORDER BY id DESC LIMIT 5"
+    ).all() as { message: string }[]
+
+    expect(rows.some(r => r.message.includes('rate limited'))).toBe(true)
+    expect(rows.some(r => r.message.includes('[object Object]'))).toBe(false)
+  })
 })

@@ -388,7 +388,14 @@ export function SettingsPage() {
   async function restartBacta() {
     if (!window.confirm('Restart Bacta?\n\nThis briefly interrupts the API — the app will be unreachable for a few seconds while the service restarts.')) return
     setRestartStatus('restarting')
-    await fetch('/api/settings/restart', { method: 'POST' })
+    try {
+      await fetch('/api/settings/restart', { method: 'POST' })
+    } catch {
+      // A connection reset here likely means the restart actually happened
+      // (the server died mid-response) rather than a genuine failure to
+      // reach it — either way, the timeout below guarantees recovery.
+    }
+    setTimeout(() => setRestartStatus('idle'), 15_000)
   }
 
   const vaultEnabled = settings['vault_enabled'] === 'true'

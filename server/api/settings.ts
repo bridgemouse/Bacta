@@ -99,6 +99,12 @@ settingsRouter.post('/test-vault-connection', async (_req, res) => {
 settingsRouter.post('/restart', (_req, res) => {
   res.status(202).json({ ok: true })
   const child = spawn('sudo', ['systemctl', 'restart', 'bacta-api'], { stdio: 'ignore', detached: true })
+  // Without an 'error' listener, a failed launch (e.g. ENOENT) throws
+  // unhandled and crashes this process instead of the intended restart.
+  child.on('error', (err) => console.error('[settings] failed to spawn restart:', err))
+  child.on('exit', (code) => {
+    if (code !== 0) console.error(`[settings] restart command exited with code ${code}`)
+  })
   child.unref()
 })
 

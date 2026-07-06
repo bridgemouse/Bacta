@@ -262,6 +262,33 @@ describe('MX-4 Chat API', () => {
     expect(rows.some(r => r.level === 'error' && r.message.includes('empty-response-session'))).toBe(true)
   })
 
+  it('logs an app_logs entry when the chat stream throws an exception', async () => {
+    const { streamText } = await import('ai')
+    vi.mocked(streamText).mockImplementationOnce(() => ({
+      fullStream: (async function* () {
+        throw new Error('provider unavailable')
+        // eslint-disable-next-line no-unreachable
+        yield
+      })(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any)
+
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'What is my HRV?', sessionId: 'throw-session' })
+
+    expect(res.status).toBe(200)
+    expect(res.text).toContain('"error"')
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT source, level, message FROM app_logs WHERE source = 'mx4-chat' ORDER BY id DESC LIMIT 5"
+    ).all() as { source: string; level: string; message: string }[]
+
+    expect(rows.some(r => r.level === 'error' && r.message.includes('throw-session'))).toBe(true)
+  })
+
   it('POST /api/mx4/chat responds normally when vault is configured but getVaultTools throws', async () => {
     // Bug: getVaultTools() is called unconditionally; if vault is enabled but unreachable,
     // it throws and the outer try-catch sends a generic error SSE instead of MX-4 responding.
@@ -277,6 +304,34 @@ describe('MX-4 Chat API', () => {
     expect(res.status).toBe(200)
     expect(res.text).not.toContain('"error"')
     expect(res.text).toContain('[DONE]')
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT source, level, message FROM app_logs WHERE source = 'mx4-chat' ORDER BY id DESC LIMIT 5"
+    ).all() as { source: string; level: string; message: string }[]
+
+    expect(rows.some(r => r.level === 'error' && r.message.includes('ECONNREFUSED vault.local'))).toBe(true)
+  })
+
+  it('POST /api/mx4/chat logs a real detail (not "[object Object]") when getVaultTools rejects with a plain error-shaped object', async () => {
+    // MCP/JSON-RPC transports commonly reject with { code, message } objects rather
+    // than Error instances — String(obj) would collapse that to "[object Object]".
+    const vaultMod = await import('../../server/lib/ai/vaultClient')
+    vi.mocked(vaultMod.isVaultEnabled).mockReturnValueOnce(true)
+    vi.mocked(vaultMod.getVaultTools).mockRejectedValueOnce({ code: -32603, message: 'Internal error: vault unreachable' })
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'What is Garmin Run Coach?', sessionId: 'vault-fail-object-session' })
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT message FROM app_logs WHERE source = 'mx4-chat' ORDER BY id DESC LIMIT 5"
+    ).all() as { message: string }[]
+
+    expect(rows.some(r => r.message.includes('Internal error: vault unreachable'))).toBe(true)
+    expect(rows.some(r => r.message.includes('[object Object]'))).toBe(false)
   })
 
   it('POST /api/mx4/chat leaves session in a working state after an empty-response turn (no orphaned user message)', async () => {

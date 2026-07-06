@@ -53,6 +53,15 @@ export function toolLabel(toolName: string, args: Record<string, unknown>): stri
   }
 }
 
+// Error, not Error: unknown rejections can be plain error-shaped objects
+// ({ code, message }, common from MCP/JSON-RPC transports) rather than Error
+// instances — String(obj) would collapse those to "[object Object]".
+function errorDetail(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
+  return String(e)
+}
+
 export function categorizeError(e: unknown): string {
   const msg = e instanceof Error ? e.message : ''
   if (/api.key|not configured|no.*(provider|ai)|invalid.key|unauthorized/i.test(msg)) {
@@ -222,6 +231,16 @@ function removeOrphanedUserTurn(rowId: number | bigint): void {
   }
 }
 
+// Own source ('mx4-chat', not 'mx4') so frequent chat-failure logging can't crowd
+// the nightly orchestrator's low-volume 'mx4' history out of the default Logs view.
+function logChatFailure(message: string): void {
+  try {
+    logEvent('mx4-chat', 'error', message)
+  } catch (logErr: unknown) {
+    console.error('[mx4] failed to log chat failure:', logErr)
+  }
+}
+
 mx4Router.post('/chat', async (req, res) => {
   const { message, sessionId, section } = req.body as { message?: string; sessionId?: string; section?: string }
 
@@ -254,7 +273,13 @@ mx4Router.post('/chat', async (req, res) => {
   res.setHeader('Connection', 'keep-alive')
 
   try {
-    const vaultTools = isVaultEnabled() ? await getVaultTools().catch(() => ({})) : {}
+    const vaultTools = isVaultEnabled()
+      ? await getVaultTools().catch((vaultErr: unknown) => {
+          console.error('[mx4] vault tools unavailable:', vaultErr)
+          logChatFailure(`Vault tools unavailable (session ${sessionId}): ${errorDetail(vaultErr)}`)
+          return {}
+        })
+      : {}
     const result = streamText({
       model: getModel('chat'),
       system,
@@ -280,20 +305,16 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
-      // Own source ('mx4-chat', not 'mx4') so frequent chat-failure logging can't crowd
-      // the nightly orchestrator's low-volume 'mx4' history out of the default Logs view.
-      try {
-        logEvent('mx4-chat', 'error', `Chat turn produced no response (session ${sessionId})`)
-      } catch (logErr: unknown) {
-        console.error('[mx4] failed to log empty-response event:', logErr)
-      }
+      logChatFailure(`Chat turn produced no response (session ${sessionId})`)
       removeOrphanedUserTurn(userMessage.lastInsertRowid)
       res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
     }
   } catch (e: unknown) {
     console.error('[mx4] chat stream error:', e)
+    const categorized = categorizeError(e)
+    logChatFailure(`Chat turn threw (session ${sessionId}): ${categorized}`)
     removeOrphanedUserTurn(userMessage.lastInsertRowid)
-    res.write(`data: ${JSON.stringify({ error: categorizeError(e) })}\n\n`)
+    res.write(`data: ${JSON.stringify({ error: categorized })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')

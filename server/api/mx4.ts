@@ -53,6 +53,15 @@ export function toolLabel(toolName: string, args: Record<string, unknown>): stri
   }
 }
 
+// Error, not Error: unknown rejections can be plain error-shaped objects
+// ({ code, message }, common from MCP/JSON-RPC transports) rather than Error
+// instances — String(obj) would collapse those to "[object Object]".
+function errorDetail(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
+  return String(e)
+}
+
 export function categorizeError(e: unknown): string {
   const msg = e instanceof Error ? e.message : ''
   if (/api.key|not configured|no.*(provider|ai)|invalid.key|unauthorized/i.test(msg)) {
@@ -264,7 +273,13 @@ mx4Router.post('/chat', async (req, res) => {
   res.setHeader('Connection', 'keep-alive')
 
   try {
-    const vaultTools = isVaultEnabled() ? await getVaultTools().catch(() => ({})) : {}
+    const vaultTools = isVaultEnabled()
+      ? await getVaultTools().catch((vaultErr: unknown) => {
+          console.error('[mx4] vault tools unavailable:', vaultErr)
+          logChatFailure(`Vault tools unavailable (session ${sessionId}): ${errorDetail(vaultErr)}`)
+          return {}
+        })
+      : {}
     const result = streamText({
       model: getModel('chat'),
       system,

@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { getSetting } from '../settings'
+import { logEvent } from '../logger'
 
 // Provider-agnostic research tool for MX-4.
 //
@@ -26,6 +27,28 @@ Guidance:
 - For web results: summarise what was found and link the source.
 - If nothing is found on either backend for a scientific topic, say so — do not fabricate.
 - Never include personal biometric values in the query.`
+
+// Node's fetch throws a generic TypeError('fetch failed') for network-level
+// failures (DNS, connection refused, TLS) with the real reason nested in
+// .cause — and non-Error rejections (e.g. JSON-RPC-shaped objects) would
+// otherwise collapse to "[object Object]" via bare String(e).
+function errorDetail(e: unknown): string {
+  if (e instanceof Error) {
+    const cause = (e as Error & { cause?: unknown }).cause
+    if (cause) return `${e.message}: ${cause instanceof Error ? cause.message : String(cause)}`
+    return e.message
+  }
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
+  return String(e)
+}
+
+function logResearchFailure(message: string): void {
+  try {
+    logEvent('mx4-research', 'error', message)
+  } catch (logErr: unknown) {
+    console.error('[mx4] failed to log research failure:', logErr)
+  }
+}
 
 interface Source {
   title: string
@@ -104,7 +127,9 @@ async function searchWeb(query: string, limit: number): Promise<Source[]> {
         abstract: typeof r.text === 'string' ? r.text.slice(0, 600) : null,
       }))
     }
-  } catch {
+  } catch (e: unknown) {
+    console.error(`[mx4] research: ${provider} web search failed:`, e)
+    logResearchFailure(`${provider} web search failed for query "${query}": ${errorDetail(e)}`)
     return []  // web backend is best-effort; scholarly still returns
   }
   return []
@@ -121,7 +146,9 @@ export const research = tool({
     const out: { scholarly: Source[]; web: Source[]; note?: string } = { scholarly: [], web: [] }
     try {
       out.scholarly = await searchOpenAlex(query, n)
-    } catch {
+    } catch (e: unknown) {
+      console.error('[mx4] research: OpenAlex search failed:', e)
+      logResearchFailure(`OpenAlex search failed for query "${query}": ${errorDetail(e)}`)
       out.note = 'Scholarly backend (OpenAlex) was unreachable; results may be incomplete.'
     }
     out.web = await searchWeb(query, n)

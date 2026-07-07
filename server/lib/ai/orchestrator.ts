@@ -17,6 +17,15 @@ import path from 'path'
 
 const SYSTEM_PROMPT_PATH = path.join(process.cwd(), 'mx4', 'system-prompt.md')
 
+// Error, not Error: unknown rejections can be plain error-shaped objects
+// ({ code, message }, common from MCP/JSON-RPC transports) rather than Error
+// instances — String(obj) would collapse those to "[object Object]".
+function errorDetail(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
+  return String(e)
+}
+
 export function loadSystemPrompt(): string {
   try {
     return fs.readFileSync(SYSTEM_PROMPT_PATH, 'utf-8')
@@ -82,7 +91,12 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
       queryDb,
       readAllWikiPages,
       research,
-      ...(isVaultEnabled() ? await getVaultTools() : {}),
+      ...(isVaultEnabled()
+        ? await getVaultTools().catch((vaultErr: unknown) => {
+            logEvent('mx4', 'error', `Vault tools unavailable for ${sectionName}: ${errorDetail(vaultErr)}`)
+            return {}
+          })
+        : {}),
     } as ToolSet,
     stopWhen: stepCountIs(12),
   })

@@ -54,7 +54,7 @@ garminRouter.get('/summary', (_req, res) => {
 
 // GET /api/garmin/activities — last N days, newest first
 garminRouter.get('/activities', (req, res) => {
-  const days = Math.min(Number(req.query.days) || 7, 30)
+  const days = Math.min(Math.max(1, Number(req.query.days) || 7), 30)
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
   const rows = db.prepare(
     `SELECT activity_id, date, start_time, name, type_key,

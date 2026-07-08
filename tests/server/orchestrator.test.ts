@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import * as vaultMod from '../../server/lib/ai/vaultClient'
 
 process.env.DB_PATH   = ':memory:'
 process.env.WIKI_DIR  = path.join(os.tmpdir(), 'bacta-orch-wiki-' + process.pid)
@@ -24,6 +25,11 @@ vi.mock('ai', async (importOriginal) => {
     }),
   }
 })
+
+vi.mock('../../server/lib/ai/vaultClient', () => ({
+  isVaultEnabled: vi.fn().mockReturnValue(false),
+  getVaultTools: vi.fn().mockResolvedValue({}),
+}))
 
 describe('runOrchestrator', () => {
   beforeAll(async () => {
@@ -114,6 +120,35 @@ describe('runOrchestrator', () => {
       const { default: db } = await import('../../server/db/client')
       const rows = db.prepare("SELECT level, message FROM app_logs WHERE source = 'mx4'").all() as { level: string; message: string }[]
       expect(rows.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('vault tool failures during a section run', () => {
+    afterEach(() => {
+      vi.mocked(vaultMod.isVaultEnabled).mockReturnValue(false)
+      vi.mocked(vaultMod.getVaultTools).mockResolvedValue({})
+    })
+
+    it('degrades gracefully and logs when getVaultTools rejects while vault is enabled', async () => {
+      vi.clearAllMocks()
+      const { generateText } = await import('ai')
+      vi.mocked(generateText).mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      vi.mocked(vaultMod.isVaultEnabled).mockReturnValue(true)
+      vi.mocked(vaultMod.getVaultTools).mockRejectedValueOnce(new Error('ECONNREFUSED vault.local'))
+
+      const { runSectionById } = await import('../../server/lib/ai/orchestrator')
+
+      // Must not throw — a vault outage shouldn't fail the section or burn retries.
+      await expect(runSectionById('recovery')).resolves.toBeUndefined()
+
+      const { default: db } = await import('../../server/db/client')
+      const rows = db.prepare(
+        "SELECT level, message FROM app_logs WHERE source = 'mx4' AND message LIKE '%vault%'"
+      ).all() as { level: string; message: string }[]
+      expect(rows.length).toBeGreaterThan(0)
+      expect(rows[0].level).toBe('error')
+      expect(rows[0].message).toContain('ECONNREFUSED vault.local')
     })
   })
 

@@ -65,4 +65,33 @@ describe('POST /api/poll/force', () => {
     expect(row).toBeDefined()
     expect(row!.level).toBe('error')
   })
+
+  it('logs only once when a failed spawn emits both error and close', async () => {
+    const request = (await import('supertest')).default
+    const { app } = await import('../../server/index')
+    const { default: db } = await import('../../server/db/client')
+
+    const { maxId: baselineId } = db.prepare(
+      "SELECT COALESCE(MAX(id), 0) AS maxId FROM app_logs"
+    ).get() as { maxId: number }
+
+    spawnMock.mockImplementationOnce(() => {
+      const child = new EventEmitter() as any
+      // Real child_process behavior on a failed spawn (e.g. ENOENT): 'error'
+      // fires, then 'close' fires with a non-zero/negative code — not null.
+      setImmediate(() => {
+        child.emit('error', new Error('ENOENT python3'))
+        child.emit('close', -2)
+      })
+      return child
+    })
+
+    await request(app).post('/api/poll/force')
+    await new Promise(resolve => setImmediate(resolve))
+
+    const rows = db.prepare(
+      "SELECT level, message FROM app_logs WHERE source = 'garmin' AND id > ?"
+    ).all(baselineId) as { level: string; message: string }[]
+    expect(rows.filter(r => r.message.includes('Force sync failed'))).toHaveLength(1)
+  })
 })

@@ -17,13 +17,17 @@ pollRouter.post('/force', (_req, res) => {
   }
   const script = path.join(process.cwd(), 'scripts', 'garmin_poller.py')
   polling = true
+  let spawnFailed = false
   const child = spawn('python3', [script], { stdio: 'ignore' })
   child.on('close', (code) => {
     polling = false
-    if (code !== 0) logEvent('garmin', 'error', `Force sync failed (exit code ${code})`)
+    // A failed spawn (e.g. ENOENT) fires 'error' AND THEN 'close' with a
+    // non-zero code — without this guard that's a duplicate app_logs entry.
+    if (!spawnFailed && code !== 0) logEvent('garmin', 'error', `Force sync failed (exit code ${code})`)
   })
   child.on('error', (err) => {
     polling = false
+    spawnFailed = true
     logEvent('garmin', 'error', `Force sync failed to spawn: ${err.message}`)
   })
   res.status(202).json({ ok: true, status: 'running' })

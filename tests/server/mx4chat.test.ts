@@ -371,6 +371,39 @@ describe('MX-4 Chat API', () => {
     expect(res2.text).toContain('Hello ')
     expect(res2.text).toContain('from MX-4.')
   })
+
+  it('POST /api/mx4/chat logs a compression failure and still completes the chat turn', async () => {
+    const { default: db } = await import('../../server/db/client')
+    const sessionId = 'compression-fail-session'
+
+    // Default mx4_chat_compression_threshold is 20 — seed enough prior messages
+    // that the new user message (inserted before compression runs) pushes the
+    // session over the threshold and triggers compressSessionIfNeeded.
+    const insert = db.prepare(
+      'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
+    )
+    for (let i = 0; i < 20; i++) {
+      insert.run(sessionId, i % 2 === 0 ? 'user' : 'assistant', `message ${i}`, null)
+    }
+
+    const { generateText } = await import('ai')
+    vi.mocked(generateText).mockRejectedValueOnce(new Error('compression model unavailable'))
+
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'one more message', sessionId })
+
+    // Compression failure is non-fatal — the chat turn still completes.
+    expect(res.status).toBe(200)
+    expect(res.text).toContain('[DONE]')
+
+    const rows = db.prepare(
+      "SELECT level, message FROM app_logs WHERE source = 'mx4-chat' ORDER BY id DESC LIMIT 5"
+    ).all() as { level: string; message: string }[]
+
+    expect(rows.some(r => r.level === 'error' && r.message.includes('compression model unavailable'))).toBe(true)
+  })
 })
 
 describe('categorizeError', () => {

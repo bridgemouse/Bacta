@@ -304,7 +304,9 @@ export const callbackHandler: RequestHandler = async (req: Request, res: Respons
     console.log(`[integrations] ${provider} connected successfully`)
     res.redirect(`${baseUrl}/#/settings?connected=${provider}`)
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
     console.error(`[integrations] ${provider} callback error:`, err)
+    logEvent('integrations', 'error', `${provider} OAuth callback failed: ${message}`)
     res.redirect(`${baseUrl}/#/settings?error=${provider}`)
   }
 }

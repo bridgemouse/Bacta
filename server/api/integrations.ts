@@ -156,8 +156,10 @@ router.post('/:provider/sync', requireSyncAuth, async (req: Request, res: Respon
     setSetting(`${provider}_last_sync`, new Date().toISOString())
     res.json({ ok: true, provider, recordsWritten })
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Sync failed'
     console.error(`[integrations] ${provider} sync error:`, err)
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Sync failed' })
+    logEvent('integrations', 'error', `${provider} sync failed: ${message}`)
+    res.status(500).json({ error: message })
   }
 })
 

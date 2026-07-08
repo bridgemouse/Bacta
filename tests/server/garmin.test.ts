@@ -109,6 +109,22 @@ describe('Activities endpoint — expand fields', () => {
     expect(testAct.run_vert_osc_cm).toBe(8.4)
     expect(testAct.run_gct_ms).toBe(245)
   })
+
+  it('clamps a negative days value to a minimum 1-day window instead of returning empty', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/activities').query({ days: -5 })
+    expect(res.status).toBe(200)
+    const acts = res.body.activities as any[]
+    expect(acts.some((a: any) => String(a.activity_id) === '9999')).toBe(true)
+  })
+
+  it('clamps a zero days value to a minimum 1-day window instead of returning empty', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/activities').query({ days: 0 })
+    expect(res.status).toBe(200)
+    const acts = res.body.activities as any[]
+    expect(acts.some((a: any) => String(a.activity_id) === '9999')).toBe(true)
+  })
 })
 
 describe('sleep-hypno endpoint', () => {

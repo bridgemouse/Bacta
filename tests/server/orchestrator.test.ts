@@ -63,6 +63,20 @@ describe('runOrchestrator', () => {
     expect(parsed).toHaveProperty('flags')
   })
 
+  it('does not duplicate wiki content: system prompt carries it, readAllWikiPages tool is not also offered', async () => {
+    vi.clearAllMocks()
+    const { generateText } = await import('ai')
+    const mockGenerateText = vi.mocked(generateText)
+    mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+    const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+    await runOrchestrator()
+
+    const firstCallArgs = mockGenerateText.mock.calls[0][0] as { system: string; tools: Record<string, unknown> }
+    expect(firstCallArgs.system).toContain('Wiki Knowledge')
+    expect(firstCallArgs.tools).not.toHaveProperty('readAllWikiPages')
+  })
+
   it('each briefing row has a generated_at timestamp and model name', async () => {
     const { default: db } = await import('../../server/db/client')
     const row = db.prepare('SELECT generated_at, model FROM mx4_briefings WHERE section = ?').get('recovery') as { generated_at: string; model: string }

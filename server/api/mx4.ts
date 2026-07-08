@@ -6,7 +6,7 @@ import { assembleSystemPrompt } from '../lib/ai/prompt'
 import { loadChatHistory } from '../lib/ai/chat'
 import { getModel } from '../lib/ai/provider'
 import { readAllWikiPagesSync, loadHeartbeat, resetWikiPatternPages, resetAllWikiPages } from '../lib/ai/wiki'
-import { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage } from '../lib/ai/tools'
+import { queryDb, writeWikiPage, listWikiPages, archiveWikiPage } from '../lib/ai/tools'
 import { research } from '../lib/ai/research'
 import { getVaultTools, isVaultEnabled } from '../lib/ai/vaultClient'
 import { getSetting } from '../lib/settings'
@@ -285,8 +285,10 @@ mx4Router.post('/chat', async (req, res) => {
       model: getModel('chat'),
       system,
       messages: [...history, { role: 'user' as const, content: message.trim() }],
+      // readAllWikiPages is deliberately omitted — the same content is already
+      // spliced into `system` above via assembleSystemPrompt (see #75).
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tools: { queryDb, readAllWikiPages, writeWikiPage, listWikiPages, archiveWikiPage, research, ...vaultTools } as any,
+      tools: { queryDb, writeWikiPage, listWikiPages, archiveWikiPage, research, ...vaultTools } as any,
       stopWhen: stepCountIs(8),
     })
 

@@ -4,7 +4,7 @@ import { getSetting } from '../settings'
 import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
 import { assembleSystemPrompt } from './prompt'
-import { queryDb, readAllWikiPages } from './tools'
+import { queryDb } from './tools'
 import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
@@ -75,7 +75,7 @@ async function runSection(
 
 Section focus: ${promptAddendum}
 
-Use queryDb to pull the last 30 days of relevant metrics. ${isVaultEnabled() ? 'Use get_wiki_index then read_wiki_page or search_wiki to pull personal context from the connected vault.' : ''} Use readAllWikiPages if you need to review accumulated MX-4 knowledge.
+Use queryDb to pull the last 30 days of relevant metrics. ${isVaultEnabled() ? 'Use get_wiki_index then read_wiki_page or search_wiki to pull personal context from the connected vault.' : ''} Your accumulated MX-4 knowledge is already provided below under "Wiki Knowledge" — no need to re-fetch it.
 
 Produce a complete analysis in your voice. Cover: what the data shows today, how it compares to the 30-day trend, what it means for the user's current training block, and one specific recommendation.${activityContext}`
 
@@ -87,9 +87,10 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     // tools here made it end with wiki-update meta ("briefing generated, wiki
     // updated") or exhaust its steps. Wiki curation is a separate concern (the
     // SYNC WIKI chat skill / wrap synthesis), keeping briefings clean.
+    // readAllWikiPages is deliberately omitted — the same content is already
+    // spliced into systemWithContext above (see #75).
     tools: {
       queryDb,
-      readAllWikiPages,
       research,
       ...(isVaultEnabled()
         ? await getVaultTools().catch((vaultErr: unknown) => {

@@ -25,3 +25,4 @@ __pycache__/
 !client/public/**/*.png
 *.png
 !client/public/*.png
+.worktrees/

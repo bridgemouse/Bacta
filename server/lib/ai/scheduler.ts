@@ -1,6 +1,7 @@
 import cron, { type ScheduledTask } from 'node-cron'
 import { getSetting } from '../settings'
 import { runOrchestrator } from './orchestrator'
+import { logEvent } from '../logger'
 
 let nightlyTask: ScheduledTask | null = null
 
@@ -21,7 +22,11 @@ export function scheduleNightly(): void {
   const expr = `${minute} ${hour} * * *`
 
   nightlyTask = cron.schedule(expr, () => {
-    runOrchestrator().catch(err => console.error('[mx4] nightly run error:', err))
+    runOrchestrator().catch(err => {
+      console.error('[mx4] nightly run error:', err)
+      const message = err instanceof Error ? err.message : String(err)
+      logEvent('mx4', 'error', `Nightly run failed: ${message}`)
+    })
   })
 
   console.log(`[mx4] nightly run scheduled at ${time} (cron: ${expr})`)

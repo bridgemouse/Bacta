@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { spawn } from 'child_process'
 import path from 'path'
 import db from '../db/client'
+import { logEvent } from '../lib/logger'
 import { getSetting, setSetting, PROVIDERS, Provider } from '../lib/settings'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from '../lib/auth'
 import { encrypt, decrypt } from '../lib/integrations/shared/encryption'
@@ -301,7 +302,9 @@ export const callbackHandler: RequestHandler = async (req: Request, res: Respons
     console.log(`[integrations] ${provider} connected successfully`)
     res.redirect(`${baseUrl}/#/settings?connected=${provider}`)
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
     console.error(`[integrations] ${provider} callback error:`, err)
+    logEvent('integrations', 'error', `${provider} OAuth callback failed: ${message}`)
     res.redirect(`${baseUrl}/#/settings?error=${provider}`)
   }
 }

@@ -5,6 +5,11 @@ process.env.DB_PATH = ':memory:'
 process.env.BACTA_ENCRYPTION_KEY = 'a'.repeat(64)
 process.env.BACTA_INTERNAL_TOKEN = 'test-internal-token'
 
+vi.mock('../../server/lib/integrations/strava/stravaService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../server/lib/integrations/strava/stravaService')>()
+  return { ...actual, exchangeCode: vi.fn(actual.exchangeCode) }
+})
+
 describe('Integrations API', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')
@@ -55,6 +60,35 @@ describe('Integrations API', () => {
       .query({ code: 'some-code', state: 'wrong-state' })
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/state/i)
+  })
+
+  it('GET /api/integrations/strava/callback logs a failure to app_logs when the token exchange rejects', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('strava_client_id', 'cid123')").run()
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('base_url', 'http://bacta.home')").run()
+
+    const { app } = await import('../../server/index')
+
+    // Generate a real oauth_state via the authorize endpoint so the callback's
+    // CSRF check passes and the token exchange is actually reached.
+    const authorizeRes = await request(app).get('/api/integrations/strava/authorize')
+    const state = new URL(authorizeRes.body.url).searchParams.get('state')!
+
+    const stravaService = await import('../../server/lib/integrations/strava/stravaService')
+    vi.mocked(stravaService.exchangeCode).mockRejectedValueOnce(new Error('invalid_client'))
+
+    const res = await request(app)
+      .get('/api/integrations/strava/callback')
+      .query({ code: 'some-code', state })
+
+    expect(res.status).toBe(302)
+    expect(res.headers.location).toContain('error=strava')
+
+    const row = db.prepare(
+      "SELECT level, message FROM app_logs WHERE level = 'error' AND message LIKE '%strava%' ORDER BY id DESC LIMIT 1"
+    ).get() as { level: string; message: string } | undefined
+    expect(row).toBeDefined()
+    expect(row!.message).toContain('invalid_client')
   })
 
   it('POST /api/integrations/strava/disconnect clears tokens and sets enabled=false', async () => {

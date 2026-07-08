@@ -163,7 +163,7 @@
 
 **Scope:** Custom-built nutrition tracker — not a third-party integration. This is a major feature: food logging UI, macro/calorie tracking, meal history, and a Bacta-native data model.  
 **Path:** Design session first (data model + UI) → build logging interface → wire to nutrition table → build `NutritionPage.tsx` → wire MX-4 briefing.  
-**DB:** `macrofactor_snapshots` table exists as a placeholder; will be replaced or repurposed when the data model is defined.  
+**DB:** `macrofactor_snapshots` table exists as a placeholder, confirmed empty (0 rows) as of 2026-07-08 and superseded — `NUTRITION_PLAN.md` §3 resolves this to a straight drop (new `foods`/`food_log_entries`/`nutrition_targets` tables instead), not a repurpose, since its EAV shape can't represent multi-item-per-day food logging.  
 **Plan drafted (2026-07-08):** `docs/NUTRITION_PLAN.md` (data model, API design, 8-phase backend sprint plan, self-critique pass) and `docs/NUTRITION_DESIGN_BRIEF.md` (accent color + data-types brief for the Claude Design handoff session) are done. Design session and implementation have not started — see `NUTRITION_PLAN.md` §7 for open product decisions (TypeScript vs. Python for bulk import, how much USDA/OFF reference data to import, `home` cross-channel synthesis, meal-type vocabulary, unit conversion, micronutrients) that need a human call before Phase 1 begins.
 
 ### Blood Work Section

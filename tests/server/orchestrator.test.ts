@@ -102,10 +102,29 @@ describe('runOrchestrator', () => {
       mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
 
       const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
-      await runOrchestrator()
+      await expect(runOrchestrator()).rejects.toThrow(/quota exceeded: 429/)
 
       // Only one call should have been made — the rate-limit aborts the entire run
       expect(mockGenerateText).toHaveBeenCalledTimes(1)
+    })
+
+    it('rejects when a section fails all retry attempts, so callers can detect the failure', async () => {
+      vi.useFakeTimers()
+
+      const { generateText } = await import('ai')
+      const mockGenerateText = vi.mocked(generateText)
+
+      vi.clearAllMocks()
+      mockGenerateText.mockRejectedValue(new Error('persistent model failure'))
+
+      const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+
+      const runPromise = runOrchestrator()
+      const assertion = expect(runPromise).rejects.toThrow(/persistent model failure/)
+      await vi.runAllTimersAsync()
+      await assertion
+
+      vi.useRealTimers()
     })
   })
 

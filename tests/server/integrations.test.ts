@@ -194,4 +194,28 @@ describe('Integrations API', () => {
     expect(res.status).toBe(200)
     expect(res.body.hevy.connected).toBe(false)
   })
+
+  it('POST /api/integrations/hevy/sync logs a failure to app_logs when runSync rejects', async () => {
+    const { default: db } = await import('../../server/db/client')
+    // hevy_enabled=true but no api_key — runSync throws 'Hevy API key not configured'
+    // synchronously, a real failure path with no external service mocking required.
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('hevy_enabled', 'true')").run()
+    db.prepare("DELETE FROM app_settings WHERE key = 'hevy_api_key'").run()
+
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/integrations/hevy/sync')
+      .set('Authorization', 'Bearer test-internal-token')
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toMatch(/Hevy API key not configured/)
+
+    const row = db.prepare(
+      "SELECT level, message FROM app_logs WHERE level = 'error' AND message LIKE '%hevy%' ORDER BY id DESC LIMIT 1"
+    ).get() as { level: string; message: string } | undefined
+    expect(row).toBeDefined()
+    expect(row!.message).toContain('Hevy API key not configured')
+
+    db.prepare("DELETE FROM app_settings WHERE key IN ('hevy_enabled', 'hevy_api_key')").run()
+  })
 })

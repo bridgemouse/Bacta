@@ -3,6 +3,25 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { tool } from 'ai'
 import { z } from 'zod'
 import { getSetting } from '../settings'
+import { logEvent } from '../logger'
+
+// Error, not Error: unknown rejections can be plain error-shaped objects
+// ({ code, message }, common from MCP/JSON-RPC transports) rather than Error
+// instances — String(obj) would collapse those to "[object Object]".
+function errorDetail(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
+  return String(e)
+}
+
+function logVaultToolFailure(toolName: string, e: unknown): void {
+  console.error(`[mx4] vault tool ${toolName} failed:`, e)
+  try {
+    logEvent('mx4', 'error', `${toolName} failed: ${errorDetail(e)}`)
+  } catch (logErr: unknown) {
+    console.error('[mx4] failed to log vault tool failure:', logErr)
+  }
+}
 
 let _client: Client | null = null
 
@@ -55,8 +74,12 @@ export async function getVaultTools() {
         domain: z.string().optional(),
       }),
       execute: async ({ query, domain }) => {
-        const result = await client.callTool({ name: 'search_wiki', arguments: { query, domain } })
-        return result
+        try {
+          return await client.callTool({ name: 'search_wiki', arguments: { query, domain } })
+        } catch (e) {
+          logVaultToolFailure('search_wiki', e)
+          return { error: 'search_wiki unavailable — the vault connection dropped mid-session.' }
+        }
       },
     }),
     read_wiki_page: tool({
@@ -65,8 +88,12 @@ export async function getVaultTools() {
         path: z.string(),
       }),
       execute: async ({ path }) => {
-        const result = await client.callTool({ name: 'read_wiki_page', arguments: { path } })
-        return result
+        try {
+          return await client.callTool({ name: 'read_wiki_page', arguments: { path } })
+        } catch (e) {
+          logVaultToolFailure('read_wiki_page', e)
+          return { error: 'read_wiki_page unavailable — the vault connection dropped mid-session.' }
+        }
       },
     }),
     list_wiki_pages: tool({
@@ -75,16 +102,24 @@ export async function getVaultTools() {
         domain: z.string().optional(),
       }),
       execute: async ({ domain }) => {
-        const result = await client.callTool({ name: 'list_wiki_pages', arguments: { domain } })
-        return result
+        try {
+          return await client.callTool({ name: 'list_wiki_pages', arguments: { domain } })
+        } catch (e) {
+          logVaultToolFailure('list_wiki_pages', e)
+          return { error: 'list_wiki_pages unavailable — the vault connection dropped mid-session.' }
+        }
       },
     }),
     get_wiki_index: tool({
       description: 'Get the wiki index — the master catalog of all pages. Read this first to orient before reading individual pages.',
       inputSchema: z.object({}),
       execute: async () => {
-        const result = await client.callTool({ name: 'get_wiki_index', arguments: {} })
-        return result
+        try {
+          return await client.callTool({ name: 'get_wiki_index', arguments: {} })
+        } catch (e) {
+          logVaultToolFailure('get_wiki_index', e)
+          return { error: 'get_wiki_index unavailable — the vault connection dropped mid-session.' }
+        }
       },
     }),
   }

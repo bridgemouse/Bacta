@@ -3,9 +3,10 @@ import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 process.env.DB_PATH = ':memory:'
 
 const connectMock = vi.fn()
+const callToolMock = vi.fn()
 
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: class { connect = connectMock },
+  Client: class { connect = connectMock; callTool = callToolMock },
 }))
 vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({
   SSEClientTransport: vi.fn(),
@@ -91,5 +92,27 @@ describe('vaultClient', () => {
     const tools = await getVaultTools()
     expect(Object.keys(tools)).toContain('search_wiki')
     expect(connectMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('search_wiki degrades gracefully and logs when callTool rejects mid-session', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('vault_enabled', 'true')").run()
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('vault_url', 'http://vault.local')").run()
+    const { resetVaultClient, getVaultTools } = await import('../../server/lib/ai/vaultClient')
+    resetVaultClient()
+
+    connectMock.mockResolvedValueOnce(undefined)
+    const tools = await getVaultTools()
+
+    callToolMock.mockRejectedValueOnce(new Error('ECONNRESET'))
+    // Must not throw — a mid-session vault drop shouldn't reject the whole tool step.
+    const result = await (tools.search_wiki as any).execute({ query: 'HRV baseline' })
+    expect(result).toBeDefined()
+
+    const rows = db.prepare(
+      "SELECT level, message FROM app_logs WHERE level = 'error' AND message LIKE '%search_wiki%' ORDER BY id DESC LIMIT 1"
+    ).all() as { level: string; message: string }[]
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows[0].message).toContain('ECONNRESET')
   })
 })

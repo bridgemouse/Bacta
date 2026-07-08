@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import db from '../db/client'
 import { getSyncState, triggerGarminSync } from '../lib/garminSync'
+import { logEvent } from '../lib/logger'
 
 const garminRouter = Router()
 
@@ -137,7 +138,11 @@ garminRouter.get('/sleep-hypno', (_req, res) => {
     const endLocal: number | null = dto.sleepEndTimestampLocal ?? null
     const levels: Array<{ startGMT: string; endGMT: string; activityLevel: number }> = obj.sleepLevels
 
-    if (!startMs || !endMs || !Array.isArray(levels)) { res.json(EMPTY); return }
+    if (!startMs || !endMs || !Array.isArray(levels)) {
+      logEvent('garmin', 'error', 'sleep-hypno: source_json missing expected dailySleepDTO/sleepLevels shape')
+      res.json(EMPTY)
+      return
+    }
 
     // Garmin's sleepLevels[].startGMT/endGMT strings have no timezone suffix
     // despite the name — they're UTC. Without an explicit 'Z', `new Date()`
@@ -157,7 +162,9 @@ garminRouter.get('/sleep-hypno', (_req, res) => {
     }
 
     res.json({ hypno, startLocal, endLocal })
-  } catch {
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    logEvent('garmin', 'error', `sleep-hypno: failed to parse source_json — ${detail}`)
     res.json(EMPTY)
   }
 })

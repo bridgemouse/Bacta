@@ -154,7 +154,7 @@ describe('sleep-hypno endpoint', () => {
     }
   })
 
-  it('handles parse failure gracefully', async () => {
+  it('handles parse failure gracefully and logs the failure to app_logs', async () => {
     const { default: db } = await import('../../server/db/client')
     db.prepare(
       `INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
@@ -164,6 +164,12 @@ describe('sleep-hypno endpoint', () => {
     const res = await request(app).get('/api/garmin/sleep-hypno')
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ hypno: [], startLocal: null, endLocal: null })
+
+    const row = db.prepare(
+      "SELECT level, message FROM app_logs WHERE source = 'garmin' ORDER BY id DESC LIMIT 1"
+    ).get() as { level: string; message: string } | undefined
+    expect(row).toBeDefined()
+    expect(row!.level).toBe('error')
   })
 
   it('matches sleep-level segments as UTC regardless of server timezone', async () => {

@@ -25,6 +25,13 @@ vi.mock('ai', async (importOriginal) => {
   }
 })
 
+vi.mock('../../server/lib/ai/vaultClient', () => ({
+  getVaultTools: vi.fn().mockResolvedValue({}),
+  isVaultEnabled: vi.fn().mockReturnValue(false),
+  resetVaultClient: vi.fn(),
+  testVaultConnection: vi.fn().mockResolvedValue({ ok: true }),
+}))
+
 describe('runOrchestrator', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')
@@ -114,6 +121,27 @@ describe('runOrchestrator', () => {
       const { default: db } = await import('../../server/db/client')
       const rows = db.prepare("SELECT level, message FROM app_logs WHERE source = 'mx4'").all() as { level: string; message: string }[]
       expect(rows.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('vault tool failures', () => {
+    it('logs the failure and degrades gracefully when getVaultTools rejects during a section run', async () => {
+      const vaultMod = await import('../../server/lib/ai/vaultClient')
+      vi.clearAllMocks()
+      vi.mocked(vaultMod.isVaultEnabled).mockReturnValue(true)
+      vi.mocked(vaultMod.getVaultTools).mockRejectedValueOnce(new Error('ECONNREFUSED vault.local'))
+      const { generateText } = await import('ai')
+      vi.mocked(generateText).mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runSectionById } = await import('../../server/lib/ai/orchestrator')
+      await expect(runSectionById('recovery')).resolves.toBeUndefined()
+
+      const { default: db } = await import('../../server/db/client')
+      const rows = db.prepare(
+        "SELECT level, message FROM app_logs WHERE source = 'mx4' ORDER BY id DESC LIMIT 5"
+      ).all() as { level: string; message: string }[]
+
+      expect(rows.some(r => r.level === 'error' && r.message.includes('ECONNREFUSED vault.local'))).toBe(true)
     })
   })
 

@@ -29,6 +29,7 @@ export function useSyncState() {
           reloadRef.current = setTimeout(() => window.dispatchEvent(new CustomEvent('bacta:sync-complete')), 3000)
         } else {
           showToast('Garmin sync failed. Try again from Settings.', 'error')
+          reloadRef.current = setTimeout(() => setState({ status: 'idle', elapsed: null }), 3000)
         }
       }
     } catch { /* ignore network errors during polling */ }

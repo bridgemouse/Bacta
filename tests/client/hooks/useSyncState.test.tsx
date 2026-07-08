@@ -37,6 +37,31 @@ describe('useSyncState — error toast', () => {
     expect(result.current.toast.toasts[0].level).toBe('error')
   })
 
+  it('resets status back to idle after pollStatus observes an error, matching startSync\'s catch behavior', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ok: true }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status: 'error', elapsed: null }) })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.useFakeTimers()
+
+    const { result } = renderHook(() => useCombined(), { wrapper })
+
+    await act(async () => {
+      await result.current.sync.startSync()
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(result.current.sync.status).toBe('error')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+
+    expect(result.current.sync.status).toBe('idle')
+  })
+
   it('shows an error toast when triggering the sync request itself fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')))
 

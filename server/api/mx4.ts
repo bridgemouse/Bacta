@@ -256,8 +256,9 @@ mx4Router.post('/chat', async (req, res) => {
   // Compress if needed before building context
   try {
     await compressSessionIfNeeded(sessionId)
-  } catch {
+  } catch (compressErr: unknown) {
     // Non-fatal — proceed without compression
+    logChatFailure(`Compression failed (session ${sessionId}): ${errorDetail(compressErr)}`)
   }
 
   const history = loadChatHistory(sessionId)

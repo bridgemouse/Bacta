@@ -109,6 +109,22 @@ describe('Activities endpoint — expand fields', () => {
     expect(testAct.run_vert_osc_cm).toBe(8.4)
     expect(testAct.run_gct_ms).toBe(245)
   })
+
+  it('clamps a negative days value to a minimum 1-day window instead of returning empty', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/activities').query({ days: -5 })
+    expect(res.status).toBe(200)
+    const acts = res.body.activities as any[]
+    expect(acts.some((a: any) => String(a.activity_id) === '9999')).toBe(true)
+  })
+
+  it('clamps a zero days value to a minimum 1-day window instead of returning empty', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).get('/api/garmin/activities').query({ days: 0 })
+    expect(res.status).toBe(200)
+    const acts = res.body.activities as any[]
+    expect(acts.some((a: any) => String(a.activity_id) === '9999')).toBe(true)
+  })
 })
 
 describe('sleep-hypno endpoint', () => {
@@ -154,7 +170,7 @@ describe('sleep-hypno endpoint', () => {
     }
   })
 
-  it('handles parse failure gracefully', async () => {
+  it('handles parse failure gracefully and logs the failure to app_logs', async () => {
     const { default: db } = await import('../../server/db/client')
     db.prepare(
       `INSERT OR REPLACE INTO health_snapshots (date, metric, value, unit, source_json) VALUES (?, ?, ?, ?, ?)`
@@ -164,6 +180,12 @@ describe('sleep-hypno endpoint', () => {
     const res = await request(app).get('/api/garmin/sleep-hypno')
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ hypno: [], startLocal: null, endLocal: null })
+
+    const row = db.prepare(
+      "SELECT level, message FROM app_logs WHERE source = 'garmin' ORDER BY id DESC LIMIT 1"
+    ).get() as { level: string; message: string } | undefined
+    expect(row).toBeDefined()
+    expect(row!.level).toBe('error')
   })
 
   it('matches sleep-level segments as UTC regardless of server timezone', async () => {

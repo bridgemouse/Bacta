@@ -178,11 +178,11 @@ const SUBTEXT: CSSProperties = {
 function SleepOverview() {
   const { data: slp, sources } = useSleepData()
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('sleep')
-  const { isOpen: heroOpen, handleTap: heroTap } = useCardInfoOverlay('slp-hero', HERO_INFO, A)
-  const { isOpen: archOpen, handleTap: archTap } = useCardInfoOverlay('slp-arch', ARCH_INFO, A)
-  const { isOpen: effOpen, handleTap: effTap } = useCardInfoOverlay('slp-efficiency', EFFICIENCY_INFO, A)
-  const { isOpen: debtOpen, handleTap: debtTap } = useCardInfoOverlay('slp-debt', DEBT_INFO, A)
-  const { isOpen: archScoreOpen, handleTap: archScoreTap } = useCardInfoOverlay('slp-arch-score', ARCH_SCORE_INFO, A)
+  const { isOpen: heroOpen, handleTap: heroTap, handleKeyDown: heroKeyDown } = useCardInfoOverlay('slp-hero', HERO_INFO, A)
+  const { isOpen: archOpen, handleTap: archTap, handleKeyDown: archKeyDown } = useCardInfoOverlay('slp-arch', ARCH_INFO, A)
+  const { isOpen: effOpen, handleTap: effTap, handleKeyDown: effKeyDown } = useCardInfoOverlay('slp-efficiency', EFFICIENCY_INFO, A)
+  const { isOpen: debtOpen, handleTap: debtTap, handleKeyDown: debtKeyDown } = useCardInfoOverlay('slp-debt', DEBT_INFO, A)
+  const { isOpen: archScoreOpen, handleTap: archScoreTap, handleKeyDown: archScoreKeyDown } = useCardInfoOverlay('slp-arch-score', ARCH_SCORE_INFO, A)
 
   const efficiencyPct = slp.duration.inBed > 0
     ? Math.min(100, Math.round((slp.duration.mins / slp.duration.inBed) * 100)) : 0
@@ -222,6 +222,9 @@ function SleepOverview() {
       {/* Hero */}
       <div
         onClick={heroTap}
+        tabIndex={0}
+        role="button"
+        onKeyDown={heroKeyDown}
         style={{
           position: 'relative', display: 'flex', alignItems: 'center', gap: 14,
           background: `linear-gradient(150deg, ${hexA(A, 0.1)}, ${COLORS.surface} 60%)`,
@@ -265,7 +268,7 @@ function SleepOverview() {
 
       {/* Efficiency + Debt pair */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 9, alignItems: 'stretch' }}>
-        <div onClick={effTap} style={{
+        <div onClick={effTap} tabIndex={0} role="button" onKeyDown={effKeyDown} style={{
           flex: 1, position: 'relative', background: COLORS.surface,
           border: `1px solid ${COLORS.line}`, borderRadius: 10,
           padding: '12px 13px 11px',
@@ -281,7 +284,7 @@ function SleepOverview() {
           <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: COLORS.textMuted, paddingLeft: 3 }}>{awakeInBed}m awake in bed</div>
           {effOpen && <InfoOverlay info={EFFICIENCY_INFO} accent={A} radius={10} compact onClick={effTap} />}
         </div>
-        <div onClick={debtTap} style={{
+        <div onClick={debtTap} tabIndex={0} role="button" onKeyDown={debtKeyDown} style={{
           flex: 1, position: 'relative', background: COLORS.surface,
           border: `1px solid ${COLORS.line}`, borderRadius: 10,
           padding: '12px 13px 11px',
@@ -306,6 +309,9 @@ function SleepOverview() {
       {/* Architecture */}
       <div
         onClick={archTap}
+        tabIndex={0}
+        role="button"
+        onKeyDown={archKeyDown}
         style={{
           position: 'relative', background: COLORS.surface,
           border: `1px solid ${COLORS.line}`, borderRadius: 12,
@@ -332,7 +338,7 @@ function SleepOverview() {
       </div>
 
       {slp.archScore != null && (
-        <div onClick={archScoreTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
+        <div onClick={archScoreTap} tabIndex={0} role="button" onKeyDown={archScoreKeyDown} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
           <Bracket color={A} inset={6} op={0.32} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, paddingLeft: 3 }}>
@@ -419,8 +425,8 @@ function SleepOverview() {
 
 function SleepTrends() {
   const { data: slp } = useSleepData()
-  const { isOpen: durOpen, handleTap: durTap } = useCardInfoOverlay('slp-dur-trend', TREND_SECTIONS.duration.info, A)
-  const { isOpen: scoreTrendOpen, handleTap: scoreTrendTap } = useCardInfoOverlay('slp-score-trend', TREND_SECTIONS.score.info, A)
+  const { isOpen: durOpen, handleTap: durTap, handleKeyDown: durKeyDown } = useCardInfoOverlay('slp-dur-trend', TREND_SECTIONS.duration.info, A)
+  const { isOpen: scoreTrendOpen, handleTap: scoreTrendTap, handleKeyDown: scoreTrendKeyDown } = useCardInfoOverlay('slp-score-trend', TREND_SECTIONS.score.info, A)
 
   const last = slp.score.trend[slp.score.trend.length - 1]
   const first = slp.score.trend[0]
@@ -434,7 +440,7 @@ function SleepTrends() {
       {slp.duration.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.duration.railLabel} accent={A} right={TREND_SECTIONS.duration.period} />
-          <div onClick={durTap} style={BESPOKE_CARD}>
+          <div onClick={durTap} tabIndex={0} role="button" onKeyDown={durKeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>DEEP SLEEP · MINS</span>
@@ -457,7 +463,7 @@ function SleepTrends() {
       {slp.score.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.score.railLabel} accent={A} right={TREND_SECTIONS.score.period} />
-          <div onClick={scoreTrendTap} style={BESPOKE_CARD}>
+          <div onClick={scoreTrendTap} tabIndex={0} role="button" onKeyDown={scoreTrendKeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>

@@ -29,6 +29,7 @@ export function useSyncState() {
           reloadRef.current = setTimeout(() => window.dispatchEvent(new CustomEvent('bacta:sync-complete')), 3000)
         } else {
           showToast('Garmin sync failed. Try again from Settings.', 'error')
+          reloadRef.current = setTimeout(() => setState({ status: 'idle', elapsed: null }), 3000)
         }
       }
     } catch { /* ignore network errors during polling */ }
@@ -36,6 +37,7 @@ export function useSyncState() {
 
   const startSync = useCallback(async () => {
     if (state.status === 'running') return
+    if (reloadRef.current) { clearTimeout(reloadRef.current); reloadRef.current = null }
     try {
       await fetch('/api/garmin/sync', { method: 'POST' })
       setState({ status: 'running', elapsed: 0 })
@@ -43,7 +45,7 @@ export function useSyncState() {
     } catch {
       setState({ status: 'error', elapsed: null })
       showToast('Could not reach the server to start a Garmin sync.', 'error')
-      setTimeout(() => setState({ status: 'idle', elapsed: null }), 3000)
+      reloadRef.current = setTimeout(() => setState({ status: 'idle', elapsed: null }), 3000)
     }
   }, [state.status, pollStatus, showToast])
 

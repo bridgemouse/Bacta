@@ -26,6 +26,15 @@ export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps
     }
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open, onClose])
+
   if (!render) return null
 
   return (

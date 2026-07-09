@@ -121,11 +121,11 @@ const CALORIES_TREND_INFO: CardInfo = {
 function TrainingOverview() {
   const { data: TRN } = useTrainingData()
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('training')
-  const { isOpen: statusOpen, handleTap: statusTap } = useCardInfoOverlay('trn-status', STATUS_INFO, A)
-  const { isOpen: ratioOpen, handleTap: ratioTap } = useCardInfoOverlay('trn-loadratio', LOAD_RATIO_INFO, A)
-  const { isOpen: intensityOpen, handleTap: intensityTap } = useCardInfoOverlay('trn-intensity', INTENSITY_INFO, A)
-  const { isOpen: zonesOpen, handleTap: zonesTap } = useCardInfoOverlay('trn-hrzones', ZONES_INFO, A)
-  const { isOpen: stepsOpen, handleTap: stepsTap } = useCardInfoOverlay('trn-steps', STEPS_INFO, A)
+  const { isOpen: statusOpen, handleTap: statusTap, handleKeyDown: statusKeyDown } = useCardInfoOverlay('trn-status', STATUS_INFO, A)
+  const { isOpen: ratioOpen, handleTap: ratioTap, handleKeyDown: ratioKeyDown } = useCardInfoOverlay('trn-loadratio', LOAD_RATIO_INFO, A)
+  const { isOpen: intensityOpen, handleTap: intensityTap, handleKeyDown: intensityKeyDown } = useCardInfoOverlay('trn-intensity', INTENSITY_INFO, A)
+  const { isOpen: zonesOpen, handleTap: zonesTap, handleKeyDown: zonesKeyDown } = useCardInfoOverlay('trn-hrzones', ZONES_INFO, A)
+  const { isOpen: stepsOpen, handleTap: stepsTap, handleKeyDown: stepsKeyDown } = useCardInfoOverlay('trn-steps', STEPS_INFO, A)
 
   const totalZoneMins = TRN.hrZones.reduce((s, z) => s + z.mins, 0)
   const ratioColor = TRN.loadRatio?.state === 'Optimal' ? A
@@ -145,7 +145,7 @@ function TrainingOverview() {
       <MX4Briefing accent={A} brief={BRIEFS.training} liveData={liveBriefing ?? undefined} section="training" onRefresh={refreshBriefing} />
 
       {/* Status banner */}
-      <div onClick={statusTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 9, minHeight: CARD_SIZES.row }}>
+      <div onClick={statusTap} tabIndex={0} role="button" onKeyDown={statusKeyDown} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 9, minHeight: CARD_SIZES.row }}>
         <StatusBanner status={TRN.status.value} sub={TRN.status.sub} accent={A} />
         {statusOpen && <InfoOverlay info={STATUS_INFO} accent={A} radius={9} compact onClick={statusTap} />}
       </div>
@@ -192,7 +192,7 @@ function TrainingOverview() {
 
       {/* Load Ratio card with range track */}
       {TRN.loadRatio && (
-        <div onClick={ratioTap} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 8 }}>
+        <div onClick={ratioTap} tabIndex={0} role="button" onKeyDown={ratioKeyDown} style={{ position: 'relative', marginBottom: 9, cursor: 'pointer', overflow: 'hidden', borderRadius: 8 }}>
           <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '11px 13px 12px' }}>
             <Bracket color={A} inset={6} op={0.28} radius={4} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -217,7 +217,7 @@ function TrainingOverview() {
       )}
 
       <Rail label="INTENSITY THIS WEEK" accent={A} right={`GOAL ${TRN.intensity.goal} MIN`} />
-      <div onClick={intensityTap} style={{
+      <div onClick={intensityTap} tabIndex={0} role="button" onKeyDown={intensityKeyDown} style={{
         position: 'relative', background: COLORS.surface, border: `1px solid ${COLORS.line}`,
         borderRadius: 9, padding: '11px 14px 12px', overflow: 'hidden',
         marginBottom: 9, cursor: 'pointer',
@@ -231,7 +231,7 @@ function TrainingOverview() {
       {TRN.hrZones.length > 0 && (
         <>
           <Rail label="HR ZONES" accent={A} right={`${Math.round(totalZoneMins)} MIN TODAY`} />
-          <div onClick={zonesTap} style={{
+          <div onClick={zonesTap} tabIndex={0} role="button" onKeyDown={zonesKeyDown} style={{
             position: 'relative', background: COLORS.surface, border: `1px solid ${COLORS.line}`,
             borderRadius: 10, padding: '13px 14px 12px', overflow: 'hidden',
             minHeight: CARD_SIZES.bar, marginBottom: 9, cursor: 'pointer',
@@ -246,7 +246,7 @@ function TrainingOverview() {
       {/* Steps bar chart */}
       <Rail label="DAILY ACTIVITY" accent={A} right={TRN.dailyActivity.steps != null ? `${TRN.dailyActivity.steps.toLocaleString()} STEPS` : undefined} />
       {TRN.dailyActivity.stepsTrend.length > 0 && (
-        <div onClick={stepsTap} style={{
+        <div onClick={stepsTap} tabIndex={0} role="button" onKeyDown={stepsKeyDown} style={{
           position: 'relative', background: COLORS.surface, border: `1px solid ${COLORS.line}`,
           borderRadius: 10, padding: '13px 14px 12px', overflow: 'hidden',
           minHeight: CARD_SIZES.bar, marginBottom: 9, cursor: 'pointer',
@@ -326,10 +326,10 @@ const SUBTEXT: CSSProperties = {
 
 function TrainingTrends() {
   const { data: TRN } = useTrainingData()
-  const { isOpen: loadOpen, handleTap: loadTap } = useCardInfoOverlay('trn-load-trend', TREND_SECTIONS.load.info, A)
-  const { isOpen: volOpen, handleTap: volTap } = useCardInfoOverlay('trn-volume', TREND_SECTIONS.volume.info, A)
-  const { isOpen: faOpen, handleTap: faTap } = useCardInfoOverlay('trn-fitnessage-trend', TREND_SECTIONS.fitnessAge.info, A)
-  const { isOpen: vo2Open, handleTap: vo2Tap } = useCardInfoOverlay('trn-vo2max', TREND_SECTIONS.vo2max.info, A)
+  const { isOpen: loadOpen, handleTap: loadTap, handleKeyDown: loadKeyDown } = useCardInfoOverlay('trn-load-trend', TREND_SECTIONS.load.info, A)
+  const { isOpen: volOpen, handleTap: volTap, handleKeyDown: volKeyDown } = useCardInfoOverlay('trn-volume', TREND_SECTIONS.volume.info, A)
+  const { isOpen: faOpen, handleTap: faTap, handleKeyDown: faKeyDown } = useCardInfoOverlay('trn-fitnessage-trend', TREND_SECTIONS.fitnessAge.info, A)
+  const { isOpen: vo2Open, handleTap: vo2Tap, handleKeyDown: vo2KeyDown } = useCardInfoOverlay('trn-vo2max', TREND_SECTIONS.vo2max.info, A)
 
   const faValue = typeof TRN.vo2max.fitnessAge === 'number' ? TRN.vo2max.fitnessAge.toFixed(1) : TRN.vo2max.fitnessAge
   const loadSubtext = TRN.load.low && TRN.load.high
@@ -342,7 +342,7 @@ function TrainingTrends() {
       {TRN.load.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.load.railLabel} accent={A} right={TREND_SECTIONS.load.period} />
-          <div onClick={loadTap} style={BESPOKE_CARD}>
+          <div onClick={loadTap} tabIndex={0} role="button" onKeyDown={loadKeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ACUTE LOAD · 7 DAYS</span>
@@ -361,7 +361,7 @@ function TrainingTrends() {
       {TRN.weeklyVolume && TRN.weeklyVolume.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.volume.railLabel} accent={A} right={TREND_SECTIONS.volume.period} />
-          <div onClick={volTap} style={BESPOKE_CARD}>
+          <div onClick={volTap} tabIndex={0} role="button" onKeyDown={volKeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600, marginBottom: 10 }}>HOURS / WEEK</div>
             <Bars7
@@ -380,7 +380,7 @@ function TrainingTrends() {
       {TRN.vo2max.fitnessAgeTrend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.fitnessAge.railLabel} accent={A} right={TREND_SECTIONS.fitnessAge.period} />
-          <div onClick={faTap} style={BESPOKE_CARD}>
+          <div onClick={faTap} tabIndex={0} role="button" onKeyDown={faKeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>IMPROVING ↓</span>
@@ -419,7 +419,7 @@ function TrainingTrends() {
       {TRN.vo2max.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.vo2max.railLabel} accent={A} right={TREND_SECTIONS.vo2max.period} />
-          <div onClick={vo2Tap} style={BESPOKE_CARD}>
+          <div onClick={vo2Tap} tabIndex={0} role="button" onKeyDown={vo2KeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>ML/KG/MIN</span>

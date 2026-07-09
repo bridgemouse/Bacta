@@ -29,12 +29,12 @@ describe('ouraProcessor', () => {
 
     expect(snap('sleep_score')).toBe(78)
     expect(snap('hrv')).toBe(45)
-    expect(snap('respiration')).toBeCloseTo(15.2, 1)
-    expect(snap('sleep_duration_s')).toBe(25200)
-    expect(snap('deep_sleep_s')).toBe(5400)
-    expect(snap('light_sleep_s')).toBe(10800)
-    expect(snap('rem_sleep_s')).toBe(9000)
-    expect(snap('spo2')).toBeCloseTo(97.5, 1)
+    expect(snap('resp_avg')).toBeCloseTo(15.2, 1)
+    expect(snap('sleep_s')).toBe(25200)
+    expect(snap('sleep_deep_s')).toBe(5400)
+    expect(snap('sleep_light_s')).toBe(10800)
+    expect(snap('sleep_rem_s')).toBe(9000)
+    expect(snap('spo2_avg')).toBeCloseTo(97.5, 1)
   })
 
   it('processOuraData writes readiness snapshots', async () => {

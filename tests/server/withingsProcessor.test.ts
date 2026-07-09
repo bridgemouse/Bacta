@@ -36,7 +36,7 @@ describe('withingsProcessor', () => {
 
     processWithingsData([{ date: 1705017600, measures: [{ value: 9800, type: 54, unit: -2 }] }])
     const row = db.prepare(
-      "SELECT value FROM health_snapshots WHERE metric = 'spo2' AND source = 'withings'"
+      "SELECT value FROM health_snapshots WHERE metric = 'spo2_avg' AND source = 'withings'"
     ).get() as { value: number } | undefined
     expect(row).toBeDefined()
     expect(row!.value).toBeCloseTo(98.0, 1)

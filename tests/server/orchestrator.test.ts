@@ -32,6 +32,10 @@ vi.mock('../../server/lib/ai/vaultClient', () => ({
   testVaultConnection: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
+vi.mock('../../server/lib/ai/wrap', () => ({
+  wrapSession: vi.fn().mockResolvedValue(undefined),
+}))
+
 describe('runOrchestrator', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')
@@ -61,6 +65,20 @@ describe('runOrchestrator', () => {
     expect(parsed).toHaveProperty('body')
     expect(parsed).toHaveProperty('recommendation')
     expect(parsed).toHaveProperty('flags')
+  })
+
+  it('does not duplicate wiki content: system prompt carries it, readAllWikiPages tool is not also offered', async () => {
+    vi.clearAllMocks()
+    const { generateText } = await import('ai')
+    const mockGenerateText = vi.mocked(generateText)
+    mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+    const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+    await runOrchestrator()
+
+    const firstCallArgs = mockGenerateText.mock.calls[0][0] as { system: string; tools: Record<string, unknown> }
+    expect(firstCallArgs.system).toContain('Wiki Knowledge')
+    expect(firstCallArgs.tools).not.toHaveProperty('readAllWikiPages')
   })
 
   it('each briefing row has a generated_at timestamp and model name', async () => {
@@ -102,10 +120,29 @@ describe('runOrchestrator', () => {
       mockGenerateText.mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
 
       const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
-      await runOrchestrator()
+      await expect(runOrchestrator()).rejects.toThrow(/quota exceeded: 429/)
 
       // Only one call should have been made — the rate-limit aborts the entire run
       expect(mockGenerateText).toHaveBeenCalledTimes(1)
+    })
+
+    it('rejects when a section fails all retry attempts, so callers can detect the failure', async () => {
+      vi.useFakeTimers()
+
+      const { generateText } = await import('ai')
+      const mockGenerateText = vi.mocked(generateText)
+
+      vi.clearAllMocks()
+      mockGenerateText.mockRejectedValue(new Error('persistent model failure'))
+
+      const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+
+      const runPromise = runOrchestrator()
+      const assertion = expect(runPromise).rejects.toThrow(/persistent model failure/)
+      await vi.runAllTimersAsync()
+      await assertion
+
+      vi.useRealTimers()
     })
   })
 
@@ -142,6 +179,26 @@ describe('runOrchestrator', () => {
       ).all() as { level: string; message: string }[]
 
       expect(rows.some(r => r.level === 'error' && r.message.includes('ECONNREFUSED vault.local'))).toBe(true)
+    })
+  })
+
+  describe('wrapSession failures', () => {
+    it('logs to app_logs when wrapSession rejects', async () => {
+      const wrapMod = await import('../../server/lib/ai/wrap')
+      vi.clearAllMocks()
+      vi.mocked(wrapMod.wrapSession).mockRejectedValueOnce(new Error('synthesis failed: model unavailable'))
+      const { generateText } = await import('ai')
+      vi.mocked(generateText).mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+      await runOrchestrator()
+
+      const { default: db } = await import('../../server/db/client')
+      const rows = db.prepare(
+        "SELECT level, message FROM app_logs WHERE source = 'mx4' ORDER BY id DESC LIMIT 10"
+      ).all() as { level: string; message: string }[]
+
+      expect(rows.some(r => r.level === 'error' && r.message.includes('synthesis failed: model unavailable'))).toBe(true)
     })
   })
 

@@ -255,6 +255,20 @@ describe('MX4Briefing', () => {
     )
     expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
   })
+
+  it('fades in the body content when it transitions from the stub line to live data', () => {
+    const { rerender } = render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={undefined} section="home" />
+    )
+    const bodyBefore = screen.getByTestId('mx4-body')
+    expect(bodyBefore.style.animation).toBe('')
+
+    rerender(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} section="home" />
+    )
+    const bodyAfter = screen.getByTestId('mx4-body')
+    expect(bodyAfter.style.animation).toContain('valueFadeIn')
+  })
 })
 
 describe('MX4Briefing — handleRefresh error toast', () => {

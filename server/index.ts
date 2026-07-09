@@ -19,11 +19,13 @@ import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './l
 import { VALID_LOGOS } from './api/settings'
 import { scheduleNightly } from './lib/ai/scheduler'
 import { scheduleGarminBackgroundSync } from './lib/garminSync'
+import { scheduleProviderBackgroundSync } from './lib/providerSync'
 import { getSetting } from './lib/settings'
 
 migrate()
 scheduleNightly()
 scheduleGarminBackgroundSync()
+scheduleProviderBackgroundSync()
 
 const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST
 

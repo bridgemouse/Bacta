@@ -104,6 +104,20 @@ describe('MX-4 Chat API', () => {
     expect(rows[1]).toEqual({ role: 'assistant', content: 'Hello from MX-4.' })
   })
 
+  it('does not duplicate wiki content: system prompt carries it, readAllWikiPages tool is not also offered', async () => {
+    const { streamText } = await import('ai')
+    vi.mocked(streamText).mockClear()
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'What is my HRV?', sessionId: 'sess-wiki-dedup-test' })
+
+    const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string; tools: Record<string, unknown> }
+    expect(firstCallArgs.system).toContain('Wiki Knowledge')
+    expect(firstCallArgs.tools).not.toHaveProperty('readAllWikiPages')
+  })
+
   it('POST /api/mx4/chat/seed inserts assistant message and returns ok', async () => {
     const { app } = await import('../../server/index')
     const res = await request(app)

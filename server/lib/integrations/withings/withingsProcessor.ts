@@ -4,7 +4,7 @@ import { WithingsMeasureGroup } from './withingsService'
 const MEAS_TYPE: Record<number, { metric: string; unit: string }> = {
   1:  { metric: 'weight_kg',  unit: 'kg'  },
   11: { metric: 'resting_hr', unit: 'bpm' },
-  54: { metric: 'spo2',       unit: '%'   },
+  54: { metric: 'spo2_avg',   unit: '%'   },
 }
 
 export function processWithingsData(groups: WithingsMeasureGroup[]): number {

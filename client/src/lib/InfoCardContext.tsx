@@ -39,7 +39,15 @@ export function useCardInfoOverlay(id: string, info: CardInfo | undefined, _acce
     isOpen ? close() : open(id)
   }
 
-  return { isOpen, handleTap }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!info) return
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    e.stopPropagation()
+    isOpen ? close() : open(id)
+  }
+
+  return { isOpen, handleTap, handleKeyDown }
 }
 
 interface InfoOverlayProps {

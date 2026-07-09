@@ -36,7 +36,7 @@ Saved to iPhone home screen, runs on local WiFi only (`bacta.local`). Runs on **
 - **Dark UI always.** Never propose or implement light mode.
 - **No multi-line paste** in terminal — use scripts or files.
 - Commits go to `main` directly. No feature branches unless specified.
-- `INSERT OR IGNORE` for idempotent DB writes.
+- `INSERT OR REPLACE` for idempotent `health_snapshots` writes — allows a same-day metric to be corrected on re-poll (e.g. if Garmin revises a computed value).
 - **Prefer editing existing files** over creating new ones.
 - Do not add comments unless the WHY is genuinely non-obvious.
 

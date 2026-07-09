@@ -286,7 +286,7 @@ Every entry here represents a real bug that was introduced and fixed. Read these
 
 **Summary queries use per-metric MAX(date).** See the EAV section above. Hardcoding `today` breaks when metrics arrive at different times during the day.
 
-**Write patterns.** Use `INSERT OR IGNORE` for `health_snapshots` rows (metrics are immutable once stored). Use `INSERT OR REPLACE` for `health_activities` rows so re-syncs overwrite stale activity data.
+**Write patterns.** Use `INSERT OR REPLACE` for both `health_snapshots` and `health_activities` rows, so a same-day metric or activity can be corrected on re-sync (e.g. if the source revises a computed value) rather than silently keeping the first value ever written.
 
 **Body battery fields.** Garmin returns two types of body battery data:
 - Delta amounts: `body_battery_charged` and `body_battery_drained` (how much charged/drained in the day)

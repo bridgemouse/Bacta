@@ -55,12 +55,12 @@ export function processPolarData(data: PolarData): number {
     for (const night of data.nights) {
       const s = night.sleep_summary
       const rows: [string, number | null, string][] = [
-        ['sleep_duration_s', s.total_sleep_time,   's'],
-        ['deep_sleep_s',     s.deep_sleep_time,    's'],
-        ['light_sleep_s',    s.light_sleep_time,   's'],
-        ['rem_sleep_s',      s.rem_time,           's'],
+        ['sleep_s',          s.total_sleep_time,   's'],
+        ['sleep_deep_s',     s.deep_sleep_time,    's'],
+        ['sleep_light_s',    s.light_sleep_time,   's'],
+        ['sleep_rem_s',      s.rem_time,           's'],
         ['sleep_score',      s.sleep_score,        'score'],
-        ['respiration',      s.breathing_rate_avg, 'rpm'],
+        ['resp_avg',         s.breathing_rate_avg, 'brpm'],
       ]
       for (const [metric, value, unit] of rows) {
         if (value == null) continue

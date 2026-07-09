@@ -50,12 +50,12 @@ describe('whoopProcessor', () => {
 
     const rows = db.prepare("SELECT metric FROM health_snapshots WHERE date='2026-06-21' AND source='whoop'").all() as { metric: string }[]
     const metrics = rows.map(r => r.metric)
-    expect(metrics).toContain('sleep_duration_s')
-    expect(metrics).toContain('deep_sleep_s')
-    expect(metrics).toContain('light_sleep_s')
-    expect(metrics).toContain('rem_sleep_s')
+    expect(metrics).toContain('sleep_s')
+    expect(metrics).toContain('sleep_deep_s')
+    expect(metrics).toContain('sleep_light_s')
+    expect(metrics).toContain('sleep_rem_s')
     // Nap was skipped — only one set of sleep rows
-    const sleepRows = db.prepare("SELECT COUNT(*) as n FROM health_snapshots WHERE date='2026-06-21' AND metric='sleep_duration_s' AND source='whoop'").get() as { n: number }
+    const sleepRows = db.prepare("SELECT COUNT(*) as n FROM health_snapshots WHERE date='2026-06-21' AND metric='sleep_s' AND source='whoop'").get() as { n: number }
     expect(sleepRows.n).toBe(1)
   })
 

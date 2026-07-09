@@ -1,7 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import * as MetricTileModule from '../../../client/src/components/MetricTile'
 import { SystemCard } from '../../../client/src/components/MetricTile'
 import type { SystemCardTile } from '../../../client/src/components/MetricTile'
+
+describe('MetricTile (legacy)', () => {
+  it('is fully removed — no import breakage remains to preserve it', () => {
+    expect('MetricTile' in MetricTileModule).toBe(false)
+  })
+})
 
 const sparkTile: SystemCardTile = {
   key: 'recovery',

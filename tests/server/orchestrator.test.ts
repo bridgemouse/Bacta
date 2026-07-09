@@ -32,6 +32,10 @@ vi.mock('../../server/lib/ai/vaultClient', () => ({
   testVaultConnection: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
+vi.mock('../../server/lib/ai/wrap', () => ({
+  wrapSession: vi.fn().mockResolvedValue(undefined),
+}))
+
 describe('runOrchestrator', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')
@@ -161,6 +165,26 @@ describe('runOrchestrator', () => {
       ).all() as { level: string; message: string }[]
 
       expect(rows.some(r => r.level === 'error' && r.message.includes('ECONNREFUSED vault.local'))).toBe(true)
+    })
+  })
+
+  describe('wrapSession failures', () => {
+    it('logs to app_logs when wrapSession rejects', async () => {
+      const wrapMod = await import('../../server/lib/ai/wrap')
+      vi.clearAllMocks()
+      vi.mocked(wrapMod.wrapSession).mockRejectedValueOnce(new Error('synthesis failed: model unavailable'))
+      const { generateText } = await import('ai')
+      vi.mocked(generateText).mockResolvedValue({ text: 'MX-4 mock analysis.' } as any)
+
+      const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+      await runOrchestrator()
+
+      const { default: db } = await import('../../server/db/client')
+      const rows = db.prepare(
+        "SELECT level, message FROM app_logs WHERE source = 'mx4' ORDER BY id DESC LIMIT 10"
+      ).all() as { level: string; message: string }[]
+
+      expect(rows.some(r => r.level === 'error' && r.message.includes('synthesis failed: model unavailable'))).toBe(true)
     })
   })
 

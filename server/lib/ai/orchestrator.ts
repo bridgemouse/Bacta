@@ -196,7 +196,9 @@ export async function runOrchestrator(): Promise<void> {
   try {
     await wrapSession()
   } catch (e: unknown) {
-    console.error('[mx4] wrapSession failed:', e instanceof Error ? e.message : e)
+    const message = e instanceof Error ? e.message : String(e)
+    console.error('[mx4] wrapSession failed:', message)
+    logEvent('mx4', 'error', `wrapSession failed: ${message}`)
   }
 
   // Surface section failures to callers (e.g. the all_sections rerun path in

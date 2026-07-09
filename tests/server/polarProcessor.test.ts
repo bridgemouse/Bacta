@@ -40,8 +40,11 @@ describe('polarProcessor', () => {
       "SELECT metric, value FROM health_snapshots WHERE date = '2024-01-11' AND source = 'polar'"
     ).all() as { metric: string; value: number }[]
     const map = Object.fromEntries(rows.map(r => [r.metric, r.value]))
-    expect(map.sleep_duration_s).toBe(25200)
-    expect(map.deep_sleep_s).toBe(7200)
+    expect(map.sleep_s).toBe(25200)
+    expect(map.sleep_deep_s).toBe(7200)
+    expect(map.sleep_light_s).toBe(14400)
+    expect(map.sleep_rem_s).toBe(3600)
+    expect(map.resp_avg).toBeCloseTo(14.2, 1)
     expect(map.sleep_score).toBe(82)
   })
 

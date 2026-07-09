@@ -163,7 +163,7 @@ router.post('/:provider/sync', requireSyncAuth, async (req: Request, res: Respon
   }
 })
 
-async function runSync(provider: Provider): Promise<number> {
+export async function runSync(provider: Provider): Promise<number> {
   const since = daysAgo(30)
 
   switch (provider) {

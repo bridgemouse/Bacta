@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-whoop/poller.py — triggers a Whoop data sync via the Bacta API.
-Called by health_poller.py when whoop_enabled=true in app_settings.
+whoop/poller.py — manually triggers a Whoop data sync via the Bacta API.
+Bacta's own background sync (server/lib/providerSync.ts) calls runSync()
+in-process on an hourly schedule and does not invoke this script — it
+remains available for external/manual triggering (e.g. your own cron
+entry) against the same API endpoint.
 
 Required env vars:
   BACTA_INTERNAL_TOKEN  — pre-shared token for API auth

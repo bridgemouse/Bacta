@@ -9,22 +9,6 @@ import { COLORS, FONT_MONO, SECTION_ACCENTS, SECTION_LABELS } from '../theme'
 import type { SectionKey } from '../theme'
 
 // ---------------------------------------------------------------------------
-// Legacy MetricTile — kept for backward compat with page components
-// ---------------------------------------------------------------------------
-export interface MetricTileProps {
-  value: string
-  unit?: string
-  label: string
-  accent: string
-  progress?: number
-  trend?: string
-}
-
-export function MetricTile(_props: MetricTileProps): null {
-  return null
-}
-
-// ---------------------------------------------------------------------------
 // SystemCard — new component
 // ---------------------------------------------------------------------------
 

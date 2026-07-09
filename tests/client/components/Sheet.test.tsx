@@ -11,6 +11,17 @@ function renderSheet(onClose: () => void) {
   )
 }
 
+describe('Sheet — Escape key', () => {
+  it('calls onClose when Escape is pressed while open', () => {
+    const onClose = vi.fn()
+    renderSheet(onClose)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+})
+
 describe('SheetShell drag-to-dismiss', () => {
   it('calls onClose when the drag handle is dragged down past the threshold', () => {
     const onClose = vi.fn()

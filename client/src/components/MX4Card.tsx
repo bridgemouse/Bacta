@@ -73,6 +73,19 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
     if (errorResetRef.current) clearTimeout(errorResetRef.current)
   }, [])
 
+  // Fades the body in the moment live data replaces the stub line — covers
+  // Home's own first load (nothing can be prefetched before it) and acts as a
+  // safety net elsewhere if a section's prefetch hasn't resolved yet.
+  const hasLiveData = liveData != null
+  const wasLiveDataRef = useRef(hasLiveData)
+  const [bodyAnimKey, setBodyAnimKey] = useState(0)
+  useEffect(() => {
+    if (wasLiveDataRef.current !== hasLiveData) {
+      wasLiveDataRef.current = hasLiveData
+      setBodyAnimKey(k => k + 1)
+    }
+  }, [hasLiveData])
+
   // Refresh-all ("mx4_home_rerun_mode" = all_sections) runs recovery -> sleep -> training -> home
   // in that fixed order (see server/lib/ai/sections.ts SECTIONS) — home is always last, so once
   // recovery/sleep/training are all done, only home's own briefing remains.
@@ -259,7 +272,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
       </div>
 
       {/* Body — live markdown or stub text */}
-      <div style={{ padding: '0 15px 13px' }}>
+      <div key={bodyAnimKey} data-testid="mx4-body" style={{ padding: '0 15px 13px', animation: bodyAnimKey > 0 ? 'valueFadeIn 400ms ease' : undefined }}>
         {liveData ? (
           <>
             <p style={{ margin: '0 0 7px 0', fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: accent }}>

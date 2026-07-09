@@ -129,11 +129,11 @@ const SUBTEXT: CSSProperties = {
 function RecoveryOverview() {
   const { data: rec, sources } = useRecoveryData()
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('recovery')
-  const { isOpen: scoreOpen, handleTap: scoreTap } = useCardInfoOverlay('rec-score', SCORE_INFO, A)
-  const { isOpen: hrvOpen, handleTap: hrvTap } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
-  const { isOpen: battOpen, handleTap: battTap } = useCardInfoOverlay('rec-battery', BATTERY_INFO, A)
-  const { isOpen: recovTimeOpen, handleTap: recovTimeTap } = useCardInfoOverlay('rec-recov-time', RECOVERY_TIME_INFO, A)
-  const { isOpen: sleepHrOpen, handleTap: sleepHrTap } = useCardInfoOverlay('rec-sleep-hr', SLEEP_HR_INFO, A)
+  const { isOpen: scoreOpen, handleTap: scoreTap, handleKeyDown: scoreKeyDown } = useCardInfoOverlay('rec-score', SCORE_INFO, A)
+  const { isOpen: hrvOpen, handleTap: hrvTap, handleKeyDown: hrvKeyDown } = useCardInfoOverlay('rec-hrv', HRV_INFO, A)
+  const { isOpen: battOpen, handleTap: battTap, handleKeyDown: battKeyDown } = useCardInfoOverlay('rec-battery', BATTERY_INFO, A)
+  const { isOpen: recovTimeOpen, handleTap: recovTimeTap, handleKeyDown: recovTimeKeyDown } = useCardInfoOverlay('rec-recov-time', RECOVERY_TIME_INFO, A)
+  const { isOpen: sleepHrOpen, handleTap: sleepHrTap, handleKeyDown: sleepHrKeyDown } = useCardInfoOverlay('rec-sleep-hr', SLEEP_HR_INFO, A)
 
   const inHRVRange = rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null
     ? rec.hrv.value >= rec.hrvBaselineLow && rec.hrv.value <= rec.hrvBaselineHigh
@@ -181,6 +181,9 @@ function RecoveryOverview() {
       {/* Recovery Score hero */}
       <div
         onClick={scoreTap}
+        tabIndex={0}
+        role="button"
+        onKeyDown={scoreKeyDown}
         style={{
           position: 'relative', display: 'flex', alignItems: 'center', gap: 16,
           background: `linear-gradient(150deg, ${hexA(A, 0.1)}, ${COLORS.surface} 60%)`,
@@ -219,6 +222,9 @@ function RecoveryOverview() {
       {/* HRV — full-width chart */}
       <div
         onClick={hrvTap}
+        tabIndex={0}
+        role="button"
+        onKeyDown={hrvKeyDown}
         style={{
           position: 'relative', background: COLORS.surface,
           border: `1px solid ${COLORS.line}`, borderRadius: 11,
@@ -281,7 +287,7 @@ function RecoveryOverview() {
 
       {/* Body Battery */}
       {rec.battery.max != null && rec.battery.max > 0 && (
-        <div onClick={battTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
+        <div onClick={battTap} tabIndex={0} role="button" onKeyDown={battKeyDown} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
           <Bracket color={A} inset={6} op={0.28} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, paddingLeft: 3 }}>
@@ -313,7 +319,7 @@ function RecoveryOverview() {
 
       {/* Recovery Time */}
       {rec.recoveryTimeH != null && (
-        <div onClick={recovTimeTap} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
+        <div onClick={recovTimeTap} tabIndex={0} role="button" onKeyDown={recovTimeKeyDown} style={{ ...BESPOKE_CARD, marginBottom: 9 }}>
           <Bracket color={A} inset={6} op={0.28} radius={4} />
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${A}, transparent 80%)`, opacity: 0.7 }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingLeft: 3 }}>
@@ -410,8 +416,8 @@ function RecoveryOverview() {
 
 function RecoveryTrends() {
   const { data: rec } = useRecoveryData()
-  const { isOpen: scoreTrendOpen, handleTap: scoreTrendTap } = useCardInfoOverlay('rec-score-trend', TREND_SECTIONS.score.info, A)
-  const { isOpen: hrvTrendOpen, handleTap: hrvTrendTap } = useCardInfoOverlay('rec-hrv-trend', TREND_SECTIONS.hrv.info, A)
+  const { isOpen: scoreTrendOpen, handleTap: scoreTrendTap, handleKeyDown: scoreTrendKeyDown } = useCardInfoOverlay('rec-score-trend', TREND_SECTIONS.score.info, A)
+  const { isOpen: hrvTrendOpen, handleTap: hrvTrendTap, handleKeyDown: hrvTrendKeyDown } = useCardInfoOverlay('rec-hrv-trend', TREND_SECTIONS.hrv.info, A)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -419,7 +425,7 @@ function RecoveryTrends() {
       {rec.score.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.score.railLabel} accent={A} right={TREND_SECTIONS.score.period} />
-          <div onClick={scoreTrendTap} style={BESPOKE_CARD}>
+          <div onClick={scoreTrendTap} tabIndex={0} role="button" onKeyDown={scoreTrendKeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>TRAINING READINESS · 7 DAYS</span>
@@ -438,7 +444,7 @@ function RecoveryTrends() {
       {rec.hrv.trend.length > 0 && (
         <>
           <Rail label={TREND_SECTIONS.hrv.railLabel} accent={A} right={TREND_SECTIONS.hrv.period} />
-          <div onClick={hrvTrendTap} style={BESPOKE_CARD}>
+          <div onClick={hrvTrendTap} tabIndex={0} role="button" onKeyDown={hrvTrendKeyDown} style={BESPOKE_CARD}>
             <Bracket color={A} inset={6} op={0.28} />
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 9.5, letterSpacing: '0.12em', color: COLORS.textSecondary, fontWeight: 600 }}>MS · OVERNIGHT RMSSD</span>

@@ -81,3 +81,19 @@ describe('useTrainingData — status sub-label', () => {
     expect(result.current.data.status.sub).not.toBe('as of Jun 30')
   })
 })
+
+describe('useTrainingData — vo2max delta', () => {
+  it('derives delta from the real vo2maxTrend history instead of the stub value', async () => {
+    mockFetchTrend.mockImplementation((metric: string) => {
+      if (metric === 'vo2max') return Promise.resolve([54, 53, 52, 51, 50])
+      return Promise.resolve([])
+    })
+    mockFetchSummary.mockResolvedValue({ vo2max: 50 })
+
+    const { result } = renderHook(() => useTrainingData())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    // Real trend descends 54 -> 50, a decrease of 4 — not the stub's hardcoded +1.
+    expect(result.current.data.vo2max.delta).toBe(-4)
+  })
+})

@@ -43,10 +43,10 @@ export function processWhoopData(data: WhoopData): number {
       const day    = s.end.slice(0, 10)
       const ss     = s.score.stage_summary
       const totalS = Math.round((ss.total_in_bed_time_milli - ss.total_awake_time_milli) / 1000)
-      upsertSnapshot.run(day, 'sleep_duration_s', totalS,                                                       's'); count++
-      upsertSnapshot.run(day, 'deep_sleep_s',     Math.round(ss.total_slow_wave_sleep_time_milli / 1000), 's'); count++
-      upsertSnapshot.run(day, 'light_sleep_s',    Math.round(ss.total_light_sleep_time_milli / 1000),    's'); count++
-      upsertSnapshot.run(day, 'rem_sleep_s',      Math.round(ss.total_rem_sleep_time_milli / 1000),      's'); count++
+      upsertSnapshot.run(day, 'sleep_s',      totalS,                                                       's'); count++
+      upsertSnapshot.run(day, 'sleep_deep_s', Math.round(ss.total_slow_wave_sleep_time_milli / 1000), 's'); count++
+      upsertSnapshot.run(day, 'sleep_light_s', Math.round(ss.total_light_sleep_time_milli / 1000),    's'); count++
+      upsertSnapshot.run(day, 'sleep_rem_s',  Math.round(ss.total_rem_sleep_time_milli / 1000),      's'); count++
     }
     for (const w of data.workouts) {
       if (w.score_state !== 'SCORED' || !w.score) continue

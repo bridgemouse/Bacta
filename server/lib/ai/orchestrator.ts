@@ -4,7 +4,7 @@ import { getSetting } from '../settings'
 import { SECTIONS } from './sections'
 import { readAllWikiPagesSync, loadHeartbeat } from './wiki'
 import { assembleSystemPrompt } from './prompt'
-import { queryDb, readAllWikiPages } from './tools'
+import { queryDb } from './tools'
 import { research } from './research'
 import { getVaultTools, isVaultEnabled } from './vaultClient'
 import { BriefingResultSchema, type BriefingResult } from './types'
@@ -75,7 +75,7 @@ async function runSection(
 
 Section focus: ${promptAddendum}
 
-Use queryDb to pull the last 30 days of relevant metrics. ${isVaultEnabled() ? 'Use get_wiki_index then read_wiki_page or search_wiki to pull personal context from the connected vault.' : ''} Use readAllWikiPages if you need to review accumulated MX-4 knowledge.
+Use queryDb to pull the last 30 days of relevant metrics. ${isVaultEnabled() ? 'Use get_wiki_index then read_wiki_page or search_wiki to pull personal context from the connected vault.' : ''} Your accumulated MX-4 knowledge is already provided below under "Wiki Knowledge" — no need to re-fetch it.
 
 Produce a complete analysis in your voice. Cover: what the data shows today, how it compares to the 30-day trend, what it means for the user's current training block, and one specific recommendation.${activityContext}`
 
@@ -87,9 +87,10 @@ Produce a complete analysis in your voice. Cover: what the data shows today, how
     // tools here made it end with wiki-update meta ("briefing generated, wiki
     // updated") or exhaust its steps. Wiki curation is a separate concern (the
     // SYNC WIKI chat skill / wrap synthesis), keeping briefings clean.
+    // readAllWikiPages is deliberately omitted — the same content is already
+    // spliced into systemWithContext above (see #75).
     tools: {
       queryDb,
-      readAllWikiPages,
       research,
       ...(isVaultEnabled()
         ? await getVaultTools().catch((vaultErr: unknown) => {
@@ -196,6 +197,15 @@ export async function runOrchestrator(): Promise<void> {
   try {
     await wrapSession()
   } catch (e: unknown) {
-    console.error('[mx4] wrapSession failed:', e instanceof Error ? e.message : e)
+    const message = e instanceof Error ? e.message : String(e)
+    console.error('[mx4] wrapSession failed:', message)
+    logEvent('mx4', 'error', `wrapSession failed: ${message}`)
+  }
+
+  // Surface section failures to callers (e.g. the all_sections rerun path in
+  // mx4.ts, which otherwise has no way to know a section failed since this
+  // function used to always resolve).
+  if (errors.length > 0) {
+    throw new Error(`Run completed with errors: ${errors.map(e => `${e.section}: ${e.error}`).join('; ')}`)
   }
 }

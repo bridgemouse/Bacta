@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTransitionNavigate } from '../lib/useTransitionNavigate'
 import { AppShell } from '../components/AppShell'
 import { MX4Briefing } from '../components/MX4Card'
@@ -5,7 +6,7 @@ import { SystemCard } from '../components/MetricTile'
 import type { SystemCardTile } from '../components/MetricTile'
 import { useTab } from '../lib/TabContext'
 import { BRIEFS } from '../lib/stubData'
-import { useBriefing } from '../hooks/useBriefing'
+import { useBriefing, prefetchBriefing } from '../hooks/useBriefing'
 import { MX4_COLOR, SECTION_ACCENTS } from '../theme'
 import { TrendRow } from '../components/viz/TrendRow'
 import { Rail } from '../components/viz/Rail'
@@ -122,6 +123,16 @@ function HomeTrends({ liveData, onRefresh }: { liveData?: import('../lib/briefin
 function HomeContent({ onNavigate }: { onNavigate: (path: string) => void }) {
   const tab = useTab()
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('home')
+
+  // Warm the other built sections' briefing cache while the user is still on
+  // Home, so their first-ever tap into Recovery/Sleep/Training this session
+  // reads live data immediately instead of flashing the stub line first.
+  useEffect(() => {
+    prefetchBriefing('recovery')
+    prefetchBriefing('sleep')
+    prefetchBriefing('training')
+  }, [])
+
   return tab === 'overview'
     ? <HomeOverview onNavigate={onNavigate} liveData={liveBriefing ?? undefined} onRefresh={refreshBriefing} />
     : <HomeTrends liveData={liveBriefing ?? undefined} onRefresh={refreshBriefing} />

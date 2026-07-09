@@ -174,7 +174,9 @@ export function useTrainingData(): { data: TrainingData; loading: boolean } {
           vo2max: {
             value:                summary.vo2max                ?? TRAINING.vo2max.value,
             unit:                 'mL/kg/min',
-            delta:                TRAINING.vo2max.delta,
+            delta:                vo2maxTrend.length >= 2
+                                    ? Math.round((vo2maxTrend[vo2maxTrend.length - 1] - vo2maxTrend[0]) * 10) / 10
+                                    : TRAINING.vo2max.delta,
             fitnessAge:           summary.fitness_age           ?? TRAINING.vo2max.fitnessAge,
             fitnessAgeAchievable: summary.fitness_age_achievable ?? null,
             trend:                vo2maxTrend,

@@ -189,7 +189,7 @@
 - `garmin_activities` → `health_activities` (composite PK `activity_id TEXT + source TEXT`)
 - `garmin_activity_legs` → `health_activity_legs` (+ `source` column)
 - Idempotent migrations in `server/db/migrate.ts` — existing Garmin data preserved
-- All Python pollers updated to new table names; Garmin scripts relocated to `scripts/providers/garmin/`
+- All Python pollers updated to new table names; the canonical Garmin poller remains at `scripts/garmin_poller.py` (a `scripts/providers/garmin/poller.py` copy was attempted but left a stale, diverging fork — removed, see #82)
 - `scripts/health_poller.py` dispatcher — built to run Garmin always + OAuth providers when enabled, but never wired to any timer/cron; removed 2026-07-09 (issue #81) in favor of an in-process scheduler (`server/lib/providerSync.ts`)
 - `server/lib/integrations/shared/metricMap.ts` — canonical metric registry + `PROVIDER_LABELS`
 - `server/lib/integrations/shared/sourceResolver.ts` — `resolveSource()` priority utility

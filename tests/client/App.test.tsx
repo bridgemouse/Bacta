@@ -63,6 +63,15 @@ describe('App', () => {
     expect(startViewTransition).toHaveBeenCalledTimes(1)
   })
 
+  test('prefetches recovery/sleep/training briefings on Home mount, so a first navigation there is never the stub-then-pop-in flash', () => {
+    renderApp('/')
+
+    const requestedUrls = vi.mocked(global.fetch).mock.calls.map(([url]) => url)
+    expect(requestedUrls).toContain('/api/insights/recovery')
+    expect(requestedUrls).toContain('/api/insights/sleep')
+    expect(requestedUrls).toContain('/api/insights/training')
+  })
+
   test('renders recovery page on /recovery route', () => {
     renderApp('/recovery')
     expect(screen.getAllByText('RECOVERY').length).toBeGreaterThan(0)

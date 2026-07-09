@@ -8,17 +8,28 @@ import { logEvent } from './logger'
 // a manual "SYNC NOW" click.
 const SYNC_INTERVAL_CRON = '0 * * * *' // hourly
 
+// Provider fetch calls have no request timeout, so a hung connection can keep
+// a run in flight past the next hourly tick — this guard stops that tick from
+// starting a second, overlapping pass over the same providers.
+let syncInProgress = false
+
 async function syncEnabledProviders(): Promise<void> {
-  for (const provider of PROVIDERS) {
-    if (provider === 'garmin') continue
-    if (getSetting(`${provider}_enabled`) !== 'true') continue
-    try {
-      await runSync(provider)
-      setSetting(`${provider}_last_sync`, new Date().toISOString())
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      logEvent('integrations', 'error', `${provider} background sync failed: ${message}`)
+  if (syncInProgress) return
+  syncInProgress = true
+  try {
+    for (const provider of PROVIDERS) {
+      if (provider === 'garmin') continue
+      if (getSetting(`${provider}_enabled`) !== 'true') continue
+      try {
+        await runSync(provider)
+        setSetting(`${provider}_last_sync`, new Date().toISOString())
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        logEvent('integrations', 'error', `${provider} background sync failed: ${message}`)
+      }
     }
+  } finally {
+    syncInProgress = false
   }
 }
 

@@ -67,4 +67,37 @@ describe('scheduleProviderBackgroundSync', () => {
 
     expect(runSync).not.toHaveBeenCalledWith('garmin')
   })
+
+  it('does not start a second overlapping pass if a tick fires while the previous one is still in flight', async () => {
+    const { default: db } = await import('../../server/db/client')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('strava_enabled', 'true')").run()
+
+    const { runSync } = await import('../../server/api/integrations')
+    vi.mocked(runSync).mockClear()
+    let resolveFirstCall: (() => void) | undefined
+    vi.mocked(runSync).mockImplementationOnce(() => new Promise(resolve => {
+      resolveFirstCall = () => resolve(0)
+    }))
+
+    const { scheduleProviderBackgroundSync } = await import('../../server/lib/providerSync')
+    scheduleProviderBackgroundSync()
+
+    // First tick: runSync('strava') is now in flight (never resolves yet).
+    capturedFn!()
+    await new Promise(resolve => setImmediate(resolve))
+    expect(runSync).toHaveBeenCalledTimes(1)
+
+    // Second tick fires before the first has resolved — must not start a
+    // second overlapping pass over the same providers.
+    capturedFn!()
+    await new Promise(resolve => setImmediate(resolve))
+    expect(runSync).toHaveBeenCalledTimes(1)
+
+    // Let the first call resolve and confirm a subsequent tick works normally.
+    resolveFirstCall!()
+    await new Promise(resolve => setImmediate(resolve))
+    capturedFn!()
+    await new Promise(resolve => setImmediate(resolve))
+    expect(runSync).toHaveBeenCalledTimes(2)
+  })
 })

@@ -51,6 +51,42 @@ describe('useCardInfoOverlay', () => {
     act(() => result.current.handleTap({ stopPropagation: () => {} } as React.MouseEvent))
     expect(result.current.isOpen).toBe(false)
   })
+
+  it('handleKeyDown opens on Enter', () => {
+    const { result } = renderHook(
+      () => useCardInfoOverlay('id', { description: 'Test' }, '#2bc4e8'),
+      { wrapper }
+    )
+    act(() => result.current.handleKeyDown({ key: 'Enter', preventDefault: () => {}, stopPropagation: () => {} } as React.KeyboardEvent))
+    expect(result.current.isOpen).toBe(true)
+  })
+
+  it('handleKeyDown opens on Space', () => {
+    const { result } = renderHook(
+      () => useCardInfoOverlay('id', { description: 'Test' }, '#2bc4e8'),
+      { wrapper }
+    )
+    act(() => result.current.handleKeyDown({ key: ' ', preventDefault: () => {}, stopPropagation: () => {} } as React.KeyboardEvent))
+    expect(result.current.isOpen).toBe(true)
+  })
+
+  it('handleKeyDown ignores other keys', () => {
+    const { result } = renderHook(
+      () => useCardInfoOverlay('id', { description: 'Test' }, '#2bc4e8'),
+      { wrapper }
+    )
+    act(() => result.current.handleKeyDown({ key: 'a', preventDefault: () => {}, stopPropagation: () => {} } as React.KeyboardEvent))
+    expect(result.current.isOpen).toBe(false)
+  })
+
+  it('handleKeyDown does nothing when info is undefined', () => {
+    const { result } = renderHook(
+      () => useCardInfoOverlay('id', undefined, '#2bc4e8'),
+      { wrapper }
+    )
+    act(() => result.current.handleKeyDown({ key: 'Enter', preventDefault: () => {}, stopPropagation: () => {} } as React.KeyboardEvent))
+    expect(result.current.isOpen).toBe(false)
+  })
 })
 
 function TwoCards() {

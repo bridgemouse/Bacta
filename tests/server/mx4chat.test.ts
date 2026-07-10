@@ -478,6 +478,12 @@ describe('categorizeError', () => {
       .toBe('MX-4 timed out during analysis. Try a shorter query.')
   })
 
+  it('detects a no-response tool-loop exhaustion distinctly from the generic fallback', () => {
+    const categorized = categorizeError(new Error('no response'))
+    expect(categorized).not.toBe('MX-4 encountered an error. Try again.')
+    expect(categorized).toBe("MX-4 couldn't complete a response — try rephrasing or asking again.")
+  })
+
   it('returns generic message for unknown errors', () => {
     expect(categorizeError(new Error('something unexpected')))
       .toBe('MX-4 encountered an error. Try again.')

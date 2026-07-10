@@ -73,6 +73,9 @@ export function categorizeError(e: unknown): string {
   if (/timeout|timed out/i.test(msg)) {
     return 'MX-4 timed out during analysis. Try a shorter query.'
   }
+  if (/no response/i.test(msg)) {
+    return "MX-4 couldn't complete a response — try rephrasing or asking again."
+  }
   return 'MX-4 encountered an error. Try again.'
 }
 

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const BriefingResultSchema = z.object({
   tone:           z.enum(['POSITIVE', 'CAUTION', 'FLAG']),
-  headline:       z.string(),
+  headline:       z.string().describe("A distinct, punchy one-sentence summary — must not restate the body's opening sentence."),
   summary:        z.string(),
   body:           z.string(),
   recommendation: z.string(),

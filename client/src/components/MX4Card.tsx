@@ -91,39 +91,13 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
   // recovery/sleep/training are all done, only home's own briefing remains.
   const REFRESH_ALL_STAGES = ['recovery', 'sleep', 'training', 'home']
 
-  async function handleRefresh() {
-    if (!section || refreshState === 'running') return
-    if (errorResetRef.current) {
-      clearTimeout(errorResetRef.current)
-      errorResetRef.current = null
-    }
-    setRefreshState('running')
-    setRefreshProgress(null)
+  // Shared by handleRefresh (after triggering a new run) and the on-mount resume
+  // effect (after finding one already in flight) — polls until the section's own
+  // briefing timestamp advances, updating staged progress for refresh-all runs.
+  async function pollForCompletion(isFullRun: boolean) {
     let succeeded = false
     try {
-      let isFullRun = false
-      if (section === 'home') {
-        try {
-          const settingsRes = await fetch('/api/settings')
-          const settings = await settingsRes.json() as Record<string, string>
-          isFullRun = settings.mx4_home_rerun_mode === 'all_sections'
-        } catch {
-          // treat as home-only regeneration if the settings fetch fails
-        }
-      }
-
-      const triggerRes = await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
-      if (triggerRes.status === 409) {
-        // Another run (e.g. the nightly full orchestrator) is already in progress —
-        // this click didn't start anything, so don't poll for it or surface a stale
-        // error left over from a previous, unrelated run of this section. Not a
-        // failure of this click, so don't flash the FAILED state either.
-        showToast('MX-4 is already running. Try again shortly.', 'error')
-        succeeded = true
-        return
-      }
-
-      const trackedSections = isFullRun ? REFRESH_ALL_STAGES : [section]
+      const trackedSections = isFullRun ? REFRESH_ALL_STAGES : [section as string]
       const fetchGeneratedAt = async (s: string) => {
         const res = await fetch(`/api/insights/${s}`)
         const d = await res.json() as { generated_at?: string }
@@ -145,7 +119,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
           setRefreshProgress(Math.round((doneCount / trackedSections.length) * 100))
         }
 
-        if (current[section] !== baseline[section]) {
+        if (current[section as string] !== baseline[section as string]) {
           onRefresh?.()
           succeeded = true
           break
@@ -172,6 +146,77 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
       }
     }
   }
+
+  async function detectFullRun(): Promise<boolean> {
+    if (section !== 'home') return false
+    try {
+      const settingsRes = await fetch('/api/settings')
+      const settings = await settingsRes.json() as Record<string, string>
+      return settings.mx4_home_rerun_mode === 'all_sections'
+    } catch {
+      // treat as home-only regeneration if the settings fetch fails
+      return false
+    }
+  }
+
+  async function handleRefresh() {
+    if (!section || refreshState === 'running') return
+    if (errorResetRef.current) {
+      clearTimeout(errorResetRef.current)
+      errorResetRef.current = null
+    }
+    setRefreshState('running')
+    setRefreshProgress(null)
+
+    const isFullRun = await detectFullRun()
+
+    let triggerRes: Response
+    try {
+      triggerRes = await fetch(`/api/mx4/run/${section}`, { method: 'POST' })
+    } catch {
+      setRefreshState('error')
+      setRefreshProgress(null)
+      errorResetRef.current = setTimeout(() => setRefreshState('idle'), 4000)
+      return
+    }
+
+    if (triggerRes.status === 409) {
+      // Another run (e.g. the nightly full orchestrator) is already in progress —
+      // this click didn't start anything, so don't poll for it or surface a stale
+      // error left over from a previous, unrelated run of this section. Not a
+      // failure of this click, so don't flash the FAILED state either.
+      showToast('MX-4 is already running. Try again shortly.', 'error')
+      setRefreshState('idle')
+      setRefreshProgress(null)
+      return
+    }
+
+    await pollForCompletion(isFullRun)
+  }
+
+  // On mount (including remounting after navigating away and back), check whether
+  // a refresh is genuinely still running server-side rather than always defaulting
+  // to idle — the previous mount's in-flight run has no other way to reach this one (#114).
+  useEffect(() => {
+    if (!section) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const statusRes = await fetch(`/api/mx4/run/${section}/status`)
+        const statusData = await statusRes.json() as { error: string | null; running?: boolean }
+        if (cancelled || !statusData.running) return
+        setRefreshState('running')
+        setRefreshProgress(null)
+        const isFullRun = await detectFullRun()
+        if (cancelled) return
+        await pollForCompletion(isFullRun)
+      } catch {
+        // ignore — stay idle if the status check itself fails
+      }
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section])
 
   async function handleFullAnalysis() {
     if (!liveData?.body) return

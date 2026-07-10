@@ -162,10 +162,13 @@ mx4Router.post('/run/:section', (req, res) => {
 })
 
 // GET /api/mx4/run/:section/status — last categorized failure for a section's most
-// recent run, if any. Lets the client surface a toast for the fire-and-forget /run/:section.
+// recent run, if any, plus whether a run is currently in flight (orchestratorRunning is
+// a single global guard, not per-section, but only one run happens at a time by design —
+// see #114). Lets the client surface a toast for the fire-and-forget /run/:section, and
+// resume the RUNNING UI state on remount instead of always defaulting to idle.
 mx4Router.get('/run/:section/status', (req, res) => {
   const { section } = req.params
-  res.json({ error: sectionRunErrors[section] ?? null })
+  res.json({ error: sectionRunErrors[section] ?? null, running: orchestratorRunning })
 })
 
 mx4Router.get('/chat/:sessionId', (req, res) => {

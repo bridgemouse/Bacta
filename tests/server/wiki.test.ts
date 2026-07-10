@@ -51,4 +51,17 @@ describe('wiki utilities', () => {
     const result = loadHeartbeat()
     expect(typeof result).toBe('string')
   })
+
+  it('resetAllWikiPages blanks a personalized profile page, not just a hardcoded user-profile.md', async () => {
+    // MX-4 named the real profile page after the user (e.g. "ethan-profile.md") rather
+    // than the generic "user-profile.md" the reset function used to assume — the old
+    // implementation left this file completely untouched. #125
+    const { writeWikiPageSync, resetAllWikiPages } = await import('../../server/lib/ai/wiki')
+    writeWikiPageSync('ethan-profile', '# Ethan Profile\nSubstantive accumulated personal content here.')
+
+    resetAllWikiPages()
+
+    const content = fs.readFileSync(path.join(TEST_WIKI_DIR, 'ethan-profile.md'), 'utf-8')
+    expect(content).not.toContain('Substantive accumulated personal content')
+  })
 })

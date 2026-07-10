@@ -50,7 +50,7 @@ The `mx4/wiki/` directory is MX-4's working memory. See `docs/MX4_LLM_WIKI_PRINC
 **Write** durable patterns, trajectories with a projection, cross-domain correlations, and personal baselines.
 **Do not write** raw data (the DB has that), single-day anomalies, or observations that could apply to anyone.
 
-**If a page exists:** update it; revise stale entries; rewrite when a new analysis contradicts a prior belief.
-**If the pattern is new:** create a focused page named as a noun phrase (`hrv-baseline`, `sleep-architecture`).
+**If a page exists:** update it; revise stale entries; rewrite when a new analysis contradicts a prior belief. Check the pre-seeded pages first — `hrv-patterns`, `sleep-patterns`, `training-patterns`, `correlations`, `weekly-observations` — most new findings belong on one of these rather than a new page.
+**If the pattern is new and doesn't fit an existing page:** create a focused page named as a noun phrase (`vo2max-trajectory`, `load-patterns`).
 
 **The wiki is knowledge, not a journal** — a reader should understand the current state from any page, not reconstruct it from a timeline.

@@ -51,7 +51,7 @@ export function archiveWikiPageSync(name: string): void {
   fs.copyFileSync(srcPath, path.join(archiveDir, `${date}-${name}.md`))
 }
 
-const PATTERN_PAGES: Record<string, string> = {
+export const PATTERN_PAGES: Record<string, string> = {
   'hrv-patterns':        '# HRV Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
   'sleep-patterns':      '# Sleep Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
   'training-patterns':   '# Training Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
@@ -73,7 +73,18 @@ export function resetAllWikiPages(): void {
   for (const [name, content] of Object.entries(PATTERN_PAGES)) {
     fs.writeFileSync(path.join(dir, `${name}.md`), content, 'utf-8')
   }
-  fs.writeFileSync(path.join(dir, 'user-profile.md'), USER_PROFILE_BLANK, 'utf-8')
+  // The profile page's name isn't enforced anywhere — MX-4 may have named it after
+  // the user (e.g. "ethan-profile.md") rather than the generic "user-profile.md" —
+  // so blank whatever profile-shaped page(s) actually exist, not a hardcoded name. #125
+  const profilePages = fs.existsSync(dir)
+    ? fs.readdirSync(dir).filter(f => f.endsWith('-profile.md'))
+    : []
+  for (const file of profilePages) {
+    fs.writeFileSync(path.join(dir, file), USER_PROFILE_BLANK, 'utf-8')
+  }
+  if (profilePages.length === 0) {
+    fs.writeFileSync(path.join(dir, 'user-profile.md'), USER_PROFILE_BLANK, 'utf-8')
+  }
 }
 
 export function loadHeartbeat(): string {

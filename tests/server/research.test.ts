@@ -126,3 +126,47 @@ describe('MX-4 research tool', () => {
     expect(rows.some(r => r.message.includes('[object Object]'))).toBe(false)
   })
 })
+
+describe('MX-4 fetchPage tool', () => {
+  beforeAll(async () => {
+    const { migrate } = await import('../../server/db/migrate')
+    migrate()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('fetches a specific URL and returns its parsed text content, not just a search snippet', async () => {
+    const html = `<html><head><title>OTF Workout Thread</title></head><body>
+      <script>trackPageView();</script>
+      <style>.hidden { display: none; }</style>
+      <p>Today's Orange Theory workout was a Power Day with rowing intervals.</p>
+      <p>Base pace was 24-26 splits, push pace 21-23.</p>
+    </body></html>`
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      headers: new Map([['content-type', 'text/html; charset=utf-8']]),
+      text: async () => html,
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchPage } = await import('../../server/lib/ai/research')
+    const result = await fetchPage.execute!({ url: 'https://reddit.com/r/orangetheory/thread' }, {} as any) as any
+
+    expect(result.title).toBe('OTF Workout Thread')
+    expect(result.text).toContain('Power Day with rowing intervals')
+    expect(result.text).toContain('24-26 splits')
+    // script/style content must not leak into the parsed text
+    expect(result.text).not.toContain('trackPageView')
+    expect(result.text).not.toContain('display: none')
+  })
+
+  it('returns an error note instead of throwing when the fetch fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+    const { fetchPage } = await import('../../server/lib/ai/research')
+    const result = await fetchPage.execute!({ url: 'https://example.com/unreachable' }, {} as any) as any
+    expect(result.error).toBeDefined()
+    expect(result.text).toBeUndefined()
+  })
+})

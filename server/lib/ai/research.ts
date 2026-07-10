@@ -135,6 +135,57 @@ async function searchWeb(query: string, limit: number): Promise<Source[]> {
   return []
 }
 
+const FETCH_PAGE_DESCRIPTION = `Fetch a specific URL (found via research or provided by the user) and return its parsed text content.
+
+Use this when the answer lives inside a specific page or thread rather than a search snippet — e.g. a Reddit thread, a manufacturer spec page, an article. The 'research' tool can find a link; this tool reads what's actually on it.
+
+Only works on text/HTML pages — not images, videos, PDFs, or pages requiring login.`
+
+const MAX_PAGE_TEXT_LENGTH = 6000
+
+function htmlToText(html: string): string {
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<\/(p|div|br|li|h[1-6]|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]*\n+/g, '\n\n')
+    .trim()
+  return text.length > MAX_PAGE_TEXT_LENGTH ? text.slice(0, MAX_PAGE_TEXT_LENGTH) + '…' : text
+}
+
+export const fetchPage = tool({
+  description: FETCH_PAGE_DESCRIPTION,
+  inputSchema: z.object({
+    url: z.string().describe('The exact URL to fetch and read, usually found via a prior research call.'),
+  }),
+  execute: async ({ url }) => {
+    try {
+      const resp = await fetch(url, { signal: AbortSignal.timeout(12_000) })
+      if (!resp.ok) return { url, error: `Fetch failed: HTTP ${resp.status}` }
+      const html = await resp.text()
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
+      return {
+        url,
+        title: titleMatch ? titleMatch[1].trim() : null,
+        text: htmlToText(html),
+      }
+    } catch (e: unknown) {
+      console.error(`[mx4] fetchPage failed for ${url}:`, e)
+      logResearchFailure(`fetchPage failed for "${url}": ${errorDetail(e)}`)
+      return { url, error: 'Could not fetch this page — it may be unreachable or block automated requests.' }
+    }
+  },
+})
+
 export const research = tool({
   description: RESEARCH_DESCRIPTION,
   inputSchema: z.object({

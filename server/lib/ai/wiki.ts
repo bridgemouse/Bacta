@@ -51,7 +51,7 @@ export function archiveWikiPageSync(name: string): void {
   fs.copyFileSync(srcPath, path.join(archiveDir, `${date}-${name}.md`))
 }
 
-const PATTERN_PAGES: Record<string, string> = {
+export const PATTERN_PAGES: Record<string, string> = {
   'hrv-patterns':        '# HRV Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
   'sleep-patterns':      '# Sleep Patterns\n_(MX-4 will populate this as patterns emerge)_\n',
   'training-patterns':   '# Training Patterns\n_(MX-4 will populate this as patterns emerge)_\n',

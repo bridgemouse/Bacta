@@ -13,7 +13,11 @@ describe('HEARTBEAT.md.example — Wiki Management Protocol page naming', () => 
     )
 
     for (const name of Object.keys(PATTERN_PAGES)) {
-      expect(template).toContain(name)
+      // Backtick-wrapped, matching how the protocol actually references page names —
+      // a bare substring check would pass for "correlations" even if its specific
+      // reference here were missing, since the word already appears elsewhere in the
+      // template as unrelated prose ("cross-domain correlations").
+      expect(template).toContain(`\`${name}\``)
     }
   })
 })

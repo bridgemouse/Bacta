@@ -17,6 +17,11 @@ function makeFetch(responses: Array<object>) {
     if (url === '/api/settings') {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
     }
+    if (url.endsWith('/status')) {
+      // The on-mount resume check (#114) hits this before any click — fixed response
+      // so it doesn't consume a slot meant for the /api/insights/:section sequence below.
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ error: null, running: false }) } as Response)
+    }
     const resp = responses[Math.min(getCallCount, responses.length - 1)]
     getCallCount++
     return Promise.resolve({ ok: true, json: () => Promise.resolve(resp) } as Response)
@@ -344,6 +349,12 @@ describe('MX4Briefing — handleRefresh error toast', () => {
       </ToastProvider>
     )
 
+    // The on-mount resume check (#114) legitimately calls status once on its own —
+    // it doesn't surface a toast since the response has no `running: true`.
+    await act(async () => { await Promise.resolve() })
+    expect(screen.queryByText(/stale error from a previous run/)).not.toBeInTheDocument()
+    const callsAfterMount = statusMock.mock.calls.length
+
     await act(async () => {
       fireEvent.click(screen.getByText('REFRESH ›'))
     })
@@ -351,11 +362,11 @@ describe('MX4Briefing — handleRefresh error toast', () => {
     expect(screen.getByText(/already running/i)).toBeInTheDocument()
     expect(screen.queryByText(/stale error from a previous run/)).not.toBeInTheDocument()
 
-    // Advance well past a poll interval — status must never be checked for a rejected trigger.
+    // Advance well past a poll interval — status must never be checked again for a rejected trigger.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000)
     })
-    expect(statusMock).not.toHaveBeenCalled()
+    expect(statusMock).toHaveBeenCalledTimes(callsAfterMount)
   })
 })
 
@@ -436,6 +447,44 @@ describe('MX4Briefing — handleRefresh failure feedback', () => {
     expect(screen.getByText('RUNNING ›')).toBeInTheDocument()
 
     vi.useRealTimers()
+  })
+})
+
+describe('MX4Briefing — resume in-progress run on mount', () => {
+  const liveBriefing = {
+    tone: 'POSITIVE' as const,
+    headline: 'Systems nominal.',
+    summary: 'Everything looks good today.',
+    body: '## DIRECTIVE\nKeep it up.',
+    recommendation: 'Train as planned.',
+    flags: [],
+  }
+
+  it('shows RUNNING instead of REFRESH on mount when the server reports a run already in progress', async () => {
+    // Bug: refreshState is component-local state, only ever set inside handleRefresh's
+    // own closure. Remounting (e.g. navigate away and back while a refresh-all run is
+    // still going server-side) always starts at idle, with no on-mount check of actual
+    // server-side run status.
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/mx4/run/home/status') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ error: null, running: true }) } as Response)
+      }
+      // Never resolves — the poll loop this triggers shouldn't matter for this assertion.
+      return new Promise(() => {})
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.home} liveData={liveBriefing} section="home" />
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText(/RUNNING/)).toBeInTheDocument()
+    expect(screen.queryByText('REFRESH ›')).not.toBeInTheDocument()
   })
 })
 

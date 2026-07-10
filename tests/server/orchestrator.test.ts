@@ -81,6 +81,19 @@ describe('runOrchestrator', () => {
     expect(firstCallArgs.tools).not.toHaveProperty('readAllWikiPages')
   })
 
+  it('instructs the model that the headline must not restate the body\'s opening sentence', async () => {
+    vi.clearAllMocks()
+    const { generateObject } = await import('ai')
+    const mockGenerateObject = vi.mocked(generateObject)
+
+    const { runOrchestrator } = await import('../../server/lib/ai/orchestrator')
+    await runOrchestrator()
+
+    const firstCallArgs = mockGenerateObject.mock.calls[0][0] as { prompt: string }
+    expect(firstCallArgs.prompt).toContain('headline')
+    expect(firstCallArgs.prompt.toLowerCase()).toContain('must not restate')
+  })
+
   it('each briefing row has a generated_at timestamp and model name', async () => {
     const { default: db } = await import('../../server/db/client')
     const row = db.prepare('SELECT generated_at, model FROM mx4_briefings WHERE section = ?').get('recovery') as { generated_at: string; model: string }

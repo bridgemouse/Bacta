@@ -3,10 +3,14 @@ import request from 'supertest'
 
 process.env.DB_PATH = ':memory:'
 
-vi.mock('../../server/lib/ai/orchestrator', () => ({
-  runOrchestrator: vi.fn().mockResolvedValue(undefined),
-  loadSystemPrompt: vi.fn().mockReturnValue('You are MX-4.'),
-}))
+vi.mock('../../server/lib/ai/orchestrator', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../server/lib/ai/orchestrator')>()
+  return {
+    ...actual,
+    runOrchestrator: vi.fn().mockResolvedValue(undefined),
+    loadSystemPrompt: vi.fn().mockReturnValue('You are MX-4.'),
+  }
+})
 
 vi.mock('../../server/lib/ai/vaultClient', () => ({
   getVaultTools: vi.fn().mockResolvedValue({}),
@@ -116,6 +120,27 @@ describe('MX-4 Chat API', () => {
     const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string; tools: Record<string, unknown> }
     expect(firstCallArgs.system).toContain('Wiki Knowledge')
     expect(firstCallArgs.tools).not.toHaveProperty('readAllWikiPages')
+  })
+
+  it('includes today\'s logged activities in the chat system prompt, matching briefing awareness', async () => {
+    const { streamText } = await import('ai')
+    vi.mocked(streamText).mockClear()
+
+    const { default: db } = await import('../../server/db/client')
+    const today = new Date().toLocaleDateString('en-CA')
+    db.prepare(
+      `INSERT INTO health_activities (activity_id, source, date, start_time, name, type_key, duration_s)
+       VALUES (?, 'garmin', ?, ?, ?, 'running', 1800)`
+    ).run('act-same-day-test', today, `${today}T07:00:00`, 'Morning Run')
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'What should I do today?', sessionId: 'sess-activity-context-test' })
+
+    const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string }
+    expect(firstCallArgs.system).toContain("Today's Logged Activities")
+    expect(firstCallArgs.system).toContain('Morning Run')
   })
 
   it('POST /api/mx4/chat/seed inserts assistant message and returns ok', async () => {

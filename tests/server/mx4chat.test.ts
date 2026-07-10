@@ -45,6 +45,7 @@ vi.mock('ai', async (importOriginal) => {
     generateText: vi.fn().mockResolvedValue({
       text: '[MX-4 ARCHIVE] Earlier conversation compressed.',
     }),
+    stepCountIs: vi.fn(actual.stepCountIs),
   }
 })
 
@@ -133,6 +134,26 @@ describe('MX-4 Chat API', () => {
 
     const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { tools: Record<string, unknown> }
     expect(firstCallArgs.tools).toHaveProperty('fetchPage')
+  })
+
+  it('budgets enough steps for a two-hop research-then-fetchPage lookup to still produce a final answer', async () => {
+    // fetchPage (#113) turned research into a potential multi-hop workflow: search, then
+    // read a candidate page, sometimes retry with another candidate. stepCountIs stops
+    // once N steps complete regardless of whether the last step was a tool call — so a
+    // budget sized for single-hop research (the old value, 8) can be entirely consumed by
+    // tool calls, leaving zero steps for the model to ever produce text (closes generic
+    // "couldn't complete a response" failures on real-world lookups).
+    const { stepCountIs } = await import('ai')
+    vi.mocked(stepCountIs).mockClear()
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'Look up what Orange Theory 2G and 3G classes entail', sessionId: 'sess-step-budget-test' })
+
+    expect(vi.mocked(stepCountIs)).toHaveBeenCalledWith(expect.any(Number))
+    const stepCount = vi.mocked(stepCountIs).mock.calls[0][0] as number
+    expect(stepCount).toBeGreaterThanOrEqual(12)
   })
 
   it('includes today\'s logged activities in the chat system prompt, matching briefing awareness', async () => {

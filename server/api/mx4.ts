@@ -301,7 +301,13 @@ mx4Router.post('/chat', async (req, res) => {
       // spliced into `system` above via assembleSystemPrompt (see #75).
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tools: { queryDb, writeWikiPage, listWikiPages, archiveWikiPage, research, fetchPage, ...vaultTools } as any,
-      stopWhen: stepCountIs(8),
+      // 8 was sized for single-hop research (find + summarize snippets). fetchPage (#113)
+      // made research a genuine multi-hop workflow (search, read a candidate page, maybe
+      // retry with another candidate) — stepCountIs stops once N steps complete regardless
+      // of whether the last one was a tool call, so a tight budget can be entirely consumed
+      // by tool calls, leaving no step for the model to ever produce text. Matches
+      // orchestrator.ts's stepCountIs(12) for its own richer tool-loop.
+      stopWhen: stepCountIs(12),
     })
 
     let fullText = ''

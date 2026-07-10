@@ -76,6 +76,16 @@ function aerobicBenefit(te: number | null): string | null {
   return null
 }
 
+function BatteryGlyph({ color, size = 10 }: { color: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }} data-testid="battery-glyph">
+      <rect x="2" y="7" width="17" height="10" rx="2" fill="none" stroke={color} strokeWidth="1.7" />
+      <rect x="20" y="10" width="2.5" height="4" rx="1" fill={color} />
+      <path d="M11 9.5 L7.5 13 L10.5 13 L9 15.5" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function ActivityGlyph({ sigil, color, size = 16 }: { sigil: Sigil; color: string; size?: number }) {
   const p = { fill: 'none', stroke: color, strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   return (
@@ -319,11 +329,16 @@ function LegCard({ leg, accent }: { leg: ActivityLeg; accent: string }) {
               <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, fontWeight: 400 }}> avg bpm</span>
             </div>
           )}
-          <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginTop: 2 }}>
-            {[
-              leg.max_hr != null && `max ${leg.max_hr}`,
-              battDiff != null && `${battDiff}🔋`,
-            ].filter(Boolean).join(' · ')}
+          <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginTop: 2,
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+            {leg.max_hr != null && <span>max {leg.max_hr}</span>}
+            {battDiff != null && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                {leg.max_hr != null && <span style={{ opacity: 0.6 }}>·</span>}
+                <BatteryGlyph color={hexA(color, 0.8)} size={10} />
+                {battDiff}
+              </span>
+            )}
           </div>
         </div>
       </div>

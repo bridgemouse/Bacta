@@ -1,5 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
+import dns from 'dns'
+import net from 'net'
 import { getSetting } from '../settings'
 import { logEvent } from '../logger'
 
@@ -134,6 +136,110 @@ async function searchWeb(query: string, limit: number): Promise<Source[]> {
   }
   return []
 }
+
+const FETCH_PAGE_DESCRIPTION = `Fetch a specific URL (found via research or provided by the user) and return its parsed text content.
+
+Use this when the answer lives inside a specific page or thread rather than a search snippet — e.g. a Reddit thread, a manufacturer spec page, an article. The 'research' tool can find a link; this tool reads what's actually on it.
+
+Only works on text/HTML pages — not images, videos, PDFs, or pages requiring login.`
+
+const MAX_PAGE_TEXT_LENGTH = 6000
+const MAX_RESPONSE_BYTES = 5 * 1024 * 1024  // 5MB — a malicious/oversized page shouldn't buffer unbounded in memory
+
+// SSRF guard: fetchPage's target URL is model-chosen and can be seeded by
+// untrusted content (a research result, a page MX-4 already read). The home
+// LAN is not a trust boundary (docs/SECURITY.md), so the server must refuse
+// to fetch internal/loopback/link-local addresses on its own behalf, not
+// rely on prompt instructions alone.
+const BLOCKED_HOSTNAMES = new Set(['localhost', '0.0.0.0'])
+
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split('.').map(Number)
+  if (parts.length !== 4 || parts.some(p => Number.isNaN(p))) return false
+  const [a, b] = parts
+  if (a === 127) return true                        // loopback
+  if (a === 10) return true                          // 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true    // 172.16.0.0/12
+  if (a === 192 && b === 168) return true             // 192.168.0.0/16
+  if (a === 169 && b === 254) return true             // link-local (incl. cloud metadata)
+  if (a === 100 && b >= 64 && b <= 127) return true    // CGNAT
+  if (a === 0) return true                            // "this" network
+  return false
+}
+
+function isPrivateIPv6(ip: string): boolean {
+  const lower = ip.toLowerCase()
+  if (lower === '::1') return true
+  if (lower.startsWith('fc') || lower.startsWith('fd')) return true  // fc00::/7 (unique local)
+  if (lower.startsWith('fe80')) return true                          // link-local
+  if (lower.startsWith('::ffff:')) return isPrivateIPv4(lower.slice(7))
+  return false
+}
+
+async function assertPublicUrl(rawUrl: string): Promise<void> {
+  const parsed = new URL(rawUrl)
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`Blocked protocol: ${parsed.protocol}`)
+  }
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, '')
+  if (BLOCKED_HOSTNAMES.has(hostname.toLowerCase())) {
+    throw new Error('Blocked local/internal hostname')
+  }
+  const ipVersion = net.isIP(hostname)
+  if (ipVersion === 4 && isPrivateIPv4(hostname)) throw new Error('Blocked private IPv4 target')
+  if (ipVersion === 6 && isPrivateIPv6(hostname)) throw new Error('Blocked private IPv6 target')
+  if (ipVersion === 0) {
+    const { address, family } = await dns.promises.lookup(hostname)
+    if (family === 4 && isPrivateIPv4(address)) throw new Error('Blocked hostname resolving to a private IPv4')
+    if (family === 6 && isPrivateIPv6(address)) throw new Error('Blocked hostname resolving to a private IPv6')
+  }
+}
+
+function htmlToText(html: string): string {
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<\/(p|div|br|li|h[1-6]|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]*\n+/g, '\n\n')
+    .trim()
+  return text.length > MAX_PAGE_TEXT_LENGTH ? text.slice(0, MAX_PAGE_TEXT_LENGTH) + '…' : text
+}
+
+export const fetchPage = tool({
+  description: FETCH_PAGE_DESCRIPTION,
+  inputSchema: z.object({
+    url: z.string().describe('The exact URL to fetch and read, usually found via a prior research call.'),
+  }),
+  execute: async ({ url }) => {
+    try {
+      await assertPublicUrl(url)
+      const resp = await fetch(url, { signal: AbortSignal.timeout(12_000) })
+      if (!resp.ok) return { url, error: `Fetch failed: HTTP ${resp.status}` }
+      const contentLength = Number(resp.headers?.get?.('content-length'))
+      if (contentLength > MAX_RESPONSE_BYTES) return { url, error: 'Page too large to fetch' }
+      const html = await resp.text()
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
+      return {
+        url,
+        title: titleMatch ? titleMatch[1].trim() : null,
+        text: htmlToText(html),
+      }
+    } catch (e: unknown) {
+      console.error(`[mx4] fetchPage failed for ${url}:`, e)
+      logResearchFailure(`fetchPage failed for "${url}": ${errorDetail(e)}`)
+      return { url, error: 'Could not fetch this page — it may be unreachable or block automated requests.' }
+    }
+  },
+})
 
 export const research = tool({
   description: RESEARCH_DESCRIPTION,

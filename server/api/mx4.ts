@@ -7,7 +7,7 @@ import { loadChatHistory } from '../lib/ai/chat'
 import { getModel } from '../lib/ai/provider'
 import { readAllWikiPagesSync, loadHeartbeat, resetWikiPatternPages, resetAllWikiPages } from '../lib/ai/wiki'
 import { queryDb, writeWikiPage, listWikiPages, archiveWikiPage } from '../lib/ai/tools'
-import { research } from '../lib/ai/research'
+import { research, fetchPage } from '../lib/ai/research'
 import { getVaultTools, isVaultEnabled } from '../lib/ai/vaultClient'
 import { getSetting } from '../lib/settings'
 import { logEvent } from '../lib/logger'
@@ -24,6 +24,8 @@ export function toolLabel(toolName: string, args: Record<string, unknown>): stri
       const q = String(args.query ?? '').slice(0, 50).trim()
       return q ? `SWEEPING ARCHIVES FOR ${q}` : 'SWEEPING ARCHIVES'
     }
+    case 'fetchPage':
+      return 'PULLING PAGE CONTENT'
     case 'readAllWikiPages':
       return 'CONSULTING LOADED MATRICES'
     case 'writeWikiPage': {
@@ -298,7 +300,7 @@ mx4Router.post('/chat', async (req, res) => {
       // readAllWikiPages is deliberately omitted — the same content is already
       // spliced into `system` above via assembleSystemPrompt (see #75).
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tools: { queryDb, writeWikiPage, listWikiPages, archiveWikiPage, research, ...vaultTools } as any,
+      tools: { queryDb, writeWikiPage, listWikiPages, archiveWikiPage, research, fetchPage, ...vaultTools } as any,
       stopWhen: stepCountIs(8),
     })
 

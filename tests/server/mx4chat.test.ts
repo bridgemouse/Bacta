@@ -122,6 +122,19 @@ describe('MX-4 Chat API', () => {
     expect(firstCallArgs.tools).not.toHaveProperty('readAllWikiPages')
   })
 
+  it('offers fetchPage so MX-4 can read a specific page, not just search snippets', async () => {
+    const { streamText } = await import('ai')
+    vi.mocked(streamText).mockClear()
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'Look up my Orange Theory workout thread', sessionId: 'sess-fetchpage-test' })
+
+    const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { tools: Record<string, unknown> }
+    expect(firstCallArgs.tools).toHaveProperty('fetchPage')
+  })
+
   it('includes today\'s logged activities in the chat system prompt, matching briefing awareness', async () => {
     const { streamText } = await import('ai')
     vi.mocked(streamText).mockClear()
@@ -522,6 +535,10 @@ describe('toolLabel', () => {
     const q = 'a'.repeat(60)
     const label = toolLabel('research', { query: q })
     expect(label).toBe(`SWEEPING ARCHIVES FOR ${'a'.repeat(50)}`)
+  })
+
+  it('returns static label for fetchPage', () => {
+    expect(toolLabel('fetchPage', { url: 'https://example.com' })).toBe('PULLING PAGE CONTENT')
   })
 
   it('returns static label for readAllWikiPages', () => {

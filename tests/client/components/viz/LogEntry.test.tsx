@@ -1,7 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { vi } from 'vitest'
 import { LogEntry } from '../../../../client/src/components/viz/LogEntry'
-import type { GarminActivity } from '../../../../client/src/lib/garminApi'
+import type { GarminActivity, ActivityLeg } from '../../../../client/src/lib/garminApi'
+import * as garminApi from '../../../../client/src/lib/garminApi'
 
 const BASE_ACTIVITY: GarminActivity = {
   activity_id: 1,
@@ -241,5 +243,48 @@ describe('LogEntry — full expand with all sections', () => {
     expect(screen.getByText('TRAINING EFFECT')).toBeInTheDocument()
     expect(screen.getByText('HR ZONES')).toBeInTheDocument()
     expect(screen.getByText('RUNNING DYNAMICS')).toBeInTheDocument()
+  })
+})
+
+const MULTI_SPORT_ACTIVITY: GarminActivity = {
+  ...BASE_ACTIVITY,
+  type_key: 'multi_sport',
+}
+
+const LEG_WITH_BATTERY_DRAIN: ActivityLeg = {
+  leg_id: 1,
+  activity_id: 1,
+  leg_index: 0,
+  type_key: 'cycling',
+  start_time: '2026-06-05 07:30:00',
+  duration_s: 1800,
+  distance_m: 10000,
+  calories: 300,
+  avg_hr: 140,
+  max_hr: 160,
+  aerobic_te: null,
+  anaerobic_te: null,
+  training_load: null,
+  body_battery_diff: -18,
+  zone1_s: null, zone2_s: null, zone3_s: null, zone4_s: null, zone5_s: null,
+  run_cadence: null, run_stride_cm: null, run_vert_osc_cm: null, run_gct_ms: null, run_power_w: null,
+  row_stroke_rate: null, row_power_w: null, row_strokes: null,
+}
+
+describe('LogEntry — multisport leg body battery display', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('shows a themed icon for body battery delta instead of a raw emoji', async () => {
+    vi.spyOn(garminApi, 'fetchActivityLegs').mockResolvedValue([LEG_WITH_BATTERY_DRAIN])
+    const user = userEvent.setup()
+    const { container } = render(<LogEntry activity={MULTI_SPORT_ACTIVITY} accent="#fb923c" />)
+    await user.click(screen.getByRole('button'))
+
+    await waitFor(() => expect(screen.getByText(/-18/)).toBeInTheDocument())
+
+    expect(container.textContent).not.toContain('🔋')
+    expect(container.querySelector('[data-testid="battery-glyph"]')).not.toBeNull()
   })
 })

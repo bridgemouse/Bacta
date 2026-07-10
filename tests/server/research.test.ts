@@ -126,3 +126,108 @@ describe('MX-4 research tool', () => {
     expect(rows.some(r => r.message.includes('[object Object]'))).toBe(false)
   })
 })
+
+describe('MX-4 fetchPage tool', () => {
+  beforeAll(async () => {
+    const { migrate } = await import('../../server/db/migrate')
+    migrate()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('fetches a specific URL and returns its parsed text content, not just a search snippet', async () => {
+    const html = `<html><head><title>OTF Workout Thread</title></head><body>
+      <script>trackPageView();</script>
+      <style>.hidden { display: none; }</style>
+      <p>Today's Orange Theory workout was a Power Day with rowing intervals.</p>
+      <p>Base pace was 24-26 splits, push pace 21-23.</p>
+    </body></html>`
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      headers: new Map([['content-type', 'text/html; charset=utf-8']]),
+      text: async () => html,
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchPage } = await import('../../server/lib/ai/research')
+    const result = await fetchPage.execute!({ url: 'https://reddit.com/r/orangetheory/thread' }, {} as any) as any
+
+    expect(result.title).toBe('OTF Workout Thread')
+    expect(result.text).toContain('Power Day with rowing intervals')
+    expect(result.text).toContain('24-26 splits')
+    // script/style content must not leak into the parsed text
+    expect(result.text).not.toContain('trackPageView')
+    expect(result.text).not.toContain('display: none')
+  })
+
+  it('returns an error note instead of throwing when the fetch fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+    const { fetchPage } = await import('../../server/lib/ai/research')
+    const result = await fetchPage.execute!({ url: 'https://example.com/unreachable' }, {} as any) as any
+    expect(result.error).toBeDefined()
+    expect(result.text).toBeUndefined()
+  })
+
+  it('refuses to buffer an oversized response body instead of reading it fully into memory', async () => {
+    const textFn = vi.fn(async () => 'x'.repeat(100))
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      headers: { get: (h: string) => (h === 'content-length' ? String(50 * 1024 * 1024) : null) },
+      text: textFn,
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchPage } = await import('../../server/lib/ai/research')
+    const result = await fetchPage.execute!({ url: 'https://example.com/huge-page' }, {} as any) as any
+
+    expect(result.error).toBeDefined()
+    expect(textFn).not.toHaveBeenCalled()
+  })
+
+  describe('SSRF guard', () => {
+    // A malicious/compromised web page found via `research` (or a directly-injected
+    // prompt) could instruct MX-4 to fetch an internal address — the server, not the
+    // browser, would make that request. docs/SECURITY.md explicitly treats research
+    // results as a prompt-injection vector and the LAN as untrusted, so this must be
+    // blocked at the network-target level, not just by prompt instructions.
+    const blockedUrls = [
+      'http://127.0.0.1/secret',
+      'http://localhost:3000/api/settings',
+      'http://192.168.1.1/admin',
+      'http://10.0.0.5/internal',
+      'http://169.254.169.254/latest/meta-data/',
+      'http://[::1]/secret',
+      'file:///etc/passwd',
+    ]
+
+    for (const url of blockedUrls) {
+      it(`refuses to fetch ${url}`, async () => {
+        const fetchMock = vi.fn()
+        vi.stubGlobal('fetch', fetchMock)
+
+        const { fetchPage } = await import('../../server/lib/ai/research')
+        const result = await fetchPage.execute!({ url }, {} as any) as any
+
+        expect(result.error).toBeDefined()
+        expect(result.text).toBeUndefined()
+        expect(fetchMock).not.toHaveBeenCalled()
+      })
+    }
+
+    it('still allows a normal public https URL through', async () => {
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        text: async () => '<html><head><title>t</title></head><body>ok</body></html>',
+      }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { fetchPage } = await import('../../server/lib/ai/research')
+      const result = await fetchPage.execute!({ url: 'https://example.com/page' }, {} as any) as any
+
+      expect(result.error).toBeUndefined()
+      expect(fetchMock).toHaveBeenCalledOnce()
+    })
+  })
+})

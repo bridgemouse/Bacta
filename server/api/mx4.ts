@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { streamText, stepCountIs } from 'ai'
-import { runOrchestrator, runSectionById, loadSystemPrompt } from '../lib/ai/orchestrator'
+import { runOrchestrator, runSectionById, loadSystemPrompt, buildActivityContext } from '../lib/ai/orchestrator'
 import { SECTIONS } from '../lib/ai/sections'
 import { assembleSystemPrompt } from '../lib/ai/prompt'
 import { loadChatHistory } from '../lib/ai/chat'
@@ -162,10 +162,13 @@ mx4Router.post('/run/:section', (req, res) => {
 })
 
 // GET /api/mx4/run/:section/status — last categorized failure for a section's most
-// recent run, if any. Lets the client surface a toast for the fire-and-forget /run/:section.
+// recent run, if any, plus whether a run is currently in flight (orchestratorRunning is
+// a single global guard, not per-section, but only one run happens at a time by design —
+// see #114). Lets the client surface a toast for the fire-and-forget /run/:section, and
+// resume the RUNNING UI state on remount instead of always defaulting to idle.
 mx4Router.get('/run/:section/status', (req, res) => {
   const { section } = req.params
-  res.json({ error: sectionRunErrors[section] ?? null })
+  res.json({ error: sectionRunErrors[section] ?? null, running: orchestratorRunning })
 })
 
 mx4Router.get('/chat/:sessionId', (req, res) => {
@@ -267,7 +270,11 @@ mx4Router.post('/chat', async (req, res) => {
   const systemBase = loadSystemPrompt()
   // Chat is where MX-4 curates his wiki (writeWikiPage / SYNC WIKI), so include
   // the wiki-curation standard here.
-  const system = assembleSystemPrompt(systemBase, heartbeat, wikiContext, true)
+  // Same-day activities already reflect their impact in the metrics MX-4 has
+  // access to — without this, chat has no way to know today isn't a blank slate
+  // (briefings already get this via buildActivityContext, see #112).
+  const activityContext = buildActivityContext(new Date().toLocaleDateString('en-CA'))
+  const system = assembleSystemPrompt(systemBase, heartbeat, wikiContext, true) + activityContext
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')

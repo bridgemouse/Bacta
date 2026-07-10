@@ -11,6 +11,7 @@ import { Gauge } from '../components/viz/Gauge'
 import { HeadlineCard } from '../components/viz/HeadlineCard'
 import { HealthStatusTile } from '../components/viz/HealthStatusTile'
 import { Delta } from '../components/viz/Delta'
+import { HRVRangeBadge } from '../components/viz/HRVRangeBadge'
 import { Rail } from '../components/viz/Rail'
 import { TrendRow } from '../components/viz/TrendRow'
 import { Bars7 } from '../components/viz/Bars7'
@@ -245,29 +246,7 @@ function RecoveryOverview() {
             </div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginTop: 4 }}>vs {rec.hrv.avg}ms week avg</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 160 }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 5,
-              background: hexA(inHRVRange ? COLORS.green : COLORS.amber, 0.12),
-              border: `1px solid ${hexA(inHRVRange ? COLORS.green : COLORS.amber, 0.42)}`,
-            }}>
-              <StatusCore accent={inHRVRange ? COLORS.green : COLORS.amber} size={5} />
-              <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: inHRVRange ? COLORS.green : COLORS.amber }}>
-                {inHRVRange ? 'IN RANGE' : 'BELOW'}
-              </span>
-            </div>
-            {rec.hrv.direction && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 5,
-                background: hexA(dirColor, 0.11), border: `1px solid ${hexA(dirColor, 0.38)}`,
-              }}>
-                <StatusCore accent={dirColor} size={5} />
-                <span style={{ fontFamily: FONT_MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: dirColor }}>
-                  {rec.hrv.direction.label}
-                </span>
-              </div>
-            )}
-          </div>
+          <HRVRangeBadge inRange={inHRVRange} direction={rec.hrv.direction} dirColor={dirColor} />
         </div>
         <Sparkline data={rec.hrv.trend} accent={A} w={280} h={36} avgLine={rec.hrv.avg ?? undefined} />
         {rec.hrvBaselineLow != null && rec.hrvBaselineHigh != null && (

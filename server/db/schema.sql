@@ -10,15 +10,67 @@ CREATE TABLE IF NOT EXISTS health_snapshots (
   UNIQUE(date, metric, source)
 );
 
-CREATE TABLE IF NOT EXISTS macrofactor_snapshots (
+-- Reference food/ingredient data. Bulk-imported from USDA FoodData Central (SR Legacy +
+-- Foundation Foods) and Open Food Facts, plus user-saved custom/ad-hoc foods (source='custom').
+-- Macro values are per (default_qty, default_unit) — e.g. per 100g — mirroring how both
+-- USDA and OFF publish their data, so import requires no unit conversion at write time.
+CREATE TABLE IF NOT EXISTS foods (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  source       TEXT NOT NULL,              -- 'usda' | 'openfoodfacts' | 'custom'
+  source_id    TEXT,                       -- USDA fdcId or OFF barcode/code; NULL for custom foods
+  name         TEXT NOT NULL,
+  brand        TEXT,                       -- packaged/branded foods only; NULL for generic/whole foods
+  default_qty  REAL NOT NULL DEFAULT 100,  -- the quantity the macro columns below refer to
+  default_unit TEXT NOT NULL DEFAULT 'g',
+  calories     REAL,
+  protein_g    REAL,
+  carbs_g      REAL,
+  fat_g        REAL,
+  fiber_g      REAL,
+  source_json  TEXT,                       -- raw import payload — mirrors health_snapshots' source_json,
+                                            -- lets a future micronutrient feature mine
+                                            -- fields we don't surface yet without re-importing
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(source, source_id)
+);
+CREATE INDEX IF NOT EXISTS idx_foods_name ON foods(name);
+
+-- Logged diary entries. One row per food per meal per day — the same multi-row-per-day
+-- shape as health_activities, for the same reason (EAV can't represent it).
+-- Nutrient columns are a denormalized snapshot at log time (mirrors SparkyFitness's
+-- food_entries design): editing or re-importing a `foods` row later must never silently
+-- change what a past day's log says was eaten.
+CREATE TABLE IF NOT EXISTS food_log_entries (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  date        TEXT NOT NULL,
-  metric      TEXT NOT NULL,
-  value       REAL,
-  unit        TEXT,
-  source_json TEXT,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(date, metric)
+  date        TEXT NOT NULL,               -- ISO date this entry counts toward
+  meal_type   TEXT NOT NULL,               -- 'breakfast' | 'lunch' | 'dinner' | 'snack' | free-form label
+  logged_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  food_id     INTEGER REFERENCES foods(id),-- NULL for a fully ad-hoc entry (FR3)
+  name        TEXT NOT NULL,               -- denormalized display name, always present
+  quantity    REAL NOT NULL,
+  unit        TEXT NOT NULL,
+  calories    REAL,
+  protein_g   REAL,
+  carbs_g     REAL,
+  fat_g       REAL,
+  fiber_g     REAL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_food_log_entries_date ON food_log_entries(date);
+
+-- Daily macro/calorie targets. Date-keyed (not a single mutable settings row) so target
+-- changes over months stay visible in history — same reasoning as user_goals in SparkyFitness,
+-- and the same "don't overwrite history" instinct behind health_snapshots being date-keyed.
+-- "Current" targets = the row with the latest date <= the date being queried.
+CREATE TABLE IF NOT EXISTS nutrition_targets (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  date       TEXT NOT NULL UNIQUE,         -- date this target set takes effect from
+  calories   REAL,
+  protein_g  REAL,
+  carbs_g    REAL,
+  fat_g      REAL,
+  fiber_g    REAL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS manual_inputs (

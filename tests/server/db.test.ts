@@ -27,11 +27,20 @@ describe('schema', () => {
     expect(row).toBeTruthy()
   })
 
-  it('creates macrofactor_snapshots table', () => {
+  it('drops the dead macrofactor_snapshots table', () => {
     const row = db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='macrofactor_snapshots'"
     ).get()
-    expect(row).toBeTruthy()
+    expect(row).toBeFalsy()
+  })
+
+  it('creates foods, food_log_entries, nutrition_targets tables', () => {
+    for (const name of ['foods', 'food_log_entries', 'nutrition_targets']) {
+      const row = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+      ).get(name)
+      expect(row).toBeTruthy()
+    }
   })
 
   it('creates blood_work table', () => {

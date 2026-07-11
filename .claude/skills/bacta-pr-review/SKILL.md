@@ -138,6 +138,22 @@ Squash-merge is this repo's convention (one commit per PR, `(#N)` suffix,
 confirmed in `git log`). If the PR's body says `closes #N`, verify GitHub
 actually closed the linked issue after merge.
 
+**If the PR touched `client/src`, the merge is not done yet.** `bacta-api`
+auto-reloads server files via `tsx watch`, but the client is a static build
+served from `dist/client` — merging to `main` only updates source, not the
+bundle actually sent to the phone. Rebuild and deploy now:
+
+```bash
+cd /opt/bacta && npm run build:client
+```
+
+**A #114 regression report on 2026-07-11 turned out to be exactly this:**
+three merged client PRs (#120, #124, #127) sat un-deployed for ~17 hours
+because this phase never rebuilt the client — the user reproduced a bug
+that had already been fixed in source. Do not skip this step because "the
+merge succeeded" — a successful `git merge`/`gh pr merge` says nothing
+about what the phone is currently running.
+
 ---
 
 ## Phase 5 — Verify Baseline Before Next PR
@@ -151,6 +167,15 @@ npm test && npx tsc --noEmit && npx tsc -p tsconfig.server.json --noEmit
 broke something is the next review's problem to inherit if you don't
 catch it here — especially likely right after resolving a collision-zone
 conflict.
+
+If any PR merged this session touched `client/src` and you haven't rebuilt
+since, `dist/client/index.html`'s mtime will predate that merge commit —
+check it before moving on:
+
+```bash
+stat -c '%y' dist/client/index.html
+git log -1 --format='%ci' HEAD
+```
 
 Clean up: delete any local worktree/branch for the PR just merged.
 
@@ -189,6 +214,7 @@ Clean up: delete any local worktree/branch for the PR just merged.
 | File flagged as collision zone hits a merge conflict | Combine both sides' logic, never pick one blind |
 | Merge just resolved a conflict | Re-run full suite before calling it done |
 | About to start next PR | Confirm main is still green first |
+| Merged PR touched `client/src` | Run `npm run build:client` before calling the merge done — source on main ≠ deployed |
 
 ## Common Mistakes
 
@@ -200,3 +226,4 @@ Clean up: delete any local worktree/branch for the PR just merged.
 | Reporting a confirmed bug without fixing it | Leaves the backlog-clearing session no better than an unreviewed merge |
 | Fixing an out-of-diff bug without asking | Scope-creeps the PR past what the user agreed to |
 | Using `git merge -X ours/theirs` on a collision file | Same failure as manual blind resolution, just automated |
+| Merging a client-side PR without rebuilding | `main` has the fix, the phone doesn't — user reports a "regression" that's actually just an undeployed merge |

@@ -89,7 +89,19 @@ Query as `SELECT date, value FROM health_snapshots WHERE metric = '<name>' ORDER
 
 **`health_activity_legs`** (children of `multi_sport` parents): `leg_id`, `activity_id` (FK), `leg_index`, `type_key` (mobility, strength_training, running, …), `start_time`, `duration_s`, `distance_m`, `calories`, `avg_hr`, `max_hr`, `aerobic_te`/`anaerobic_te`, `training_load`, `body_battery_diff`, `zone1_s`…`zone5_s`, running dynamics, rowing fields. A `multi_sport` parent's real work is in its legs — query legs for per-discipline detail.
 
-**Other tables:** `manual_inputs` (date, readiness 1–5, caffeine_mg, supplements) — empty until the Daily Log ships. `blood_work` (date, marker, value, unit, reference_range, source_file) — empty until labs are imported. `macrofactor_snapshots` — empty until Nutrition ships. `mx4_briefings` (section, content_json, generated_at, model) — your own completed briefings; query for cross-channel synthesis.
+**Other tables:** `manual_inputs` (date, readiness 1–5, caffeine_mg, supplements) — empty until the Daily Log ships. `blood_work` (date, marker, value, unit, reference_range, source_file) — empty until labs are imported. `mx4_briefings` (section, content_json, generated_at, model) — your own completed briefings; query for cross-channel synthesis.
+
+---
+
+## 3.1 Data Dictionary — Nutrition
+
+Unlike the biometric tables above, these are **normal (non-EAV) tables** — query columns directly, do not filter by a `metric` column.
+
+**`food_log_entries`** (one row per logged food per meal per day): `id`, `date` (ISO date the entry counts toward), `meal_type` (breakfast/lunch/dinner/snack, or a free-form label), `logged_at` (timestamp within the day), `food_id` (FK to `foods`, NULL for a fully ad-hoc entry), `name` (denormalized display name, always present), `quantity`, `unit`, `calories`, `protein_g`, `carbs_g`, `fat_g`, `fiber_g`. Nutrient columns are a **denormalized snapshot at log time** — editing or re-importing a `foods` row later never changes what a past day's log says was eaten. Query example: `SELECT date, meal_type, name, calories, protein_g, carbs_g, fat_g FROM food_log_entries WHERE date >= date('now', '-14 days') ORDER BY date, logged_at`.
+
+**`nutrition_targets`** (one row per date the targets changed, not a single mutable settings row): `id`, `date`, `calories`, `protein_g`, `carbs_g`, `fat_g`, `fiber_g`. "Current" target for a given date = the row with the latest `date <= <that date>` — never assume the most recently-inserted row is current if querying a past date.
+
+**`foods`** (reference/ingredient data, not user logs — rarely needs querying directly by you): `id`, `source` (`'usda'` / `'openfoodfacts'` / `'custom'`), `source_id`, `name`, `brand`, `default_qty`/`default_unit` (the quantity the macro columns refer to), `calories`, `protein_g`, `carbs_g`, `fat_g`, `fiber_g`, `source_json`. Empty except for user-saved custom foods until a bulk import ships (not yet built).
 
 ---
 

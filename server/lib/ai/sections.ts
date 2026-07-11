@@ -63,6 +63,22 @@ body: Use ## VO2 MAX TRAJECTORY, ## LOAD ANALYSIS, ## INTENSITY PATTERN, ## DIRE
 Your entire response must be the analysis prose itself — never a summary of actions taken or a note about tools/wiki.`,
   },
   {
+    id: 'nutrition',
+    name: 'Nutrition',
+    metrics: [], // no health_snapshots metrics involved — see food_log_entries/nutrition_targets below
+    includeManual: false,
+    promptAddendum: `Pull today's and the last 14 days of logged food via queryDb against food_log_entries (NOT health_snapshots — this is a normal table, not EAV: SELECT date, meal_type, name, calories, protein_g, carbs_g, fat_g FROM food_log_entries WHERE date >= date('now', '-14 days') ORDER BY date, logged_at). Pull the effective target via nutrition_targets (most recent row with date <= today).
+
+Sum today's logged totals against today's target — lead with whether the day is on track, over, or under, and by how much on the metric that matters most (usually protein or calories, use judgment from the trend). Note any day with zero logged entries as a logging gap, not a zero-calorie day — do not narrate a gap as an achievement.
+
+Look for a pattern across the 14-day window: consistent shortfall on a specific macro, meal-timing patterns, or weekend/weekday divergence. Check your wiki for any documented goal (cut/maintain/bulk) before characterizing whether the trend is aligned with intent — do not assume a goal that isn't documented.
+
+summary: 3–5 sentences. Today's target-vs-actual, the most significant multi-day pattern, one concrete action. No headers.
+body: Use ## TODAY, ## PATTERN, ## DIRECTIVE. Bold all metric values. Bullets for multi-point findings.
+
+Your entire response must be the analysis prose itself — never a summary of actions taken or a note about tools/wiki.`,
+  },
+  {
     id: 'home',
     name: 'Home',
     metrics: [],

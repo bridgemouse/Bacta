@@ -72,4 +72,22 @@ describe('SettingsPage — Restart Bacta', () => {
 
     expect(fetch).not.toHaveBeenCalledWith('/api/settings/restart', { method: 'POST' })
   })
+
+  // Every other overlay in the app (Sheet, used by BottomSheet/AskSheet) dismisses
+  // on Escape — ConfirmDialog should match that convention rather than trap the
+  // user with only CANCEL/CONFIRM as exits.
+  test('pressing Escape dismisses the in-app dialog without calling the restart endpoint', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await user.click(await screen.findByText('INSTANCE'))
+    const restartButton = await screen.findByText('RESTART ›')
+    await user.click(restartButton)
+
+    await screen.findByText('CONFIRM')
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByText('CONFIRM')).not.toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalledWith('/api/settings/restart', { method: 'POST' })
+  })
 })

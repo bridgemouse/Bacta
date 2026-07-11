@@ -86,16 +86,27 @@ export function CollapsibleSection({ label, accent, children }: { label: string;
  * turns a "yes/no" gate into a permanent "no" with no visible failure (#134).
  */
 export function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onCancel])
+
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        background: hexA('#000000', 0.6),
+        background: hexA(COLORS.base, 0.75),
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 200,
+        // Below ToastContainer (200) so an in-flight toast (e.g. a sync error)
+        // stays visible over this dialog rather than getting silently covered;
+        // above Sheet (40) so it still sits over BottomSheet/AskSheet.
+        zIndex: 150,
         padding: 24,
       }}
       onClick={onCancel}

@@ -543,6 +543,29 @@ describe('MX-4 Chat API', () => {
       const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string }
       expect(firstCallArgs.system).not.toContain('did not complete')
     })
+
+    it('does not let a SQL LIKE wildcard in sessionId broaden the match to a different session\'s failure', async () => {
+      // sessionId is client-supplied with no format validation beyond non-empty string —
+      // a literal '%' in it must not turn the failure lookup into a wildcard prefix match
+      // that leaks an unrelated session's diagnostic note into this one.
+      const { default: db } = await import('../../server/db/client')
+      db.prepare(
+        `INSERT INTO app_logs (source, level, message, created_at) VALUES (?, ?, ?, ?)`
+      ).run('mx4-chat', 'error',
+        'Chat turn produced no response (session sess-wild-real) | inFlight: fetchPage(url: victim-data)',
+        '2026-07-10 21:00:00')
+
+      const { streamText } = await import('ai')
+      vi.mocked(streamText).mockClear()
+
+      const { app } = await import('../../server/index')
+      await request(app)
+        .post('/api/mx4/chat')
+        .send({ message: 'hello', sessionId: 'sess-wild-%' })
+
+      const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string }
+      expect(firstCallArgs.system).not.toContain('victim-data')
+    })
   })
 })
 

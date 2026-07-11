@@ -264,11 +264,15 @@ function describeToolCall(toolName: string, input: Record<string, unknown>): str
 // framing as buildActivityContext) rather than words attributed to him, and only for
 // the turn immediately following an unresolved failure — not a persistent error banner.
 function getUnresolvedFailureNote(sessionId: string): string {
+  // Exact substring comparison, not LIKE — sessionId is client-supplied with no format
+  // validation beyond non-empty string, and a literal '%' or '_' in it would otherwise
+  // be interpreted as a SQL wildcard, broadening the match to an unrelated session.
+  const prefix = `Chat turn produced no response (session ${sessionId})`
   const failure = db.prepare(
     `SELECT message, created_at FROM app_logs
-     WHERE source = 'mx4-chat' AND level = 'error' AND message LIKE ?
+     WHERE source = 'mx4-chat' AND level = 'error' AND substr(message, 1, length(?)) = ?
      ORDER BY created_at DESC, id DESC LIMIT 1`
-  ).get(`Chat turn produced no response (session ${sessionId})%`) as { message: string; created_at: string } | undefined
+  ).get(prefix, prefix) as { message: string; created_at: string } | undefined
   if (!failure) return ''
 
   const lastReply = db.prepare(

@@ -180,4 +180,54 @@ describe('Nutrition API', () => {
       expect(res.body.remaining.protein_g).toBeCloseTo(180 - 33.8)
     })
   })
+
+  describe('GET /api/nutrition/trend', () => {
+    function daysAgo(n: number): string {
+      return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10)
+    }
+
+    it('zero-fills days with no logged entries within the requested window', async () => {
+      const { default: db } = await import('../../server/db/client')
+      // 5-day window ending today: seed entries on only 2 of those 5 days.
+      db.prepare(`
+        INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g)
+        VALUES (?, 'lunch', 'Trend Test A', 1, 'serving', 500, 20, 50, 10, 5)
+      `).run(daysAgo(3))
+      db.prepare(`
+        INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g)
+        VALUES (?, 'dinner', 'Trend Test B', 1, 'serving', 700, 30, 60, 15, 8)
+      `).run(daysAgo(1))
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/trend').query({ days: 5 })
+
+      expect(res.status).toBe(200)
+      expect(res.body.days.length).toBe(5)
+      expect(res.body.days.map((d: { date: string }) => d.date)).toEqual([
+        daysAgo(4), daysAgo(3), daysAgo(2), daysAgo(1), daysAgo(0),
+      ])
+      expect(res.body.days.find((d: { date: string }) => d.date === daysAgo(4))).toMatchObject({ calories: 0 })
+      expect(res.body.days.find((d: { date: string }) => d.date === daysAgo(3))).toMatchObject({ calories: 500 })
+      expect(res.body.days.find((d: { date: string }) => d.date === daysAgo(2))).toMatchObject({ calories: 0 })
+      expect(res.body.days.find((d: { date: string }) => d.date === daysAgo(1))).toMatchObject({ calories: 700 })
+      expect(res.body.days.find((d: { date: string }) => d.date === daysAgo(0))).toMatchObject({ calories: 0 })
+    })
+
+    it('clamps days to the same 1-30 range as /api/garmin/activities?days=', async () => {
+      const { app } = await import('../../server/index')
+      const tooMany = await request(app).get('/api/nutrition/trend').query({ days: 9999 })
+      expect(tooMany.body.days.length).toBe(30)
+
+      // days=0 is falsy, so — mirroring garmin.ts's `Number(req.query.days) || 7` exactly —
+      // it falls back to the default of 7 rather than clamping to the floor of 1.
+      const zero = await request(app).get('/api/nutrition/trend').query({ days: 0 })
+      expect(zero.body.days.length).toBe(7)
+
+      const negative = await request(app).get('/api/nutrition/trend').query({ days: -5 })
+      expect(negative.body.days.length).toBe(1)
+
+      const missing = await request(app).get('/api/nutrition/trend').query({})
+      expect(missing.body.days.length).toBe(7)
+    })
+  })
 })

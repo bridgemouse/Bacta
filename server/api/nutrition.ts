@@ -294,4 +294,32 @@ nutritionRouter.get('/summary', (req, res) => {
   res.json({ target, actual, remaining })
 })
 
+// GET /api/nutrition/trend?days=N — N-day daily-total history, zero-filled for empty days
+nutritionRouter.get('/trend', (req, res) => {
+  const days = Math.min(Math.max(1, Number(req.query.days) || 7), 30)
+
+  const rows = db.prepare(`
+    SELECT date,
+      COALESCE(SUM(calories), 0)  as calories,
+      COALESCE(SUM(protein_g), 0) as protein_g,
+      COALESCE(SUM(carbs_g), 0)   as carbs_g,
+      COALESCE(SUM(fat_g), 0)     as fat_g,
+      COALESCE(SUM(fiber_g), 0)   as fiber_g
+    FROM food_log_entries
+    WHERE date >= date('now', ?)
+    GROUP BY date
+  `).all(`-${days - 1} days`) as Array<{
+    date: string; calories: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number
+  }>
+
+  const byDate = new Map(rows.map(r => [r.date, r]))
+  const result = []
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
+    result.push(byDate.get(date) ?? { date, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 })
+  }
+
+  res.json({ days: result })
+})
+
 export default nutritionRouter

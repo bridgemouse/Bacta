@@ -80,6 +80,90 @@ export function CollapsibleSection({ label, accent, children }: { label: string;
   )
 }
 
+/**
+ * In-app replacement for window.confirm() — standalone iOS home-screen PWAs
+ * don't reliably present native confirm()/alert() dialogs, which silently
+ * turns a "yes/no" gate into a permanent "no" with no visible failure (#134).
+ */
+export function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onCancel])
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: hexA(COLORS.base, 0.75),
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Below ToastContainer (200) so an in-flight toast (e.g. a sync error)
+        // stays visible over this dialog rather than getting silently covered;
+        // above Sheet (40) so it still sits over BottomSheet/AskSheet.
+        zIndex: 150,
+        padding: 24,
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: COLORS.surfaceElevated,
+          border: `1px solid ${COLORS.line}`,
+          borderRadius: 14,
+          padding: 20,
+          maxWidth: 340,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+        }}
+      >
+        <p style={{ margin: '0 0 18px', fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.5, color: COLORS.text, whiteSpace: 'pre-line' }}>
+          {message}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              letterSpacing: '0.08em',
+              padding: '7px 14px',
+              borderRadius: 7,
+              border: `1px solid ${COLORS.line}`,
+              background: 'transparent',
+              color: COLORS.textSecondary,
+              cursor: 'pointer',
+            }}
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              letterSpacing: '0.08em',
+              padding: '7px 14px',
+              borderRadius: 7,
+              border: `1px solid ${hexA(COLORS.mx4Red, 0.5)}`,
+              background: hexA(COLORS.mx4Red, 0.1),
+              color: COLORS.mx4Red,
+              cursor: 'pointer',
+            }}
+          >
+            CONFIRM
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const cardStyle: React.CSSProperties = {
   background: COLORS.surface,
   borderRadius: 12,
@@ -155,6 +239,7 @@ export function SettingsPage() {
   const [baseUrlInput, setBaseUrlInput] = useState('')
   const [restartStatus, setRestartStatus] = useState<'idle' | 'restarting'>('idle')
   const [priorityList, setPriorityList] = useState<string[]>([...PRIORITY_ALL])
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null)
 
   const refreshStatus = async () => {
     const res = await fetch('/api/integrations/status')
@@ -378,24 +463,34 @@ export function SettingsPage() {
     save('mx4_chat_model', firstModel)
   }
 
-  async function clearData(endpoint: string, key: string, confirmMsg: string) {
-    if (!window.confirm(confirmMsg)) return
-    await fetch(endpoint, { method: 'DELETE' })
-    setClearedKey(key)
-    setTimeout(() => setClearedKey(null), 2500)
+  function clearData(endpoint: string, key: string, confirmMsg: string) {
+    setConfirmDialog({
+      message: confirmMsg,
+      onConfirm: async () => {
+        setConfirmDialog(null)
+        await fetch(endpoint, { method: 'DELETE' })
+        setClearedKey(key)
+        setTimeout(() => setClearedKey(null), 2500)
+      },
+    })
   }
 
-  async function restartBacta() {
-    if (!window.confirm('Restart Bacta?\n\nThis briefly interrupts the API — the app will be unreachable for a few seconds while the service restarts.')) return
-    setRestartStatus('restarting')
-    try {
-      await fetch('/api/settings/restart', { method: 'POST' })
-    } catch {
-      // A connection reset here likely means the restart actually happened
-      // (the server died mid-response) rather than a genuine failure to
-      // reach it — either way, the timeout below guarantees recovery.
-    }
-    setTimeout(() => setRestartStatus('idle'), 15_000)
+  function restartBacta() {
+    setConfirmDialog({
+      message: 'Restart Bacta?\n\nThis briefly interrupts the API — the app will be unreachable for a few seconds while the service restarts.',
+      onConfirm: async () => {
+        setConfirmDialog(null)
+        setRestartStatus('restarting')
+        try {
+          await fetch('/api/settings/restart', { method: 'POST' })
+        } catch {
+          // A connection reset here likely means the restart actually happened
+          // (the server died mid-response) rather than a genuine failure to
+          // reach it — either way, the timeout below guarantees recovery.
+        }
+        setTimeout(() => setRestartStatus('idle'), 15_000)
+      },
+    })
   }
 
   const vaultEnabled = settings['vault_enabled'] === 'true'
@@ -417,6 +512,7 @@ export function SettingsPage() {
   const currentLogo = (settings['app_logo'] as LogoKey | undefined) ?? DEFAULT_LOGO
 
   return (
+    <>
     <AppShell section="settings">
       {/* Rail: APPEARANCE */}
       <CollapsibleSection label="APPEARANCE" accent={MX4_COLOR}>
@@ -1313,5 +1409,13 @@ export function SettingsPage() {
         BACTA·OS v{APP_VERSION}
       </div>
     </AppShell>
+    {confirmDialog && (
+      <ConfirmDialog
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
+    )}
+    </>
   )
 }

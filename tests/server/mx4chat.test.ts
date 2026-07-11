@@ -477,6 +477,96 @@ describe('MX-4 Chat API', () => {
 
     expect(rows.some(r => r.level === 'error' && r.message.includes('compression model unavailable'))).toBe(true)
   })
+
+  it('logs the in-flight tool call when the tool-loop truncates with no text produced', async () => {
+    // #132: a truncated turn previously logged only "produced no response", with no
+    // record of what MX-4 was actually doing when the budget ran out.
+    const { streamText } = await import('ai')
+    vi.mocked(streamText).mockImplementationOnce(() => ({
+      fullStream: (async function* () {
+        yield { type: 'tool-call', toolName: 'fetchPage', input: { url: 'https://orangetheory.com/classes' } }
+        // No text-delta — the turn truncates mid-tool-use.
+      })(),
+    }) as any)
+
+    const { app } = await import('../../server/index')
+    await request(app)
+      .post('/api/mx4/chat')
+      .send({ message: 'look up their class structure', sessionId: 'sess-in-flight-log-test' })
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT message FROM app_logs WHERE source = 'mx4-chat' ORDER BY id DESC LIMIT 5"
+    ).all() as { message: string }[]
+
+    expect(rows.some(r => r.message.includes('fetchPage') && r.message.includes('orangetheory.com'))).toBe(true)
+  })
+
+  describe('unresolved-failure recollection', () => {
+    const sessionId = 'sess-recollection-test'
+
+    it('surfaces the prior in-flight failure as a system note on the next turn', async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare(
+        `INSERT INTO app_logs (source, level, message, created_at) VALUES (?, ?, ?, ?)`
+      ).run('mx4-chat', 'error',
+        `Chat turn produced no response (session ${sessionId}) | inFlight: fetchPage(url: https://orangetheory.com/classes)`,
+        '2026-07-10 20:00:00')
+
+      const { streamText } = await import('ai')
+      vi.mocked(streamText).mockClear()
+
+      const { app } = await import('../../server/index')
+      await request(app)
+        .post('/api/mx4/chat')
+        .send({ message: 'try that again', sessionId })
+
+      const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string }
+      expect(firstCallArgs.system).toContain('fetchPage')
+      expect(firstCallArgs.system).toContain('did not complete')
+    })
+
+    it('does not resurface the note once a reply has landed after the failure', async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare(
+        `INSERT INTO mx4_chat_messages (session_id, role, content, created_at) VALUES (?, ?, ?, ?)`
+      ).run(sessionId, 'assistant', 'Here is the class structure.', '2026-07-10 20:05:00')
+
+      const { streamText } = await import('ai')
+      vi.mocked(streamText).mockClear()
+
+      const { app } = await import('../../server/index')
+      await request(app)
+        .post('/api/mx4/chat')
+        .send({ message: 'thanks, one more question', sessionId })
+
+      const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string }
+      expect(firstCallArgs.system).not.toContain('did not complete')
+    })
+
+    it('does not let a SQL LIKE wildcard in sessionId broaden the match to a different session\'s failure', async () => {
+      // sessionId is client-supplied with no format validation beyond non-empty string —
+      // a literal '%' in it must not turn the failure lookup into a wildcard prefix match
+      // that leaks an unrelated session's diagnostic note into this one.
+      const { default: db } = await import('../../server/db/client')
+      db.prepare(
+        `INSERT INTO app_logs (source, level, message, created_at) VALUES (?, ?, ?, ?)`
+      ).run('mx4-chat', 'error',
+        'Chat turn produced no response (session sess-wild-real) | inFlight: fetchPage(url: victim-data)',
+        '2026-07-10 21:00:00')
+
+      const { streamText } = await import('ai')
+      vi.mocked(streamText).mockClear()
+
+      const { app } = await import('../../server/index')
+      await request(app)
+        .post('/api/mx4/chat')
+        .send({ message: 'hello', sessionId: 'sess-wild-%' })
+
+      const firstCallArgs = vi.mocked(streamText).mock.calls[0][0] as unknown as { system: string }
+      expect(firstCallArgs.system).not.toContain('victim-data')
+    })
+  })
 })
 
 describe('categorizeError', () => {

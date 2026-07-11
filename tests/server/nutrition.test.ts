@@ -135,4 +135,49 @@ describe('Nutrition API', () => {
       expect(res.body.meals.breakfast.entries.some((e: { id: number }) => e.id === adHocEntryId)).toBe(false)
     })
   })
+
+  describe('Targets + summary', () => {
+    const targetDate = '2026-06-01'
+    const laterDate = '2026-06-15'
+    const logDate = '2026-07-01' // matches the date used in the "Food log CRUD" block above
+
+    it('POST /api/nutrition/targets upserts a target set', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/targets').send({
+        date: targetDate, calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 25,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ date: targetDate, calories: 2000 })
+    })
+
+    it('POST with the same date updates the existing row instead of duplicating', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/targets').send({
+        date: targetDate, calories: 2200, protein_g: 180, carbs_g: 220, fat_g: 70, fiber_g: 30,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ date: targetDate, calories: 2200 })
+
+      const { default: db } = await import('../../server/db/client')
+      const count = db.prepare('SELECT COUNT(*) as n FROM nutrition_targets WHERE date = ?').get(targetDate) as { n: number }
+      expect(count.n).toBe(1)
+    })
+
+    it('GET ?date= returns the most recent target with date <= the requested date', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/targets').query({ date: laterDate })
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ date: targetDate, calories: 2200 })
+    })
+
+    it('GET /api/nutrition/summary composes log totals against the resolved target', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/summary').query({ date: logDate })
+      expect(res.status).toBe(200)
+      expect(res.body.target).toMatchObject({ calories: 2200, protein_g: 180 })
+      expect(res.body.actual).toMatchObject({ calories: 778, protein_g: 33.8 })
+      expect(res.body.remaining.calories).toBe(2200 - 778)
+      expect(res.body.remaining.protein_g).toBeCloseTo(180 - 33.8)
+    })
+  })
 })

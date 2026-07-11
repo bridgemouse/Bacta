@@ -213,4 +213,85 @@ nutritionRouter.delete('/log/:id', (req, res) => {
   res.json({ ok: true })
 })
 
+interface TargetRow {
+  calories: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+  fiber_g: number | null
+}
+
+function resolveTarget(date: string): (TargetRow & { date: string }) | null {
+  return (db.prepare(
+    'SELECT * FROM nutrition_targets WHERE date <= ? ORDER BY date DESC LIMIT 1'
+  ).get(date) as (TargetRow & { date: string }) | undefined) ?? null
+}
+
+function logTotals(date: string): TargetRow {
+  const rows = db.prepare(
+    'SELECT calories, protein_g, carbs_g, fat_g, fiber_g FROM food_log_entries WHERE date = ?'
+  ).all(date) as TargetRow[]
+
+  const totals: TargetRow = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 }
+  for (const row of rows) {
+    for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
+      totals[key] = (totals[key] ?? 0) + (row[key] ?? 0)
+    }
+  }
+  return totals
+}
+
+// GET /api/nutrition/targets?date= — the effective target set for a date
+nutritionRouter.get('/targets', (req, res) => {
+  const date = req.query.date as string
+  const target = resolveTarget(date)
+  res.json(target)
+})
+
+// POST /api/nutrition/targets — upsert a target set effective from a given date
+nutritionRouter.post('/targets', (req, res) => {
+  const { date, calories, protein_g, carbs_g, fat_g, fiber_g } = req.body as {
+    date: string
+    calories?: number
+    protein_g?: number
+    carbs_g?: number
+    fat_g?: number
+    fiber_g?: number
+  }
+
+  try {
+    db.prepare(`
+      INSERT INTO nutrition_targets (date, calories, protein_g, carbs_g, fat_g, fiber_g)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(date) DO UPDATE SET
+        calories  = excluded.calories,
+        protein_g = excluded.protein_g,
+        carbs_g   = excluded.carbs_g,
+        fat_g     = excluded.fat_g,
+        fiber_g   = excluded.fiber_g
+    `).run(date, calories ?? null, protein_g ?? null, carbs_g ?? null, fat_g ?? null, fiber_g ?? null)
+    const row = db.prepare('SELECT * FROM nutrition_targets WHERE date = ?').get(date)
+    res.status(201).json(row)
+  } catch (err: unknown) {
+    console.error('[nutrition] target upsert failed:', err)
+    res.status(400).json({ error: 'Could not save nutrition targets' })
+  }
+})
+
+// GET /api/nutrition/summary?date= — target-vs-actual for one day
+nutritionRouter.get('/summary', (req, res) => {
+  const date = req.query.date as string
+  const target = resolveTarget(date)
+  const actual = logTotals(date)
+
+  const remaining: TargetRow = { calories: null, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null }
+  for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
+    remaining[key] = target?.[key] != null && actual[key] != null
+      ? Math.round((target[key]! - actual[key]!) * 100) / 100
+      : null
+  }
+
+  res.json({ target, actual, remaining })
+})
+
 export default nutritionRouter

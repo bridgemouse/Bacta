@@ -249,6 +249,39 @@ function logChatFailure(message: string): void {
   }
 }
 
+// Diagnostic detail for logs/recollection — distinct from toolLabel(), which is a
+// static droid-voice progress label meant for the live UI indicator, not specific
+// enough here (e.g. fetchPage's label never includes the URL it was fetching).
+function describeToolCall(toolName: string, input: Record<string, unknown>): string {
+  const args = Object.entries(input).map(([k, v]) => `${k}: ${String(v).slice(0, 60)}`).join(', ')
+  return args ? `${toolName}(${args})` : toolName
+}
+
+// #132: when a turn truncates mid-tool-use, the failed user message is removed from
+// history and no error is ever stored as a fake assistant reply (see the persisted
+// anti-pattern note in project memory) — so MX-4 has no memory of the failure on the
+// next turn. This surfaces what was in-flight as real, factual system context (same
+// framing as buildActivityContext) rather than words attributed to him, and only for
+// the turn immediately following an unresolved failure — not a persistent error banner.
+function getUnresolvedFailureNote(sessionId: string): string {
+  const failure = db.prepare(
+    `SELECT message, created_at FROM app_logs
+     WHERE source = 'mx4-chat' AND level = 'error' AND message LIKE ?
+     ORDER BY created_at DESC, id DESC LIMIT 1`
+  ).get(`Chat turn produced no response (session ${sessionId})%`) as { message: string; created_at: string } | undefined
+  if (!failure) return ''
+
+  const lastReply = db.prepare(
+    `SELECT created_at FROM mx4_chat_messages WHERE session_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 1`
+  ).get(sessionId) as { created_at: string } | undefined
+  if (lastReply && lastReply.created_at >= failure.created_at) return ''
+
+  const [, inFlight] = failure.message.split(' | inFlight: ')
+  if (!inFlight) return ''
+
+  return `\n\n## Recent System Note\nYour previous response attempt in this session did not complete before running out of available steps. You were calling: ${inFlight}. If the user's current message is a retry or follow-up to that request, consider a more direct approach rather than repeating the same sequence.`
+}
+
 mx4Router.post('/chat', async (req, res) => {
   const { message, sessionId, section } = req.body as { message?: string; sessionId?: string; section?: string }
 
@@ -279,7 +312,8 @@ mx4Router.post('/chat', async (req, res) => {
   // access to — without this, chat has no way to know today isn't a blank slate
   // (briefings already get this via buildActivityContext, see #112).
   const activityContext = buildActivityContext(new Date().toLocaleDateString('en-CA'))
-  const system = assembleSystemPrompt(systemBase, heartbeat, wikiContext, true) + activityContext
+  const failureNote = getUnresolvedFailureNote(sessionId)
+  const system = assembleSystemPrompt(systemBase, heartbeat, wikiContext, true) + activityContext + failureNote
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -311,9 +345,12 @@ mx4Router.post('/chat', async (req, res) => {
     })
 
     let fullText = ''
+    let lastToolCall: { toolName: string; input: Record<string, unknown> } | null = null
     for await (const part of result.fullStream) {
       if (part.type === 'tool-call') {
-        const label = toolLabel(part.toolName, part.input as Record<string, unknown>)
+        const input = part.input as Record<string, unknown>
+        lastToolCall = { toolName: part.toolName, input }
+        const label = toolLabel(part.toolName, input)
         res.write(`data: ${JSON.stringify({ tool: label })}\n\n`)
       } else if (part.type === 'text-delta') {
         res.write(`data: ${JSON.stringify(part.text)}\n\n`)
@@ -326,7 +363,8 @@ mx4Router.post('/chat', async (req, res) => {
         'INSERT INTO mx4_chat_messages (session_id, role, content, section) VALUES (?, ?, ?, ?)'
       ).run(sessionId, 'assistant', fullText, section ?? null)
     } else {
-      logChatFailure(`Chat turn produced no response (session ${sessionId})`)
+      const inFlight = lastToolCall ? ` | inFlight: ${describeToolCall(lastToolCall.toolName, lastToolCall.input)}` : ''
+      logChatFailure(`Chat turn produced no response (session ${sessionId})${inFlight}`)
       removeOrphanedUserTurn(userMessage.lastInsertRowid)
       res.write(`data: ${JSON.stringify({ error: categorizeError(new Error('no response')) })}\n\n`)
     }

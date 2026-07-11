@@ -126,6 +126,32 @@ describe('Nutrition API', () => {
       expect(res.body).toMatchObject({ id: adHocEntryId, calories: 350 })
     })
 
+    it('PUT with a new quantity on a food-linked entry rescales macros from the reference food', async () => {
+      // A separate date from logDate — this block only asserts the created/edited
+      // entry's own fields, but reuses logDate elsewhere would pollute the later
+      // Targets + summary block's aggregate totals for logDate.
+      const rescaleDate = '2026-07-03'
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/log').send({
+        date: rescaleDate, meal_type: 'lunch', food_id: oatsFoodId, quantity: 100, unit: 'g',
+      })
+      expect(created.body.calories).toBe(389) // 100g == default_qty, factor 1
+
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 50 })
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ quantity: 50, calories: 194.5, protein_g: 8.45 })
+    })
+
+    it('POST with an explicit food_id: null is treated as ad-hoc, not an invalid food reference', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-04', meal_type: 'snack', food_id: null,
+        name: 'Handful of nuts', quantity: 1, unit: 'serving', calories: 180,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ name: 'Handful of nuts', calories: 180 })
+    })
+
     it('DELETE removes a logged entry', async () => {
       const { app } = await import('../../server/index')
       const del = await request(app).delete(`/api/nutrition/log/${adHocEntryId}`)

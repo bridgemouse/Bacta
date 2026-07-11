@@ -125,7 +125,7 @@ nutritionRouter.post('/log', (req, res) => {
       fiber_g: number | null
     }
 
-    if (food_id !== undefined) {
+    if (food_id !== undefined && food_id !== null) {
       const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(food_id) as FoodRow | undefined
       if (!food) {
         res.status(400).json({ error: 'food_id does not reference an existing food' })
@@ -185,6 +185,22 @@ nutritionRouter.put('/log/:id', (req, res) => {
   const updates: Record<string, unknown> = {}
   for (const key of editable) {
     if (key in req.body) updates[key] = req.body[key]
+  }
+
+  // A quantity edit on a food-linked entry (and no explicit macro override in the same
+  // request) rescales from the reference food — otherwise the stored macros would silently
+  // keep reflecting the old quantity, since they're a denormalized snapshot, not a live join.
+  const macrosExplicitlyProvided = (['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).some(k => k in updates)
+  if (existing.food_id != null && 'quantity' in updates && !macrosExplicitlyProvided) {
+    const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(existing.food_id) as FoodRow | undefined
+    if (food) {
+      const factor = (updates.quantity as number) / food.default_qty
+      updates.calories = scale(food.calories, factor)
+      updates.protein_g = scale(food.protein_g, factor)
+      updates.carbs_g = scale(food.carbs_g, factor)
+      updates.fat_g = scale(food.fat_g, factor)
+      updates.fiber_g = scale(food.fiber_g, factor)
+    }
   }
 
   const merged = { ...existing, ...updates }

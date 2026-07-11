@@ -9,6 +9,7 @@ import garminRouter from './api/garmin'
 import manualRouter from './api/manual'
 import insightsRouter from './api/insights'
 import bloodworkRouter from './api/bloodwork'
+import nutritionRouter from './api/nutrition'
 import pollRouter from './api/poll'
 import mx4Router from './api/mx4'
 import settingsRouter from './api/settings'
@@ -101,6 +102,7 @@ app.use('/api/garmin', requireAuth, garminRouter)
 app.use('/api/manual', requireAuth, manualRouter)
 app.use('/api/insights', requireAuth, insightsRouter)
 app.use('/api/bloodwork', requireAuth, bloodworkRouter)
+app.use('/api/nutrition', requireAuth, nutritionRouter)
 app.use('/api/poll', requireAuth, aiLimiter, pollRouter)
 app.use('/api/mx4', requireAuth, aiLimiter, mx4Router)
 app.use('/api/settings', requireAuth, settingsRouter)

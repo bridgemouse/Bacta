@@ -4,14 +4,16 @@ import { mapUsdaFoodToRow, mapOffProductToRow, type FoodImportRow, type UsdaFood
 
 // USDA's full bulk-download JSON top-level wrapper key was NOT verified against a real
 // downloaded file (only the per-record shape was, via the live /food/{fdcId} API — see
-// foodImportMapping.ts). This scans the parsed JSON for the first array wherever it is,
-// so the loader works regardless of the real wrapper key name (e.g. "FoundationFoods").
+// foodImportMapping.ts). USDA's combined "all data types" downloads are known to carry
+// multiple array-valued keys side by side (e.g. FoundationFoods + SRLegacyFoods +
+// BrandedFoods + SurveyFoods) — concatenating every array found, rather than returning
+// just the first one, means the loader can't silently drop an entire category of food
+// records just because it appears second in the file.
 export function extractRecordsArray(parsed: unknown): unknown[] {
   if (Array.isArray(parsed)) return parsed
   if (parsed && typeof parsed === 'object') {
-    for (const value of Object.values(parsed)) {
-      if (Array.isArray(value)) return value
-    }
+    const arrays = Object.values(parsed).filter((v): v is unknown[] => Array.isArray(v))
+    if (arrays.length > 0) return arrays.flat()
   }
   throw new Error('Could not find a records array in the parsed JSON — unrecognized dump file shape')
 }
@@ -39,27 +41,41 @@ function writeRow(row: FoodImportRow): void {
 // Reads a local USDA FoodData Central JSON dump file (Foundation Foods and/or SR
 // Legacy — see NUTRITION_PLAN.md §1 for the recommended practical cutoff) and upserts
 // every record into `foods`. Returns the number of records processed.
+//
+// Wrapped in db.transaction() — matches the batching convention every other bulk-write
+// path in this codebase uses (server/lib/integrations/*Processor.ts) rather than one
+// autocommit per row, which would make a real multi-thousand-record file take far
+// longer than necessary. It also makes the import atomic: a malformed record partway
+// through aborts the whole run with no partial write, instead of leaving `foods` in a
+// half-imported state that a caller would have no way to detect or safely retry.
 export function importUsdaDumpFile(filePath: string): number {
   const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
   const records = extractRecordsArray(parsed) as UsdaFoodRecord[]
-  for (const record of records) {
-    writeRow(mapUsdaFoodToRow(record))
-  }
+  const writeAll = db.transaction((recs: UsdaFoodRecord[]) => {
+    for (const record of recs) {
+      writeRow(mapUsdaFoodToRow(record))
+    }
+  })
+  writeAll(records)
   return records.length
 }
 
 // Reads a local Open Food Facts JSONL dump file (one JSON product document per line)
 // and upserts every mappable record into `foods`. Records with no usable product name
 // are skipped, not inserted. Returns the number of records actually written.
+// Transactional for the same reason as importUsdaDumpFile above.
 export function importOffDumpFile(filePath: string): number {
   const lines = fs.readFileSync(filePath, 'utf-8').split('\n').filter(line => line.trim().length > 0)
   let written = 0
-  for (const line of lines) {
-    const record = JSON.parse(line) as OffProductRecord
-    const row = mapOffProductToRow(record)
-    if (!row) continue
-    writeRow(row)
-    written++
-  }
+  const writeAll = db.transaction((allLines: string[]) => {
+    for (const line of allLines) {
+      const record = JSON.parse(line) as OffProductRecord
+      const row = mapOffProductToRow(record)
+      if (!row) continue
+      writeRow(row)
+      written++
+    }
+  })
+  writeAll(lines)
   return written
 }

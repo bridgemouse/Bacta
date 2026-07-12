@@ -32,8 +32,11 @@ export interface OffProductRecord {
   product_name?: string
   brands?: string
   nutriments?: Record<string, unknown>
-  // The single-product REST API wraps the same document under a "product" key
-  // (alongside a "status" field) — the JSONL bulk export does not. Accept either.
+  // The single-product REST API (verified live) wraps the same document under a
+  // "product" key alongside a "status" field. OFF's own docs describe the JSONL bulk
+  // export as identical to their MongoDB dump, which is documented elsewhere as the
+  // flat (unwrapped) document — inferred from docs, not independently verified live
+  // against a real downloaded export. Accept either shape defensively either way.
   product?: {
     product_name?: string
     brands?: string
@@ -94,12 +97,19 @@ export function mapUsdaFoodToRow(record: UsdaFoodRecord): FoodImportRow {
 }
 
 function numberOrNull(value: unknown): number | null {
-  return typeof value === 'number' ? value : null
+  if (typeof value === 'number') return value
+  // Some real OFF records carry a *_100g value as a numeric string rather than a
+  // JSON number — parse rather than silently treating it the same as a missing key.
+  if (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) {
+    return Number(value)
+  }
+  return null
 }
 
 export function mapOffProductToRow(record: OffProductRecord): FoodImportRow | null {
   // Unwrap the REST API's "product" nesting if present; otherwise treat the record
-  // itself as the flat document (the shape the real JSONL bulk export uses).
+  // itself as the flat document (the shape inferred, not confirmed live, for the
+  // real JSONL bulk export — see the OffProductRecord type comment above).
   const doc = record.product ?? record
   const name = doc.product_name
   if (!name) return null

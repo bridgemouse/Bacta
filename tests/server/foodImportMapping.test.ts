@@ -86,6 +86,15 @@ describe('mapOffProductToRow', () => {
     expect(row!.fiber_g).toBeNull()
   })
 
+  it('parses a nutriment value even when OFF returns it as a numeric string rather than a number', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const row = mapOffProductToRow({
+      code: '111', product_name: 'String-valued nutriments',
+      nutriments: { 'energy-kcal_100g': '250', 'proteins_100g': '10.5' },
+    } as any)
+    expect(row).toMatchObject({ calories: 250, protein_g: 10.5 })
+  })
+
   it('also accepts the API-response shape (nested under "product") defensively', async () => {
     const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
     const record = loadFixture('off-api-nested-example.json')

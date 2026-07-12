@@ -27,6 +27,16 @@ describe('food import loader', () => {
       const { extractRecordsArray } = await import('../../server/lib/nutrition/foodImportLoader')
       expect(() => extractRecordsArray({ someKey: 'not an array' })).toThrow()
     })
+
+    it('concatenates every array-valued key when a dump has more than one (e.g. a combined USDA export with FoundationFoods + SRLegacyFoods + BrandedFoods side by side) rather than silently picking one and dropping the rest', async () => {
+      const { extractRecordsArray } = await import('../../server/lib/nutrition/foodImportLoader')
+      const result = extractRecordsArray({
+        FoundationFoods: [{ a: 1 }],
+        SRLegacyFoods: [{ b: 1 }, { b: 2 }],
+        SurveyFoods: [],
+      })
+      expect(result).toEqual([{ a: 1 }, { b: 1 }, { b: 2 }])
+    })
   })
 
   describe('importUsdaDumpFile', () => {
@@ -73,6 +83,26 @@ describe('food import loader', () => {
       const { default: db } = await import('../../server/db/client')
       const rows = db.prepare("SELECT * FROM foods WHERE source = 'openfoodfacts'").all() as any[]
       expect(rows.length).toBe(2)
+    })
+
+    it('is atomic — a malformed line partway through aborts the whole import with no partial writes, since a real multi-million-line file should not be able to leave the table half-imported', async () => {
+      const fs = await import('fs')
+      const os = await import('os')
+      const path2 = await import('path')
+      const badFile = path2.join(os.tmpdir(), `off-bad-${process.pid}.jsonl`)
+      fs.writeFileSync(badFile, [
+        '{"code": "9999999999999", "product_name": "Should Not Persist", "nutriments": {"energy-kcal_100g": 100}}',
+        'this is not valid json',
+      ].join('\n'))
+
+      const { importOffDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      expect(() => importOffDumpFile(badFile)).toThrow()
+
+      const { default: db } = await import('../../server/db/client')
+      const row = db.prepare("SELECT * FROM foods WHERE source_id = '9999999999999'").get()
+      expect(row).toBeUndefined()
+
+      fs.unlinkSync(badFile)
     })
   })
 })

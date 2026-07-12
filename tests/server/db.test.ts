@@ -27,12 +27,11 @@ describe('schema', () => {
     expect(row).toBeTruthy()
   })
 
-  it('drops the dead macrofactor_snapshots table', () => {
-    const row = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='macrofactor_snapshots'"
-    ).get()
-    expect(row).toBeFalsy()
-  })
+  // The real "drops an existing macrofactor_snapshots table" behavior is exercised by
+  // tests/server/nutritionSchema.test.ts, which manually creates the table on an
+  // established DB first — a fresh :memory: DB here never has the table to begin with
+  // (schema.sql no longer creates it), so an "absent after migrate()" check in this
+  // suite would only prove the table doesn't exist, not that migrate() dropped it.
 
   it('creates foods, food_log_entries, nutrition_targets tables', () => {
     for (const name of ['foods', 'food_log_entries', 'nutrition_targets']) {

@@ -1,0 +1,17 @@
+{
+  "FoundationFoods": [
+    {
+      "fdcId": 5555555,
+      "description": "Valid Record",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        { "type": "FoodNutrient", "nutrient": { "id": 1008, "number": "208", "name": "Energy", "unitName": "kcal" }, "amount": 200.0 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 5.0 }
+      ]
+    },
+    {
+      "fdcId": 6666666,
+      "description": "Malformed Record — missing foodNutrients entirely"
+    }
+  ]
+}

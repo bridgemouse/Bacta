@@ -42,6 +42,22 @@ describe('Nutrition API', () => {
       expect(res.body.foods.length).toBeGreaterThan(0)
       expect(res.body.foods.some((f: { name: string }) => f.name === 'Grilled Chicken Breast')).toBe(true)
     })
+
+    it('rejects a default_qty of 0, which would cause a division-by-zero when later scaling a logged entry', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Zero Qty Food', default_qty: 0, default_unit: 'g', calories: 100,
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects a negative default_qty for the same reason', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Negative Qty Food', default_qty: -5, default_unit: 'g', calories: 100,
+      })
+      expect(res.status).toBe(400)
+    })
   })
 
   describe('Food log CRUD', () => {
@@ -142,6 +158,39 @@ describe('Nutrition API', () => {
       expect(res.body).toMatchObject({ quantity: 50, calories: 194.5, protein_g: 8.45 })
     })
 
+    it('PUT with quantity + one explicit macro override rescales the OTHER macros too, not just the one provided', async () => {
+      const overrideDate = '2026-07-05'
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/log').send({
+        date: overrideDate, meal_type: 'lunch', food_id: oatsFoodId, quantity: 100, unit: 'g',
+      })
+      expect(created.body).toMatchObject({ calories: 389, protein_g: 16.9 })
+
+      // Change quantity to 50 (would normally halve everything) AND explicitly override
+      // calories to a manually-corrected value. protein_g/carbs_g/fat_g/fiber_g were not
+      // explicitly provided, so they must still rescale to the new quantity (194.5-style
+      // halving), not remain stuck at the old quantity=100 values.
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 50, calories: 100 })
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ quantity: 50, calories: 100, protein_g: 8.45 })
+    })
+
+    it('PUT rejects changing unit away from the linked food\'s default_unit, same as POST', async () => {
+      const unitDate = '2026-07-06'
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/log').send({
+        date: unitDate, meal_type: 'lunch', food_id: oatsFoodId, quantity: 100, unit: 'g',
+      })
+
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ unit: 'oz' })
+      expect(res.status).toBe(400)
+
+      // and the original entry must be unchanged, not partially written
+      const { default: db } = await import('../../server/db/client')
+      const row = db.prepare('SELECT unit, quantity, calories FROM food_log_entries WHERE id = ?').get(created.body.id)
+      expect(row).toMatchObject({ unit: 'g', quantity: 100, calories: 389 })
+    })
+
     it('POST with an explicit food_id: null is treated as ad-hoc, not an invalid food reference', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/log').send({
@@ -211,6 +260,18 @@ describe('Nutrition API', () => {
     function daysAgo(n: number): string {
       return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10)
     }
+
+    it('computes "today" from the local calendar date, not UTC — the trend window must not be a day ahead in the evening EST hours', async () => {
+      // 11:30pm EDT on 2026-07-02 is already 2026-07-03T03:30:00Z in UTC — a naive
+      // UTC-based "today" would be one day ahead of what the user considers today.
+      // Tested via an explicit Date argument (no fake timers/clock mocking needed,
+      // which avoids the known supertest+fake-timers hang seen elsewhere in this file).
+      const originalTz = process.env.TZ
+      process.env.TZ = 'America/New_York'
+      const { localDateString } = await import('../../server/api/nutrition')
+      expect(localDateString(new Date('2026-07-03T03:30:00Z'))).toBe('2026-07-02')
+      process.env.TZ = originalTz
+    })
 
     it('zero-fills days with no logged entries within the requested window', async () => {
       const { default: db } = await import('../../server/db/client')

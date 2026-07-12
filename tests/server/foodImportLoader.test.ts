@@ -52,12 +52,26 @@ describe('food import loader', () => {
       expect(rows.find(r => r.source_id === '174988')).toMatchObject({ name: 'Croissants, apple', calories: 254 })
     })
 
+    it('skips a malformed record (no foodNutrients) instead of aborting the whole batch', async () => {
+      const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      const count = importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-with-malformed.json'))
+      // 2 records in the file, but only 1 is well-formed — the malformed one is skipped,
+      // not thrown, and does not roll back the valid record's write.
+      expect(count).toBe(1)
+
+      const { default: db } = await import('../../server/db/client')
+      const row = db.prepare("SELECT * FROM foods WHERE source_id = '5555555'").get()
+      expect(row).toMatchObject({ name: 'Valid Record', calories: 200 })
+      const malformedRow = db.prepare("SELECT * FROM foods WHERE source_id = '6666666'").get()
+      expect(malformedRow).toBeUndefined()
+    })
+
     it('running the import twice does not duplicate rows (idempotent upsert)', async () => {
       const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
       importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-sample.json'))
 
       const { default: db } = await import('../../server/db/client')
-      const rows = db.prepare("SELECT * FROM foods WHERE source = 'usda'").all() as any[]
+      const rows = db.prepare("SELECT * FROM foods WHERE source = 'usda' AND source_id IN ('2261421', '174988')").all() as any[]
       expect(rows.length).toBe(2)
     })
   })

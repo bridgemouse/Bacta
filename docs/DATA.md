@@ -132,22 +132,9 @@ CREATE TABLE health_activity_legs (
 CREATE INDEX idx_health_activity_legs_activity ON health_activity_legs(activity_id);
 ```
 
-### `macrofactor_snapshots`
+### `foods`, `food_log_entries`, `nutrition_targets`
 
-Same EAV schema as `health_snapshots`. Currently empty — MacroFactor integration is blocked on account setup.
-
-```sql
-CREATE TABLE macrofactor_snapshots (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  date        TEXT NOT NULL,
-  metric      TEXT NOT NULL,
-  value       REAL,
-  unit        TEXT,
-  source_json TEXT,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(date, metric)
-);
-```
+Nutrition is a custom-built tracker, not a third-party integration — the abandoned `macrofactor_snapshots` EAV placeholder was dropped (confirmed empty, zero references anywhere in the codebase) since its shape can't represent multiple foods logged per meal per day. See `docs/NUTRITION_PLAN.md` §3 for the full schema, design notes, and rationale. These are normal (non-EAV) tables — query columns directly rather than filtering by a `metric` column.
 
 ### `manual_inputs`
 
@@ -186,7 +173,7 @@ CREATE TABLE blood_work (
 
 ## EAV Pattern
 
-`health_snapshots` and `macrofactor_snapshots` use Entity-Attribute-Value rather than wide tables. Each row is one metric for one date. This allows new metrics to be added without schema migrations and stores the raw `source_json` from the provider API for every reading.
+`health_snapshots` uses Entity-Attribute-Value rather than a wide table. Each row is one metric for one date. This allows new metrics to be added without schema migrations and stores the raw `source_json` from the provider API for every reading.
 
 **Querying correctly:** Always use per-metric `MAX(date)` to find the latest value for each metric. Do not hardcode today's date — metrics arrive at different times and some metrics only update weekly.
 
@@ -306,7 +293,7 @@ These were renamed from `max`/`min` in a database migration (Jun 11, 2026). Any 
 | Activity legs | Live — `health_activity_legs` via `/api/garmin/activities/:id/legs` |
 | MX-4 briefing text | **Live** — `mx4_briefings` table via `/api/insights/:section` → `useBriefing`. `stubData.ts` `BRIEFS` is a fallback only (used until a section has generated). |
 | MX-4 tone/headline/summary/body | **Live** — `mx4_briefings.content_json` |
-| Nutrition data | Empty — `macrofactor_snapshots` has no rows (section in STANDBY) |
+| Nutrition data | Backend live (`foods`/`food_log_entries`/`nutrition_targets`), no frontend yet (section in STANDBY) |
 | Blood work | Empty — `blood_work` has no rows (section in STANDBY) |
 | Manual inputs | Empty — `manual_inputs` has no rows (Daily Log in STANDBY) |
 

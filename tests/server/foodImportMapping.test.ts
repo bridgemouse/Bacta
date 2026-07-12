@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 
@@ -26,11 +26,45 @@ describe('mapUsdaFoodToRow', () => {
     })
     // This Foundation record has no "208" entry — only 957 (Atwater General) and 958
     // (Atwater Specific). The mapper prefers 957 over 958 when 208 is absent.
-    expect(row.calories).toBe(389.125)
+    expect(row!.calories).toBe(389.125)
     // This record has both 291 (Fiber, total dietary) and 293 (AOAC 2011.25) — the
     // mapper prefers 291, the classic/more universally-present code.
-    expect(row.fiber_g).toBe(10.5)
-    expect(JSON.parse(row.source_json)).toMatchObject({ fdcId: 2261421 })
+    expect(row!.fiber_g).toBe(10.5)
+    expect(JSON.parse(row!.source_json)).toMatchObject({ fdcId: 2261421 })
+  })
+
+  it('returns null (does not throw) for a malformed record with no foodNutrients array, rather than crashing a whole bulk-import transaction over one bad record', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    expect(mapUsdaFoodToRow({ fdcId: 999, description: 'Malformed' } as any)).toBeNull()
+    expect(mapUsdaFoodToRow({ fdcId: 999, description: 'Malformed', foodNutrients: 'not-an-array' } as any)).toBeNull()
+  })
+
+  describe('unmapped nutrient codes (e.g. a Branded/Survey Foods record outside the verified Foundation+SR Legacy scope)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('warns when none of the known nutrient codes matched any macro, rather than silently returning an all-null row', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+      const row = mapUsdaFoodToRow({
+        fdcId: 777,
+        description: 'Unrecognized Data Type Food',
+        foodNutrients: [
+          { type: 'FoodNutrient', nutrient: { id: 9999, number: '9999', name: 'Some Unmapped Nutrient', unitName: 'g' }, amount: 1 },
+        ],
+      } as any)
+
+      expect(row).toMatchObject({ calories: null, protein_g: null, carbs_g: null, fat_g: null })
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('777'))
+    })
+
+    it('does not warn when at least one macro was successfully mapped', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+      mapUsdaFoodToRow(loadFixture('usda-sr-legacy-croissant.json') as any)
+      expect(warnSpy).not.toHaveBeenCalled()
+    })
   })
 
   it('maps an SR Legacy record using the classic nutrient codes (208 energy, 291 fiber) when they are the only ones present', async () => {

@@ -40,24 +40,31 @@ function writeRow(row: FoodImportRow): void {
 
 // Reads a local USDA FoodData Central JSON dump file (Foundation Foods and/or SR
 // Legacy — see NUTRITION_PLAN.md §1 for the recommended practical cutoff) and upserts
-// every record into `foods`. Returns the number of records processed.
+// every mappable record into `foods`. A record mapUsdaFoodToRow can't make sense of
+// (e.g. missing foodNutrients) is skipped, not thrown — matching importOffDumpFile's
+// skip-and-continue behavior, so one bad record in a real multi-thousand-record file
+// doesn't lose the rest. Returns the number of records actually written.
 //
 // Wrapped in db.transaction() — matches the batching convention every other bulk-write
 // path in this codebase uses (server/lib/integrations/*Processor.ts) rather than one
 // autocommit per row, which would make a real multi-thousand-record file take far
-// longer than necessary. It also makes the import atomic: a malformed record partway
-// through aborts the whole run with no partial write, instead of leaving `foods` in a
-// half-imported state that a caller would have no way to detect or safely retry.
+// longer than necessary. It also makes the import atomic against genuine DB-level
+// failures (e.g. a constraint violation): those still abort and roll back the whole
+// run rather than leaving `foods` in a half-imported state with no way to detect it.
 export function importUsdaDumpFile(filePath: string): number {
   const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
   const records = extractRecordsArray(parsed) as UsdaFoodRecord[]
+  let written = 0
   const writeAll = db.transaction((recs: UsdaFoodRecord[]) => {
     for (const record of recs) {
-      writeRow(mapUsdaFoodToRow(record))
+      const row = mapUsdaFoodToRow(record)
+      if (!row) continue
+      writeRow(row)
+      written++
     }
   })
   writeAll(records)
-  return records.length
+  return written
 }
 
 // Reads a local Open Food Facts JSONL dump file (one JSON product document per line)

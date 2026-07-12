@@ -26,6 +26,11 @@ nutritionRouter.post('/foods', (req, res) => {
     fiber_g?: number
   }
 
+  if (default_qty !== undefined && default_qty <= 0) {
+    res.status(400).json({ error: 'default_qty must be greater than 0' })
+    return
+  }
+
   try {
     const stmt = db.prepare(`
       INSERT INTO foods (source, name, brand, default_qty, default_unit, calories, protein_g, carbs_g, fat_g, fiber_g)
@@ -82,7 +87,6 @@ nutritionRouter.get('/log', (req, res) => {
   }>
 
   const meals: Record<string, { entries: typeof rows; totals: Record<string, number> }> = {}
-  const daily = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 }
 
   for (const row of rows) {
     if (!meals[row.meal_type]) {
@@ -90,13 +94,14 @@ nutritionRouter.get('/log', (req, res) => {
     }
     meals[row.meal_type].entries.push(row)
     for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
-      const value = row[key] ?? 0
-      meals[row.meal_type].totals[key] += value
-      daily[key] += value
+      meals[row.meal_type].totals[key] += row[key] ?? 0
     }
   }
 
-  res.json({ meals, daily })
+  // daily comes from the same logTotals() used by GET /summary, rather than a second
+  // hand-duplicated summation — the two endpoints would otherwise be able to silently
+  // disagree if one's null/edge-case handling changed without the other.
+  res.json({ meals, daily: logTotals(date) })
 })
 
 // POST /api/nutrition/log — log a new entry, either against a reference food (scaled) or fully ad-hoc
@@ -133,6 +138,13 @@ nutritionRouter.post('/log', (req, res) => {
       }
       if (unit !== food.default_unit) {
         res.status(400).json({ error: `Unit mismatch — this food is logged in ${food.default_unit}` })
+        return
+      }
+      if (food.default_qty <= 0) {
+        // Defense in depth against pre-existing bad data — POST /foods rejects
+        // default_qty <= 0 at write time, but a stale row would otherwise divide
+        // by zero here and silently write Infinity/NaN into a REAL column.
+        res.status(400).json({ error: 'Referenced food has an invalid default_qty' })
         return
       }
       const factor = quantity / food.default_qty
@@ -187,19 +199,34 @@ nutritionRouter.put('/log/:id', (req, res) => {
     if (key in req.body) updates[key] = req.body[key]
   }
 
-  // A quantity edit on a food-linked entry (and no explicit macro override in the same
-  // request) rescales from the reference food — otherwise the stored macros would silently
-  // keep reflecting the old quantity, since they're a denormalized snapshot, not a live join.
-  const macrosExplicitlyProvided = (['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).some(k => k in updates)
-  if (existing.food_id != null && 'quantity' in updates && !macrosExplicitlyProvided) {
+  // A food-linked entry's macros are a denormalized snapshot, not a live join — a
+  // quantity or unit edit must rescale from the reference food, otherwise the stored
+  // macros silently keep reflecting the old quantity/unit combination. Only macros NOT
+  // explicitly overridden in this same request get rescaled — providing one corrected
+  // macro must not freeze the other four at their now-stale values. Unit is validated
+  // against the food's default_unit the same way POST does (no conversion in v1), since
+  // an entry's unit must always match the food it's linked to, edit or not.
+  if (existing.food_id != null) {
     const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(existing.food_id) as FoodRow | undefined
     if (food) {
-      const factor = (updates.quantity as number) / food.default_qty
-      updates.calories = scale(food.calories, factor)
-      updates.protein_g = scale(food.protein_g, factor)
-      updates.carbs_g = scale(food.carbs_g, factor)
-      updates.fat_g = scale(food.fat_g, factor)
-      updates.fiber_g = scale(food.fiber_g, factor)
+      const finalUnit = (updates.unit ?? existing.unit) as string
+      if (finalUnit !== food.default_unit) {
+        res.status(400).json({ error: `Unit mismatch — this food is logged in ${food.default_unit}` })
+        return
+      }
+      if (food.default_qty <= 0) {
+        res.status(400).json({ error: 'Referenced food has an invalid default_qty' })
+        return
+      }
+      if ('quantity' in updates || 'unit' in updates) {
+        const finalQuantity = (updates.quantity ?? existing.quantity) as number
+        const factor = finalQuantity / food.default_qty
+        for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
+          if (!(key in updates)) {
+            updates[key] = scale(food[key], factor)
+          }
+        }
+      }
     }
   }
 
@@ -310,9 +337,21 @@ nutritionRouter.get('/summary', (req, res) => {
   res.json({ target, actual, remaining })
 })
 
+// food_log_entries.date is the user's local calendar day (same convention as
+// health_activities.date — see orchestrator.ts's toLocaleDateString('en-CA') use for
+// same-day activity lookups). SQLite's date('now', ...) is always UTC regardless of
+// process TZ, so computing the window boundary that way would put the trend a full day
+// ahead of the user's actual "today" in the evening EST hours (past UTC midnight).
+// Exported for direct unit testing without needing to fake the global clock/timers.
+export function localDateString(date: Date): string {
+  return date.toLocaleDateString('en-CA')
+}
+
 // GET /api/nutrition/trend?days=N — N-day daily-total history, zero-filled for empty days
 nutritionRouter.get('/trend', (req, res) => {
   const days = Math.min(Math.max(1, Number(req.query.days) || 7), 30)
+  const now = new Date()
+  const dayLabel = (i: number): string => localDateString(new Date(now.getTime() - i * 86400000))
 
   const rows = db.prepare(`
     SELECT date,
@@ -322,16 +361,16 @@ nutritionRouter.get('/trend', (req, res) => {
       COALESCE(SUM(fat_g), 0)     as fat_g,
       COALESCE(SUM(fiber_g), 0)   as fiber_g
     FROM food_log_entries
-    WHERE date >= date('now', ?)
+    WHERE date >= ?
     GROUP BY date
-  `).all(`-${days - 1} days`) as Array<{
+  `).all(dayLabel(days - 1)) as Array<{
     date: string; calories: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number
   }>
 
   const byDate = new Map(rows.map(r => [r.date, r]))
   const result = []
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
+    const date = dayLabel(i)
     result.push(byDate.get(date) ?? { date, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 })
   }
 

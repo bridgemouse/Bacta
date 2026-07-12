@@ -78,10 +78,17 @@ function findUsdaAmount(nutrients: UsdaFoodNutrient[], codes: readonly string[])
   return null
 }
 
-export function mapUsdaFoodToRow(record: UsdaFoodRecord): FoodImportRow {
+export function mapUsdaFoodToRow(record: UsdaFoodRecord): FoodImportRow | null {
   const nutrients = record.foodNutrients
-  return {
-    source: 'usda',
+  // A malformed/unexpected record (e.g. an unrelated array-valued key extractRecordsArray
+  // concatenated in from a combined dump) must not throw here — importUsdaDumpFile wraps
+  // the whole batch in one db.transaction(), so an uncaught exception on record N would
+  // roll back every record already written in that call. Skip it instead, matching
+  // mapOffProductToRow's graceful null-return for an unmappable record.
+  if (!Array.isArray(nutrients)) return null
+
+  const row = {
+    source: 'usda' as const,
     source_id: String(record.fdcId),
     name: record.description,
     brand: record.brandOwner ?? record.brandName ?? null,
@@ -94,6 +101,17 @@ export function mapUsdaFoodToRow(record: UsdaFoodRecord): FoodImportRow {
     fiber_g: findUsdaAmount(nutrients, USDA_NUTRIENT_CODES.fiber_g),
     source_json: JSON.stringify(record),
   }
+
+  // The nutrient-code priority lists were verified only against real Foundation Foods
+  // and SR Legacy records. A record where every macro comes back null is a sign none of
+  // the known codes matched at all — plausibly a dataType (Branded Foods, Survey/FNDDS)
+  // this mapper was never checked against — surface it instead of silently importing
+  // an all-null row with no visibility into the gap.
+  if (row.calories === null && row.protein_g === null && row.carbs_g === null && row.fat_g === null) {
+    console.warn(`[nutrition-import] USDA fdcId ${row.source_id} ("${row.name}") matched none of the known nutrient codes — check its dataType is Foundation Foods or SR Legacy`)
+  }
+
+  return row
 }
 
 function numberOrNull(value: unknown): number | null {

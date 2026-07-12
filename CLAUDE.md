@@ -173,7 +173,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 ## Data
 
 - **DB:** SQLite at `/opt/bacta/data/bacta.db`
-- **Schema:** `server/db/schema.sql` — EAV tables `health_snapshots` + `macrofactor_snapshots` (date, metric, value, unit, source, source_json)
+- **Schema:** `server/db/schema.sql` — EAV table `health_snapshots` (date, metric, value, unit, source, source_json); Nutrition uses purpose-built non-EAV tables instead (`foods`, `food_log_entries`, `nutrition_targets`) since multiple foods can be logged per meal per day
 - **Poller:** `scripts/garmin_poller.py` — nightly 3AM via `bacta-garmin.timer` (installed)
 - **Ingest:** `scripts/garmin_ingest.py` — historical import (365 days, ~35 min runtime)
 - **Garmin tokens:** `~/.garminconnect` on LXC 109

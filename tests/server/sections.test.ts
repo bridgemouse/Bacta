@@ -2,17 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { SECTIONS } from '../../server/lib/ai/sections'
 
 describe('SECTIONS', () => {
-  it('defines exactly four sections in the correct run order', () => {
+  it('defines exactly five sections in the correct run order', () => {
     const ids = SECTIONS.map(s => s.id)
-    expect(ids).toEqual(['recovery', 'sleep', 'training', 'home'])
+    expect(ids).toEqual(['recovery', 'sleep', 'training', 'nutrition', 'home'])
   })
 
   it('home section runs last', () => {
     expect(SECTIONS[SECTIONS.length - 1].id).toBe('home')
   })
 
-  it('each non-home section has at least one metric', () => {
-    for (const s of SECTIONS.filter(s => s.id !== 'home')) {
+  // 'home' has no health_snapshots metrics of its own — it synthesizes across the other
+  // sections' completed mx4_briefings rows instead. 'nutrition' is excluded for a different
+  // reason: it has no health_snapshots metrics either, since its data lives in the normal
+  // (non-EAV) food_log_entries/nutrition_targets tables, queried directly via queryDb.
+  it('each section outside home/nutrition has at least one health_snapshots metric', () => {
+    for (const s of SECTIONS.filter(s => s.id !== 'home' && s.id !== 'nutrition')) {
       expect(s.metrics.length).toBeGreaterThan(0)
     }
   })
@@ -20,6 +24,11 @@ describe('SECTIONS', () => {
   it('home section has empty metrics array (reads from mx4_briefings instead)', () => {
     const home = SECTIONS.find(s => s.id === 'home')!
     expect(home.metrics).toEqual([])
+  })
+
+  it('nutrition section has empty metrics array (reads food_log_entries/nutrition_targets directly, not health_snapshots)', () => {
+    const nutrition = SECTIONS.find(s => s.id === 'nutrition')!
+    expect(nutrition.metrics).toEqual([])
   })
 
   it('uses corrected metric names (no stale Python names)', () => {

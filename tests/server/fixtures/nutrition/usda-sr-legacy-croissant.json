@@ -1,0 +1,12 @@
+{
+  "fdcId": 174988,
+  "description": "Croissants, apple",
+  "dataType": "SR Legacy",
+  "foodNutrients": [
+    { "type": "FoodNutrient", "nutrient": { "id": 1008, "number": "208", "name": "Energy", "unitName": "kcal" }, "amount": 254.00000000 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 7.40000000 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "g" }, "amount": 8.70000000 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "g" }, "amount": 37.10000000 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1079, "number": "291", "name": "Fiber, total dietary", "unitName": "g" }, "amount": 2.50000000 }
+  ]
+}

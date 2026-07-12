@@ -13,6 +13,17 @@ export function migrate() {
   )
   db.exec(schema)
 
+  // Drop the dead macrofactor_snapshots table (idempotent) — confirmed empty (0 rows),
+  // zero blast radius (no route/hook/script reads or writes it). Nutrition is now built
+  // on purpose-built foods/food_log_entries/nutrition_targets tables instead of EAV.
+  const hasMacrofactorSnapshots = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='macrofactor_snapshots'"
+  ).get()
+  if (hasMacrofactorSnapshots) {
+    db.exec('DROP TABLE macrofactor_snapshots')
+    console.log('[db] dropped unused macrofactor_snapshots')
+  }
+
   // Rename garmin_snapshots → health_snapshots (idempotent)
   const hasOldSnapshots = db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='garmin_snapshots'"

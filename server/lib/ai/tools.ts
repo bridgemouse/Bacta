@@ -13,8 +13,14 @@ const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the healt
 Schema:
   health_snapshots(date TEXT, metric TEXT, source TEXT, value REAL, unit TEXT, source_json TEXT)
   health_activities(date TEXT, activity_id TEXT, source TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
+  food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL)
+    — a normal table, NOT EAV like health_snapshots. Multiple rows per day (one per logged food).
+  nutrition_targets(id INTEGER, date TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL)
+    — one row per date the targets changed. "Current" target = the row with the latest date <= the date in question.
+  foods(id INTEGER, source TEXT, name TEXT, brand TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, default_qty REAL, default_unit TEXT)
+    — reference/ingredient data, not user logs. Rarely needs querying directly by MX-4.
   mx4_briefings(section TEXT, content_json TEXT, generated_at TEXT, model TEXT)
-    — section values: 'recovery', 'sleep', 'training', 'home'
+    — section values: 'recovery', 'sleep', 'training', 'nutrition', 'home'
     — content_json is a JSON string: { tone, headline, summary, body, recommendation, flags }
     — Query example: SELECT section, content_json FROM mx4_briefings WHERE section IN ('recovery','sleep','training')
 

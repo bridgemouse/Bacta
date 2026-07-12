@@ -1,0 +1,29 @@
+{
+  "FoundationFoods": [
+    {
+      "fdcId": 2261421,
+      "description": "Flour, oat, whole grain",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        { "type": "FoodNutrient", "nutrient": { "id": 1062, "number": "957", "name": "Energy (Atwater General Factors)", "unitName": "kcal" }, "amount": 389.125 },
+        { "type": "FoodNutrient", "nutrient": { "id": 2048, "number": "958", "name": "Energy (Atwater Specific Factors)", "unitName": "kcal" }, "amount": 386.42927500 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 13.16875000 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "g" }, "amount": 6.30900000 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "g" }, "amount": 69.91725000 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1079, "number": "291", "name": "Fiber, total dietary", "unitName": "g" }, "amount": 10.5 }
+      ]
+    },
+    {
+      "fdcId": 174988,
+      "description": "Croissants, apple",
+      "dataType": "SR Legacy",
+      "foodNutrients": [
+        { "type": "FoodNutrient", "nutrient": { "id": 1008, "number": "208", "name": "Energy", "unitName": "kcal" }, "amount": 254.0 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 7.4 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "g" }, "amount": 8.7 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "g" }, "amount": 37.1 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1079, "number": "291", "name": "Fiber, total dietary", "unitName": "g" }, "amount": 2.5 }
+      ]
+    }
+  ]
+}

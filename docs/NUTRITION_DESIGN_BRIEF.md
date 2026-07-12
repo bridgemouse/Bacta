@@ -1,5 +1,7 @@
 # Nutrition Section — Brief for Claude Design
 
+> **Note on the visual reference:** `design_bacta-handoff-package/Bacta - Prototype v3.html` (referenced throughout this brief) is a solid starting point, but production has iterated a good bit beyond it since — treat v3 as a reference for the underlying system (layout patterns, component shapes, general visual language), not as a pixel-accurate spec of what's live today.
+>
 > **Status: REVISED 2026-07-12 — the full backend (Phases 1–8) is merged to `main`.** This is a brief/prompt for a *future* Claude Design session per `docs/PLUGINS.md`'s documented workflow — it is **not** a design, not component code, not a mockup, and not a color palette beyond the one accent already assigned. It hands Claude Design three things: the accent color, the data types available, and the section's character — exactly what that workflow document says a new-section design session needs.
 >
 > **What changed in this revision:** the previous revision (2026-07-11) described a still-open PR. **PR #136 has since been reviewed (a fresh-context `/code-review` pass found and fixed 9 real bugs) and merged to `main`** — every data-shape claim below is now verified against the actual merged code (`server/api/nutrition.ts`), not a branch in flight. Two corrections from the review fixes that matter for design:

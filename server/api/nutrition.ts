@@ -337,6 +337,152 @@ nutritionRouter.get('/summary', (req, res) => {
   res.json({ target, actual, remaining })
 })
 
+interface RecipeIngredientInput {
+  food_id?: number
+  name: string
+  quantity: number
+  unit: string
+  calories?: number
+  protein_g?: number
+  carbs_g?: number
+  fat_g?: number
+  fiber_g?: number
+}
+
+function sumField(items: RecipeIngredientInput[], key: keyof RecipeIngredientInput): number {
+  return items.reduce((s, i) => s + (Number(i[key]) || 0), 0)
+}
+
+// GET /api/nutrition/recipes — list saved recipes with their per-serving food's macros
+nutritionRouter.get('/recipes', (req, res) => {
+  const recipes = db.prepare(`
+    SELECT r.id, r.name, r.servings, r.food_id, r.created_at,
+      f.calories as per_serving_calories, f.protein_g as per_serving_protein_g,
+      f.carbs_g as per_serving_carbs_g, f.fat_g as per_serving_fat_g, f.fiber_g as per_serving_fiber_g,
+      (SELECT COUNT(*) FROM recipe_ingredients ri WHERE ri.recipe_id = r.id) as ingredient_count
+    FROM recipes r JOIN foods f ON f.id = r.food_id
+    ORDER BY r.name
+  `).all()
+  res.json({ recipes })
+})
+
+// POST /api/nutrition/recipes — save a recipe: computes per-serving macros from ingredients,
+// creates the materialized food + the recipe + its ingredient rows in one transaction (a
+// recipe without its food, or vice versa, must never exist).
+nutritionRouter.post('/recipes', (req, res) => {
+  const { name, servings, ingredients } = req.body as {
+    name: string
+    servings: number
+    ingredients: RecipeIngredientInput[]
+  }
+
+  if (!servings || servings <= 0) {
+    res.status(400).json({ error: 'servings must be greater than 0' })
+    return
+  }
+  if (!ingredients || ingredients.length === 0) {
+    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
+    return
+  }
+
+  try {
+    const kcalPerServing = Math.round(sumField(ingredients, 'calories') / servings)
+    const proteinPerServing = Math.round((sumField(ingredients, 'protein_g') / servings) * 100) / 100
+    const carbsPerServing = Math.round((sumField(ingredients, 'carbs_g') / servings) * 100) / 100
+    const fatPerServing = Math.round((sumField(ingredients, 'fat_g') / servings) * 100) / 100
+    const fiberPerServing = Math.round((sumField(ingredients, 'fiber_g') / servings) * 100) / 100
+
+    const createRecipe = db.transaction(() => {
+      const foodInfo = db.prepare(`
+        INSERT INTO foods (source, name, default_qty, default_unit, calories, protein_g, carbs_g, fat_g, fiber_g)
+        VALUES ('custom', ?, 1, 'serving', ?, ?, ?, ?, ?)
+      `).run(name, kcalPerServing, proteinPerServing, carbsPerServing, fatPerServing, fiberPerServing)
+      const foodId = foodInfo.lastInsertRowid
+
+      const recipeInfo = db.prepare(
+        'INSERT INTO recipes (name, servings, food_id) VALUES (?, ?, ?)'
+      ).run(name, servings, foodId)
+      const recipeId = recipeInfo.lastInsertRowid
+
+      const insertIngredient = db.prepare(`
+        INSERT INTO recipe_ingredients (recipe_id, food_id, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      for (const ing of ingredients) {
+        insertIngredient.run(
+          recipeId, ing.food_id ?? null, ing.name, ing.quantity, ing.unit,
+          ing.calories ?? null, ing.protein_g ?? null, ing.carbs_g ?? null, ing.fat_g ?? null, ing.fiber_g ?? null,
+        )
+      }
+      return { recipeId, foodId }
+    })
+
+    const { recipeId, foodId } = createRecipe()
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(recipeId) as object
+    const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(foodId)
+    res.status(201).json({ ...recipe, food })
+  } catch (err: unknown) {
+    console.error('[nutrition] recipe save failed:', err)
+    res.status(400).json({ error: 'Could not save recipe' })
+  }
+})
+
+function isForeignKeyError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes('FOREIGN KEY constraint failed')
+}
+
+// DELETE /api/nutrition/recipes/:id — deletes the recipe, its ingredients, and its
+// materialized food as one unit. Blocked (400) if that food has already been logged
+// elsewhere — food_log_entries keeps its own denormalized snapshot, but the food_id
+// reference itself must stay valid, so the delete is refused rather than silently
+// orphaning past log entries or leaving a half-deleted recipe.
+nutritionRouter.delete('/recipes/:id', (req, res) => {
+  const { id } = req.params
+  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id) as { food_id: number } | undefined
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' })
+    return
+  }
+  try {
+    const deleteRecipe = db.transaction(() => {
+      db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id)
+      db.prepare('DELETE FROM recipes WHERE id = ?').run(id)
+      db.prepare('DELETE FROM foods WHERE id = ?').run(recipe.food_id)
+    })
+    deleteRecipe()
+    res.json({ ok: true })
+  } catch (err: unknown) {
+    if (isForeignKeyError(err)) {
+      res.status(400).json({ error: 'Cannot delete — this recipe has already been logged' })
+      return
+    }
+    console.error('[nutrition] recipe delete failed:', err)
+    res.status(400).json({ error: 'Could not delete recipe' })
+  }
+})
+
+// DELETE /api/nutrition/foods/:id — remove a saved food. Blocked (400) if the food has
+// ever been logged or used as a recipe ingredient, for the same reason as recipe deletion
+// above: those rows must keep a valid food_id reference.
+nutritionRouter.delete('/foods/:id', (req, res) => {
+  const { id } = req.params
+  try {
+    const info = db.prepare('DELETE FROM foods WHERE id = ?').run(id)
+    if (info.changes === 0) {
+      res.status(404).json({ error: 'Food not found' })
+      return
+    }
+    res.json({ ok: true })
+  } catch (err: unknown) {
+    if (isForeignKeyError(err)) {
+      res.status(400).json({ error: 'Cannot delete — this food has been logged or used in a recipe' })
+      return
+    }
+    console.error('[nutrition] food delete failed:', err)
+    res.status(400).json({ error: 'Could not delete food' })
+  }
+})
+
 // food_log_entries.date is the user's local calendar day (same convention as
 // health_activities.date — see orchestrator.ts's toLocaleDateString('en-CA') use for
 // same-day activity lookups). SQLite's date('now', ...) is always UTC regardless of

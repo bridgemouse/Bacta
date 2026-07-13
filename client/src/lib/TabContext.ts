@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 
-export type Tab = 'overview' | 'trends'
+export type Tab = 'overview' | 'trends' | 'library'
 
 interface TabContextValue {
   tab: Tab

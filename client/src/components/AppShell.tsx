@@ -14,10 +14,11 @@ import { useTransitionNavigate } from '../lib/useTransitionNavigate'
 interface AppShellProps {
   section: SectionKey
   hasTabs?: boolean
+  tabs?: [Tab, Tab]
   children: React.ReactNode
 }
 
-export function AppShell({ section, hasTabs = false, children }: AppShellProps) {
+export function AppShell({ section, hasTabs = false, tabs, children }: AppShellProps) {
   const navigate = useTransitionNavigate()
   const [navOpen, setNavOpen] = useState(false)
   const [askOpen, setAskOpen] = useState(false)
@@ -73,6 +74,7 @@ export function AppShell({ section, hasTabs = false, children }: AppShellProps) 
           <BottomBar
             accent={accent}
             hasTabs={hasTabs}
+            tabs={tabs}
             onAsk={() => setAskOpen(true)}
             onNav={() => setNavOpen(true)}
           />

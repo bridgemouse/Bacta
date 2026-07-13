@@ -9,12 +9,17 @@ import { hexA } from '../lib/hexA'
 const oct = (c: number) =>
   `polygon(${c}px 0, calc(100% - ${c}px) 0, 100% ${c}px, 100% calc(100% - ${c}px), calc(100% - ${c}px) 100%, ${c}px 100%, 0 calc(100% - ${c}px), 0 ${c}px)`
 
+const TAB_LABELS: Record<Tab, string> = {
+  overview: 'Overview',
+  trends: 'Trends',
+  library: 'Library',
+}
 
-function SectionTabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
+function SectionTabs({ tab, onTab, tabs }: { tab: Tab; onTab: (t: Tab) => void; tabs: [Tab, Tab] }) {
   return (
     <div style={{ clipPath: oct(7), background: hexA(MX4_COLOR, 0.45), padding: 1.5, flexShrink: 0 }}>
       <div style={{ clipPath: oct(6), background: COLORS.base, display: 'flex', gap: 3, padding: 3 }}>
-        {(['overview', 'trends'] as const).map(t => {
+        {tabs.map(t => {
           const active = tab === t
           return (
             <button
@@ -34,7 +39,7 @@ function SectionTabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                 color: active ? MX4_COLOR : COLORS.textMuted,
               }}
             >
-              {t === 'overview' ? 'Overview' : 'Trends'}
+              {TAB_LABELS[t]}
             </button>
           )
         })}
@@ -46,6 +51,7 @@ function SectionTabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 interface BottomBarProps {
   accent: string
   hasTabs?: boolean
+  tabs?: [Tab, Tab]
   onAsk: () => void
   onNav: () => void
 }
@@ -54,7 +60,7 @@ const DIVIDER = (
   <span style={{ width: 1, height: 24, background: hexA(MX4_COLOR, 0.22), flexShrink: 0 }} />
 )
 
-export function BottomBar({ hasTabs = false, onAsk, onNav }: BottomBarProps) {
+export function BottomBar({ hasTabs = false, tabs = ['overview', 'trends'], onAsk, onNav }: BottomBarProps) {
   const { tab, setTab } = useContext(TabContext)
   return (
     <div
@@ -136,7 +142,7 @@ export function BottomBar({ hasTabs = false, onAsk, onNav }: BottomBarProps) {
         {hasTabs ? (
           <>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-              <SectionTabs tab={tab} onTab={setTab} />
+              <SectionTabs tab={tab} onTab={setTab} tabs={tabs} />
             </div>
             {DIVIDER}
           </>

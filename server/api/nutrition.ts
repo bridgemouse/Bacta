@@ -71,6 +71,14 @@ function scale(value: number | null, factor: number): number | null {
   return value === null ? null : Math.round(value * factor * 100) / 100
 }
 
+function roundKcal(value: number): number {
+  return Math.round(value)
+}
+
+function roundMacro(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
 // GET /api/nutrition/log?date= — a day's logged entries grouped by meal, with totals
 nutritionRouter.get('/log', (req, res) => {
   const date = req.query.date as string
@@ -386,11 +394,11 @@ nutritionRouter.post('/recipes', (req, res) => {
   }
 
   try {
-    const kcalPerServing = Math.round(sumField(ingredients, 'calories') / servings)
-    const proteinPerServing = Math.round((sumField(ingredients, 'protein_g') / servings) * 100) / 100
-    const carbsPerServing = Math.round((sumField(ingredients, 'carbs_g') / servings) * 100) / 100
-    const fatPerServing = Math.round((sumField(ingredients, 'fat_g') / servings) * 100) / 100
-    const fiberPerServing = Math.round((sumField(ingredients, 'fiber_g') / servings) * 100) / 100
+    const kcalPerServing = roundKcal(sumField(ingredients, 'calories') / servings)
+    const proteinPerServing = roundMacro(sumField(ingredients, 'protein_g') / servings)
+    const carbsPerServing = roundMacro(sumField(ingredients, 'carbs_g') / servings)
+    const fatPerServing = roundMacro(sumField(ingredients, 'fat_g') / servings)
+    const fiberPerServing = roundMacro(sumField(ingredients, 'fiber_g') / servings)
 
     const createRecipe = db.transaction(() => {
       const foodInfo = db.prepare(`

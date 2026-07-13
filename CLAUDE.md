@@ -35,7 +35,7 @@ Saved to iPhone home screen, runs on local WiFi only (`bacta.local`). Runs on **
 - **Inline styles only.** No CSS files, no Tailwind, no CSS modules in components. Global CSS keyframe animations are defined in `client/index.css` and referenced by name in `animation` strings.
 - **Dark UI always.** Never propose or implement light mode.
 - **No multi-line paste** in terminal — use scripts or files.
-- Commits go to `main` directly. No feature branches unless specified.
+- Work on a `feature/<name>` branch and merge via PR (see "Branch Convention" below) — do not commit directly to `main`.
 - `INSERT OR REPLACE` for idempotent `health_snapshots` writes — allows a same-day metric to be corrected on re-poll (e.g. if Garmin revises a computed value).
 - **Prefer editing existing files** over creating new ones.
 - Do not add comments unless the WHY is genuinely non-obvious.

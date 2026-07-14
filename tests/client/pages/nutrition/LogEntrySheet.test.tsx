@@ -53,6 +53,13 @@ describe('LogEntrySheet — Quick Track', () => {
 })
 
 describe('LogEntrySheet — search and recents', () => {
+  it('shows a no-saved-foods hint when there is no query and no recents (cold start)', async () => {
+    const { fetchRecentEntries: mockFetchRecentEntries } = await import('../../../../client/src/lib/nutritionApi')
+    ;(mockFetchRecentEntries as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+    expect(await screen.findByText(/No saved foods yet/)).toBeInTheDocument()
+  })
+
   it('shows up to 4 recent entries when the search query is empty', async () => {
     const { fetchRecentEntries: mockFetchRecentEntries } = await import('../../../../client/src/lib/nutritionApi')
     ;(mockFetchRecentEntries as ReturnType<typeof vi.fn>).mockResolvedValue([

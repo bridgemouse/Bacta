@@ -136,6 +136,12 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
           <input placeholder="Search saved foods…" value={query} onChange={e => setQuery(e.target.value)}
             style={{ ...inputStyle, marginBottom: 10 }} />
 
+          {!query && recents.length === 0 && (
+            <div style={{ fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted, marginBottom: 12, lineHeight: 1.4 }}>
+              No saved foods yet — reference database grows as you save foods, or log ad-hoc below. Nothing to search is normal.
+            </div>
+          )}
+
           {!query && recents.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>

@@ -4,11 +4,12 @@ import { hexA } from '../../lib/hexA'
 import { useNutritionLog } from '../../hooks/useNutritionLog'
 import { useBriefing } from '../../hooks/useBriefing'
 import { todayLocal, addDaysLocal, relativeDayLabel, absoluteDateLabel } from '../../lib/nutritionDate'
-import type { MealGroup, NutritionSummary } from '../../lib/nutritionApi'
+import type { MealGroup, NutritionSummary, FoodLogEntry } from '../../lib/nutritionApi'
 import { MX4Briefing } from '../../components/MX4Card'
 import { BRIEFS } from '../../lib/stubData'
 import { Rail } from '../../components/viz/Rail'
 import { LogEntrySheet } from './LogEntrySheet'
+import { EditEntrySheet } from './EditEntrySheet'
 
 const A = SECTION_ACCENTS.nutrition
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const
@@ -87,7 +88,7 @@ function LedgerHero({ summary, date }: { summary: NutritionSummary | null; date:
   )
 }
 
-function MealGroupCard({ mealKey, group, onOpenLog }: { mealKey: string; group: MealGroup; onOpenLog: () => void }) {
+function MealGroupCard({ mealKey, group, onOpenLog, onEntryClick }: { mealKey: string; group: MealGroup; onOpenLog: () => void; onEntryClick: (entry: FoodLogEntry) => void }) {
   return (
     <div style={{ marginBottom: 9 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -98,10 +99,10 @@ function MealGroupCard({ mealKey, group, onOpenLog }: { mealKey: string; group: 
         <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{group.totals.calories} KCAL</span>
       </div>
       {group.entries.map(entry => (
-        <div key={entry.id} style={{
+        <div key={entry.id} onClick={() => onEntryClick(entry)} style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           borderLeft: `2px solid ${A}`, background: COLORS.surface, borderRadius: 6,
-          padding: '9px 11px', marginBottom: 6,
+          padding: '9px 11px', marginBottom: 6, cursor: 'pointer',
         }}>
           <div>
             <div style={{ fontFamily: FONT_UI, fontSize: 13.5, fontWeight: 600, color: COLORS.text }}>{entry.name}</div>
@@ -134,6 +135,7 @@ export function NutritionOverview() {
   const { log, summary, loading, refresh } = useNutritionLog(date)
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('nutrition')
   const [logSheetMeal, setLogSheetMeal] = useState<string | null>(null)
+  const [editEntry, setEditEntry] = useState<FoodLogEntry | null>(null)
   const isToday = date === todayLocal()
   const mealKeys = log ? orderedMealKeys(log.meals) : []
   const missingMeals = MEAL_ORDER.filter(m => !mealKeys.includes(m))
@@ -180,7 +182,7 @@ export function NutritionOverview() {
       )}
 
       {log && mealKeys.map(mealKey => (
-        <MealGroupCard key={mealKey} mealKey={mealKey} group={log.meals[mealKey]} onOpenLog={() => setLogSheetMeal(mealKey)} />
+        <MealGroupCard key={mealKey} mealKey={mealKey} group={log.meals[mealKey]} onOpenLog={() => setLogSheetMeal(mealKey)} onEntryClick={setEditEntry} />
       ))}
 
       {missingMeals.length > 0 && (
@@ -204,6 +206,14 @@ export function NutritionOverview() {
         meal={logSheetMeal ?? 'breakfast'}
         onClose={() => setLogSheetMeal(null)}
         onLogged={refresh}
+      />
+
+      <EditEntrySheet
+        open={editEntry !== null}
+        entry={editEntry}
+        date={date}
+        onClose={() => setEditEntry(null)}
+        onSaved={refresh}
       />
     </>
   )

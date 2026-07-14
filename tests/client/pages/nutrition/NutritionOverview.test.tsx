@@ -193,3 +193,13 @@ describe('NutritionOverview — LogEntrySheet', () => {
     })
   })
 })
+
+describe('NutritionOverview — EditEntrySheet', () => {
+  it('opens the EditEntrySheet with the clicked entry', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    render(<NutritionOverview />)
+    await waitFor(() => screen.getByText('Oatmeal'))
+    await user.click(screen.getByText('Oatmeal'))
+    expect(await screen.findByText('SAVE CHANGES')).toBeInTheDocument()
+  })
+})

@@ -53,6 +53,7 @@ describe('NutritionLibrary — list', () => {
     mockFetchRecipes.mockResolvedValue([])
     await user.click(screen.getByLabelText('Delete Protein Smoothie'))
     await waitFor(() => expect(mockDeleteRecipe).toHaveBeenCalledWith(2))
+    await waitFor(() => expect(screen.queryByText('Protein Smoothie')).not.toBeInTheDocument())
   })
 
   it('shows the empty state when there are no foods or recipes', async () => {

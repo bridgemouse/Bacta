@@ -60,7 +60,7 @@ export const toneColor = (t: Tone): string =>
   t === 'flag' ? COLORS.red : t === 'caution' ? COLORS.amber : COLORS.green
 
 /** Sections that have full Overview + Trends content built */
-export const BUILT_SECTIONS: SectionKey[] = ['home', 'recovery', 'sleep', 'training']
+export const BUILT_SECTIONS: SectionKey[] = ['home', 'recovery', 'sleep', 'training', 'nutrition']
 
 export const CARD_SIZES = {
   hero:  220,

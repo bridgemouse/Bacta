@@ -37,6 +37,11 @@ export const BRIEFS: Record<string, Brief> = {
     line: 'Status holds at Productive — VO2max ticked to 52. Acute load is 342 and climbing toward the top of your optimal band. Today\'s run logged clean. Keep the next session aerobic to bank the adaptation.',
     chips: [['STATUS', 'PRODUCTIVE'], ['LOAD', '342'], ['VO2', '52']],
   },
+  nutrition: {
+    tone: 'positive', mood: 'transmit', meta: 'STANDING BY',
+    line: 'Nutrition channel online. Logging summary and standing will surface here once the day has entries.',
+    chips: [['KCAL', '—/—'], ['LOGGED', '0'], ['FLAGS', '0']],
+  },
 }
 
 // ── Recovery ──────────────────────────────────────────────────────────────────

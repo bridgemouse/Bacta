@@ -214,4 +214,25 @@ describe('NutritionLibrary — new recipe', () => {
       }],
     }))
   })
+
+  it('ad-hoc ingredient macros are editable and contribute to the RECIPE TOTAL', async () => {
+    mockCreateRecipe.mockResolvedValue({ id: 1, food: { id: 2 } })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Honey Toast')
+    await user.type(screen.getByLabelText('Servings'), '1')
+    await user.click(screen.getByText('+ AD-HOC INGREDIENT'))
+    await user.type(screen.getByLabelText('Ingredient 0 name'), 'Honey')
+    await user.type(screen.getByLabelText('Ingredient 0 calories'), '64')
+    await user.type(screen.getByLabelText('Ingredient 0 carbs_g'), '17')
+
+    expect(screen.getByText(/RECIPE TOTAL 64 kcal · PER SERVING 64 kcal/)).toBeInTheDocument()
+
+    await user.click(screen.getByText('SAVE RECIPE'))
+    await waitFor(() => expect(mockCreateRecipe).toHaveBeenCalledWith(expect.objectContaining({
+      ingredients: [expect.objectContaining({ name: 'Honey', calories: 64, carbs_g: 17, protein_g: undefined })],
+    })))
+  })
 })

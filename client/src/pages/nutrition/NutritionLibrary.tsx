@@ -148,23 +148,37 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
       {ingredients.map((ing, i) => {
         const isAdHoc = ing.food_id == null
         return (
-          <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-            {isAdHoc ? (
-              <input aria-label={`Ingredient ${i} name`} value={ing.name} onChange={e => updateIngredient(i, { name: e.target.value })}
-                placeholder="Name" style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
-            ) : (
-              <span style={{ flex: 1, fontFamily: FONT_UI, fontSize: 12, color: COLORS.text }}>{ing.name}</span>
+          <div key={i} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: isAdHoc ? 4 : 0 }}>
+              {isAdHoc ? (
+                <input aria-label={`Ingredient ${i} name`} value={ing.name} onChange={e => updateIngredient(i, { name: e.target.value })}
+                  placeholder="Name" style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
+              ) : (
+                <span style={{ flex: 1, fontFamily: FONT_UI, fontSize: 12, color: COLORS.text }}>{ing.name}</span>
+              )}
+              <input aria-label={`Ingredient ${i} quantity`} value={String(ing.quantity)}
+                onChange={e => updateIngredient(i, { quantity: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
+              {isAdHoc ? (
+                <input aria-label={`Ingredient ${i} unit`} value={ing.unit} onChange={e => updateIngredient(i, { unit: e.target.value })}
+                  placeholder="g" style={{ ...inputStyle, width: 30, fontSize: 9, padding: '5px 4px' }} />
+              ) : (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 30 }}>{ing.unit}</span>
+              )}
+              {!isAdHoc && (
+                <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 60 }}>{ing.calories ?? '—'} kcal</span>
+              )}
+              <button aria-label={`Remove ingredient ${i}`} onClick={() => removeIngredient(i)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer' }}>✕</button>
+            </div>
+            {isAdHoc && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
+                {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
+                  <input key={key} aria-label={`Ingredient ${i} ${key}`} placeholder="—"
+                    value={ing[key] == null ? '' : String(ing[key])}
+                    onChange={e => updateIngredient(i, { [key]: e.target.value === '' ? null : Number(e.target.value) })}
+                    style={{ ...inputStyle, textAlign: 'center', padding: '5px 2px', fontSize: 9 }} />
+                ))}
+              </div>
             )}
-            <input aria-label={`Ingredient ${i} quantity`} value={String(ing.quantity)}
-              onChange={e => updateIngredient(i, { quantity: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
-            {isAdHoc ? (
-              <input aria-label={`Ingredient ${i} unit`} value={ing.unit} onChange={e => updateIngredient(i, { unit: e.target.value })}
-                placeholder="g" style={{ ...inputStyle, width: 30, fontSize: 9, padding: '5px 4px' }} />
-            ) : (
-              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 30 }}>{ing.unit}</span>
-            )}
-            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 60 }}>{ing.calories ?? '—'} kcal</span>
-            <button aria-label={`Remove ingredient ${i}`} onClick={() => removeIngredient(i)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer' }}>✕</button>
           </div>
         )
       })}

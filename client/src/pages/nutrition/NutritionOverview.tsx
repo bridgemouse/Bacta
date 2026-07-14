@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { useNutritionLog } from '../../hooks/useNutritionLog'
+import { useBriefing } from '../../hooks/useBriefing'
 import { todayLocal, addDaysLocal, relativeDayLabel, absoluteDateLabel } from '../../lib/nutritionDate'
 import type { MealGroup, NutritionSummary } from '../../lib/nutritionApi'
+import { MX4Briefing } from '../../components/MX4Card'
+import { BRIEFS } from '../../lib/stubData'
 import { Rail } from '../../components/viz/Rail'
 
 const A = SECTION_ACCENTS.nutrition
@@ -129,6 +132,7 @@ function MealGroupCard({ mealKey, group }: { mealKey: string; group: MealGroup }
 export function NutritionOverview() {
   const [date, setDate] = useState(todayLocal())
   const { log, summary, loading } = useNutritionLog(date)
+  const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('nutrition')
   const isToday = date === todayLocal()
   const mealKeys = log ? orderedMealKeys(log.meals) : []
   const missingMeals = MEAL_ORDER.filter(m => !mealKeys.includes(m))
@@ -158,6 +162,10 @@ export function NutritionOverview() {
           style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${COLORS.line}`, background: COLORS.surface, color: COLORS.textSecondary, cursor: 'pointer' }}
         >›</button>
       </div>
+
+      {isToday && (
+        <MX4Briefing accent={A} brief={BRIEFS.nutrition} liveData={liveBriefing ?? undefined} section="nutrition" onRefresh={refreshBriefing} />
+      )}
 
       <Rail label={isToday ? 'TODAY · SO FAR' : date < todayLocal() ? `CLOSED DAY · ${relativeDayLabel(date)}` : `PLANNED · ${relativeDayLabel(date)}`} accent={A}
         right={summary?.target ? `TARGET SET ${summary.target.date} · EDIT ›` : 'NO TARGET SET · SET ›'} />

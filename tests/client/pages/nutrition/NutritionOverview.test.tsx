@@ -77,3 +77,18 @@ describe('NutritionOverview — ledger', () => {
     await waitFor(() => expect(screen.getByText('NO TARGET SET · SET ›')).toBeInTheDocument())
   })
 })
+
+describe('NutritionOverview — MX-4 briefing', () => {
+  it('renders the MX-4 briefing card only when viewing today', async () => {
+    render(<NutritionOverview />)
+    await waitFor(() => expect(screen.getByText(/MX-4 \/\/ NUTRITION/)).toBeInTheDocument())
+  })
+
+  it('does not render the briefing card on a past day', async () => {
+    render(<NutritionOverview />)
+    const user = (await import('@testing-library/user-event')).default.setup()
+    await waitFor(() => screen.getByLabelText('Previous day'))
+    await user.click(screen.getByLabelText('Previous day'))
+    await waitFor(() => expect(screen.queryByText(/MX-4 \/\/ NUTRITION/)).not.toBeInTheDocument())
+  })
+})

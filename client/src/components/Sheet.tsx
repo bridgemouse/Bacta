@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { COLORS, FONT_MONO } from '../theme'
 import { hexA } from '../lib/hexA'
 import { bactaTexture } from '../lib/bactaTexture'
@@ -37,7 +38,12 @@ export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps
 
   if (!render) return null
 
-  return (
+  // Portaled to document.body — a Sheet rendered from inside page content (not
+  // hoisted to AppShell's root like BottomSheet/AskSheet) would otherwise be
+  // trapped inside the content zone's own z-index stacking context and render
+  // BENEATH the fixed BottomBar dock, making anything near the sheet's bottom
+  // edge (e.g. a submit button) visually and pointer-event unreachable.
+  return createPortal(
     <div
       data-testid="sheet-backdrop"
       onClick={onClose}
@@ -66,7 +72,8 @@ export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

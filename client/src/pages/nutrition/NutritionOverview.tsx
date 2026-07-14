@@ -5,6 +5,7 @@ import { useNutritionLog } from '../../hooks/useNutritionLog'
 import { useBriefing } from '../../hooks/useBriefing'
 import { todayLocal, addDaysLocal, relativeDayLabel, absoluteDateLabel } from '../../lib/nutritionDate'
 import type { MealGroup, NutritionSummary, FoodLogEntry } from '../../lib/nutritionApi'
+import { createLogEntry } from '../../lib/nutritionApi'
 import { MX4Briefing } from '../../components/MX4Card'
 import { BRIEFS } from '../../lib/stubData'
 import { LogEntrySheet } from './LogEntrySheet'
@@ -13,6 +14,16 @@ import { TargetsSheet } from './TargetsSheet'
 
 const A = SECTION_ACCENTS.nutrition
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const
+
+async function copyMealToToday(group: MealGroup, mealKey: string) {
+  for (const entry of group.entries) {
+    await createLogEntry({
+      date: todayLocal(), meal_type: mealKey, food_id: entry.food_id ?? undefined,
+      name: entry.food_id == null ? entry.name : undefined, quantity: entry.quantity, unit: entry.unit,
+      calories: entry.calories, protein_g: entry.protein_g, carbs_g: entry.carbs_g, fat_g: entry.fat_g, fiber_g: entry.fiber_g,
+    })
+  }
+}
 
 function orderedMealKeys(meals: Record<string, MealGroup>): string[] {
   const known = MEAL_ORDER.filter(m => m in meals)
@@ -88,7 +99,7 @@ function LedgerHero({ summary, date }: { summary: NutritionSummary | null; date:
   )
 }
 
-function MealGroupCard({ mealKey, group, onOpenLog, onEntryClick }: { mealKey: string; group: MealGroup; onOpenLog: () => void; onEntryClick: (entry: FoodLogEntry) => void }) {
+function MealGroupCard({ mealKey, group, onOpenLog, onEntryClick, isToday, onCopied }: { mealKey: string; group: MealGroup; onOpenLog: () => void; onEntryClick: (entry: FoodLogEntry) => void; isToday: boolean; onCopied: () => void }) {
   return (
     <div style={{ marginBottom: 9 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -96,6 +107,12 @@ function MealGroupCard({ mealKey, group, onOpenLog, onEntryClick }: { mealKey: s
           {mealKey.toUpperCase()}
         </span>
         <span style={{ flex: 1, height: 1, background: COLORS.line }} />
+        {!isToday && (
+          <button onClick={() => copyMealToToday(group, mealKey).then(onCopied)} style={{
+            background: 'none', border: `1px solid ${hexA(A, 0.4)}`, borderRadius: 5, padding: '2px 7px',
+            color: A, fontFamily: FONT_MONO, fontSize: 8, cursor: 'pointer',
+          }}>COPY TO TODAY</button>
+        )}
         <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{group.totals.calories} KCAL</span>
       </div>
       {group.entries.map(entry => (
@@ -200,7 +217,10 @@ export function NutritionOverview() {
       )}
 
       {log && mealKeys.map(mealKey => (
-        <MealGroupCard key={mealKey} mealKey={mealKey} group={log.meals[mealKey]} onOpenLog={() => setLogSheetMeal(mealKey)} onEntryClick={setEditEntry} />
+        <MealGroupCard key={mealKey} mealKey={mealKey} group={log.meals[mealKey]} isToday={isToday}
+          onEntryClick={setEditEntry}
+          onOpenLog={() => setLogSheetMeal(mealKey)}
+          onCopied={() => { setDate(todayLocal()); refresh() }} />
       ))}
 
       {missingMeals.length > 0 && (

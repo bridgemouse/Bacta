@@ -214,3 +214,20 @@ describe('NutritionOverview — TargetsSheet', () => {
     expect(await screen.findByText('SAVE TARGETS')).toBeInTheDocument()
   })
 })
+
+describe('NutritionOverview — Copy to today', () => {
+  it('shows a COPY TO TODAY chip on a meal group only when viewing a past day, and copies every entry in that meal', async () => {
+    const { createLogEntry } = await import('../../../../client/src/lib/nutritionApi')
+    ;(createLogEntry as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 99 })
+    const user = (await import('@testing-library/user-event')).default.setup()
+    render(<NutritionOverview />)
+    await waitFor(() => screen.getByLabelText('Previous day'))
+    expect(screen.queryByText('COPY TO TODAY')).not.toBeInTheDocument() // today has no chip
+
+    await user.click(screen.getByLabelText('Previous day'))
+    await waitFor(() => screen.getByText('COPY TO TODAY'))
+    await user.click(screen.getByText('COPY TO TODAY'))
+
+    await waitFor(() => expect(createLogEntry).toHaveBeenCalledWith(expect.objectContaining({ name: 'Oatmeal', meal_type: 'breakfast' })))
+  })
+})

@@ -112,6 +112,28 @@ nutritionRouter.get('/log', (req, res) => {
   res.json({ meals, daily: logTotals(date) })
 })
 
+// GET /api/nutrition/log/recent?limit=N — most recent distinct (name+unit) log entries,
+// newest first, for the Log Entry sheet's RECENT list. Dedup keeps only each name+unit
+// combination's most recent row — a corrected quantity/macro re-log should surface its
+// latest state, not a stale older log of the same food.
+nutritionRouter.get('/log/recent', (req, res) => {
+  const limit = Math.min(Math.max(1, Number(req.query.limit) || 4), 20)
+  const rows = db.prepare(
+    'SELECT * FROM food_log_entries ORDER BY logged_at DESC LIMIT 200'
+  ).all() as Array<{ name: string; unit: string }>
+
+  const seen = new Set<string>()
+  const entries: typeof rows = []
+  for (const row of rows) {
+    const key = `${row.name}::${row.unit}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    entries.push(row)
+    if (entries.length >= limit) break
+  }
+  res.json({ entries })
+})
+
 // POST /api/nutrition/log — log a new entry, either against a reference food (scaled) or fully ad-hoc
 nutritionRouter.post('/log', (req, res) => {
   const { date, meal_type, food_id, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g } = req.body as {

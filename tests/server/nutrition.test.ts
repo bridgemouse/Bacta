@@ -428,4 +428,39 @@ describe('Nutrition API', () => {
       expect(del.status).toBe(400)
     })
   })
+
+  describe('Recent entries', () => {
+    it('GET /api/nutrition/log/recent returns entries newest-first, deduped by name+unit', async () => {
+      const { default: db } = await import('../../server/db/client')
+
+      // Insert entries with explicit timestamps that are guaranteed to be newest
+      // Use a timestamp in the future to ensure they're returned first by ORDER BY logged_at DESC
+      const future = new Date(Date.now() + 10000).toISOString().replace('T', ' ').slice(0, 19)
+      const pastFuture = new Date(Date.now() + 5000).toISOString().replace('T', ' ').slice(0, 19)
+
+      db.prepare(`INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run('2026-07-08', 'lunch', 'Salmon bowl', 1, 'bowl', 500, pastFuture, pastFuture)
+      db.prepare(`INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run('2026-07-09', 'lunch', 'Salmon bowl', 1, 'bowl', 520, future, future)
+      db.prepare(`INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run('2026-07-09', 'dinner', 'Turkey sandwich', 1, 'sandwich', 400, future, future)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/log/recent').query({ limit: 4 })
+      expect(res.status).toBe(200)
+      const salmonEntries = res.body.entries.filter((e: { name: string }) => e.name === 'Salmon bowl')
+      expect(salmonEntries.length).toBe(1) // deduped
+      expect(salmonEntries[0].calories).toBe(520) // the more recent of the two
+    })
+
+    it('GET /api/nutrition/log/recent respects the limit param', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/log/recent').query({ limit: 1 })
+      expect(res.status).toBe(200)
+      expect(Array.isArray(res.body.entries)).toBe(true)
+      // After the previous test, there should be at least some entries in the database
+      expect(res.body.entries.length).toBeGreaterThan(0)
+      expect(res.body.entries.length).toBeLessThanOrEqual(1)
+    })
+  })
 })

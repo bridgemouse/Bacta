@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { createLogEntry } from '../../lib/nutritionApi'
+import { createLogEntry, searchFoods, fetchRecentEntries, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
 
 const A = SECTION_ACCENTS.nutrition
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
@@ -23,6 +23,10 @@ const inputStyle = {
 
 export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged }: LogEntrySheetProps) {
   const [meal, setMeal] = useState(initialMeal)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<Food[]>([])
+  const [recents, setRecents] = useState<FoodLogEntry[]>([])
+  const [selectedFood, setSelectedFood] = useState<Food | null>(null)
   const [name, setName] = useState('')
   const [qty, setQty] = useState('')
   const [unit, setUnit] = useState('')
@@ -43,6 +47,18 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
       reset()
     }
   }, [open, initialMeal])
+
+  useEffect(() => {
+    if (!open) return
+    fetchRecentEntries(4).then(setRecents)
+  }, [open])
+
+  useEffect(() => {
+    if (!query) { setResults([]); return }
+    let cancelled = false
+    searchFoods(query).then(r => { if (!cancelled) setResults(r) })
+    return () => { cancelled = true }
+  }, [query])
 
   async function handleSubmit() {
     if (!name || !qty || !unit || submitting) return
@@ -78,6 +94,48 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
               }}>{m.toUpperCase()}</button>
             ))}
           </div>
+
+          <input placeholder="Search saved foods…" value={query} onChange={e => setQuery(e.target.value)}
+            style={{ ...inputStyle, marginBottom: 10 }} />
+
+          {!query && recents.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>
+                RECENT · ONE TAP TO RE-LOG
+              </div>
+              {recents.map(r => (
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px solid ${COLORS.line}` }}>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: COLORS.text }}>{r.name}</span>
+                  <button onClick={async () => {
+                    await createLogEntry({ date, meal_type: meal, food_id: r.food_id, name: r.food_id == null ? r.name : undefined, quantity: r.quantity, unit: r.unit, calories: r.calories, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })
+                    onLogged(); onClose()
+                  }} style={{ background: 'none', border: 'none', color: A, fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, cursor: 'pointer' }}>+ LOG</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {query && results.length === 0 && (
+            <div style={{ border: `1px dashed ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 12, fontFamily: FONT_MONO, fontSize: 12, color: COLORS.textMuted }}>
+              No match for &quot;{query}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
+            </div>
+          )}
+
+          {query && results.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              {results.map(f => (
+                <button key={f.id} onClick={() => { setSelectedFood(f); setQuery('') }} style={{
+                  display: 'block', width: '100%', textAlign: 'left', background: COLORS.surface,
+                  border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: '8px 10px', marginBottom: 6, cursor: 'pointer',
+                }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: COLORS.text }}>{f.name}</div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
+                    per {f.default_qty} {f.default_unit} · {f.calories ?? '—'} kcal · unit locked to {f.default_unit}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
           <input placeholder="What did you eat? (e.g. tacos from the truck)" value={name}
             onChange={e => setName(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />

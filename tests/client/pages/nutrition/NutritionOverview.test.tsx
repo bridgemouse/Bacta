@@ -7,6 +7,8 @@ vi.mock('../../../../client/src/lib/nutritionApi', () => ({
   fetchLog: vi.fn(),
   fetchSummary: vi.fn(),
   createLogEntry: vi.fn(),
+  searchFoods: vi.fn().mockResolvedValue([]),
+  fetchRecentEntries: vi.fn().mockResolvedValue([]),
 }))
 
 import { fetchLog, fetchSummary } from '../../../../client/src/lib/nutritionApi'

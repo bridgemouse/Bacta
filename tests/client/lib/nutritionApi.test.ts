@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   fetchLog,
+  fetchRecentEntries,
   createLogEntry,
   updateLogEntry,
   deleteLogEntry,
@@ -36,6 +37,13 @@ describe('nutritionApi', () => {
   it('fetchLog throws on a non-ok response', async () => {
     mockFetch.mockResolvedValue({ ok: false })
     await expect(fetchLog('2026-07-13')).rejects.toThrow()
+  })
+
+  it('fetchRecentEntries calls GET /api/nutrition/log/recent with the limit and returns entries', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ entries: [{ id: 1, name: 'Oats' }] }) })
+    const result = await fetchRecentEntries(4)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/log/recent?limit=4')
+    expect(result[0].name).toBe('Oats')
   })
 
   it('createLogEntry POSTs the entry and returns the created row', async () => {

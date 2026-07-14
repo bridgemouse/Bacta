@@ -46,6 +46,13 @@ export async function fetchLog(date: string): Promise<LogResponse> {
   return res.json()
 }
 
+export async function fetchRecentEntries(limit = 4): Promise<FoodLogEntry[]> {
+  const res = await fetch(`/api/nutrition/log/recent?limit=${limit}`)
+  if (!res.ok) return []
+  const { entries } = await res.json() as { entries: FoodLogEntry[] }
+  return entries
+}
+
 export interface LogEntryInput {
   date: string
   meal_type: string

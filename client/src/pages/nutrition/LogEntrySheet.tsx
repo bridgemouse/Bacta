@@ -7,6 +7,23 @@ import { createLogEntry, searchFoods, fetchRecentEntries, type Food, type FoodLo
 const A = SECTION_ACCENTS.nutrition
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 
+function scaledPreview(food: Food, qty: number) {
+  const factor = qty / food.default_qty
+  const round2 = (v: number | null) => v == null ? null : Math.round(v * factor * 100) / 100
+  return {
+    calories: food.calories == null ? null : Math.round(food.calories * factor),
+    protein_g: round2(food.protein_g),
+    carbs_g: round2(food.carbs_g),
+    fat_g: round2(food.fat_g),
+  }
+}
+
+function qtyForGoal(food: Food, macroKey: 'calories' | 'protein_g' | 'carbs_g' | 'fat_g', goal: number): number | null {
+  const perDefaultQty = food[macroKey]
+  if (perDefaultQty == null || perDefaultQty === 0) return null
+  return Math.round((goal * food.default_qty / perDefaultQty) * 100) / 100
+}
+
 interface LogEntrySheetProps {
   open: boolean
   date: string
@@ -33,11 +50,14 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   const [macros, setMacros] = useState<Record<'calories' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g', string>>({
     calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '',
   })
+  const [goalMacro, setGoalMacro] = useState<'calories' | 'protein_g' | 'carbs_g' | 'fat_g' | null>(null)
+  const [goalValue, setGoalValue] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   function reset() {
     setName(''); setQty(''); setUnit('')
     setMacros({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
+    setSelectedFood(null); setGoalMacro(null); setGoalValue('')
   }
 
   useEffect(() => {
@@ -47,6 +67,12 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
       reset()
     }
   }, [open, initialMeal])
+
+  useEffect(() => {
+    if (!selectedFood || !goalMacro || goalValue === '') return
+    const computed = qtyForGoal(selectedFood, goalMacro, Number(goalValue))
+    if (computed != null) setQty(String(computed))
+  }, [selectedFood, goalMacro, goalValue])
 
   useEffect(() => {
     if (!open) return
@@ -61,7 +87,20 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   }, [query])
 
   async function handleSubmit() {
-    if (!name || !qty || !unit || submitting) return
+    if (submitting) return
+    if (selectedFood) {
+      if (!qty) return
+      setSubmitting(true)
+      try {
+        await createLogEntry({ date, meal_type: meal, food_id: selectedFood.id, quantity: Number(qty), unit: selectedFood.default_unit })
+        setSelectedFood(null); setGoalMacro(null); setGoalValue('')
+        onLogged(); onClose()
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+    if (!name || !qty || !unit) return
     setSubmitting(true)
     try {
       await createLogEntry({
@@ -73,8 +112,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
         fiber_g: macros.fiber_g === '' ? null : Number(macros.fiber_g),
       })
       reset()
-      onLogged()
-      onClose()
+      onLogged(); onClose()
     } finally {
       setSubmitting(false)
     }
@@ -137,24 +175,63 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
             </div>
           )}
 
-          <input placeholder="What did you eat? (e.g. tacos from the truck)" value={name}
-            onChange={e => setName(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
+          {selectedFood ? (
+            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontFamily: FONT_UI, fontSize: 14, fontWeight: 600, color: COLORS.text }}>{selectedFood.name}</span>
+                <button aria-label="Clear selected food" onClick={() => { setSelectedFood(null); setGoalMacro(null); setGoalValue('') }}
+                  style={{ background: 'none', border: 'none', color: COLORS.textMuted, cursor: 'pointer', fontSize: 16 }}>✕</button>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <input aria-label="Quantity" value={qty} onChange={e => setQty(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+                <span style={{ ...inputStyle, flex: 1, display: 'flex', alignItems: 'center', gap: 6, color: A, borderColor: hexA(A, 0.4) }}>
+                  🔒 <span style={{ fontFamily: FONT_MONO }}>{selectedFood.default_unit}</span> <span style={{ fontSize: 8, color: COLORS.textMuted, fontFamily: FONT_MONO }}>LOCKED</span>
+                </span>
+              </div>
+              {qty !== '' && (() => {
+                const preview = scaledPreview(selectedFood, Number(qty))
+                return (
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, marginBottom: 10 }}>
+                    auto: {preview.calories ?? '—'} kcal · P {preview.protein_g ?? '—'} · C {preview.carbs_g ?? '—'} · F {preview.fat_g ?? '—'}
+                  </div>
+                )
+              })()}
+              <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>
+                NO MACRO MATH — SET QTY FROM A GOAL
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['calories', 'protein_g', 'carbs_g', 'fat_g'] as const).map(key => (
+                  <button key={key} onClick={() => setGoalMacro(key)} style={{
+                    padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: FONT_MONO, fontSize: 9,
+                    border: `1px solid ${goalMacro === key ? A : COLORS.line}`, background: goalMacro === key ? `${A}22` : 'transparent',
+                    color: goalMacro === key ? A : COLORS.textMuted,
+                  }}>{key === 'protein_g' ? 'P' : key === 'carbs_g' ? 'C' : key === 'fat_g' ? 'F' : 'KCAL'}</button>
+                ))}
+                <input placeholder="goal" value={goalValue} onChange={e => setGoalValue(e.target.value)} style={{ ...inputStyle, width: 70 }} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <input placeholder="What did you eat? (e.g. tacos from the truck)" value={name}
+                onChange={e => setName(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <input placeholder="qty" value={qty} onChange={e => setQty(e.target.value)} style={inputStyle} />
-            <input placeholder="unit (any)" value={unit} onChange={e => setUnit(e.target.value)} style={inputStyle} />
-          </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input placeholder="qty" value={qty} onChange={e => setQty(e.target.value)} style={inputStyle} />
+                <input placeholder="unit (any)" value={unit} onChange={e => setUnit(e.target.value)} style={inputStyle} />
+              </div>
 
-          <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>
-            MACROS OPTIONAL — LOG WHAT YOU KNOW, LEAVE THE REST BLANK
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
-            {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
-              <input key={key} placeholder="—" value={macros[key]}
-                onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
-                style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
-            ))}
-          </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>
+                MACROS OPTIONAL — LOG WHAT YOU KNOW, LEAVE THE REST BLANK
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
+                {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
+                  <input key={key} placeholder="—" value={macros[key]}
+                    onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
+                    style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
+                ))}
+              </div>
+            </>
+          )}
 
           <button onClick={handleSubmit} disabled={submitting} style={{
             width: '100%', padding: '11px 0', borderRadius: 8, border: 'none', cursor: submitting ? 'default' : 'pointer',

@@ -9,6 +9,7 @@ vi.mock('../../../../client/src/lib/nutritionApi', () => ({
   createLogEntry: vi.fn(),
   searchFoods: vi.fn().mockResolvedValue([]),
   fetchRecentEntries: vi.fn().mockResolvedValue([]),
+  saveTargets: vi.fn(),
 }))
 
 import { fetchLog, fetchSummary } from '../../../../client/src/lib/nutritionApi'
@@ -201,5 +202,15 @@ describe('NutritionOverview — EditEntrySheet', () => {
     await waitFor(() => screen.getByText('Oatmeal'))
     await user.click(screen.getByText('Oatmeal'))
     expect(await screen.findByText('SAVE CHANGES')).toBeInTheDocument()
+  })
+})
+
+describe('NutritionOverview — TargetsSheet', () => {
+  it('opens the TargetsSheet when the target rail button is clicked', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    render(<NutritionOverview />)
+    await waitFor(() => screen.getByText(/EDIT ›/))
+    await user.click(screen.getByText(/EDIT ›/))
+    expect(await screen.findByText('SAVE TARGETS')).toBeInTheDocument()
   })
 })

@@ -10,6 +10,7 @@ import { BRIEFS } from '../../lib/stubData'
 import { Rail } from '../../components/viz/Rail'
 import { LogEntrySheet } from './LogEntrySheet'
 import { EditEntrySheet } from './EditEntrySheet'
+import { TargetsSheet } from './TargetsSheet'
 
 const A = SECTION_ACCENTS.nutrition
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const
@@ -136,6 +137,7 @@ export function NutritionOverview() {
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('nutrition')
   const [logSheetMeal, setLogSheetMeal] = useState<string | null>(null)
   const [editEntry, setEditEntry] = useState<FoodLogEntry | null>(null)
+  const [targetsOpen, setTargetsOpen] = useState(false)
   const isToday = date === todayLocal()
   const mealKeys = log ? orderedMealKeys(log.meals) : []
   const missingMeals = MEAL_ORDER.filter(m => !mealKeys.includes(m))
@@ -170,8 +172,25 @@ export function NutritionOverview() {
         <MX4Briefing accent={A} brief={BRIEFS.nutrition} liveData={liveBriefing ?? undefined} section="nutrition" onRefresh={refreshBriefing} />
       )}
 
-      <Rail label={isToday ? 'TODAY · SO FAR' : date < todayLocal() ? `CLOSED DAY · ${relativeDayLabel(date)}` : `PLANNED · ${relativeDayLabel(date)}`} accent={A}
-        right={summary?.target ? `TARGET SET ${summary.target.date} · EDIT ›` : 'NO TARGET SET · SET ›'} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '16px 0 11px' }}>
+        <span style={{
+          fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.2em',
+          color: A, fontWeight: 600, flexShrink: 0,
+        }}>
+          {isToday ? 'TODAY · SO FAR' : date < todayLocal() ? `CLOSED DAY · ${relativeDayLabel(date)}` : `PLANNED · ${relativeDayLabel(date)}`}
+        </span>
+        <span style={{
+          flex: 1, height: 1,
+          background: `linear-gradient(90deg, ${hexA(A, 0.4)}, ${COLORS.line})`,
+        }} />
+        <button onClick={() => setTargetsOpen(true)} style={{
+          fontFamily: FONT_MONO, fontSize: 9,
+          color: COLORS.textMuted, letterSpacing: '0.06em', flexShrink: 0,
+          border: 'none', background: 'transparent', cursor: 'pointer', padding: 0,
+        }}>
+          {summary?.target ? `TARGET SET ${summary.target.date} · EDIT ›` : 'NO TARGET SET · SET ›'}
+        </button>
+      </div>
 
       <LedgerHero summary={summary} date={date} />
 
@@ -213,6 +232,13 @@ export function NutritionOverview() {
         entry={editEntry}
         date={date}
         onClose={() => setEditEntry(null)}
+        onSaved={refresh}
+      />
+
+      <TargetsSheet
+        open={targetsOpen}
+        initialTarget={summary?.target ?? null}
+        onClose={() => setTargetsOpen(false)}
         onSaved={refresh}
       />
     </>

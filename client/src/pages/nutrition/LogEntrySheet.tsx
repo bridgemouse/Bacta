@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
-import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
+import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { createLogEntry, searchFoods, fetchRecentEntries, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
 
@@ -105,7 +105,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
               </div>
               {recents.map(r => (
                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px solid ${COLORS.line}` }}>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 12.5, color: COLORS.text }}>{r.name}</span>
+                  <span style={{ fontFamily: FONT_UI, fontSize: 12.5, color: COLORS.text }}>{r.name}</span>
                   <button onClick={async () => {
                     await createLogEntry({ date, meal_type: meal, food_id: r.food_id, name: r.food_id == null ? r.name : undefined, quantity: r.quantity, unit: r.unit, calories: r.calories, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })
                     onLogged(); onClose()
@@ -128,7 +128,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
                   display: 'block', width: '100%', textAlign: 'left', background: COLORS.surface,
                   border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: '8px 10px', marginBottom: 6, cursor: 'pointer',
                 }}>
-                  <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: COLORS.text }}>{f.name}</div>
+                  <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text }}>{f.name}</div>
                   <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
                     per {f.default_qty} {f.default_unit} · {f.calories ?? '—'} kcal · unit locked to {f.default_unit}
                   </div>

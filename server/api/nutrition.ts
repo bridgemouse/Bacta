@@ -119,7 +119,7 @@ nutritionRouter.get('/log', (req, res) => {
 nutritionRouter.get('/log/recent', (req, res) => {
   const limit = Math.min(Math.max(1, Number(req.query.limit) || 4), 20)
   const rows = db.prepare(
-    'SELECT * FROM food_log_entries ORDER BY logged_at DESC LIMIT 200'
+    'SELECT * FROM food_log_entries ORDER BY logged_at DESC, id DESC LIMIT 200'
   ).all() as Array<{ name: string; unit: string }>
 
   const seen = new Set<string>()

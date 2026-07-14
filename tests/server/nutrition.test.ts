@@ -462,5 +462,32 @@ describe('Nutrition API', () => {
       expect(res.body.entries.length).toBeGreaterThan(0)
       expect(res.body.entries.length).toBeLessThanOrEqual(1)
     })
+
+    it('breaks ties at the same logged_at timestamp by using id DESC (higher id wins)', async () => {
+      const { default: db } = await import('../../server/db/client')
+      // Insert two entries with the SAME name, unit, and logged_at timestamp
+      // but DIFFERENT calories to test the deterministic tiebreaker
+      const sameTimestamp = '2026-07-12 12:00:00'
+      const firstId = Number(db.prepare(`
+        INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run('2026-07-12', 'lunch', 'Chicken sandwich', 1, 'sandwich', 450, sameTimestamp, sameTimestamp).lastInsertRowid)
+
+      const secondId = Number(db.prepare(`
+        INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run('2026-07-12', 'lunch', 'Chicken sandwich', 1, 'sandwich', 480, sameTimestamp, sameTimestamp).lastInsertRowid)
+
+      // Verify secondId is indeed larger (inserted later)
+      expect(secondId).toBeGreaterThan(firstId)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/log/recent').query({ limit: 10 })
+      expect(res.status).toBe(200)
+      const sandwichEntries = res.body.entries.filter((e: { name: string }) => e.name === 'Chicken sandwich')
+      expect(sandwichEntries.length).toBe(1) // deduped to exactly one
+      expect(sandwichEntries[0].id).toBe(secondId) // the one with the higher id (inserted second)
+      expect(sandwichEntries[0].calories).toBe(480) // and thus the correct calories value
+    })
   })
 })

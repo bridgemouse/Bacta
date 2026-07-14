@@ -116,7 +116,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
           )}
 
           {query && results.length === 0 && (
-            <div style={{ border: `1px dashed ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 12, fontFamily: FONT_MONO, fontSize: 12, color: COLORS.textMuted }}>
+            <div style={{ border: `1px dashed ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 12, fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted }}>
               No match for &quot;{query}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
             </div>
           )}

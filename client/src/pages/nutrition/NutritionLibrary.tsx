@@ -119,7 +119,7 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
   const perServingCalories = servingsNum > 0 ? Math.round(totalCalories / servingsNum) : 0
 
   async function handleSave() {
-    if (!name || ingredients.length === 0 || submitting) return
+    if (!name || ingredients.length === 0 || servingsNum <= 0 || submitting) return
     setSubmitting(true)
     try {
       await createRecipe({
@@ -131,6 +131,8 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
         })),
       })
       onDone()
+    } catch (err) {
+      console.error('[recipe] save failed:', err)
     } finally {
       setSubmitting(false)
     }
@@ -143,16 +145,29 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
       <label htmlFor="new-recipe-servings" style={{ display: 'block', fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 4 }}>SERVINGS</label>
       <input id="new-recipe-servings" aria-label="Servings" value={servings} onChange={e => setServings(e.target.value)} style={{ ...inputStyle, marginBottom: 12, width: 80 }} />
 
-      {ingredients.map((ing, i) => (
-        <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-          <span style={{ flex: 1, fontFamily: FONT_UI, fontSize: 12, color: COLORS.text }}>{ing.name || '(unnamed)'}</span>
-          <input aria-label={`Ingredient ${i} quantity`} value={String(ing.quantity)}
-            onChange={e => updateIngredient(i, { quantity: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
-          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 30 }}>{ing.unit}</span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 60 }}>{ing.calories ?? '—'} kcal</span>
-          <button aria-label={`Remove ingredient ${i}`} onClick={() => removeIngredient(i)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer' }}>✕</button>
-        </div>
-      ))}
+      {ingredients.map((ing, i) => {
+        const isAdHoc = ing.food_id == null
+        return (
+          <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+            {isAdHoc ? (
+              <input aria-label={`Ingredient ${i} name`} value={ing.name} onChange={e => updateIngredient(i, { name: e.target.value })}
+                placeholder="Name" style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
+            ) : (
+              <span style={{ flex: 1, fontFamily: FONT_UI, fontSize: 12, color: COLORS.text }}>{ing.name}</span>
+            )}
+            <input aria-label={`Ingredient ${i} quantity`} value={String(ing.quantity)}
+              onChange={e => updateIngredient(i, { quantity: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
+            {isAdHoc ? (
+              <input aria-label={`Ingredient ${i} unit`} value={ing.unit} onChange={e => updateIngredient(i, { unit: e.target.value })}
+                placeholder="g" style={{ ...inputStyle, width: 30, fontSize: 9, padding: '5px 4px' }} />
+            ) : (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 30 }}>{ing.unit}</span>
+            )}
+            <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 60 }}>{ing.calories ?? '—'} kcal</span>
+            <button aria-label={`Remove ingredient ${i}`} onClick={() => removeIngredient(i)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer' }}>✕</button>
+          </div>
+        )
+      })}
 
       <input placeholder="Add from saved foods…" value={query} onChange={e => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} />
       {matches.map(f => (

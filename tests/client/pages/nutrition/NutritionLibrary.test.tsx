@@ -156,14 +156,62 @@ describe('NutritionLibrary — new recipe', () => {
     await screen.findByText('Test Oats')
     await user.click(screen.getByText('+ NEW RECIPE'))
     await user.type(screen.getByLabelText('Recipe name'), 'Oat Bowl')
+    await user.type(screen.getByLabelText('Servings'), '2')
     await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Oat')
     await user.click(await screen.findByText('Test Oats'))
     await user.click(screen.getByText('SAVE RECIPE'))
 
-    await waitFor(() => expect(mockCreateRecipe).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(mockCreateRecipe).toHaveBeenCalledWith({
       name: 'Oat Bowl',
-      ingredients: [expect.objectContaining({ food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g' })],
-    })))
+      servings: 2,
+      ingredients: [{
+        food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g',
+        calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6,
+      }],
+    }))
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument() // back on the list screen
+  })
+
+  it('SAVE RECIPE is blocked if servings is not filled in', async () => {
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Oat Bowl')
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Oat')
+    await user.click(await screen.findByText('Test Oats'))
+    // Don't fill in Servings
+    await user.click(screen.getByText('SAVE RECIPE'))
+
+    // createRecipe should NOT have been called
+    await waitFor(() => expect(mockCreateRecipe).not.toHaveBeenCalled())
+  })
+
+  it('ad-hoc ingredient name and unit are editable inputs', async () => {
+    mockCreateRecipe.mockResolvedValue({ id: 1, food: { id: 2 } })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Custom Mix')
+    await user.type(screen.getByLabelText('Servings'), '1')
+    await user.click(screen.getByText('+ AD-HOC INGREDIENT'))
+    await user.type(screen.getByLabelText('Ingredient 0 name'), 'Honey')
+    const unitInput = screen.getByLabelText('Ingredient 0 unit')
+    await user.clear(unitInput)
+    await user.type(unitInput, 'tbsp')
+    const qtyInput = screen.getByLabelText('Ingredient 0 quantity')
+    await user.clear(qtyInput)
+    await user.type(qtyInput, '2')
+    await user.click(screen.getByText('SAVE RECIPE'))
+
+    await waitFor(() => expect(mockCreateRecipe).toHaveBeenCalledWith({
+      name: 'Custom Mix',
+      servings: 1,
+      ingredients: [{
+        food_id: undefined, name: 'Honey', quantity: 2, unit: 'tbsp',
+        calories: undefined, protein_g: undefined, carbs_g: undefined, fat_g: undefined, fiber_g: undefined,
+      }],
+    }))
   })
 })

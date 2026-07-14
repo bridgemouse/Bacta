@@ -96,15 +96,98 @@ describe('NutritionOverview — MX-4 briefing', () => {
 })
 
 describe('NutritionOverview — LogEntrySheet', () => {
-  it('opens the LogEntrySheet with the right meal when a missing-meal button is clicked', async () => {
+  it('opens the LogEntrySheet with LUNCH pre-selected when the missing-meal LUNCH button is clicked', async () => {
     const user = (await import('@testing-library/user-event')).default.setup()
+    const today = todayLocal()
     render(<NutritionOverview />)
     await waitFor(() => expect(screen.getAllByText('NOT LOGGED YET').length).toBe(3))
     const lunchButtons = screen.getAllByText(/\+ LUNCH/)
     await user.click(lunchButtons[0])
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'LOG ENTRY' })).toBeInTheDocument()
-      expect(screen.getByText('LUNCH')).toBeInTheDocument()
+      expect(screen.getByText(`LUNCH · ${today}`)).toBeInTheDocument()
+    })
+  })
+
+  it('opens the LogEntrySheet with DINNER pre-selected when the missing-meal DINNER button is clicked', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    const today = todayLocal()
+    render(<NutritionOverview />)
+    await waitFor(() => expect(screen.getAllByText('NOT LOGGED YET').length).toBe(3))
+    const dinnerButtons = screen.getAllByText(/\+ DINNER/)
+    await user.click(dinnerButtons[0])
+    await waitFor(() => {
+      expect(screen.getByText(`DINNER · ${today}`)).toBeInTheDocument()
+    })
+  })
+
+  it('opens the LogEntrySheet with the correct meal pre-selected when "+ ADD TO {MEAL}" is clicked on an existing meal group', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    const today = todayLocal()
+    render(<NutritionOverview />)
+    await waitFor(() => expect(screen.getByText('Oatmeal')).toBeInTheDocument())
+    const addButtons = screen.getAllByText(/\+ ADD TO BREAKFAST/)
+    await user.click(addButtons[0])
+    await waitFor(() => {
+      expect(screen.getByText(`BREAKFAST · ${today}`)).toBeInTheDocument()
+    })
+  })
+
+  it('resync meal selection when sheet is closed and reopened with a different meal', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    const today = todayLocal()
+    render(<NutritionOverview />)
+    await waitFor(() => expect(screen.getAllByText('NOT LOGGED YET').length).toBe(3))
+
+    // Open sheet with LUNCH
+    const lunchButtons = screen.getAllByText(/\+ LUNCH/)
+    await user.click(lunchButtons[0])
+    await waitFor(() => {
+      expect(screen.getByText(`LUNCH · ${today}`)).toBeInTheDocument()
+    })
+
+    // Close the sheet by clicking the close button
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' })
+    await user.click(closeButtons[closeButtons.length - 1])
+
+    // Verify sheet is closed
+    await waitFor(() => {
+      expect(screen.queryByText(`LUNCH · ${today}`)).not.toBeInTheDocument()
+    })
+
+    // Open sheet again with DINNER
+    const dinnerButtons = screen.getAllByText(/\+ DINNER/)
+    await user.click(dinnerButtons[0])
+    await waitFor(() => {
+      expect(screen.getByText(`DINNER · ${today}`)).toBeInTheDocument()
+    })
+  })
+
+  it('clears draft form state when sheet is closed without submitting', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    render(<NutritionOverview />)
+    await waitFor(() => expect(screen.getAllByText('NOT LOGGED YET').length).toBe(3))
+
+    // Open sheet and type in the name field
+    const lunchButtons = screen.getAllByText(/\+ LUNCH/)
+    await user.click(lunchButtons[0])
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('What did you eat? (e.g. tacos from the truck)')).toBeInTheDocument()
+    })
+
+    const nameInput = screen.getByPlaceholderText('What did you eat? (e.g. tacos from the truck)') as HTMLInputElement
+    await user.type(nameInput, 'stale entry')
+    expect(nameInput.value).toBe('stale entry')
+
+    // Close the sheet
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' })
+    await user.click(closeButtons[closeButtons.length - 1])
+
+    // Reopen and verify the form is cleared
+    const dinnerButtons = screen.getAllByText(/\+ DINNER/)
+    await user.click(dinnerButtons[0])
+    await waitFor(() => {
+      const reopenedInput = screen.getByPlaceholderText('What did you eat? (e.g. tacos from the truck)') as HTMLInputElement
+      expect(reopenedInput.value).toBe('')
     })
   })
 })

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
+import { hexA } from '../../lib/hexA'
 import { createLogEntry } from '../../lib/nutritionApi'
 
 const A = SECTION_ACCENTS.nutrition
@@ -35,6 +36,14 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
     setMacros({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
   }
 
+  useEffect(() => {
+    if (open) {
+      setMeal(initialMeal)
+    } else {
+      reset()
+    }
+  }, [open, initialMeal])
+
   async function handleSubmit() {
     if (!name || !qty || !unit || submitting) return
     setSubmitting(true)
@@ -64,7 +73,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
             {MEALS.map(m => (
               <button key={m} onClick={() => setMeal(m)} style={{
                 flex: 1, padding: '7px 0', borderRadius: 6, cursor: 'pointer', fontFamily: FONT_MONO, fontSize: 9.5,
-                border: `1px solid ${meal === m ? A : COLORS.line}`, background: meal === m ? `${A}22` : 'transparent',
+                border: `1px solid ${meal === m ? A : COLORS.line}`, background: meal === m ? hexA(A, 0.13) : 'transparent',
                 color: meal === m ? A : COLORS.textMuted,
               }}>{m.toUpperCase()}</button>
             ))}

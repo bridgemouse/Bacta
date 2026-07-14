@@ -8,6 +8,7 @@ import type { MealGroup, NutritionSummary } from '../../lib/nutritionApi'
 import { MX4Briefing } from '../../components/MX4Card'
 import { BRIEFS } from '../../lib/stubData'
 import { Rail } from '../../components/viz/Rail'
+import { LogEntrySheet } from './LogEntrySheet'
 
 const A = SECTION_ACCENTS.nutrition
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const
@@ -86,7 +87,7 @@ function LedgerHero({ summary, date }: { summary: NutritionSummary | null; date:
   )
 }
 
-function MealGroupCard({ mealKey, group }: { mealKey: string; group: MealGroup }) {
+function MealGroupCard({ mealKey, group, onOpenLog }: { mealKey: string; group: MealGroup; onOpenLog: () => void }) {
   return (
     <div style={{ marginBottom: 9 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -118,8 +119,7 @@ function MealGroupCard({ mealKey, group }: { mealKey: string; group: MealGroup }
           </div>
         </div>
       ))}
-      {/* onClick wired in Task 9 once LogEntrySheet exists */}
-      <button style={{
+      <button onClick={onOpenLog} style={{
         width: '100%', padding: '8px 0', borderRadius: 6, border: `1px dashed ${hexA(A, 0.4)}`,
         background: 'transparent', color: A, fontFamily: FONT_MONO, fontSize: 9.5, cursor: 'pointer',
       }}>
@@ -131,8 +131,9 @@ function MealGroupCard({ mealKey, group }: { mealKey: string; group: MealGroup }
 
 export function NutritionOverview() {
   const [date, setDate] = useState(todayLocal())
-  const { log, summary, loading } = useNutritionLog(date)
+  const { log, summary, loading, refresh } = useNutritionLog(date)
   const { data: liveBriefing, refresh: refreshBriefing } = useBriefing('nutrition')
+  const [logSheetMeal, setLogSheetMeal] = useState<string | null>(null)
   const isToday = date === todayLocal()
   const mealKeys = log ? orderedMealKeys(log.meals) : []
   const missingMeals = MEAL_ORDER.filter(m => !mealKeys.includes(m))
@@ -179,14 +180,13 @@ export function NutritionOverview() {
       )}
 
       {log && mealKeys.map(mealKey => (
-        <MealGroupCard key={mealKey} mealKey={mealKey} group={log.meals[mealKey]} />
+        <MealGroupCard key={mealKey} mealKey={mealKey} group={log.meals[mealKey]} onOpenLog={() => setLogSheetMeal(mealKey)} />
       ))}
 
       {missingMeals.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {missingMeals.map(meal => (
-            // onClick wired in Task 9
-            <button key={meal} style={{
+            <button key={meal} onClick={() => setLogSheetMeal(meal)} style={{
               flex: '1 1 45%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
               padding: '10px 0', borderRadius: 8, border: `1px dashed ${COLORS.line}`,
               background: 'transparent', color: COLORS.textMuted, cursor: 'pointer',
@@ -197,6 +197,14 @@ export function NutritionOverview() {
           ))}
         </div>
       )}
+
+      <LogEntrySheet
+        open={logSheetMeal !== null}
+        date={date}
+        meal={logSheetMeal ?? 'breakfast'}
+        onClose={() => setLogSheetMeal(null)}
+        onLogged={refresh}
+      />
     </>
   )
 }

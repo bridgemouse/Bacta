@@ -1,10 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { NutritionOverview } from '../../../../client/src/pages/nutrition/NutritionOverview'
+import { todayLocal } from '../../../../client/src/lib/nutritionDate'
 
 vi.mock('../../../../client/src/lib/nutritionApi', () => ({
   fetchLog: vi.fn(),
   fetchSummary: vi.fn(),
+  createLogEntry: vi.fn(),
 }))
 
 import { fetchLog, fetchSummary } from '../../../../client/src/lib/nutritionApi'
@@ -90,5 +92,19 @@ describe('NutritionOverview — MX-4 briefing', () => {
     await waitFor(() => screen.getByLabelText('Previous day'))
     await user.click(screen.getByLabelText('Previous day'))
     await waitFor(() => expect(screen.queryByText(/MX-4 \/\/ NUTRITION/)).not.toBeInTheDocument())
+  })
+})
+
+describe('NutritionOverview — LogEntrySheet', () => {
+  it('opens the LogEntrySheet with the right meal when a missing-meal button is clicked', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    render(<NutritionOverview />)
+    await waitFor(() => expect(screen.getAllByText('NOT LOGGED YET').length).toBe(3))
+    const lunchButtons = screen.getAllByText(/\+ LUNCH/)
+    await user.click(lunchButtons[0])
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'LOG ENTRY' })).toBeInTheDocument()
+      expect(screen.getByText('LUNCH')).toBeInTheDocument()
+    })
   })
 })

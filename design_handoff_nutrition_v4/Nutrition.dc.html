@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #0b0d12; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    a { color: #3ecf8e; text-decoration: none; }
+    a:hover { color: #6fe0ae; }
+    input, select { outline: none; }
+    input::placeholder { color: #56657a; }
+    @keyframes mx4spin        { to { transform: rotate(360deg); } }
+    @keyframes mx4breathe     { 0%,100% { transform: scale(0.82); opacity: 0.7; } 50% { transform: scale(1); opacity: 1; } }
+    @keyframes mx4ping        { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.4); opacity: 0; } }
+    @keyframes mx4tele        { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+    @keyframes mx4blink       { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+    @keyframes mx4glowbreathe { 0%,100% { box-shadow: 0 0 8px #2bc4e8; } 50% { box-shadow: 0 0 20px #2bc4e8; } }
+    @keyframes mx4shimmer     { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    @keyframes valueFadeIn    { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes sheetUp        { from { transform: translateY(101%); } to { transform: translateY(0); } }
+    @keyframes backdropIn     { from { background: rgba(6,9,14,0); } to { background: rgba(6,9,14,0.62); } }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; display: grid; place-items: center; padding: 28px 16px; background: #0b0d12;">
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="430px,900px">
+<div style="position: relative; height: 100%; display: flex; flex-direction: column; background: #0f1117; color: #f4f7fb; font-family: 'Hanken Grotesk', system-ui, sans-serif; overflow: hidden;">
+
+  <!-- Global texture overlay -->
+  <div style="position: absolute; inset: 0; pointer-events: none; z-index: 0; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0px, rgba(255,255,255,0.016) 1px, transparent 1px, transparent 3px), linear-gradient(rgba(62,207,142,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(62,207,142,0.035) 1px, transparent 1px); background-size: 100% 3px, 26px 26px, 26px 26px;"></div>
+
+  <!-- TopBar — section mode -->
+  <div style="background: rgba(17,24,39,0.92); border-bottom: 1px solid rgba(62,207,142,0.28); box-shadow: 0 1px 0 rgba(62,207,142,0.12); display: flex; align-items: center; justify-content: space-between; padding: 58px 16px 10px; flex-shrink: 0; position: relative; z-index: 2;">
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <button aria-label="Back" style="background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; color: #3ecf8e;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"></polyline></svg>
+      </button>
+      <svg width="16" height="16" viewBox="0 0 24 24" style="display: block; flex-shrink: 0;"><polygon points="12,4.5 18.5,8.2 18.5,15.8 12,19.5 5.5,15.8 5.5,8.2" fill="none" stroke="#3ecf8e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polygon></svg>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.12em; color: #3ecf8e;">NUTRITION</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 5px;">
+      <span style="position: relative; width: 6px; height: 6px; display: inline-block; flex-shrink: 0;">
+        <span style="position: absolute; inset: 0; border-radius: 50%; background: #4ade80; animation: mx4ping 2.6s cubic-bezier(0,0,.2,1) infinite;"></span>
+        <span style="position: absolute; inset: 0; border-radius: 50%; background: #4ade80; box-shadow: 0 0 7px #4ade80; animation: mx4breathe 2.6s ease-in-out infinite;"></span>
+      </span>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; letter-spacing: 0.08em; color: #4ade80;">MX-4 ONLINE</span>
+    </div>
+  </div>
+
+  <!-- Content zone -->
+  <div style="flex: 1; overflow-y: auto; padding: 13px; position: relative; z-index: 1;">
+
+    <!-- ══════════ OVERVIEW TAB ══════════ -->
+    <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Nutrition Overview">
+
+      <!-- Day navigator -->
+      <div style="display: flex; align-items: center; gap: 8px; margin: 2px 0 13px;">
+        <button onClick="{{ prevDay }}" aria-label="Previous day" style="flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; background: #111827; border: 1px solid #27384a; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"></polyline></svg>
+        </button>
+        <button onClick="{{ goToday }}" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; background: #111827; border: 1px solid {{ dayBorder }}; border-radius: 8px; padding: 6px 8px; cursor: pointer;">
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; color: {{ dayRelColor }};">{{ dayRelLabel }}</span>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.1em; color: #56657a;">{{ dayDateLabel }}</span>
+        </button>
+        <button onClick="{{ nextDay }}" aria-label="Next day" style="flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; background: #111827; border: 1px solid #27384a; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"></polyline></svg>
+        </button>
+      </div>
+
+      <!-- MX-4 Briefing card -->
+      <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+      <div style="position: relative; background: linear-gradient(160deg, rgba(62,207,142,0.10), #111827 55%); border: 1px solid rgba(62,207,142,0.35); border-radius: 14px; box-shadow: 0 0 32px rgba(62,207,142,0.08); margin-bottom: 14px; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 9px; padding: 13px 15px 11px;">
+          <svg width="19" height="19" viewBox="0 0 48 48" style="display: block; overflow: visible;">
+            <polygon points="24,4 41.3,14 41.3,34 24,44 6.7,34 6.7,14" fill="none" stroke="#3ecf8e" stroke-width="1.3" stroke-opacity="0.5"></polygon>
+            <g style="transform-origin: 24px 24px; animation: mx4spin 14s linear infinite;"><circle cx="24" cy="24" r="13" fill="none" stroke="#3ecf8e" stroke-width="1.5" stroke-dasharray="6 9" stroke-linecap="round" stroke-opacity="0.9"></circle></g>
+            <circle cx="24" cy="24" r="8.5" fill="none" stroke="#3ecf8e" stroke-width="1.4" stroke-opacity="0.85"></circle>
+            <circle cx="24" cy="24" r="3.4" fill="#3ecf8e"></circle>
+            <circle cx="24" cy="24" r="6" fill="none" stroke="#3ecf8e" stroke-width="0.8" stroke-opacity="0.4"></circle>
+          </svg>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; color: #3ecf8e; flex: 1; min-width: 0;">MX-4 // NUTRITION</span>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.08em; color: #56657a; flex-shrink: 0;">JUL 12 · 13:05</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; background: rgba(74,222,128,0.18); color: #4ade80; border: 1px solid rgba(74,222,128,0.4); flex-shrink: 0;">
+            <span style="position: relative; width: 5px; height: 5px; display: inline-block;"><span style="position: absolute; inset: 0; border-radius: 50%; background: #4ade80; box-shadow: 0 0 7px #4ade80; animation: mx4breathe 2.6s ease-in-out infinite;"></span></span>
+            POSITIVE
+          </span>
+        </div>
+        <div style="padding: 0 15px 13px;">
+          <p style="margin: 0 0 7px 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #3ecf8e;">{{ briefHeadline }}</p>
+          <p style="margin: 0 0 8px 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 15px; line-height: 1.55; color: #eef4fb;">Two meals on the books. Calories are tracking on pace for the day; protein is running behind target pace with two meal windows remaining. No flags.</p>
+          <div style="margin-top: 8px; padding: 7px 10px; background: rgba(62,207,142,0.07); border-left: 2px solid rgba(62,207,142,0.5); border-radius: 0 6px 6px 0;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.12em; color: #3ecf8e; font-weight: 700;">DIRECTIVE · </span>
+            <span style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13px; color: #f4f7fb; line-height: 1.4;">Placeholder — briefing copy is generated nightly by MX-4.</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 15px 13px; border-top: 1px solid rgba(62,207,142,0.18);">
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #56657a;">KCAL <span style="color: #3ecf8e;">{{ chipKcal }}</span></span>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #56657a;">LOGGED <span style="color: #3ecf8e;">{{ chipLogged }}</span></span>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #56657a;">FLAGS <span style="color: #3ecf8e;">0</span></span>
+          <span style="margin-left: auto; display: inline-flex; align-items: flex-end; gap: 2px; height: 12px;">
+            <span style="width: 2px; background: #3ecf8e; border-radius: 1px; transform-origin: bottom; height: 12px; animation: mx4tele 1.3s ease-in-out 0s infinite; opacity: 0.85;"></span>
+            <span style="width: 2px; background: #3ecf8e; border-radius: 1px; transform-origin: bottom; height: 12px; animation: mx4tele 1.4s ease-in-out 0.12s infinite; opacity: 0.85;"></span>
+            <span style="width: 2px; background: #3ecf8e; border-radius: 1px; transform-origin: bottom; height: 12px; animation: mx4tele 1.5s ease-in-out 0.24s infinite; opacity: 0.85;"></span>
+            <span style="width: 2px; background: #3ecf8e; border-radius: 1px; transform-origin: bottom; height: 12px; animation: mx4tele 1.6s ease-in-out 0.36s infinite; opacity: 0.85;"></span>
+          </span>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- Rail: LEDGER -->
+      <div style="display: flex; align-items: center; gap: 9px; margin: 16px 0 11px;">
+        <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.2em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">{{ ledgerRailLabel }}</span>
+        <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+        <button onClick="{{ openTargets }}" style="background: none; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #56657a; letter-spacing: 0.06em;">{{ targetSetLabel }}</span>
+          <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 700; color: #3ecf8e; letter-spacing: 0.06em;">EDIT ›</span>
+        </button>
+      </div>
+
+      <!-- HERO — ledger balance -->
+      <div style="position: relative; background: linear-gradient(150deg, rgba(62,207,142,0.1), #111827 60%); border: 1px solid rgba(62,207,142,0.32); border-radius: 13px; padding: 15px 16px 14px; overflow: hidden; margin-bottom: 9px;">
+        <span style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #3ecf8e, transparent 80%); opacity: 0.85;"></span>
+        <span style="position: absolute; top: 7px; left: 7px; width: 11px; height: 11px; pointer-events: none; opacity: 0.4; border-top: 1.4px solid #3ecf8e; border-left: 1.4px solid #3ecf8e; border-top-left-radius: 4px;"></span>
+        <span style="position: absolute; top: 7px; right: 7px; width: 11px; height: 11px; pointer-events: none; opacity: 0.4; border-top: 1.4px solid #3ecf8e; border-right: 1.4px solid #3ecf8e; border-top-right-radius: 4px;"></span>
+        <span style="position: absolute; bottom: 7px; left: 7px; width: 11px; height: 11px; pointer-events: none; opacity: 0.4; border-bottom: 1.4px solid #3ecf8e; border-left: 1.4px solid #3ecf8e; border-bottom-left-radius: 4px;"></span>
+        <span style="position: absolute; bottom: 7px; right: 7px; width: 11px; height: 11px; pointer-events: none; opacity: 0.4; border-bottom: 1.4px solid #3ecf8e; border-right: 1.4px solid #3ecf8e; border-bottom-right-radius: 4px;"></span>
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; padding-left: 3px;">
+          <div>
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.12em; color: #94a3b8; font-weight: 600; margin-bottom: 6px;">{{ remHeadLabel }}</div>
+            <div style="display: flex; align-items: baseline; gap: 5px;">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 34px; font-weight: 700; color: #f4f7fb; line-height: 1;">{{ remCalLabel }}</span>
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #56657a;">kcal</span>
+            </div>
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; color: #56657a; margin-top: 5px;">{{ dailyCalLabel }} logged · target {{ targetCalLabel }}</div>
+          </div>
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 6px; background: rgba(62,207,142,0.14); border: 1px solid rgba(62,207,142,0.4);">
+            <span style="position: relative; width: 6px; height: 6px; display: inline-block;"><span style="position: absolute; inset: 0; border-radius: 50%; background: #3ecf8e; box-shadow: 0 0 7px #3ecf8e; animation: mx4breathe 2.6s ease-in-out infinite;"></span></span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #3ecf8e;">{{ standingLabel }}</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding-left: 3px;">
+          <sc-for list="{{ macroRows }}" as="m" hint-placeholder-count="4">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #94a3b8; font-weight: 600; width: 52px; flex-shrink: 0;">{{ m.label }}</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(86,101,122,0.18); overflow: hidden;">
+                <div style="height: 100%; border-radius: 3px; width: {{ m.pctW }}; background: {{ m.barColor }}; box-shadow: 0 0 6px {{ m.glow }};"></div>
+              </div>
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; color: #56657a; width: 92px; text-align: right; flex-shrink: 0;">{{ m.remLabel }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <!-- Rail: TODAY'S LOG -->
+      <div style="display: flex; align-items: center; gap: 9px; margin: 16px 0 11px;">
+        <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.2em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">TODAY'S LOG</span>
+        <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+        <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #56657a; letter-spacing: 0.06em; flex-shrink: 0;">{{ entryCountLabel }}</span>
+      </div>
+
+      <!-- Meal groups (sparse — only logged meals) -->
+      <sc-for list="{{ mealsList }}" as="meal" hint-placeholder-count="2">
+        <div style="margin-bottom: 13px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 7px;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.14em; color: #3ecf8e; font-weight: 700;">{{ meal.label }}</span>
+            <span style="flex: 1; height: 1px; background: rgba(62,207,142,0.16);"></span>
+            <sc-if value="{{ notToday }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ meal.onCopyToday }}" style="display: inline-flex; align-items: center; gap: 4px; background: rgba(62,207,142,0.08); border: 1px solid rgba(62,207,142,0.35); border-radius: 5px; padding: 3px 7px; cursor: pointer;">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; font-weight: 700; letter-spacing: 0.1em; color: #3ecf8e;">COPY TO TODAY</span>
+              </button>
+            </sc-if>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #94a3b8;">{{ meal.totalLabel }}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <sc-for list="{{ meal.entries }}" as="e" hint-placeholder-count="2">
+              <div onClick="{{ e.onOpen }}" style="position: relative; background: #111827; border: 1px solid #27384a; border-radius: 9px; padding: 10px 12px; overflow: hidden; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                <span style="position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: #3ecf8e; opacity: 0.7;"></span>
+                <div style="flex: 1; min-width: 0; padding-left: 3px;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: #f4f7fb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ e.name }}</span>
+                    <sc-if value="{{ e.locked }}" hint-placeholder-val="{{ false }}">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#56657a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+                    </sc-if>
+                  </div>
+                  <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; color: #56657a; margin-top: 3px;">{{ e.qtyLabel }}</div>
+                </div>
+                <div style="text-align: right; flex-shrink: 0;">
+                  <div style="display: flex; align-items: baseline; gap: 3px; justify-content: flex-end;">
+                    <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px; font-weight: 700; color: #f4f7fb; line-height: 1;">{{ e.calLabel }}</span>
+                    <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a;">kcal</span>
+                  </div>
+                  <sc-if value="{{ showChips }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a; margin-top: 3px;">{{ e.macroLabel }}</div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+
+            
+
+            <button onClick="{{ meal.onAdd }}" style="background: none; border: 1px dashed rgba(62,207,142,0.3); border-radius: 9px; padding: 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.14em; color: rgba(62,207,142,0.75); cursor: pointer; width: 100%;">+ ADD TO {{ meal.label }}</button>
+          </div>
+        </div>
+      </sc-for>
+
+      <!-- Missing meals — affordance from absence, not empty cards -->
+      <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+        <sc-for list="{{ missingMeals }}" as="mm" hint-placeholder-count="2">
+          <button onClick="{{ mm.onAdd }}" style="flex: 1; background: rgba(17,24,39,0.5); border: 1px dashed rgba(86,101,122,0.45); border-radius: 9px; padding: 12px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #94a3b8;">+ {{ mm.label }}</span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; letter-spacing: 0.08em; color: #56657a;">NOT LOGGED YET</span>
+          </button>
+        </sc-for>
+      </div>
+
+    </div>
+    </sc-if>
+
+    <!-- ══════════ LIBRARY TAB ══════════ -->
+    <sc-if value="{{ isLibrary }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Food Library">
+      <div style="display: flex; align-items: center; gap: 9px; margin: 4px 0 11px;">
+        <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.2em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">FOOD LIBRARY</span>
+        <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+        <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #56657a; letter-spacing: 0.06em; flex-shrink: 0;">{{ libSub }}</span>
+      </div>
+          <!-- LIST MODE -->
+          <sc-if value="{{ libList }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+              <button onClick="{{ openNewFood }}" style="flex: 1; background: rgba(62,207,142,0.1); border: 1px solid rgba(62,207,142,0.4); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #3ecf8e; cursor: pointer;">+ NEW FOOD</button>
+              <button onClick="{{ openNewRecipe }}" style="flex: 1; background: rgba(62,207,142,0.1); border: 1px solid rgba(62,207,142,0.4); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #3ecf8e; cursor: pointer;">+ NEW RECIPE</button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 9px; margin: 4px 0 8px;">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">FOODS</span>
+              <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;">
+              <sc-for list="{{ libFoods }}" as="lf" hint-placeholder-count="2">
+                <div style="display: flex; align-items: center; gap: 9px; background: #111827; border: 1px solid #27384a; border-radius: 8px; padding: 9px 11px;">
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12.5px; font-weight: 600; color: #f4f7fb;">{{ lf.name }}</div>
+                    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a; margin-top: 2px;">{{ lf.metaLabel }}</div>
+                  </div>
+                  <button onClick="{{ lf.onDelete }}" aria-label="Delete food" style="flex-shrink: 0; background: none; border: none; padding: 4px; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #56657a;">✕</button>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 9px; margin: 4px 0 8px;">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">RECIPES</span>
+              <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
+              <sc-for list="{{ libRecipes }}" as="lr" hint-placeholder-count="1">
+                <div style="display: flex; align-items: center; gap: 9px; background: #111827; border: 1px solid rgba(62,207,142,0.25); border-radius: 8px; padding: 9px 11px;">
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12.5px; font-weight: 600; color: #f4f7fb;">{{ lr.name }}</span>
+                      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 3px; background: rgba(62,207,142,0.12); color: #3ecf8e; flex-shrink: 0;">RECIPE</span>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a; margin-top: 2px;">{{ lr.metaLabel }}</div>
+                  </div>
+                  <button onClick="{{ lr.onDelete }}" aria-label="Delete recipe" style="flex-shrink: 0; background: none; border: none; padding: 4px; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #56657a;">✕</button>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; color: #56657a; line-height: 1.5;">RECIPES SAVE AS CUSTOM FOODS (PER SERVING) — SEARCHABLE WHEN LOGGING · NO SEPARATE RECIPE STORE IN V1</div>
+          </sc-if>
+
+          <!-- NEW FOOD MODE -->
+          <sc-if value="{{ libFood }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ libBack }}" style="background: none; border: none; padding: 0 0 12px; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #94a3b8;">‹ BACK TO LIBRARY</button>
+            <div style="display: flex; align-items: center; gap: 9px; margin: 0 0 10px;">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">NEW CUSTOM FOOD</span>
+              <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+            </div>
+            <input value="{{ nfName }}" onChange="{{ onNfName }}" placeholder="Food name" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 9px 11px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13px; margin-bottom: 8px;">
+            <div style="display: flex; gap: 7px; margin-bottom: 8px;">
+              <input value="{{ nfQty }}" onChange="{{ onNfQty }}" placeholder="default qty (e.g. 100)" inputMode="decimal" style="flex: 1.4; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 9px 11px; font-size: 12px;">
+              <input value="{{ nfUnit }}" onChange="{{ onNfUnit }}" placeholder="unit (e.g. g)" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 9px 11px; font-size: 12px;">
+            </div>
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; letter-spacing: 0.06em; color: #56657a; margin-bottom: 8px; line-height: 1.5;">MACROS BELOW ARE PER DEFAULT QTY · THIS UNIT BECOMES THE LOCKED LOGGING UNIT — NO CONVERSION IN V1</div>
+            <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">KCAL</div>
+                <input value="{{ nfCal }}" onChange="{{ onNfCal }}" placeholder="—" inputMode="numeric" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 4px; font-size: 12px; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">P g</div>
+                <input value="{{ nfP }}" onChange="{{ onNfP }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 4px; font-size: 12px; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">C g</div>
+                <input value="{{ nfC }}" onChange="{{ onNfC }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 4px; font-size: 12px; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">F g</div>
+                <input value="{{ nfF }}" onChange="{{ onNfF }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 4px; font-size: 12px; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">FB g</div>
+                <input value="{{ nfFb }}" onChange="{{ onNfFb }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 4px; font-size: 12px; text-align: center;">
+              </div>
+            </div>
+            <button onClick="{{ saveNewFood }}" style="width: 100%; background: rgba(62,207,142,0.16); border: 1px solid rgba(62,207,142,0.5); border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e; cursor: pointer; box-shadow: 0 0 14px rgba(62,207,142,0.1);">SAVE FOOD — SEARCHABLE IMMEDIATELY</button>
+          </sc-if>
+
+          <!-- NEW RECIPE MODE -->
+          <sc-if value="{{ libRecipe }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ libBack }}" style="background: none; border: none; padding: 0 0 12px; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #94a3b8;">‹ BACK TO LIBRARY</button>
+            <div style="display: flex; align-items: center; gap: 9px; margin: 0 0 10px;">
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">NEW RECIPE</span>
+              <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+            </div>
+            <div style="display: flex; gap: 7px; margin-bottom: 12px;">
+              <input value="{{ rName }}" onChange="{{ onRName }}" placeholder="Recipe name" style="flex: 2.2; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 9px 11px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13px;">
+              <input value="{{ rServings }}" onChange="{{ onRServings }}" placeholder="servings" inputMode="numeric" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 9px 11px; font-size: 12px; text-align: center;">
+            </div>
+
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.12em; color: #94a3b8; font-weight: 700; margin-bottom: 7px;">INGREDIENTS</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
+              <sc-for list="{{ rIngRows }}" as="ing" hint-placeholder-count="2">
+                <div style="display: flex; align-items: center; gap: 8px; background: #111827; border: 1px solid #27384a; border-radius: 8px; padding: 8px 10px;">
+                  <span style="flex: 1; min-width: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; color: #f4f7fb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ing.name }}</span>
+                  <input value="{{ ing.qty }}" onChange="{{ ing.onQty }}" inputMode="decimal" style="width: 52px; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 6px 7px; font-size: 11px; text-align: center; border-color: rgba(62,207,142,0.35);">
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #94a3b8; flex-shrink: 0;">{{ ing.unit }}</span>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #56657a; flex-shrink: 0; width: 58px; text-align: right;">{{ ing.calLabel }}</span>
+                  <button onClick="{{ ing.onRemove }}" aria-label="Remove ingredient" style="flex-shrink: 0; background: none; border: none; padding: 2px; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #56657a;">✕</button>
+                </div>
+              </sc-for>
+            </div>
+
+            <input value="{{ rQuery }}" onChange="{{ onRQuery }}" placeholder="Add from saved foods…" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 9px 11px; font-size: 12px; margin-bottom: 6px;">
+            <sc-if value="{{ hasRResults }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+                <sc-for list="{{ rResults }}" as="rr" hint-placeholder-count="2">
+                  <button onClick="{{ rr.onPick }}" style="display: flex; align-items: center; gap: 9px; background: #111827; border: 1px solid rgba(62,207,142,0.25); border-radius: 8px; padding: 8px 11px; cursor: pointer; text-align: left; width: 100%;">
+                    <span style="flex: 1; min-width: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; color: #f4f7fb;">{{ rr.name }}</span>
+                    <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a; flex-shrink: 0;">{{ rr.metaLabel }}</span>
+                    <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; color: #3ecf8e; flex-shrink: 0;">+</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ aiClosed }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ toggleAi }}" style="width: 100%; background: none; border: 1px dashed rgba(62,207,142,0.3); border-radius: 8px; padding: 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.12em; color: rgba(62,207,142,0.75); cursor: pointer; margin-bottom: 12px;">+ AD-HOC INGREDIENT</button>
+            </sc-if>
+            <sc-if value="{{ aiOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="background: rgba(62,207,142,0.04); border: 1px solid rgba(62,207,142,0.22); border-radius: 8px; padding: 10px 11px; margin-bottom: 12px;">
+                <input value="{{ aiName }}" onChange="{{ onAiName }}" placeholder="Ingredient name" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 10px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12px; margin-bottom: 7px;">
+                <div style="display: flex; gap: 6px; margin-bottom: 7px;">
+                  <input value="{{ aiQty }}" onChange="{{ onAiQty }}" placeholder="qty" inputMode="decimal" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 8px; font-size: 11px;">
+                  <input value="{{ aiUnit }}" onChange="{{ onAiUnit }}" placeholder="unit" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 8px; font-size: 11px;">
+                  <input value="{{ aiCal }}" onChange="{{ onAiCal }}" placeholder="kcal" inputMode="numeric" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 8px; font-size: 11px;">
+                </div>
+                <div style="display: flex; gap: 6px; margin-bottom: 9px;">
+                  <input value="{{ aiP }}" onChange="{{ onAiP }}" placeholder="P g" inputMode="decimal" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 8px; font-size: 11px;">
+                  <input value="{{ aiC }}" onChange="{{ onAiC }}" placeholder="C g" inputMode="decimal" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 8px; font-size: 11px;">
+                  <input value="{{ aiF }}" onChange="{{ onAiF }}" placeholder="F g" inputMode="decimal" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; color: #f4f7fb; padding: 8px 8px; font-size: 11px;">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button onClick="{{ addAdhocIng }}" style="flex: 1; background: rgba(62,207,142,0.16); border: 1px solid rgba(62,207,142,0.5); border-radius: 7px; padding: 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; color: #3ecf8e; cursor: pointer;">ADD INGREDIENT</button>
+                  <button onClick="{{ toggleAi }}" style="background: none; border: 1px solid #27384a; border-radius: 7px; padding: 8px 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; letter-spacing: 0.08em; color: #56657a; cursor: pointer;">CANCEL</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ hasRIngs }}" hint-placeholder-val="{{ false }}">
+              <div style="background: rgba(17,24,39,0.7); border: 1px solid #27384a; border-radius: 8px; padding: 9px 11px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.1em; color: #94a3b8;">RECIPE TOTAL</span>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; color: #f4f7fb;">{{ rTotalLabel }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.1em; color: #3ecf8e;">PER SERVING</span>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; color: #3ecf8e;">{{ rServeLabel }}</span>
+                </div>
+              </div>
+            </sc-if>
+
+            <button onClick="{{ saveRecipe }}" style="width: 100%; background: rgba(62,207,142,0.16); border: 1px solid rgba(62,207,142,0.5); border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e; cursor: pointer; box-shadow: 0 0 14px rgba(62,207,142,0.1);">SAVE RECIPE — LOGGABLE PER SERVING</button>
+          </sc-if>
+
+
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- BottomBar — always cyan -->
+  <div style="flex-shrink: 0; position: relative; z-index: 2; background: rgba(17,24,39,0.96); border-top: 1px solid rgba(43,196,232,0.28); display: flex; justify-content: center; padding: 10px 12px 14px;">
+    <div style="display: flex; align-items: center; gap: 8px; width: 100%; max-width: 420px; background: linear-gradient(180deg, rgba(43,196,232,0.07), #111827); border: 1px solid rgba(43,196,232,0.3); border-radius: 30px; box-shadow: 0 0 20px rgba(43,196,232,0.09), inset 0 1px 0 rgba(255,255,255,0.04); padding: 5px 8px;">
+      <button aria-label="Ask MX-4" style="flex-shrink: 0; display: flex; align-items: center; background: transparent; border: none; padding: 0; cursor: pointer;">
+        <span style="position: relative; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle, rgba(43,196,232,0.16), rgba(43,196,232,0.03) 70%); border: 1px solid rgba(43,196,232,0.55); animation: mx4glowbreathe 3.6s ease-in-out infinite; flex-shrink: 0;">
+          <svg width="29" height="29" viewBox="0 0 48 48" style="display: block; overflow: visible;">
+            <polygon points="24,4 41.3,14 41.3,34 24,44 6.7,34 6.7,14" fill="none" stroke="#2bc4e8" stroke-width="1.2" stroke-opacity="0.32"></polygon>
+            <path d="M8.5 24 Q24 13 39.5 24 Q24 35 8.5 24 Z" fill="none" stroke="#2bc4e8" stroke-width="1.6" stroke-opacity="0.9"></path>
+            <circle cx="24" cy="24" r="7.5" fill="none" stroke="#2bc4e8" stroke-width="0.8" stroke-opacity="0.32"></circle>
+            <circle cx="24" cy="24" r="4" fill="#2bc4e8"></circle>
+          </svg>
+        </span>
+      </button>
+      <span style="width: 1px; height: 24px; background: rgba(43,196,232,0.22); flex-shrink: 0;"></span>
+      <div style="flex: 1; display: flex; justify-content: center;">
+        <div style="clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px), 0 7px); background: rgba(43,196,232,0.45); padding: 1.5px; flex-shrink: 0;">
+        <div style="clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); background: #0f1117; display: flex; gap: 3px; padding: 3px;">
+          <button onClick="{{ onOverview }}" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 14px; border: none; cursor: pointer; clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px); background: {{ ovBg }}; color: {{ ovColor }};">Overview</button>
+          <button onClick="{{ onTrends }}" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 14px; border: none; cursor: pointer; clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px); background: {{ trBg }}; color: {{ trColor }};">Library</button>
+        </div>
+        </div>
+      </div>
+      <span style="width: 1px; height: 24px; background: rgba(43,196,232,0.22); flex-shrink: 0;"></span>
+      <button aria-label="All Systems" style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle, rgba(148,163,184,0.1), transparent 70%); border: 1px solid rgba(148,163,184,0.45); box-shadow: 0 0 11px rgba(148,163,184,0.22), inset 0 0 7px rgba(148,163,184,0.06); cursor: pointer; padding: 0;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+          <polygon points="12,2.8 20.3,7.6 20.3,16.4 12,21.2 3.7,16.4 3.7,7.6" stroke-opacity="0.5"></polygon>
+          <line x1="8.6" y1="9.6" x2="15.4" y2="9.6"></line>
+          <line x1="8.6" y1="12" x2="15.4" y2="12"></line>
+          <line x1="8.6" y1="14.4" x2="12.8" y2="14.4"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════ LOG ENTRY SHEET ══════════ -->
+  <sc-if value="{{ sheetLog }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Log Entry Sheet" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(6,9,14,0.62); animation: backdropIn 0.34s ease; backdrop-filter: blur(3px);">
+    <div onClick="{{ stopProp }}" style="max-height: 88%; display: flex; flex-direction: column; animation: sheetUp 0.36s cubic-bezier(.22,.61,.36,1);">
+      <div style="position: relative; background: #0f1117; border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid rgba(62,207,142,0.4); box-shadow: 0 -18px 50px rgba(0,0,0,0.5), 0 0 40px rgba(62,207,142,0.07); overflow: hidden; display: flex; flex-direction: column; max-height: 100%; color: #f4f7fb;">
+        <div style="position: absolute; inset: 0; pointer-events: none; opacity: 0.7; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0px, rgba(255,255,255,0.016) 1px, transparent 1px, transparent 3px), linear-gradient(rgba(62,207,142,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(62,207,142,0.035) 1px, transparent 1px); background-size: 100% 3px, 26px 26px, 26px 26px;"></div>
+        <div style="position: relative; display: flex; justify-content: center; padding: 9px 0 8px;"><span style="width: 38px; height: 4px; border-radius: 4px; background: rgba(62,207,142,0.4);"></span></div>
+        <div style="position: relative; display: flex; align-items: center; gap: 11px; padding: 4px 18px 12px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" style="display: block; flex-shrink: 0;"><polygon points="12,4.5 18.5,8.2 18.5,15.8 12,19.5 5.5,15.8 5.5,8.2" fill="none" stroke="#3ecf8e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polygon></svg>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e;">LOG ENTRY</span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #56657a;">{{ sheetSub }}</span>
+          </div>
+          <button onClick="{{ closeSheet }}" aria-label="Close" style="flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #27384a; background: #111827; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <div style="position: relative; overflow-y: auto; padding: 0 18px 22px;">
+
+          <!-- Food search -->
+          <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search saved foods…" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 8px; padding: 10px 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; margin-bottom: 8px;">
+
+          <sc-if value="{{ showHint }}" hint-placeholder-val="{{ true }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.06em; color: #56657a; margin-bottom: 12px; line-height: 1.5;">{{ foodCountLabel }} · reference database grows as you save foods — or log ad-hoc below, nothing to search is normal</div>
+
+            <sc-if value="{{ hasRecents }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: center; gap: 9px; margin: 0 0 8px;">
+                <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">RECENT · ONE TAP TO RE-LOG</span>
+                <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;">
+                <sc-for list="{{ recents }}" as="rc" hint-placeholder-count="3">
+                  <button onClick="{{ rc.onLog }}" style="display: flex; align-items: center; gap: 9px; background: #111827; border: 1px solid #27384a; border-radius: 8px; padding: 9px 11px; cursor: pointer; text-align: left; width: 100%;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#56657a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><polyline points="1,4 1,10 7,10"></polyline><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"></path></svg>
+                    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12.5px; font-weight: 600; color: #f4f7fb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ rc.name }}</span>
+                      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a;">{{ rc.sub }}</span>
+                    </span>
+                    <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; font-weight: 700; letter-spacing: 0.1em; color: #3ecf8e; flex-shrink: 0;">+ LOG</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <button onClick="{{ openLibrary }}" style="display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: 1px solid #27384a; border-radius: 8px; padding: 9px 12px; cursor: pointer; margin-bottom: 12px;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; color: #94a3b8;">FOOD LIBRARY — RECIPES &amp; CUSTOM FOODS</span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: #3ecf8e;">MANAGE ›</span>
+          </button>
+
+          <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
+              <sc-for list="{{ results }}" as="r" hint-placeholder-count="2">
+                <button onClick="{{ r.onPick }}" style="display: flex; align-items: center; gap: 9px; background: #111827; border: 1px solid rgba(62,207,142,0.25); border-radius: 8px; padding: 9px 11px; cursor: pointer; text-align: left; width: 100%;">
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12.5px; font-weight: 600; color: #f4f7fb;">{{ r.name }}</div>
+                    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a; margin-top: 2px;">{{ r.metaLabel }}</div>
+                  </div>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 3px; background: rgba(62,207,142,0.12); color: #3ecf8e; flex-shrink: 0;">{{ r.badge }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ noMatch }}" hint-placeholder-val="{{ false }}">
+            <div style="background: rgba(17,24,39,0.6); border: 1px dashed rgba(86,101,122,0.4); border-radius: 8px; padding: 11px 12px; margin-bottom: 12px;">
+              <div style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12px; color: #94a3b8;">No match for &ldquo;{{ query }}&rdquo; in saved foods.</div>
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a; margin-top: 4px; line-height: 1.5;">LOG IT DIRECTLY BELOW — SAVE IT AS A FOOD TO MAKE IT SEARCHABLE NEXT TIME</div>
+            </div>
+          </sc-if>
+
+          <!-- Selected reference food -->
+          <sc-if value="{{ hasSelFood }}" hint-placeholder-val="{{ false }}">
+            <div style="background: rgba(62,207,142,0.06); border: 1px solid rgba(62,207,142,0.3); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: #f4f7fb; flex: 1;">{{ selFoodName }}</span>
+                <button onClick="{{ clearSelFood }}" style="background: none; border: none; padding: 0; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.08em; color: #56657a;">CLEAR ✕</button>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input value="{{ fQty }}" onChange="{{ onFQty }}" inputMode="decimal" style="width: 90px; background: #111827; border: 1px solid rgba(62,207,142,0.4); border-radius: 7px; padding: 8px 10px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: #f4f7fb;">
+                <span style="display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; border-radius: 7px; background: rgba(86,101,122,0.15); border: 1px solid #27384a;">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#56657a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #94a3b8;">{{ selFoodUnit }}</span>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.08em; color: #56657a;">LOCKED</span>
+                </span>
+                <span style="flex: 1; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #56657a; text-align: right; line-height: 1.4;">{{ selFoodAuto }}</span>
+              </div>
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; color: #56657a; margin-top: 7px; line-height: 1.5;">UNIT IS FIXED TO THIS FOOD ({{ selFoodUnit }}) — NO CONVERSION IN V1 · MACROS AUTO-RESCALE WITH QUANTITY · NEED A DIFFERENT UNIT? LOG AD-HOC INSTEAD</div>
+
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(62,207,142,0.22);">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.12em; color: #94a3b8; font-weight: 700; margin-bottom: 7px;">NO MACRO MATH — SET QTY FROM A GOAL</div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="display: flex; gap: 3px; flex-shrink: 0;">
+                    <sc-for list="{{ mmChips }}" as="mc" hint-placeholder-count="4">
+                      <button onClick="{{ mc.onPick }}" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; font-weight: 700; letter-spacing: 0.06em; padding: 6px 8px; border-radius: 5px; cursor: pointer; background: {{ mc.bg }}; color: {{ mc.color }}; border: 1px solid {{ mc.border }};">{{ mc.label }}</button>
+                    </sc-for>
+                  </div>
+                  <input value="{{ mmVal }}" onChange="{{ onMmVal }}" placeholder="{{ mmPlaceholder }}" inputMode="decimal" style="width: 64px; background: #111827; border: 1px solid rgba(62,207,142,0.4); border-radius: 6px; padding: 6px 8px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #f4f7fb; flex-shrink: 0;">
+                  <span style="flex: 1; min-width: 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #3ecf8e; text-align: right; line-height: 1.4;">{{ mmHint }}</span>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- Quick Track divider -->
+          <sc-if value="{{ noSelFood }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 9px; margin: 4px 0 10px;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #3ecf8e; font-weight: 600; flex-shrink: 0;">QUICK TRACK · AD-HOC</span>
+            <span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(62,207,142,0.4), #27384a);"></span>
+          </div>
+          </sc-if>
+
+          <!-- Meal chips -->
+          <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+            <sc-for list="{{ mealChips }}" as="ch" hint-placeholder-count="4">
+              <button onClick="{{ ch.onPick }}" style="flex: 1; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em; padding: 7px 4px; border-radius: 6px; cursor: pointer; background: {{ ch.bg }}; color: {{ ch.color }}; border: 1px solid {{ ch.border }};">{{ ch.label }}</button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ noSelFood }}" hint-placeholder-val="{{ true }}">
+            <input value="{{ fName }}" onChange="{{ onFName }}" placeholder="What did you eat? (e.g. tacos from the truck)" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 9px 11px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13px; color: #f4f7fb; margin-bottom: 8px;">
+            <div style="display: flex; gap: 7px; margin-bottom: 8px;">
+              <input value="{{ fQty }}" onChange="{{ onFQty }}" placeholder="qty" inputMode="decimal" style="flex: 1; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 9px 11px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb;">
+              <input value="{{ fUnit }}" onChange="{{ onFUnit }}" placeholder="unit (any)" style="flex: 1.4; min-width: 0; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 9px 11px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb;">
+            </div>
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; letter-spacing: 0.06em; color: #56657a; margin-bottom: 8px;">MACROS OPTIONAL — LOG WHAT YOU KNOW, LEAVE THE REST BLANK</div>
+            <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">KCAL</div>
+                <input value="{{ fCal }}" onChange="{{ onFCal }}" placeholder="—" inputMode="numeric" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">P g</div>
+                <input value="{{ fP }}" onChange="{{ onFP }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">C g</div>
+                <input value="{{ fC }}" onChange="{{ onFC }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">F g</div>
+                <input value="{{ fF }}" onChange="{{ onFF }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">FB g</div>
+                <input value="{{ fFb }}" onChange="{{ onFFb }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+              </div>
+            </div>
+            <button onClick="{{ toggleSave }}" style="display: flex; align-items: center; gap: 9px; background: none; border: none; padding: 0 0 12px; cursor: pointer; width: 100%; text-align: left;">
+              <span style="position: relative; width: 30px; height: 17px; border-radius: 9px; background: {{ saveTrackBg }}; border: 1px solid {{ saveTrackBorder }}; flex-shrink: 0; transition: background 0.2s ease;">
+                <span style="position: absolute; top: 2px; left: {{ saveKnobLeft }}; width: 11px; height: 11px; border-radius: 50%; background: {{ saveKnobBg }}; transition: left 0.2s ease;"></span>
+              </span>
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.08em; color: #94a3b8;">SAVE AS FOOD — SEARCHABLE NEXT TIME</span>
+            </button>
+          </sc-if>
+
+          <button onClick="{{ submitLog }}" style="width: 100%; background: rgba(62,207,142,0.16); border: 1px solid rgba(62,207,142,0.5); border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e; cursor: pointer; box-shadow: 0 0 14px rgba(62,207,142,0.1);">LOG ENTRY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══════════ TARGETS SHEET ══════════ -->
+  <sc-if value="{{ sheetTargets }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Targets Sheet" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(6,9,14,0.62); animation: backdropIn 0.34s ease; backdrop-filter: blur(3px);">
+    <div onClick="{{ stopProp }}" style="max-height: 82%; display: flex; flex-direction: column; animation: sheetUp 0.36s cubic-bezier(.22,.61,.36,1);">
+      <div style="position: relative; background: #0f1117; border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid rgba(62,207,142,0.4); box-shadow: 0 -18px 50px rgba(0,0,0,0.5), 0 0 40px rgba(62,207,142,0.07); overflow: hidden; display: flex; flex-direction: column; max-height: 100%; color: #f4f7fb;">
+        <div style="position: absolute; inset: 0; pointer-events: none; opacity: 0.7; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0px, rgba(255,255,255,0.016) 1px, transparent 1px, transparent 3px), linear-gradient(rgba(62,207,142,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(62,207,142,0.035) 1px, transparent 1px); background-size: 100% 3px, 26px 26px, 26px 26px;"></div>
+        <div style="position: relative; display: flex; justify-content: center; padding: 9px 0 8px;"><span style="width: 38px; height: 4px; border-radius: 4px; background: rgba(62,207,142,0.4);"></span></div>
+        <div style="position: relative; display: flex; align-items: center; gap: 11px; padding: 4px 18px 12px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" style="display: block; flex-shrink: 0;"><polygon points="12,4.5 18.5,8.2 18.5,15.8 12,19.5 5.5,15.8 5.5,8.2" fill="none" stroke="#3ecf8e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polygon></svg>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e;">DAILY TARGETS</span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #56657a;">{{ targetSetLabel }} · APPLIES FROM TODAY FORWARD</span>
+          </div>
+          <button onClick="{{ closeSheet }}" aria-label="Close" style="flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #27384a; background: #111827; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <div style="position: relative; overflow-y: auto; padding: 0 18px 22px;">
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.12em; color: #94a3b8; font-weight: 700; margin-bottom: 7px;">MACRO GOALS — GRAMS PER DAY</div>
+          <div style="display: flex; gap: 7px; margin-bottom: 8px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">PROTEIN g</div>
+              <input value="{{ tP }}" onChange="{{ onTP }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">CARBS g</div>
+              <input value="{{ tC }}" onChange="{{ onTC }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">FAT g</div>
+              <input value="{{ tF }}" onChange="{{ onTF }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">FIBER g</div>
+              <input value="{{ tFb }}" onChange="{{ onTFb }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+          </div>
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; color: #56657a; margin-bottom: 14px; line-height: 1.5;">EDITING A MACRO RECOMPUTES THE KCAL GOAL BELOW (P×4 + C×4 + F×9) · FIBER DOESN'T ADD KCAL</div>
+
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: 0.12em; color: #94a3b8; font-weight: 700; margin-bottom: 7px;">CALORIE GOAL</div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <input value="{{ tCal }}" onChange="{{ onTCal }}" inputMode="numeric" style="width: 110px; background: #111827; border: 1px solid rgba(62,207,142,0.4); border-radius: 7px; padding: 9px 11px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px; font-weight: 700; color: #f4f7fb;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #56657a;">kcal / day</span>
+            <sc-if value="{{ tMismatch }}" hint-placeholder-val="{{ false }}">
+              <span style="flex: 1; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #fbbf24; line-height: 1.4;">MACROS SUM TO {{ tMacroKcal }}</span>
+            </sc-if>
+            <sc-if value="{{ tMatch }}" hint-placeholder-val="{{ true }}">
+              <span style="flex: 1; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; color: #3ecf8e;">MATCHES MACROS ✓</span>
+            </sc-if>
+          </div>
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; color: #56657a; margin-bottom: 16px; line-height: 1.5;">YOU CAN OVERRIDE KCAL DIRECTLY — THE NEXT MACRO EDIT SNAPS IT BACK TO THE MACRO SUM</div>
+
+          <button onClick="{{ saveTargets }}" style="width: 100%; background: rgba(62,207,142,0.16); border: 1px solid rgba(62,207,142,0.5); border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e; cursor: pointer; box-shadow: 0 0 14px rgba(62,207,142,0.1);">SAVE TARGETS</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══════════ EDIT ENTRY SHEET ══════════ -->
+  <sc-if value="{{ sheetEdit }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Edit Entry Sheet" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(6,9,14,0.62); animation: backdropIn 0.34s ease; backdrop-filter: blur(3px);">
+    <div onClick="{{ stopProp }}" style="max-height: 82%; display: flex; flex-direction: column; animation: sheetUp 0.36s cubic-bezier(.22,.61,.36,1);">
+      <div style="position: relative; background: #0f1117; border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid rgba(62,207,142,0.4); box-shadow: 0 -18px 50px rgba(0,0,0,0.5), 0 0 40px rgba(62,207,142,0.07); overflow: hidden; display: flex; flex-direction: column; max-height: 100%; color: #f4f7fb;">
+        <div style="position: absolute; inset: 0; pointer-events: none; opacity: 0.7; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0px, rgba(255,255,255,0.016) 1px, transparent 1px, transparent 3px), linear-gradient(rgba(62,207,142,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(62,207,142,0.035) 1px, transparent 1px); background-size: 100% 3px, 26px 26px, 26px 26px;"></div>
+        <div style="position: relative; display: flex; justify-content: center; padding: 9px 0 8px;"><span style="width: 38px; height: 4px; border-radius: 4px; background: rgba(62,207,142,0.4);"></span></div>
+        <div style="position: relative; display: flex; align-items: center; gap: 11px; padding: 4px 18px 12px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" style="display: block; flex-shrink: 0;"><polygon points="12,4.5 18.5,8.2 18.5,15.8 12,19.5 5.5,15.8 5.5,8.2" fill="none" stroke="#3ecf8e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polygon></svg>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;">
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e;">EDIT ENTRY</span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #56657a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ editSub }}</span>
+          </div>
+          <button onClick="{{ closeSheet }}" aria-label="Close" style="flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #27384a; background: #111827; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <div style="position: relative; overflow-y: auto; padding: 0 18px 22px;">
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+            <div style="flex-shrink: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px;">QUANTITY</div>
+              <input value="{{ eQty }}" onChange="{{ onEQty }}" inputMode="decimal" style="width: 96px; background: #111827; border: 1px solid rgba(62,207,142,0.4); border-radius: 7px; padding: 9px 11px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: #f4f7fb;">
+            </div>
+            <sc-if value="{{ editLocked }}" hint-placeholder-val="{{ true }}">
+              <div style="flex-shrink: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px;">UNIT</div>
+                <span style="display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; border-radius: 7px; background: rgba(86,101,122,0.15); border: 1px solid #27384a;">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#56657a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #94a3b8;">{{ eUnit }}</span>
+                  <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.08em; color: #56657a;">LOCKED</span>
+                </span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ editUnlocked }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-shrink: 0;">
+                <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px;">UNIT</div>
+                <input value="{{ eUnit }}" onChange="{{ onEUnit }}" style="width: 84px; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 9px 11px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb;">
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ editLocked }}" hint-placeholder-val="{{ true }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; color: #56657a; margin-bottom: 12px; line-height: 1.5;">LINKED TO A SAVED FOOD — UNIT IS FIXED, NO CONVERSION · CHANGING QUANTITY RESCALES EACH MACRO UNLESS YOU OVERRIDE IT BELOW · TO CHANGE THE FOOD ITSELF, DELETE AND RE-LOG</div>
+          </sc-if>
+          <sc-if value="{{ editUnlocked }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; color: #56657a; margin-bottom: 12px; line-height: 1.5;">AD-HOC ENTRY — ALL FIELDS FREE · BLANK MACROS STAY UNKNOWN (SHOWN AS —)</div>
+          </sc-if>
+
+          <div style="display: flex; gap: 6px; margin-bottom: 14px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">KCAL</div>
+              <input value="{{ eCal }}" onChange="{{ onECal }}" placeholder="—" inputMode="numeric" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">P g</div>
+              <input value="{{ eP }}" onChange="{{ onEP }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">C g</div>
+              <input value="{{ eC }}" onChange="{{ onEC }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">F g</div>
+              <input value="{{ eF }}" onChange="{{ onEF }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7px; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 3px; text-align: center;">FB g</div>
+              <input value="{{ eFb }}" onChange="{{ onEFb }}" placeholder="—" inputMode="decimal" style="width: 100%; background: #111827; border: 1px solid #27384a; border-radius: 7px; padding: 8px 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #f4f7fb; text-align: center;">
+            </div>
+          </div>
+
+          <sc-if value="{{ notToday }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ copyEntryToday }}" style="display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; background: rgba(62,207,142,0.06); border: 1px solid rgba(62,207,142,0.35); border-radius: 8px; padding: 10px; cursor: pointer; margin-bottom: 8px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #3ecf8e;">COPY THIS ITEM TO TODAY</span>
+            </button>
+          </sc-if>
+          <div style="display: flex; gap: 8px;">
+            <button onClick="{{ deleteEntry }}" style="background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.35); border-radius: 8px; padding: 12px 16px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #f87171; cursor: pointer;">DELETE</button>
+            <button onClick="{{ saveEdit }}" style="flex: 1; background: rgba(62,207,142,0.16); border: 1px solid rgba(62,207,142,0.5); border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #3ecf8e; cursor: pointer; box-shadow: 0 0 14px rgba(62,207,142,0.1);">SAVE CHANGES</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-import>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 480, &quot;height&quot;: 1000}, &quot;macroChips&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Overview&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'overview',
+    sheet: null,          // null | 'log' | 'edit' | 'library'
+    libMode: 'list',      // 'list' | 'food' | 'recipe'
+    nextId: 10,
+    dayOffset: 0,
+    target: { cal: 2200, p: 180, c: 220, f: 70, fb: 30 },
+    targetSetLabel: 'TARGET SET JUN 01',
+    tCal: '', tP: '', tC: '', tF: '', tFb: '',
+    entries: [
+      { id: 1, d: 0, meal: 'breakfast', name: 'Oatmeal', foodLinked: true, qty: 200, unit: 'g', cal: 778, p: 33.8, c: 132.6, f: 13.8, fb: 21.2 },
+      { id: 2, d: 0, meal: 'breakfast', name: 'Coffee with cream', foodLinked: false, qty: 1, unit: 'cup', cal: 45, p: null, c: null, f: null, fb: null },
+      { id: 3, d: 0, meal: 'lunch', name: 'Chicken & rice bowl', foodLinked: false, qty: 1, unit: 'bowl', cal: 640, p: 42, c: 68, f: 18, fb: null },
+      { id: 4, d: -1, meal: 'breakfast', name: 'Overnight oats', foodLinked: true, qty: 1, unit: 'serving', cal: 431, p: 37.5, c: 56.1, f: 7, fb: 8.5 },
+      { id: 5, d: -1, meal: 'lunch', name: 'Turkey sandwich', foodLinked: false, qty: 1, unit: 'sandwich', cal: 520, p: 34, c: 52, f: 19, fb: 4 },
+      { id: 6, d: -1, meal: 'dinner', name: 'Salmon, rice & greens', foodLinked: false, qty: 1, unit: 'plate', cal: 740, p: 46, c: 61, f: 31, fb: 6 },
+      { id: 7, d: -1, meal: 'snack', name: 'Greek yogurt', foodLinked: false, qty: 170, unit: 'g', cal: 160, p: 17, c: 9, f: 6, fb: null },
+    ],
+    savedFoods: [
+      { id: 101, name: 'Oatmeal', kind: 'custom', qty: 100, unit: 'g', cal: 389, p: 16.9, c: 66.3, f: 6.9, fb: 10.6 },
+      { id: 102, name: 'Whey protein scoop', kind: 'custom', qty: 32, unit: 'g', cal: 120, p: 24, c: 3, f: 1.5, fb: 0 },
+      { id: 103, name: 'Overnight oats', kind: 'recipe', qty: 1, unit: 'serving', cal: 431, p: 37.5, c: 56.1, f: 7, fb: 8.5 },
+    ],
+    recipes: [
+      { id: 201, name: 'Overnight oats', servings: 1, foodId: 103, ings: [
+        { name: 'Oatmeal', qty: 80, baseQty: 100, unit: 'g', per: { cal: 389, p: 16.9, c: 66.3, f: 6.9, fb: 10.6 } },
+        { name: 'Whey protein scoop', qty: 32, baseQty: 32, unit: 'g', per: { cal: 120, p: 24, c: 3, f: 1.5, fb: 0 } },
+      ] },
+    ],
+    // library forms
+    nfName: '', nfQty: '', nfUnit: '', nfCal: '', nfP: '', nfC: '', nfF: '', nfFb: '',
+    rName: '', rServings: '1', rQuery: '', rIngs: [],
+    aiOpen: false, aiName: '', aiQty: '', aiUnit: '', aiCal: '', aiP: '', aiC: '', aiF: '',
+    // log form
+    query: '', selFoodId: null, fMeal: 'lunch',
+    fName: '', fQty: '', fUnit: '', fCal: '', fP: '', fC: '', fF: '', fFb: '', fSave: false,
+    mmMacro: 'p', mmVal: '',
+    // edit form
+    editId: null, editOrig: null,
+    eQty: '', eUnit: '', eCal: '', eP: '', eC: '', eF: '', eFb: '',
+  };
+
+  fmt(n) { return Math.round(n).toLocaleString('en-US'); }
+  fmt1(n) { const r = Math.round(n * 10) / 10; return r % 1 === 0 ? String(Math.round(r)) : r.toFixed(1); }
+  num(s) { const v = parseFloat(s); return isNaN(v) ? null : v; }
+
+  spark(data, w, h) {
+    const min = Math.min(...data), max = Math.max(...data);
+    const rng = max - min || 1;
+    const pts = data.map((d, i) => [
+      (i / Math.max(data.length - 1, 1)) * w,
+      h - 3 - ((d - min) / rng) * (h - 6),
+    ]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const area = line + ' L' + w + ' ' + h + ' L0 ' + h + ' Z';
+    const last = pts[pts.length - 1];
+    return { line, area, lastX: last[0].toFixed(1), lastY: last[1].toFixed(1) };
+  }
+
+  resetForm() {
+    this.setState({ query: '', selFoodId: null, fName: '', fQty: '', fUnit: '', fCal: '', fP: '', fC: '', fF: '', fFb: '', fSave: false, mmMacro: 'p', mmVal: '' });
+  }
+
+  openLog(mealKey) {
+    this.resetForm();
+    this.setState({ sheet: 'log', fMeal: mealKey });
+  }
+
+  submitLog() {
+    const s = this.state;
+    const sel = s.savedFoods.find(f => f.id === s.selFoodId) || null;
+    let entry;
+    if (sel) {
+      const q = this.num(s.fQty) ?? sel.qty;
+      const k = q / sel.qty;
+      entry = {
+        id: s.nextId, d: s.dayOffset, meal: s.fMeal, name: sel.name, foodLinked: true, qty: q, unit: sel.unit,
+        cal: Math.round(sel.cal * k),
+        p: Math.round(sel.p * k * 10) / 10, c: Math.round(sel.c * k * 10) / 10,
+        f: Math.round(sel.f * k * 10) / 10, fb: Math.round(sel.fb * k * 10) / 10,
+      };
+    } else {
+      if (!s.fName.trim()) return;
+      entry = {
+        id: s.nextId, d: s.dayOffset, meal: s.fMeal, name: s.fName.trim(), foodLinked: false,
+        qty: this.num(s.fQty) ?? 1, unit: s.fUnit.trim() || 'serving',
+        cal: this.num(s.fCal), p: this.num(s.fP), c: this.num(s.fC), f: this.num(s.fF), fb: this.num(s.fFb),
+      };
+    }
+    const savedFoods = (!sel && s.fSave && s.fName.trim())
+      ? s.savedFoods.concat([{ id: s.nextId + 500, kind: 'custom', name: s.fName.trim(), qty: entry.qty, unit: entry.unit, cal: entry.cal ?? 0, p: entry.p ?? 0, c: entry.c ?? 0, f: entry.f ?? 0, fb: entry.fb ?? 0 }])
+      : s.savedFoods;
+    this.setState({ entries: s.entries.concat([entry]), savedFoods, nextId: s.nextId + 1, sheet: null });
+    this.resetForm();
+  }
+
+  openEdit(e) {
+    this.setState({
+      sheet: 'edit', editId: e.id, editOrig: { ...e },
+      eQty: String(e.qty), eUnit: e.unit,
+      eCal: e.cal == null ? '' : String(e.cal),
+      eP: e.p == null ? '' : String(e.p),
+      eC: e.c == null ? '' : String(e.c),
+      eF: e.f == null ? '' : String(e.f),
+      eFb: e.fb == null ? '' : String(e.fb),
+    });
+  }
+
+  saveEdit() {
+    const s = this.state;
+    const o = s.editOrig;
+    if (!o) return;
+    const q = this.num(s.eQty) ?? o.qty;
+    const k = o.qty ? q / o.qty : 1;
+    const orig = (v) => (v == null ? '' : String(v));
+    const macro = (field, key, isInt) => {
+      if (field !== orig(o[key])) return this.num(field);           // explicit override — used as given
+      if (o[key] == null) return null;                              // unknown stays unknown
+      if (!o.foodLinked) return o[key];                             // ad-hoc: no rescale
+      const v = o[key] * k;                                         // food-linked: rescale
+      return isInt ? Math.round(v) : Math.round(v * 10) / 10;
+    };
+    const updated = {
+      ...o, qty: q,
+      unit: o.foodLinked ? o.unit : (s.eUnit.trim() || o.unit),
+      cal: macro(s.eCal, 'cal', true),
+      p: macro(s.eP, 'p', false), c: macro(s.eC, 'c', false),
+      f: macro(s.eF, 'f', false), fb: macro(s.eFb, 'fb', false),
+    };
+    this.setState({ entries: s.entries.map(e => (e.id === o.id ? updated : e)), sheet: null, editId: null, editOrig: null });
+  }
+
+  cloneToDay(list) {
+    const s = this.state;
+    let id = s.nextId;
+    const clones = list.map(e => ({ ...e, id: id++, d: s.dayOffset, meal: s.fMeal }));
+    this.setState({ entries: s.entries.concat(clones), nextId: id, sheet: null });
+    this.resetForm();
+  }
+
+  copyToToday(list) {
+    const s = this.state;
+    let id = s.nextId;
+    const clones = list.map(e => ({ ...e, id: id++, d: 0 }));
+    this.setState({ entries: s.entries.concat(clones), nextId: id, sheet: null, dayOffset: 0 });
+  }
+
+  mmApply(macroKey, valStr) {
+    const s = this.state;
+    const sel = s.savedFoods.find(f => f.id === s.selFoodId);
+    const patch = { mmMacro: macroKey, mmVal: valStr };
+    const v = parseFloat(valStr);
+    if (sel && !isNaN(v) && v > 0) {
+      const perUnit = (sel[macroKey] ?? 0) / sel.qty;
+      if (perUnit > 0) patch.fQty = String(Math.round((v / perUnit) * 10) / 10);
+    }
+    this.setState(patch);
+  }
+
+  ingScaled(ing) {
+    const k = ing.baseQty ? ing.qty / ing.baseQty : 1;
+    return { cal: ing.per.cal * k, p: ing.per.p * k, c: ing.per.c * k, f: ing.per.f * k, fb: (ing.per.fb ?? 0) * k };
+  }
+
+  recipeTotals(ings) {
+    return ings.reduce((t, ing) => {
+      const sc = this.ingScaled(ing);
+      return { cal: t.cal + sc.cal, p: t.p + sc.p, c: t.c + sc.c, f: t.f + sc.f, fb: t.fb + sc.fb };
+    }, { cal: 0, p: 0, c: 0, f: 0, fb: 0 });
+  }
+
+  saveNewFood() {
+    const s = this.state;
+    if (!s.nfName.trim()) return;
+    const food = {
+      id: s.nextId + 700, kind: 'custom', name: s.nfName.trim(),
+      qty: this.num(s.nfQty) ?? 100, unit: s.nfUnit.trim() || 'g',
+      cal: this.num(s.nfCal) ?? 0, p: this.num(s.nfP) ?? 0, c: this.num(s.nfC) ?? 0,
+      f: this.num(s.nfF) ?? 0, fb: this.num(s.nfFb) ?? 0,
+    };
+    this.setState({
+      savedFoods: s.savedFoods.concat([food]), nextId: s.nextId + 1, libMode: 'list',
+      nfName: '', nfQty: '', nfUnit: '', nfCal: '', nfP: '', nfC: '', nfF: '', nfFb: '',
+    });
+  }
+
+  addAdhocIng() {
+    const s = this.state;
+    if (!s.aiName.trim()) return;
+    const qty = this.num(s.aiQty) ?? 1;
+    const ing = {
+      name: s.aiName.trim(), qty, baseQty: qty, unit: s.aiUnit.trim() || 'g',
+      per: { cal: this.num(s.aiCal) ?? 0, p: this.num(s.aiP) ?? 0, c: this.num(s.aiC) ?? 0, f: this.num(s.aiF) ?? 0, fb: 0 },
+    };
+    this.setState({ rIngs: s.rIngs.concat([ing]), aiOpen: false, aiName: '', aiQty: '', aiUnit: '', aiCal: '', aiP: '', aiC: '', aiF: '' });
+  }
+
+  saveRecipe() {
+    const s = this.state;
+    if (!s.rName.trim() || s.rIngs.length === 0) return;
+    const servings = Math.max(1, this.num(s.rServings) ?? 1);
+    const t = this.recipeTotals(s.rIngs);
+    const foodId = s.nextId + 800;
+    const perServing = {
+      id: foodId, kind: 'recipe', name: s.rName.trim(), qty: 1, unit: 'serving',
+      cal: Math.round(t.cal / servings),
+      p: Math.round(t.p / servings * 10) / 10, c: Math.round(t.c / servings * 10) / 10,
+      f: Math.round(t.f / servings * 10) / 10, fb: Math.round(t.fb / servings * 10) / 10,
+    };
+    this.setState({
+      recipes: s.recipes.concat([{ id: s.nextId + 900, name: s.rName.trim(), servings, foodId, ings: s.rIngs }]),
+      savedFoods: s.savedFoods.concat([perServing]),
+      nextId: s.nextId + 1, libMode: 'list',
+      rName: '', rServings: '1', rQuery: '', rIngs: [],
+    });
+  }
+
+  macroKcal(p, c, f) { return Math.round((p ?? 0) * 4 + (c ?? 0) * 4 + (f ?? 0) * 9); }
+
+  openTargets() {
+    const t = this.state.target;
+    this.setState({ sheet: 'targets', tCal: String(t.cal), tP: String(t.p), tC: String(t.c), tF: String(t.f), tFb: String(t.fb) });
+  }
+
+  setMacroGoal(key, val) {
+    this.setState(st => {
+      const next = { ...st, [key]: val };
+      const kcal = this.macroKcal(parseFloat(next.tP) || 0, parseFloat(next.tC) || 0, parseFloat(next.tF) || 0);
+      return { [key]: val, tCal: String(kcal) };
+    });
+  }
+
+  saveTargets() {
+    const s = this.state;
+    this.setState({
+      target: {
+        cal: this.num(s.tCal) ?? s.target.cal,
+        p: this.num(s.tP) ?? s.target.p, c: this.num(s.tC) ?? s.target.c,
+        f: this.num(s.tF) ?? s.target.f, fb: this.num(s.tFb) ?? s.target.fb,
+      },
+      targetSetLabel: 'TARGET SET JUL 12',
+      sheet: null,
+    });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const showChips = this.props.macroChips ?? true;
+    const A = '#3ecf8e';
+    const target = s.target;
+
+    const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
+    const MEAL_LABEL = { breakfast: 'BREAKFAST', lunch: 'LUNCH', dinner: 'DINNER', snack: 'SNACK' };
+
+    // day navigation
+    const off = s.dayOffset;
+    const base = new Date(2026, 6, 12);
+    const d = new Date(base); d.setDate(base.getDate() + off);
+    const WD = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const MO = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const dayDateLabel = WD[d.getDay()] + ' · ' + MO[d.getMonth()] + ' ' + d.getDate();
+    const dayRelLabel = off === 0 ? 'TODAY' : off === -1 ? 'YESTERDAY' : off === 1 ? 'TOMORROW' : (off < 0 ? Math.abs(off) + ' DAYS AGO' : 'IN ' + off + ' DAYS');
+    const isToday = off === 0;
+    const dayEntries = s.entries.filter(e => (e.d ?? 0) === off);
+
+    // totals (null-safe)
+    const sum = (key) => dayEntries.reduce((acc, e) => acc + (e[key] ?? 0), 0);
+    const dailyCal = sum('cal'), dailyP = sum('p'), dailyC = sum('c'), dailyF = sum('f'), dailyFb = sum('fb');
+    const remCal = target.cal - dailyCal;
+
+    // sparse meal groups — only meals with entries
+    const grouped = {};
+    for (const e of dayEntries) (grouped[e.meal] = grouped[e.meal] || []).push(e);
+    const presentKeys = MEAL_ORDER.filter(k => grouped[k]).concat(Object.keys(grouped).filter(k => !MEAL_ORDER.includes(k)));
+
+    const macroLabel = (e) => {
+      const v = (x) => (x == null ? '—' : this.fmt1(x));
+      return 'P ' + v(e.p) + ' · C ' + v(e.c) + ' · F ' + v(e.f);
+    };
+
+    const mealsList = presentKeys.map(key => {
+      const entries = grouped[key].map(e => ({
+        name: e.name,
+        locked: !!e.foodLinked,
+        qtyLabel: this.fmt1(e.qty) + ' ' + e.unit + (e.foodLinked ? ' · saved food' : ' · ad-hoc'),
+        calLabel: e.cal == null ? '—' : this.fmt(e.cal),
+        macroLabel: macroLabel(e),
+        onOpen: () => this.openEdit(e),
+      }));
+      const mealCal = grouped[key].reduce((a, e) => a + (e.cal ?? 0), 0);
+      return {
+        key,
+        label: MEAL_LABEL[key] || key.toUpperCase(),
+        totalLabel: this.fmt(mealCal) + ' KCAL',
+        onCopyToday: () => this.copyToToday(grouped[key]),
+        entries,
+        onAdd: () => this.openLog(key),
+      };
+    });
+
+    const missingMeals = MEAL_ORDER.filter(k => !grouped[k]).map(k => ({
+      label: MEAL_LABEL[k],
+      onAdd: () => this.openLog(k),
+    }));
+
+    // macro rows for hero
+    const mk = (label, short, actual, tgt) => {
+      const pct = Math.min(100, Math.round((actual / tgt) * 100));
+      const over = actual > tgt;
+      const rem = tgt - actual;
+      return {
+        label, short,
+        pctW: pct + '%',
+        barColor: over ? '#fbbf24' : A,
+        glow: over ? 'rgba(251,191,36,0.35)' : 'rgba(62,207,142,0.35)',
+        remLabel: over ? this.fmt1(-rem) + ' g over' : this.fmt1(rem) + ' g left',
+        ratioLabel: this.fmt1(actual) + '/' + tgt,
+        unit: 'g',
+      };
+    };
+    const macroRows = [
+      mk('PROTEIN', 'P', dailyP, target.p),
+      mk('CARBS', 'C', dailyC, target.c),
+      mk('FAT', 'F', dailyF, target.f),
+      mk('FIBER', 'FB', dailyFb, target.fb),
+    ];
+    // food search
+    const q = s.query.trim().toLowerCase();
+    const matches = q ? s.savedFoods.filter(f => f.name.toLowerCase().includes(q)) : [];
+    const selFood = s.savedFoods.find(f => f.id === s.selFoodId) || null;
+    const results = (selFood ? [] : matches).map(r => ({
+      name: r.name,
+      badge: r.kind === 'recipe' ? 'RECIPE' : 'CUSTOM',
+      metaLabel: 'per ' + r.qty + ' ' + r.unit + ' · ' + r.cal + ' kcal · P ' + this.fmt1(r.p) + ' · unit locked to ' + r.unit,
+      onPick: () => this.setState({ selFoodId: r.id, fQty: String(r.qty), query: '' }),
+    }));
+
+    // recents — most recent distinct entries across all days, one tap re-logs
+    const seen = {};
+    const recents = s.entries.slice().sort((a, b) => b.id - a.id).filter(e => {
+      const k2 = e.name + '|' + e.unit;
+      if (seen[k2]) return false; seen[k2] = 1; return true;
+    }).slice(0, 4).map(e => ({
+      name: e.name,
+      sub: this.fmt1(e.qty) + ' ' + e.unit + ' · ' + (e.cal == null ? '—' : this.fmt(e.cal)) + ' kcal · P ' + (e.p == null ? '—' : this.fmt1(e.p)),
+      onLog: () => this.cloneToDay([e]),
+    }));
+
+    // reverse macro math chips
+    const MM = [['p', 'P'], ['c', 'C'], ['f', 'F'], ['cal', 'KCAL']];
+    const mmSel = s.savedFoods.find(f => f.id === s.selFoodId);
+    const mmChips = MM.map(pair => {
+      const active = s.mmMacro === pair[0];
+      return {
+        label: pair[1],
+        bg: active ? 'rgba(62,207,142,0.16)' : '#111827',
+        color: active ? A : '#56657a',
+        border: active ? 'rgba(62,207,142,0.5)' : '#27384a',
+        onPick: () => this.mmApply(pair[0], s.mmVal),
+      };
+    });
+    let mmHint = 'enter a goal — qty updates';
+    if (mmSel && s.mmVal) {
+      const mv = parseFloat(s.mmVal);
+      const perUnit = (mmSel[s.mmMacro] ?? 0) / mmSel.qty;
+      if (!isNaN(mv) && perUnit > 0) mmHint = '≈ ' + this.fmt1(mv / perUnit) + ' ' + mmSel.unit + ' hits ' + this.fmt1(mv) + (s.mmMacro === 'cal' ? ' kcal' : ' g ' + s.mmMacro.toUpperCase());
+    }
+
+    let selFoodAuto = '';
+    if (selFood) {
+      const qn = this.num(s.fQty) ?? selFood.qty;
+      const k = qn / selFood.qty;
+      selFoodAuto = 'auto: ' + this.fmt(selFood.cal * k) + ' kcal · P ' + this.fmt1(selFood.p * k) + ' · C ' + this.fmt1(selFood.c * k) + ' · F ' + this.fmt1(selFood.f * k);
+    }
+
+    const mealChips = ['breakfast', 'lunch', 'dinner', 'snack'].map(k => {
+      const active = s.fMeal === k;
+      return {
+        label: MEAL_LABEL[k],
+        bg: active ? 'rgba(62,207,142,0.16)' : '#111827',
+        color: active ? A : '#56657a',
+        border: active ? 'rgba(62,207,142,0.5)' : '#27384a',
+        onPick: () => this.setState({ fMeal: k }),
+      };
+    });
+
+    const bind = (key) => (e) => this.setState({ [key]: e.target.value });
+    const editOrig = s.editOrig;
+    const editLocked = !!(editOrig && editOrig.foodLinked);
+
+    return {
+      // tabs
+      isOverview: s.tab === 'overview',
+      isLibrary: s.tab === 'library',
+      onOverview: () => this.setState({ tab: 'overview' }),
+      onTrends: () => this.setState({ tab: 'library', libMode: 'list' }),
+      ovBg: s.tab === 'overview' ? 'rgba(43,196,232,0.2)' : 'transparent',
+      ovColor: s.tab === 'overview' ? '#2bc4e8' : '#56657a',
+      trBg: s.tab === 'library' ? 'rgba(43,196,232,0.2)' : 'transparent',
+      trColor: s.tab === 'library' ? '#2bc4e8' : '#56657a',
+
+      // day nav
+      isToday,
+      prevDay: () => this.setState(st => ({ dayOffset: st.dayOffset - 1 })),
+      nextDay: () => this.setState(st => ({ dayOffset: st.dayOffset + 1 })),
+      goToday: () => this.setState({ dayOffset: 0 }),
+      dayRelLabel, dayDateLabel,
+      dayRelColor: isToday ? A : '#94a3b8',
+      dayBorder: isToday ? 'rgba(62,207,142,0.4)' : '#27384a',
+      ledgerRailLabel: isToday ? 'TODAY · SO FAR' : off > 0 ? 'PLANNED · ' + dayRelLabel : 'CLOSED DAY · ' + dayRelLabel,
+      remHeadLabel: isToday ? 'REMAINING TODAY' : off > 0 ? 'BUDGET' : 'ENDED THE DAY',
+
+      // targets
+      sheetTargets: s.sheet === 'targets',
+      openTargets: () => this.openTargets(),
+      targetSetLabel: s.targetSetLabel,
+      targetCalLabel: this.fmt(target.cal),
+      tCal: s.tCal, tP: s.tP, tC: s.tC, tF: s.tF, tFb: s.tFb,
+      onTCal: (e) => this.setState({ tCal: e.target.value }),
+      onTP: (e) => this.setMacroGoal('tP', e.target.value),
+      onTC: (e) => this.setMacroGoal('tC', e.target.value),
+      onTF: (e) => this.setMacroGoal('tF', e.target.value),
+      onTFb: (e) => this.setState({ tFb: e.target.value }),
+      tMacroKcal: this.fmt(this.macroKcal(parseFloat(s.tP) || 0, parseFloat(s.tC) || 0, parseFloat(s.tF) || 0)),
+      tMismatch: Math.abs((this.num(s.tCal) ?? 0) - this.macroKcal(parseFloat(s.tP) || 0, parseFloat(s.tC) || 0, parseFloat(s.tF) || 0)) > 2,
+      tMatch: Math.abs((this.num(s.tCal) ?? 0) - this.macroKcal(parseFloat(s.tP) || 0, parseFloat(s.tC) || 0, parseFloat(s.tF) || 0)) <= 2,
+      saveTargets: () => this.saveTargets(),
+
+      // hero
+      dailyCalLabel: this.fmt(dailyCal),
+      remCalLabel: remCal >= 0 ? this.fmt(remCal) : '−' + this.fmt(-remCal),
+      standingLabel: remCal >= 0 ? this.fmt(remCal) + ' UNDER TARGET' : this.fmt(-remCal) + ' OVER TARGET',
+      macroRows,
+
+      // briefing
+      briefHeadline: 'MIDDAY STANDING · ' + this.fmt(dailyCal) + ' / 2,200 KCAL',
+      chipKcal: this.fmt(dailyCal) + '/2200',
+      chipLogged: String(dayEntries.length),
+
+      // log list
+      mealsList, missingMeals, showChips,
+      entryCountLabel: dayEntries.length + ' ENTRIES' + (isToday ? ' · 13:05' : ''),
+
+      // sheets
+      sheetLog: s.sheet === 'log',
+      sheetEdit: s.sheet === 'edit',
+      closeSheet: () => this.setState({ sheet: null }),
+      stopProp: (e) => e.stopPropagation(),
+      sheetSub: (MEAL_LABEL[s.fMeal] || 'MEAL') + ' · ' + dayDateLabel,
+      // food library
+      openLibrary: () => this.setState({ tab: 'library', sheet: null, libMode: 'list' }),
+      libList: s.libMode === 'list',
+      libFood: s.libMode === 'food',
+      libRecipe: s.libMode === 'recipe',
+      libBack: () => this.setState({ libMode: 'list' }),
+      openNewFood: () => this.setState({ libMode: 'food' }),
+      openNewRecipe: () => this.setState({ libMode: 'recipe' }),
+      libSub: s.savedFoods.filter(f => f.kind !== 'recipe').length + ' FOODS · ' + s.recipes.length + ' RECIPES',
+      libFoods: s.savedFoods.filter(f => f.kind !== 'recipe').map(f => ({
+        name: f.name,
+        metaLabel: 'per ' + f.qty + ' ' + f.unit + ' · ' + this.fmt(f.cal) + ' kcal · P ' + this.fmt1(f.p) + ' · C ' + this.fmt1(f.c) + ' · F ' + this.fmt1(f.f),
+        onDelete: () => this.setState(st => ({ savedFoods: st.savedFoods.filter(x => x.id !== f.id) })),
+      })),
+      libRecipes: s.recipes.map(r => {
+        const t = this.recipeTotals(r.ings);
+        return {
+          name: r.name,
+          metaLabel: r.ings.length + ' ingredients · ' + r.servings + ' serving' + (r.servings === 1 ? '' : 's') + ' · ' + this.fmt(t.cal / r.servings) + ' kcal / serving',
+          onDelete: () => this.setState(st => ({
+            recipes: st.recipes.filter(x => x.id !== r.id),
+            savedFoods: st.savedFoods.filter(x => x.id !== r.foodId),
+          })),
+        };
+      }),
+      nfName: s.nfName, nfQty: s.nfQty, nfUnit: s.nfUnit, nfCal: s.nfCal, nfP: s.nfP, nfC: s.nfC, nfF: s.nfF, nfFb: s.nfFb,
+      onNfName: bind('nfName'), onNfQty: bind('nfQty'), onNfUnit: bind('nfUnit'), onNfCal: bind('nfCal'),
+      onNfP: bind('nfP'), onNfC: bind('nfC'), onNfF: bind('nfF'), onNfFb: bind('nfFb'),
+      saveNewFood: () => this.saveNewFood(),
+      rName: s.rName, rServings: s.rServings, rQuery: s.rQuery,
+      onRName: bind('rName'), onRServings: bind('rServings'),
+      onRQuery: (e) => this.setState({ rQuery: e.target.value }),
+      rIngRows: s.rIngs.map((ing, i) => {
+        const sc = this.ingScaled(ing);
+        return {
+          name: ing.name, qty: String(ing.qty), unit: ing.unit,
+          calLabel: this.fmt(sc.cal) + ' kcal',
+          onQty: (e) => {
+            const v = parseFloat(e.target.value);
+            this.setState(st => ({ rIngs: st.rIngs.map((x, j) => (j === i ? { ...x, qty: isNaN(v) ? 0 : v } : x)) }));
+          },
+          onRemove: () => this.setState(st => ({ rIngs: st.rIngs.filter((x, j) => j !== i) })),
+        };
+      }),
+      hasRIngs: s.rIngs.length > 0,
+      rResults: (s.rQuery.trim() ? s.savedFoods.filter(f => f.kind !== 'recipe' && f.name.toLowerCase().includes(s.rQuery.trim().toLowerCase())) : []).map(f => ({
+        name: f.name,
+        metaLabel: 'per ' + f.qty + ' ' + f.unit + ' · ' + this.fmt(f.cal) + ' kcal',
+        onPick: () => this.setState(st => ({ rQuery: '', rIngs: st.rIngs.concat([{ name: f.name, qty: f.qty, baseQty: f.qty, unit: f.unit, per: { cal: f.cal, p: f.p, c: f.c, f: f.f, fb: f.fb } }]) })),
+      })),
+      hasRResults: s.rQuery.trim().length > 0 && s.savedFoods.some(f => f.kind !== 'recipe' && f.name.toLowerCase().includes(s.rQuery.trim().toLowerCase())),
+      aiOpen: s.aiOpen,
+      aiClosed: !s.aiOpen,
+      toggleAi: () => this.setState(st => ({ aiOpen: !st.aiOpen })),
+      aiName: s.aiName, aiQty: s.aiQty, aiUnit: s.aiUnit, aiCal: s.aiCal, aiP: s.aiP, aiC: s.aiC, aiF: s.aiF,
+      onAiName: bind('aiName'), onAiQty: bind('aiQty'), onAiUnit: bind('aiUnit'), onAiCal: bind('aiCal'),
+      onAiP: bind('aiP'), onAiC: bind('aiC'), onAiF: bind('aiF'),
+      addAdhocIng: () => this.addAdhocIng(),
+      rTotalLabel: (() => { const t = this.recipeTotals(s.rIngs); return this.fmt(t.cal) + ' kcal · P ' + this.fmt1(t.p) + ' · C ' + this.fmt1(t.c) + ' · F ' + this.fmt1(t.f); })(),
+      rServeLabel: (() => { const t = this.recipeTotals(s.rIngs); const sv = Math.max(1, this.num(s.rServings) ?? 1); return this.fmt(t.cal / sv) + ' kcal · P ' + this.fmt1(t.p / sv) + ' · C ' + this.fmt1(t.c / sv) + ' · F ' + this.fmt1(t.f / sv); })(),
+      saveRecipe: () => this.saveRecipe(),
+
+      // search
+      query: s.query,
+      onQuery: (e) => this.setState({ query: e.target.value, selFoodId: null }),
+      results,
+      hasResults: results.length > 0,
+      noMatch: !!q && results.length === 0 && !selFood,
+      showHint: !q && !selFood,
+      foodCountLabel: s.savedFoods.length + ' saved foods & recipes',
+      hasSelFood: !!selFood,
+      noSelFood: !selFood,
+      selFoodName: selFood ? selFood.name : '',
+      selFoodUnit: selFood ? selFood.unit : '',
+      selFoodAuto,
+      clearSelFood: () => this.setState({ selFoodId: null }),
+
+      // recents + copy yesterday
+      recents,
+      hasRecents: recents.length > 0,
+      notToday: !isToday,
+      copyEntryToday: () => { if (s.editOrig) this.copyToToday([s.editOrig]); },
+
+      // reverse macro math
+      mmChips,
+      mmVal: s.mmVal,
+      onMmVal: (e) => this.mmApply(s.mmMacro, e.target.value),
+      mmPlaceholder: s.mmMacro === 'cal' ? 'kcal' : 'g',
+      mmHint,
+
+      // log form
+      mealChips,
+      fName: s.fName, fQty: s.fQty, fUnit: s.fUnit, fCal: s.fCal, fP: s.fP, fC: s.fC, fF: s.fF, fFb: s.fFb,
+      onFName: bind('fName'), onFQty: bind('fQty'), onFUnit: bind('fUnit'), onFCal: bind('fCal'),
+      onFP: bind('fP'), onFC: bind('fC'), onFF: bind('fF'), onFFb: bind('fFb'),
+      submitLog: () => this.submitLog(),
+      toggleSave: () => this.setState(st => ({ fSave: !st.fSave })),
+      saveTrackBg: s.fSave ? 'rgba(62,207,142,0.35)' : 'rgba(86,101,122,0.2)',
+      saveTrackBorder: s.fSave ? 'rgba(62,207,142,0.6)' : '#27384a',
+      saveKnobLeft: s.fSave ? '15px' : '2px',
+      saveKnobBg: s.fSave ? '#3ecf8e' : '#56657a',
+
+      // edit form
+      editSub: editOrig ? (editOrig.name + ' · ' + (MEAL_LABEL[editOrig.meal] || editOrig.meal).toUpperCase()) : '',
+      editLocked,
+      editUnlocked: !!(editOrig && !editOrig.foodLinked),
+      eQty: s.eQty, eUnit: s.eUnit, eCal: s.eCal, eP: s.eP, eC: s.eC, eF: s.eF, eFb: s.eFb,
+      onEQty: bind('eQty'), onEUnit: bind('eUnit'), onECal: bind('eCal'),
+      onEP: bind('eP'), onEC: bind('eC'), onEF: bind('eF'), onEFb: bind('eFb'),
+      saveEdit: () => this.saveEdit(),
+      deleteEntry: () => this.setState(st => ({ entries: st.entries.filter(e => e.id !== st.editId), sheet: null, editId: null, editOrig: null })),
+    };
+  }
+}
+</script>
+</body>
+</html>

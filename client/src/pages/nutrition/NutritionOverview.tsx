@@ -7,7 +7,6 @@ import { todayLocal, addDaysLocal, relativeDayLabel, absoluteDateLabel } from '.
 import type { MealGroup, NutritionSummary, FoodLogEntry } from '../../lib/nutritionApi'
 import { MX4Briefing } from '../../components/MX4Card'
 import { BRIEFS } from '../../lib/stubData'
-import { Rail } from '../../components/viz/Rail'
 import { LogEntrySheet } from './LogEntrySheet'
 import { EditEntrySheet } from './EditEntrySheet'
 import { TargetsSheet } from './TargetsSheet'

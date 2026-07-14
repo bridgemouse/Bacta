@@ -37,7 +37,7 @@ describe('TargetsSheet', () => {
     render(<TargetsSheet open initialTarget={target} onClose={vi.fn()} onSaved={vi.fn()} />)
     await user.clear(screen.getByLabelText('Calorie goal'))
     await user.type(screen.getByLabelText('Calorie goal'), '2500')
-    expect(await screen.findByText(/MACROS SUM TO/)).toBeInTheDocument()
+    expect(await screen.findByText(/MACROS SUM TO 1972/)).toBeInTheDocument()
   })
 
   it('shows MATCHES MACROS when calories agree with the macro sum within tolerance', () => {

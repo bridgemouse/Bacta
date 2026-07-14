@@ -36,10 +36,10 @@ const STUB_BRIEFINGS: Record<string, object> = {
   },
   nutrition: {
     tone: 'CAUTION',
-    headline: 'No nutrition data source configured.',
-    body: 'MacroFactor integration is pending. No data available.',
-    recommendation: 'Set up a nutrition tracking source.',
-    flags: ['no data source'],
+    headline: 'Nutrition channel online. Architecture review pending.',
+    body: 'Logging is available but no live briefing has been generated yet — configure an AI provider in Settings.',
+    recommendation: 'Run the orchestrator to generate a live assessment.',
+    flags: [],
   },
   bloodwork: {
     tone: 'CAUTION',

@@ -6,6 +6,11 @@ import { NutritionPage } from '../../../client/src/pages/NutritionPage'
 vi.mock('../../../client/src/lib/nutritionApi', () => ({
   fetchLog: vi.fn().mockResolvedValue({ meals: {}, daily: { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 } }),
   fetchSummary: vi.fn().mockResolvedValue({ target: null, actual: { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 }, remaining: { calories: null, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null } }),
+  searchFoods: vi.fn().mockResolvedValue([]),
+  fetchRecipes: vi.fn().mockResolvedValue([]),
+  deleteFood: vi.fn().mockResolvedValue({}),
+  deleteRecipe: vi.fn().mockResolvedValue({}),
+  createFood: vi.fn().mockResolvedValue({}),
 }))
 
 beforeEach(() => {

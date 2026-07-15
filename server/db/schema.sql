@@ -73,6 +73,34 @@ CREATE TABLE IF NOT EXISTS nutrition_targets (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Saved recipes. Ingredient composition is stored here so it can be inspected/re-derived
+-- later; saving one also materializes a per-serving `foods` row (source='custom') so a
+-- recipe logs exactly like any other saved food — no separate logging code path needed.
+CREATE TABLE IF NOT EXISTS recipes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL,
+  servings   REAL NOT NULL,
+  food_id    INTEGER NOT NULL REFERENCES foods(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- One row per ingredient. Denormalized snapshot (mirrors food_log_entries) — a later edit
+-- to a referenced food's macros must not silently change what a saved recipe says it used.
+CREATE TABLE IF NOT EXISTS recipe_ingredients (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  recipe_id  INTEGER NOT NULL REFERENCES recipes(id),
+  food_id    INTEGER REFERENCES foods(id),   -- NULL for an ad-hoc ingredient
+  name       TEXT NOT NULL,
+  quantity   REAL NOT NULL,
+  unit       TEXT NOT NULL,
+  calories   REAL,
+  protein_g  REAL,
+  carbs_g    REAL,
+  fat_g      REAL,
+  fiber_g    REAL
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
+
 CREATE TABLE IF NOT EXISTS manual_inputs (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   date         TEXT NOT NULL UNIQUE,

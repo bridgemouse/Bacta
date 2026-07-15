@@ -26,3 +26,4 @@ __pycache__/
 *.png
 !client/public/*.png
 .worktrees/
+design_handoff_nutrition_v4/

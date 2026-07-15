@@ -317,4 +317,177 @@ describe('Nutrition API', () => {
       expect(missing.body.days.length).toBe(7)
     })
   })
+
+  describe('Recipes', () => {
+    it('POST /api/nutrition/recipes creates a recipe, its per-serving food, and its ingredients', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Protein Smoothie',
+        servings: 2,
+        ingredients: [
+          { name: 'Protein powder', quantity: 1, unit: 'scoop', calories: 120, protein_g: 24, carbs_g: 3, fat_g: 1, fiber_g: 0 },
+          { name: 'Banana', quantity: 1, unit: 'each', calories: 106, protein_g: 26, carbs_g: 27, fat_g: 0, fiber_g: 3 },
+        ],
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ name: 'Protein Smoothie', servings: 2 })
+      expect(res.body.food).toMatchObject({
+        name: 'Protein Smoothie', default_qty: 1, default_unit: 'serving',
+        calories: 113, protein_g: 25, carbs_g: 15, fat_g: 0.5, fiber_g: 1.5,
+      })
+    })
+
+    it('POST /api/nutrition/recipes rejects zero servings', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Bad Recipe', servings: 0, ingredients: [{ name: 'X', quantity: 1, unit: 'g', calories: 10 }],
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('POST /api/nutrition/recipes rejects an empty ingredient list', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Empty Recipe', servings: 2, ingredients: [],
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('GET /api/nutrition/recipes lists saved recipes with their per-serving macros and ingredient count', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/recipes')
+      expect(res.status).toBe(200)
+      const smoothie = res.body.recipes.find((r: { name: string }) => r.name === 'Protein Smoothie')
+      expect(smoothie).toBeDefined()
+      expect(smoothie.ingredient_count).toBe(2)
+    })
+
+    it('DELETE /api/nutrition/recipes/:id removes the recipe, its ingredients, and its materialized food', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Temp Recipe', servings: 1, ingredients: [{ name: 'X', quantity: 1, unit: 'g', calories: 50 }],
+      })
+      const foodId = created.body.food.id
+      const del = await request(app).delete(`/api/nutrition/recipes/${created.body.id}`)
+      expect(del.status).toBe(200)
+
+      const { default: db } = await import('../../server/db/client')
+      expect(db.prepare('SELECT * FROM foods WHERE id = ?').get(foodId)).toBeUndefined()
+    })
+
+    it('DELETE /api/nutrition/recipes/:id returns 404 for a nonexistent recipe', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).delete('/api/nutrition/recipes/999999')
+      expect(res.status).toBe(404)
+    })
+
+    it('DELETE /api/nutrition/recipes/:id is blocked with 400 if its food has already been logged, and leaves everything intact', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Logged Recipe', servings: 1, ingredients: [{ name: 'X', quantity: 1, unit: 'g', calories: 80 }],
+      })
+      const foodId = created.body.food.id
+      await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 1, unit: 'serving',
+      })
+
+      const del = await request(app).delete(`/api/nutrition/recipes/${created.body.id}`)
+      expect(del.status).toBe(400)
+
+      const { default: db } = await import('../../server/db/client')
+      expect(db.prepare('SELECT * FROM foods WHERE id = ?').get(foodId)).toBeDefined()
+      expect(db.prepare('SELECT * FROM recipes WHERE id = ?').get(created.body.id)).toBeDefined()
+    })
+  })
+
+  describe('Food deletion', () => {
+    it('DELETE /api/nutrition/foods/:id removes an unused food', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Unused Food', default_qty: 100, default_unit: 'g', calories: 50,
+      })
+      const del = await request(app).delete(`/api/nutrition/foods/${created.body.id}`)
+      expect(del.status).toBe(200)
+    })
+
+    it('DELETE /api/nutrition/foods/:id returns 404 for a nonexistent food', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).delete('/api/nutrition/foods/999999')
+      expect(res.status).toBe(404)
+    })
+
+    it('DELETE /api/nutrition/foods/:id is blocked with 400 if the food has been logged', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Logged Food', default_qty: 100, default_unit: 'g', calories: 50,
+      })
+      await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-11', meal_type: 'snack', food_id: created.body.id, quantity: 100, unit: 'g',
+      })
+      const del = await request(app).delete(`/api/nutrition/foods/${created.body.id}`)
+      expect(del.status).toBe(400)
+    })
+  })
+
+  describe('Recent entries', () => {
+    it('GET /api/nutrition/log/recent returns entries newest-first, deduped by name+unit', async () => {
+      const { default: db } = await import('../../server/db/client')
+
+      // Insert entries with explicit timestamps that are guaranteed to be newest
+      // Use a timestamp in the future to ensure they're returned first by ORDER BY logged_at DESC
+      const future = new Date(Date.now() + 10000).toISOString().replace('T', ' ').slice(0, 19)
+      const pastFuture = new Date(Date.now() + 5000).toISOString().replace('T', ' ').slice(0, 19)
+
+      db.prepare(`INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run('2026-07-08', 'lunch', 'Salmon bowl', 1, 'bowl', 500, pastFuture, pastFuture)
+      db.prepare(`INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run('2026-07-09', 'lunch', 'Salmon bowl', 1, 'bowl', 520, future, future)
+      db.prepare(`INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run('2026-07-09', 'dinner', 'Turkey sandwich', 1, 'sandwich', 400, future, future)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/log/recent').query({ limit: 4 })
+      expect(res.status).toBe(200)
+      const salmonEntries = res.body.entries.filter((e: { name: string }) => e.name === 'Salmon bowl')
+      expect(salmonEntries.length).toBe(1) // deduped
+      expect(salmonEntries[0].calories).toBe(520) // the more recent of the two
+    })
+
+    it('GET /api/nutrition/log/recent respects the limit param', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/log/recent').query({ limit: 1 })
+      expect(res.status).toBe(200)
+      expect(Array.isArray(res.body.entries)).toBe(true)
+      // After the previous test, there should be at least some entries in the database
+      expect(res.body.entries.length).toBeGreaterThan(0)
+      expect(res.body.entries.length).toBeLessThanOrEqual(1)
+    })
+
+    it('breaks ties at the same logged_at timestamp by using id DESC (higher id wins)', async () => {
+      const { default: db } = await import('../../server/db/client')
+      // Insert two entries with the SAME name, unit, and logged_at timestamp
+      // but DIFFERENT calories to test the deterministic tiebreaker
+      const sameTimestamp = '2026-07-12 12:00:00'
+      const firstId = Number(db.prepare(`
+        INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run('2026-07-12', 'lunch', 'Chicken sandwich', 1, 'sandwich', 450, sameTimestamp, sameTimestamp).lastInsertRowid)
+
+      const secondId = Number(db.prepare(`
+        INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run('2026-07-12', 'lunch', 'Chicken sandwich', 1, 'sandwich', 480, sameTimestamp, sameTimestamp).lastInsertRowid)
+
+      // Verify secondId is indeed larger (inserted later)
+      expect(secondId).toBeGreaterThan(firstId)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/log/recent').query({ limit: 10 })
+      expect(res.status).toBe(200)
+      const sandwichEntries = res.body.entries.filter((e: { name: string }) => e.name === 'Chicken sandwich')
+      expect(sandwichEntries.length).toBe(1) // deduped to exactly one
+      expect(sandwichEntries[0].id).toBe(secondId) // the one with the higher id (inserted second)
+      expect(sandwichEntries[0].calories).toBe(480) // and thus the correct calories value
+    })
+  })
 })

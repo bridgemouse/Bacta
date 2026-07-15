@@ -64,4 +64,26 @@ describe('BactaDock (BottomBar)', () => {
     await user.click(screen.getByText('Trends'))
     expect(setTab).toHaveBeenCalledWith('trends')
   })
+
+  it('renders a custom tab pair (Overview/Library) when tabs prop is provided', () => {
+    render(
+      <TabContext.Provider value={{ tab: 'overview', setTab: vi.fn() }}>
+        <BottomBar accent="#3ecf8e" hasTabs tabs={['overview', 'library']} onAsk={vi.fn()} onNav={vi.fn()} />
+      </TabContext.Provider>
+    )
+    expect(screen.getByText('Library')).toBeInTheDocument()
+    expect(screen.queryByText('Trends')).not.toBeInTheDocument()
+  })
+
+  it('clicking Library calls setTab with library', async () => {
+    const user = userEvent.setup()
+    const setTab = vi.fn()
+    render(
+      <TabContext.Provider value={{ tab: 'overview', setTab }}>
+        <BottomBar accent="#3ecf8e" hasTabs tabs={['overview', 'library']} onAsk={vi.fn()} onNav={vi.fn()} />
+      </TabContext.Provider>
+    )
+    await user.click(screen.getByText('Library'))
+    expect(setTab).toHaveBeenCalledWith('library')
+  })
 })

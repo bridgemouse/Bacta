@@ -4,6 +4,7 @@ import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
 import { saveTargets, type NutritionTarget } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
 import { useToast } from '../../lib/ToastContext'
+import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, payloadToExtendedNutrients, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
@@ -35,6 +36,7 @@ export function TargetsSheet({ open, initialTarget, onClose, onSaved }: TargetsS
   const [fat, setFat] = useState('')
   const [fiber, setFiber] = useState('')
   const [calories, setCalories] = useState('')
+  const [extended, setExtended] = useState<ExtendedNutrients>(emptyExtendedNutrients())
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export function TargetsSheet({ open, initialTarget, onClose, onSaved }: TargetsS
     setFat(initialTarget?.fat_g != null ? String(initialTarget.fat_g) : '')
     setFiber(initialTarget?.fiber_g != null ? String(initialTarget.fiber_g) : '')
     setCalories(initialTarget?.calories != null ? String(initialTarget.calories) : '')
+    setExtended(payloadToExtendedNutrients(initialTarget))
   }, [open, initialTarget])
 
   function recomputeKcal(p: string, c: string, f: string) {
@@ -56,6 +59,8 @@ export function TargetsSheet({ open, initialTarget, onClose, onSaved }: TargetsS
   async function handleSave() {
     setSubmitting(true)
     try {
+      // Targets don't support descriptive fields (see MoreNutrientsSection numericOnly) — numeric only.
+      const { glycemic_index: _glycemicIndex, allergens: _allergens, traces: _traces, ...numericExtended } = extendedNutrientsToPayload(extended)
       await saveTargets({
         date: todayLocal(),
         calories: calories === '' ? undefined : Number(calories),
@@ -63,6 +68,7 @@ export function TargetsSheet({ open, initialTarget, onClose, onSaved }: TargetsS
         carbs_g: carbs === '' ? undefined : Number(carbs),
         fat_g: fat === '' ? undefined : Number(fat),
         fiber_g: fiber === '' ? undefined : Number(fiber),
+        ...numericExtended,
       })
       onSaved(); onClose()
     } catch (err) {
@@ -106,6 +112,8 @@ export function TargetsSheet({ open, initialTarget, onClose, onSaved }: TargetsS
           <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: matchesMacros ? COLORS.mx4Green : COLORS.mx4Amber, marginBottom: 14 }}>
             {matchesMacros ? 'MATCHES MACROS ✓' : `MACROS SUM TO ${macroSum}`}
           </div>
+
+          <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} numericOnly />
 
           <button onClick={handleSave} disabled={submitting} style={{
             width: '100%', padding: '11px 0', borderRadius: 8, border: 'none', cursor: submitting ? 'default' : 'pointer',

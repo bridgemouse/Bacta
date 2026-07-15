@@ -4,6 +4,7 @@ import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { createLogEntry, searchFoods, fetchRecentEntries, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
 import { useToast } from '../../lib/ToastContext'
+import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
@@ -58,11 +59,13 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   })
   const [goalMacro, setGoalMacro] = useState<'calories' | 'protein_g' | 'carbs_g' | 'fat_g' | null>(null)
   const [goalValue, setGoalValue] = useState('')
+  const [extended, setExtended] = useState<ExtendedNutrients>(emptyExtendedNutrients())
   const [submitting, setSubmitting] = useState(false)
 
   function reset() {
     setName(''); setQty(''); setUnit('')
     setMacros({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
+    setExtended(emptyExtendedNutrients())
     setSelectedFood(null); setGoalMacro(null); setGoalValue('')
   }
 
@@ -121,6 +124,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
         carbs_g: macros.carbs_g === '' ? null : Number(macros.carbs_g),
         fat_g: macros.fat_g === '' ? null : Number(macros.fat_g),
         fiber_g: macros.fiber_g === '' ? null : Number(macros.fiber_g),
+        ...extendedNutrientsToPayload(extended),
       })
       reset()
       onLogged(); onClose()
@@ -253,6 +257,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
                     style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
                 ))}
               </div>
+              <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} />
             </>
           )}
 

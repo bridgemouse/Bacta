@@ -83,6 +83,37 @@ describe('mapUsdaFoodToRow', () => {
       fiber_g: 2.5,
     })
   })
+
+  it('maps the widened nutrient set (#140) — sodium 307, sugar 269, saturated/mono/poly/trans fat 606/645/646/605, cholesterol 601, potassium 306, vitamin A (RAE) 320, vitamin C 401, calcium 301, iron 303 — verified live against a real SR Legacy record', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('usda-sr-legacy-banana-extended.json')
+    const row = mapUsdaFoodToRow(record as any)
+
+    expect(row).toMatchObject({
+      source_id: '173944',
+      sodium_mg: 1.0,
+      sugar_g: 12.23,
+      saturated_fat_g: 0.112,
+      monounsaturated_fat_g: 0.032,
+      polyunsaturated_fat_g: 0.073,
+      trans_fat_g: 0.0,
+      cholesterol_mg: 0.0,
+      potassium_mg: 358.0,
+      vitamin_a_mcg: 3.0,
+      vitamin_c_mg: 8.7,
+      calcium_mg: 5.0,
+      iron_mg: 0.26,
+    })
+  })
+
+  it('maps a record missing a widened-nutrient code to null for that field, not 0', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    // The original croissant fixture (used above) carries none of the widened codes.
+    const record = loadFixture('usda-sr-legacy-croissant.json')
+    const row = mapUsdaFoodToRow(record as any)
+    expect(row!.sodium_mg).toBeNull()
+    expect(row!.vitamin_a_mcg).toBeNull()
+  })
 })
 
 describe('mapOffProductToRow', () => {

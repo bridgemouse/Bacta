@@ -5,6 +5,7 @@ import { hexA } from '../../lib/hexA'
 import { updateLogEntry, deleteLogEntry, createLogEntry, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
 import { useToast } from '../../lib/ToastContext'
+import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, payloadToExtendedNutrients, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
@@ -34,6 +35,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
   const [qty, setQty] = useState('')
   const [unit, setUnit] = useState('')
   const [macros, setMacros] = useState<Record<MacroKey, string>>({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
+  const [extended, setExtended] = useState<ExtendedNutrients>(emptyExtendedNutrients())
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
         fat_g: entry.fat_g == null ? '' : String(entry.fat_g),
         fiber_g: entry.fiber_g == null ? '' : String(entry.fiber_g),
       })
+      setExtended(payloadToExtendedNutrients(entry))
     }
   }, [entry])
 
@@ -67,6 +70,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
         const newVal = macros[key] === '' ? null : Number(macros[key])
         if (newVal !== currentEntry[key]) updates[key] = newVal
       }
+      Object.assign(updates, extendedNutrientsToPayload(extended))
       await updateLogEntry(currentEntry.id, updates)
       onSaved(); onClose()
     } catch (err) {
@@ -128,6 +132,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
                 style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
             ))}
           </div>
+          <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} />
           {!isToday && (
             <button onClick={handleCopyToToday} style={{
               width: '100%', padding: '9px 0', marginBottom: 10, borderRadius: 8,

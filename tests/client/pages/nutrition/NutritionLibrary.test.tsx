@@ -215,6 +215,34 @@ describe('NutritionLibrary — new recipe', () => {
     }))
   })
 
+  it('editing a food-linked ingredient quantity rescales its macros, not just the quantity', async () => {
+    mockCreateRecipe.mockResolvedValue({ id: 1, food: { id: 2 } })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Double Oats')
+    await user.type(screen.getByLabelText('Servings'), '1')
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Oat')
+    await user.click(await screen.findByText('Test Oats'))
+
+    const qtyInput = screen.getByLabelText('Ingredient 0 quantity')
+    await user.clear(qtyInput)
+    await user.type(qtyInput, '200') // double the food's default_qty of 100g
+
+    // Displayed kcal for the row and the RECIPE TOTAL must both reflect the doubled quantity,
+    // not the stale calories captured when the ingredient was first added.
+    expect(screen.getByText('778 kcal')).toBeInTheDocument()
+    expect(screen.getByText(/RECIPE TOTAL 778 kcal · PER SERVING 778 kcal/)).toBeInTheDocument()
+
+    await user.click(screen.getByText('SAVE RECIPE'))
+    await waitFor(() => expect(mockCreateRecipe).toHaveBeenCalledWith(expect.objectContaining({
+      ingredients: [expect.objectContaining({
+        quantity: 200, calories: 778, protein_g: 33.8, carbs_g: 132.6, fat_g: 13.8, fiber_g: 21.2,
+      })],
+    })))
+  })
+
   it('ad-hoc ingredient macros are editable and contribute to the RECIPE TOTAL', async () => {
     mockCreateRecipe.mockResolvedValue({ id: 1, food: { id: 2 } })
     const user = userEvent.setup()

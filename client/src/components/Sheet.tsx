@@ -58,6 +58,11 @@ export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps
         transition: 'background .34s ease',
         backdropFilter: shown ? 'blur(3px)' : 'blur(0px)',
         WebkitBackdropFilter: shown ? 'blur(3px)' : 'blur(0px)',
+        // Portaling to document.body escapes AppShell's root div, which is the only
+        // place the Hanken Grotesk font-family is applied (via inline style, not a
+        // global CSS rule) — re-declare it here so portaled sheet content doesn't
+        // silently fall back to the browser's default system-font stack.
+        fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
       }}
     >
       <div

@@ -50,6 +50,16 @@ describe('LogEntrySheet — Quick Track', () => {
     render(<LogEntrySheet open={false} date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
     expect(screen.queryByText('LOG ENTRY')).not.toBeInTheDocument()
   })
+
+  it('blocks submit when quantity is "0", instead of silently logging a zeroed-out entry', async () => {
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.type(screen.getByPlaceholderText(/what did you eat/i), 'Tacos')
+    await user.type(screen.getByPlaceholderText('qty'), '0')
+    await user.type(screen.getByPlaceholderText('unit (any)'), 'tacos')
+    await user.click(screen.getByRole('button', { name: 'LOG ENTRY' }))
+    expect(mockCreateLogEntry).not.toHaveBeenCalled()
+  })
 })
 
 describe('LogEntrySheet — search and recents', () => {
@@ -133,6 +143,31 @@ describe('LogEntrySheet — selected food', () => {
 
     // 40g protein ÷ (16.9g protein / 100g) = 236.7g
     await waitFor(() => expect(screen.getByLabelText('Quantity')).toHaveValue('236.69'))
+  })
+
+  it('blocks submit when quantity is "0" for a selected food', async () => {
+    const { searchFoods } = await import('../../../../client/src/lib/nutritionApi')
+    ;(searchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([oats])
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.type(screen.getByPlaceholderText('Search saved foods…'), 'oat')
+    await user.click(await screen.findByText('Test Oats'))
+    await user.clear(screen.getByLabelText('Quantity'))
+    await user.type(screen.getByLabelText('Quantity'), '0')
+    await user.click(screen.getByRole('button', { name: 'LOG ENTRY' }))
+    expect(mockCreateLogEntry).not.toHaveBeenCalled()
+  })
+
+  it('does not poison the quantity field with "NaN" when the goal input is non-numeric', async () => {
+    const { searchFoods } = await import('../../../../client/src/lib/nutritionApi')
+    ;(searchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([oats])
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.type(screen.getByPlaceholderText('Search saved foods…'), 'oat')
+    await user.click(await screen.findByText('Test Oats'))
+    await user.click(screen.getByText('P'))
+    await user.type(screen.getByPlaceholderText('goal'), 'abc')
+    expect(screen.getByLabelText('Quantity')).not.toHaveValue('NaN')
   })
 
   it('CLEAR returns to the search view', async () => {

@@ -3,6 +3,11 @@ import { Rail } from '../../components/viz/Rail'
 import { SECTION_ACCENTS, COLORS, FONT_MONO, FONT_UI } from '../../theme'
 import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, type Food, type Recipe } from '../../lib/nutritionApi'
 import { hexA } from '../../lib/hexA'
+import { useToast } from '../../lib/ToastContext'
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback
+}
 
 const A = SECTION_ACCENTS.nutrition
 
@@ -18,6 +23,7 @@ const accentButton = {
 }
 
 function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+  const { showToast } = useToast()
   const [name, setName] = useState('')
   const [qty, setQty] = useState('')
   const [unit, setUnit] = useState('')
@@ -28,6 +34,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
 
   async function handleSave() {
     if (!name || submitting) return
+    if (!(Number(qty) > 0)) { showToast('Default quantity must be greater than 0.', 'error'); return }
     setSubmitting(true)
     try {
       await createFood({
@@ -39,6 +46,8 @@ function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
         fiber_g: macros.fiber_g === '' ? undefined : Number(macros.fiber_g),
       })
       onDone()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not save food.'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -83,9 +92,26 @@ interface IngredientRow {
   carbs_g: number | null
   fat_g: number | null
   fiber_g: number | null
+  // Present only for food-linked rows — the food this row was added from, kept
+  // around so a later quantity edit can rescale macros from its per-default_qty
+  // values instead of leaving them frozen at whatever quantity the row started at.
+  sourceFood?: Food
+}
+
+function scaleFromFood(food: Food, quantity: number) {
+  const factor = quantity / food.default_qty
+  const round2 = (v: number | null) => v == null ? null : Math.round(v * factor * 100) / 100
+  return {
+    calories: food.calories == null ? null : Math.round(food.calories * factor),
+    protein_g: round2(food.protein_g),
+    carbs_g: round2(food.carbs_g),
+    fat_g: round2(food.fat_g),
+    fiber_g: round2(food.fiber_g),
+  }
 }
 
 function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () => void; onBack: () => void }) {
+  const { showToast } = useToast()
   const [name, setName] = useState('')
   const [servings, setServings] = useState('')
   const [ingredients, setIngredients] = useState<IngredientRow[]>([])
@@ -98,6 +124,7 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
     setIngredients(rows => [...rows, {
       food_id: food.id, name: food.name, quantity: food.default_qty, unit: food.default_unit,
       calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g, fiber_g: food.fiber_g,
+      sourceFood: food,
     }])
     setQuery('')
   }
@@ -132,7 +159,7 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
       })
       onDone()
     } catch (err) {
-      console.error('[recipe] save failed:', err)
+      showToast(errorMessage(err, 'Could not save recipe.'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -157,7 +184,10 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
                 <span style={{ flex: 1, fontFamily: FONT_UI, fontSize: 12, color: COLORS.text }}>{ing.name}</span>
               )}
               <input aria-label={`Ingredient ${i} quantity`} value={String(ing.quantity)}
-                onChange={e => updateIngredient(i, { quantity: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
+                onChange={e => {
+                  const quantity = Number(e.target.value)
+                  updateIngredient(i, ing.sourceFood ? { quantity, ...scaleFromFood(ing.sourceFood, quantity) } : { quantity })
+                }} style={{ ...inputStyle, width: 60 }} />
               {isAdHoc ? (
                 <input aria-label={`Ingredient ${i} unit`} value={ing.unit} onChange={e => updateIngredient(i, { unit: e.target.value })}
                   placeholder="g" style={{ ...inputStyle, width: 30, fontSize: 9, padding: '5px 4px' }} />
@@ -205,6 +235,7 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
 }
 
 export function NutritionLibrary() {
+  const { showToast } = useToast()
   const [mode, setMode] = useState<'list' | 'new-food' | 'new-recipe'>('list')
   const [foods, setFoods] = useState<Food[]>([])
   const [recipes, setRecipes] = useState<Recipe[]>([])
@@ -221,12 +252,20 @@ export function NutritionLibrary() {
   useEffect(() => { reload() }, [])
 
   async function handleDeleteFood(id: number) {
-    await deleteFood(id)
-    reload()
+    try {
+      await deleteFood(id)
+      reload()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not delete food.'), 'error')
+    }
   }
   async function handleDeleteRecipe(id: number) {
-    await deleteRecipe(id)
-    reload()
+    try {
+      await deleteRecipe(id)
+      reload()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not delete recipe.'), 'error')
+    }
   }
 
   if (mode === 'new-food') {

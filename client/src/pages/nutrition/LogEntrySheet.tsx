@@ -3,6 +3,11 @@ import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { createLogEntry, searchFoods, fetchRecentEntries, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
+import { useToast } from '../../lib/ToastContext'
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback
+}
 
 const A = SECTION_ACCENTS.nutrition
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
@@ -39,6 +44,7 @@ const inputStyle = {
 }
 
 export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged }: LogEntrySheetProps) {
+  const { showToast } = useToast()
   const [meal, setMeal] = useState(initialMeal)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Food[]>([])
@@ -71,7 +77,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   useEffect(() => {
     if (!selectedFood || !goalMacro || goalValue === '') return
     const computed = qtyForGoal(selectedFood, goalMacro, Number(goalValue))
-    if (computed != null) setQty(String(computed))
+    if (computed != null && !Number.isNaN(computed)) setQty(String(computed))
   }, [selectedFood, goalMacro, goalValue])
 
   useEffect(() => {
@@ -89,18 +95,23 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   async function handleSubmit() {
     if (submitting) return
     if (selectedFood) {
-      if (!qty) return
+      if (!(Number(qty) > 0)) { showToast('Quantity must be greater than 0.', 'error'); return }
       setSubmitting(true)
       try {
         await createLogEntry({ date, meal_type: meal, food_id: selectedFood.id, quantity: Number(qty), unit: selectedFood.default_unit })
         setSelectedFood(null); setGoalMacro(null); setGoalValue('')
         onLogged(); onClose()
+      } catch (err) {
+        showToast(errorMessage(err, 'Could not log entry.'), 'error')
       } finally {
         setSubmitting(false)
       }
       return
     }
-    if (!name || !qty || !unit) return
+    if (!name || !unit || !(Number(qty) > 0)) {
+      if (name && unit) showToast('Quantity must be greater than 0.', 'error')
+      return
+    }
     setSubmitting(true)
     try {
       await createLogEntry({
@@ -113,6 +124,8 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
       })
       reset()
       onLogged(); onClose()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not log entry.'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -151,8 +164,12 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px solid ${COLORS.line}` }}>
                   <span style={{ fontFamily: FONT_UI, fontSize: 12.5, color: COLORS.text }}>{r.name}</span>
                   <button onClick={async () => {
-                    await createLogEntry({ date, meal_type: meal, food_id: r.food_id, name: r.food_id == null ? r.name : undefined, quantity: r.quantity, unit: r.unit, calories: r.calories, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })
-                    onLogged(); onClose()
+                    try {
+                      await createLogEntry({ date, meal_type: meal, food_id: r.food_id, name: r.food_id == null ? r.name : undefined, quantity: r.quantity, unit: r.unit, calories: r.calories, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })
+                      onLogged(); onClose()
+                    } catch (err) {
+                      showToast(errorMessage(err, 'Could not log entry.'), 'error')
+                    }
                   }} style={{ background: 'none', border: 'none', color: A, fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, cursor: 'pointer' }}>+ LOG</button>
                 </div>
               ))}
@@ -209,7 +226,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
                 {(['calories', 'protein_g', 'carbs_g', 'fat_g'] as const).map(key => (
                   <button key={key} onClick={() => setGoalMacro(key)} style={{
                     padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: FONT_MONO, fontSize: 9,
-                    border: `1px solid ${goalMacro === key ? A : COLORS.line}`, background: goalMacro === key ? `${A}22` : 'transparent',
+                    border: `1px solid ${goalMacro === key ? A : COLORS.line}`, background: goalMacro === key ? hexA(A, 0.13) : 'transparent',
                     color: goalMacro === key ? A : COLORS.textMuted,
                   }}>{key === 'protein_g' ? 'P' : key === 'carbs_g' ? 'C' : key === 'fat_g' ? 'F' : 'KCAL'}</button>
                 ))}

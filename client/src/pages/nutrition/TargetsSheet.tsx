@@ -3,6 +3,11 @@ import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
 import { saveTargets, type NutritionTarget } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
+import { useToast } from '../../lib/ToastContext'
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback
+}
 
 const A = SECTION_ACCENTS.nutrition
 
@@ -24,6 +29,7 @@ interface TargetsSheetProps {
 }
 
 export function TargetsSheet({ open, initialTarget, onClose, onSaved }: TargetsSheetProps) {
+  const { showToast } = useToast()
   const [protein, setProtein] = useState('')
   const [carbs, setCarbs] = useState('')
   const [fat, setFat] = useState('')
@@ -59,6 +65,8 @@ export function TargetsSheet({ open, initialTarget, onClose, onSaved }: TargetsS
         fiber_g: fiber === '' ? undefined : Number(fiber),
       })
       onSaved(); onClose()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not save targets.'), 'error')
     } finally {
       setSubmitting(false)
     }

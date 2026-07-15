@@ -4,6 +4,11 @@ import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { updateLogEntry, deleteLogEntry, createLogEntry, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
+import { useToast } from '../../lib/ToastContext'
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback
+}
 
 const A = SECTION_ACCENTS.nutrition
 const MACRO_KEYS = ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const
@@ -24,6 +29,7 @@ interface EditEntrySheetProps {
 }
 
 export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntrySheetProps) {
+  const { showToast } = useToast()
   const [displayEntry, setDisplayEntry] = useState<FoodLogEntry | null>(entry)
   const [qty, setQty] = useState('')
   const [unit, setUnit] = useState('')
@@ -46,21 +52,25 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
   }, [entry])
 
   if (!displayEntry) return null
-  const isLinked = displayEntry.food_id != null
+  const currentEntry: FoodLogEntry = displayEntry
+  const isLinked = currentEntry.food_id != null
   const isToday = date === todayLocal()
 
   async function handleSave() {
+    if (!(Number(qty) > 0)) { showToast('Quantity must be greater than 0.', 'error'); return }
     setSubmitting(true)
     try {
       const updates: Partial<LogEntryInput> = {}
-      if (Number(qty) !== entry!.quantity) updates.quantity = Number(qty)
-      if (!isLinked && unit !== entry!.unit) updates.unit = unit
+      if (Number(qty) !== currentEntry.quantity) updates.quantity = Number(qty)
+      if (!isLinked && unit !== currentEntry.unit) updates.unit = unit
       for (const key of MACRO_KEYS) {
         const newVal = macros[key] === '' ? null : Number(macros[key])
-        if (newVal !== entry![key]) updates[key] = newVal
+        if (newVal !== currentEntry[key]) updates[key] = newVal
       }
-      await updateLogEntry(entry!.id, updates)
+      await updateLogEntry(currentEntry.id, updates)
       onSaved(); onClose()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not save changes.'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -69,20 +79,26 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
   async function handleDelete() {
     setSubmitting(true)
     try {
-      await deleteLogEntry(entry!.id)
+      await deleteLogEntry(currentEntry.id)
       onSaved(); onClose()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not delete entry.'), 'error')
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleCopyToToday() {
-    await createLogEntry({
-      date: todayLocal(), meal_type: entry!.meal_type, food_id: entry!.food_id ?? undefined,
-      name: entry!.food_id == null ? entry!.name : undefined, quantity: entry!.quantity, unit: entry!.unit,
-      calories: entry!.calories, protein_g: entry!.protein_g, carbs_g: entry!.carbs_g, fat_g: entry!.fat_g, fiber_g: entry!.fiber_g,
-    })
-    onSaved(); onClose()
+    try {
+      await createLogEntry({
+        date: todayLocal(), meal_type: currentEntry.meal_type, food_id: currentEntry.food_id ?? undefined,
+        name: currentEntry.food_id == null ? currentEntry.name : undefined, quantity: currentEntry.quantity, unit: currentEntry.unit,
+        calories: currentEntry.calories, protein_g: currentEntry.protein_g, carbs_g: currentEntry.carbs_g, fat_g: currentEntry.fat_g, fiber_g: currentEntry.fiber_g,
+      })
+      onSaved(); onClose()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not copy entry to today.'), 'error')
+    }
   }
 
   return (

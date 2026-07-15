@@ -2,6 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { EditEntrySheet } from '../../../../client/src/pages/nutrition/EditEntrySheet'
+import { ToastProvider } from '../../../../client/src/lib/ToastContext'
+import { ToastContainer } from '../../../../client/src/components/ToastContainer'
 
 vi.mock('../../../../client/src/lib/nutritionApi', () => ({
   updateLogEntry: vi.fn(), deleteLogEntry: vi.fn(), createLogEntry: vi.fn(),
@@ -11,6 +13,10 @@ import { updateLogEntry, deleteLogEntry, createLogEntry } from '../../../../clie
 const mockUpdate = updateLogEntry as ReturnType<typeof vi.fn>
 const mockDelete = deleteLogEntry as ReturnType<typeof vi.fn>
 const mockCreate = createLogEntry as ReturnType<typeof vi.fn>
+
+function renderWithToasts(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}<ToastContainer /></ToastProvider>)
+}
 
 const linkedEntry = { id: 7, meal_type: 'breakfast', food_id: 3, name: 'Test Oats', quantity: 100, unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6, logged_at: '' }
 const adHocEntry = { id: 8, meal_type: 'snack', food_id: null, name: 'Nuts', quantity: 1, unit: 'handful', calories: 180, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null, logged_at: '' }
@@ -61,5 +67,34 @@ describe('EditEntrySheet', () => {
   it('does not show COPY THIS ITEM TO TODAY when viewing today', () => {
     render(<EditEntrySheet open entry={adHocEntry} date={new Date().toLocaleDateString('en-CA')} onClose={vi.fn()} onSaved={vi.fn()} />)
     expect(screen.queryByText('COPY THIS ITEM TO TODAY')).not.toBeInTheDocument()
+  })
+
+  it('blocks SAVE CHANGES when quantity is cleared to blank, instead of silently zeroing macros', async () => {
+    const onSaved = vi.fn()
+    const user = userEvent.setup()
+    renderWithToasts(<EditEntrySheet open entry={linkedEntry} date="2026-07-13" onClose={vi.fn()} onSaved={onSaved} />)
+    await user.clear(screen.getByLabelText('Quantity'))
+    await user.click(screen.getByText('SAVE CHANGES'))
+    expect(await screen.findByText('Quantity must be greater than 0.')).toBeInTheDocument()
+    expect(mockUpdate).not.toHaveBeenCalled()
+    expect(onSaved).not.toHaveBeenCalled()
+  })
+
+  it('shows an error toast instead of silently failing when SAVE CHANGES is rejected', async () => {
+    mockUpdate.mockRejectedValueOnce(new Error('Unit mismatch — this food is logged in g'))
+    const onClose = vi.fn()
+    const user = userEvent.setup()
+    renderWithToasts(<EditEntrySheet open entry={linkedEntry} date="2026-07-13" onClose={onClose} onSaved={vi.fn()} />)
+    await user.click(screen.getByText('SAVE CHANGES'))
+    expect(await screen.findByText('Unit mismatch — this food is logged in g')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('shows an error toast instead of silently failing when DELETE is rejected', async () => {
+    mockDelete.mockRejectedValueOnce(new Error('Cannot delete — this food has been logged'))
+    const user = userEvent.setup()
+    renderWithToasts(<EditEntrySheet open entry={adHocEntry} date="2026-07-13" onClose={vi.fn()} onSaved={vi.fn()} />)
+    await user.click(screen.getByText('DELETE'))
+    expect(await screen.findByText('Cannot delete — this food has been logged')).toBeInTheDocument()
   })
 })

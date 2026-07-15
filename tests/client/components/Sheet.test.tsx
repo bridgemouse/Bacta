@@ -11,6 +11,20 @@ function renderSheet(onClose: () => void) {
   )
 }
 
+describe('Sheet — portaled font inheritance', () => {
+  it('re-declares the Hanken Grotesk font-family on the portaled backdrop', () => {
+    // Sheet portals its content to document.body (to escape AppShell's z-index
+    // stacking context — see the comment in Sheet.tsx), which means it no longer
+    // inherits AppShell root's inline fontFamily. Without redeclaring it here,
+    // every Sheet consumer (BottomSheet, AskSheet, and every nutrition sheet)
+    // would silently fall back to the browser's default system-font stack.
+    const onClose = vi.fn()
+    renderSheet(onClose)
+    const backdrop = screen.getByTestId('sheet-backdrop')
+    expect(backdrop.style.fontFamily).toContain('Hanken Grotesk')
+  })
+})
+
 describe('Sheet — Escape key', () => {
   it('calls onClose when Escape is pressed while open', () => {
     const onClose = vi.fn()

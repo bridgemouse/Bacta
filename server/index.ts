@@ -43,7 +43,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      // 'wasm-unsafe-eval' permits WebAssembly compilation/instantiation only — it does
+      // NOT permit JS eval() (that would be 'unsafe-eval', a much broader grant). Needed
+      // for zxing-wasm's barcode decoder (#141); confirmed live that WebAssembly
+      // instantiation is blocked without it even when the .wasm fetch itself succeeds.
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],

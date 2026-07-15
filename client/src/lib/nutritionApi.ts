@@ -237,3 +237,29 @@ export async function deleteRecipe(id: number): Promise<void> {
   const res = await fetch(`/api/nutrition/recipes/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not delete recipe'))
 }
+
+// Still-image camera capture (#141) — barcode lookup and meal-photo macro estimate.
+export async function lookupFoodByBarcode(code: string): Promise<Food | null> {
+  const res = await fetch(`/api/nutrition/foods/barcode/${code}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export interface MealPhotoEstimate {
+  name: string
+  calories: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+  fiber_g: number | null
+}
+
+export async function estimateMealFromPhoto(imageBase64: string, mediaType: string): Promise<MealPhotoEstimate> {
+  const res = await fetch('/api/nutrition/scan/meal-photo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: imageBase64, mediaType }),
+  })
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not estimate meal from photo'))
+  return res.json()
+}

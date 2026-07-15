@@ -1,7 +1,44 @@
 import { Router } from 'express'
 import db from '../db/client'
+import { estimateMealFromPhoto } from '../lib/ai/mealPhoto'
 
 const nutritionRouter = Router()
+
+// GET /api/nutrition/foods/barcode/:code — look up a food by barcode (#141 still-image
+// barcode capture: client decodes the photo via zxing-wasm, then looks up the decoded
+// code here against foods.source_id for Open Food Facts-sourced rows, which are keyed
+// by product barcode — see foodImportMapping.ts's mapOffProductToRow). Registered before
+// the generic GET /foods so it isn't shadowed (not actually at risk here since the paths
+// diverge, but matches this file's established "specific routes before :param" habit).
+nutritionRouter.get('/foods/barcode/:code', (req, res) => {
+  const { code } = req.params
+  const food = db.prepare(
+    "SELECT * FROM foods WHERE source_id = ? AND source = 'openfoodfacts'"
+  ).get(code)
+  if (!food) {
+    res.status(404).json({ error: 'No food matches this barcode' })
+    return
+  }
+  res.json(food)
+})
+
+// POST /api/nutrition/scan/meal-photo — still-image meal recognition (#141). Returns a
+// proposed macro estimate only; NEVER writes to food_log_entries itself. The client must
+// show the estimate for the user to review/edit and log through the normal POST /log
+// flow, same as any other ad-hoc entry — satisfies "never auto-logged without confirmation."
+nutritionRouter.post('/scan/meal-photo', async (req, res) => {
+  const { image, mediaType } = req.body as { image?: string; mediaType?: string }
+  if (!image || !mediaType) {
+    res.status(400).json({ error: 'image and mediaType are required' })
+    return
+  }
+  const result = await estimateMealFromPhoto(image, mediaType)
+  if ('error' in result) {
+    res.status(400).json({ error: result.error })
+    return
+  }
+  res.json(result)
+})
 
 // GET /api/nutrition/foods?q= — search reference foods by name (includes custom foods)
 nutritionRouter.get('/foods', (req, res) => {

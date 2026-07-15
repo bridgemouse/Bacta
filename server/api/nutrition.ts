@@ -461,6 +461,83 @@ function isForeignKeyError(err: unknown): boolean {
   return err instanceof Error && err.message.includes('FOREIGN KEY constraint failed')
 }
 
+// GET /api/nutrition/recipes/:id — a single recipe's composition, for the edit flow
+nutritionRouter.get('/recipes/:id', (req, res) => {
+  const { id } = req.params
+  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id)
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' })
+    return
+  }
+  const ingredients = db.prepare(
+    'SELECT food_id, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id'
+  ).all(id)
+  res.json({ ...recipe, ingredients })
+})
+
+// PUT /api/nutrition/recipes/:id — re-save an existing recipe's composition: recomputes
+// per-serving macros and updates the materialized foods row IN PLACE (same food_id), so
+// past food_log_entries rows referencing it stay valid (they hold their own denormalized
+// snapshot regardless). Ingredient rows are replaced wholesale, same as a fresh POST.
+nutritionRouter.put('/recipes/:id', (req, res) => {
+  const { id } = req.params
+  const { name, servings, ingredients } = req.body as {
+    name: string
+    servings: number
+    ingredients: RecipeIngredientInput[]
+  }
+
+  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id) as { food_id: number } | undefined
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' })
+    return
+  }
+  if (!servings || servings <= 0) {
+    res.status(400).json({ error: 'servings must be greater than 0' })
+    return
+  }
+  if (!ingredients || ingredients.length === 0) {
+    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
+    return
+  }
+
+  try {
+    const kcalPerServing = roundKcal(sumField(ingredients, 'calories') / servings)
+    const proteinPerServing = roundMacro(sumField(ingredients, 'protein_g') / servings)
+    const carbsPerServing = roundMacro(sumField(ingredients, 'carbs_g') / servings)
+    const fatPerServing = roundMacro(sumField(ingredients, 'fat_g') / servings)
+    const fiberPerServing = roundMacro(sumField(ingredients, 'fiber_g') / servings)
+
+    const updateRecipe = db.transaction(() => {
+      db.prepare('UPDATE recipes SET name = ?, servings = ? WHERE id = ?').run(name, servings, id)
+      db.prepare(`
+        UPDATE foods SET name = ?, calories = ?, protein_g = ?, carbs_g = ?, fat_g = ?, fiber_g = ?
+        WHERE id = ?
+      `).run(name, kcalPerServing, proteinPerServing, carbsPerServing, fatPerServing, fiberPerServing, recipe.food_id)
+
+      db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id)
+      const insertIngredient = db.prepare(`
+        INSERT INTO recipe_ingredients (recipe_id, food_id, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      for (const ing of ingredients) {
+        insertIngredient.run(
+          id, ing.food_id ?? null, ing.name, ing.quantity, ing.unit,
+          ing.calories ?? null, ing.protein_g ?? null, ing.carbs_g ?? null, ing.fat_g ?? null, ing.fiber_g ?? null,
+        )
+      }
+    })
+    updateRecipe()
+
+    const updatedRecipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id)
+    const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(recipe.food_id)
+    res.json({ ...updatedRecipe as object, food })
+  } catch (err: unknown) {
+    console.error('[nutrition] recipe update failed:', err)
+    res.status(400).json({ error: 'Could not update recipe' })
+  }
+})
+
 // DELETE /api/nutrition/recipes/:id — deletes the recipe, its ingredients, and its
 // materialized food as one unit. Blocked (400) if that food has already been logged
 // elsewhere — food_log_entries keeps its own denormalized snapshot, but the food_id

@@ -398,6 +398,72 @@ describe('Nutrition API', () => {
       expect(db.prepare('SELECT * FROM foods WHERE id = ?').get(foodId)).toBeDefined()
       expect(db.prepare('SELECT * FROM recipes WHERE id = ?').get(created.body.id)).toBeDefined()
     })
+
+    it('GET /api/nutrition/recipes/:id returns the recipe with its ingredient composition', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Chicken Rice Bowl', servings: 2,
+        ingredients: [
+          { name: 'Chicken breast', quantity: 200, unit: 'g', calories: 330, protein_g: 62, carbs_g: 0, fat_g: 7.2, fiber_g: 0 },
+          { name: 'Rice', quantity: 150, unit: 'g', calories: 195, protein_g: 4, carbs_g: 42, fat_g: 0.5, fiber_g: 1 },
+        ],
+      })
+      const res = await request(app).get(`/api/nutrition/recipes/${created.body.id}`)
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ name: 'Chicken Rice Bowl', servings: 2 })
+      expect(res.body.ingredients).toHaveLength(2)
+      expect(res.body.ingredients[0]).toMatchObject({ name: 'Chicken breast', quantity: 200, unit: 'g', calories: 330 })
+    })
+
+    it('GET /api/nutrition/recipes/:id returns 404 for a nonexistent recipe', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/recipes/999999')
+      expect(res.status).toBe(404)
+    })
+
+    it('PUT /api/nutrition/recipes/:id recomputes per-serving macros in place, without creating a duplicate food row or breaking existing log entries', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Protein Bowl', servings: 2,
+        ingredients: [{ name: 'Chicken breast', quantity: 200, unit: 'g', calories: 330, protein_g: 62, carbs_g: 0, fat_g: 7.2, fiber_g: 0 }],
+      })
+      const recipeId = created.body.id
+      const foodId = created.body.food.id
+
+      // this recipe's materialized food has already been logged — editing must not orphan that entry
+      const logRes = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 1, unit: 'serving',
+      })
+
+      const updated = await request(app).put(`/api/nutrition/recipes/${recipeId}`).send({
+        name: 'Protein Bowl', servings: 2,
+        ingredients: [
+          { name: 'Chicken breast', quantity: 200, unit: 'g', calories: 330, protein_g: 62, carbs_g: 0, fat_g: 7.2, fiber_g: 0 },
+          { name: 'Rice', quantity: 150, unit: 'g', calories: 195, protein_g: 4, carbs_g: 42, fat_g: 0.5, fiber_g: 1 },
+        ],
+      })
+      expect(updated.status).toBe(200)
+      expect(updated.body.food).toMatchObject({ id: foodId, calories: Math.round((330 + 195) / 2) })
+
+      const { default: db } = await import('../../server/db/client')
+      // still exactly one foods row for this recipe — updated in place, not duplicated
+      expect(db.prepare('SELECT COUNT(*) as n FROM foods WHERE id = ?').get(foodId)).toMatchObject({ n: 1 })
+      // the recipe's ingredient rows reflect the new composition
+      const ingredients = db.prepare('SELECT name FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id').all(recipeId) as { name: string }[]
+      expect(ingredients.map(i => i.name)).toEqual(['Chicken breast', 'Rice'])
+      // the earlier log entry still references a valid food_id and keeps its original snapshot
+      const logEntry = db.prepare('SELECT food_id, calories FROM food_log_entries WHERE id = ?').get(logRes.body.id) as { food_id: number; calories: number }
+      expect(logEntry.food_id).toBe(foodId)
+      expect(logEntry.calories).toBe(165)
+    })
+
+    it('PUT /api/nutrition/recipes/:id returns 404 for a nonexistent recipe', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).put('/api/nutrition/recipes/999999').send({
+        name: 'X', servings: 1, ingredients: [{ name: 'X', quantity: 1, unit: 'g', calories: 10 }],
+      })
+      expect(res.status).toBe(404)
+    })
   })
 
   describe('Food deletion', () => {

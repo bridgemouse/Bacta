@@ -464,6 +464,27 @@ describe('Nutrition API', () => {
       })
       expect(res.status).toBe(404)
     })
+
+    it('PUT /api/nutrition/recipes/:id rejects an ingredient that references the recipe\'s own materialized food', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Self Ref Bowl', servings: 2,
+        ingredients: [{ name: 'Chicken breast', quantity: 200, unit: 'g', calories: 330, protein_g: 62, carbs_g: 0, fat_g: 7.2, fiber_g: 0 }],
+      })
+      const recipeId = created.body.id
+      const foodId = created.body.food.id
+
+      const res = await request(app).put(`/api/nutrition/recipes/${recipeId}`).send({
+        name: 'Self Ref Bowl', servings: 2,
+        ingredients: [{ food_id: foodId, name: 'Self Ref Bowl', quantity: 1, unit: 'serving', calories: 165, protein_g: 31, carbs_g: 0, fat_g: 3.6, fiber_g: 0 }],
+      })
+      expect(res.status).toBe(400)
+
+      const { default: db } = await import('../../server/db/client')
+      // rejected — the recipe's ingredient composition must be untouched
+      const ingredients = db.prepare('SELECT name FROM recipe_ingredients WHERE recipe_id = ?').all(recipeId) as { name: string }[]
+      expect(ingredients.map(i => i.name)).toEqual(['Chicken breast'])
+    })
   })
 
   describe('Food deletion', () => {

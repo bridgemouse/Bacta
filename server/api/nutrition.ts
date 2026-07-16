@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Response } from 'express'
 import db from '../db/client'
 
 const nutritionRouter = Router()
@@ -383,6 +383,28 @@ function sumField(items: RecipeIngredientInput[], key: keyof RecipeIngredientInp
   return items.reduce((s, i) => s + (Number(i[key]) || 0), 0)
 }
 
+function perServingMacros(ingredients: RecipeIngredientInput[], servings: number) {
+  return {
+    kcalPerServing: roundKcal(sumField(ingredients, 'calories') / servings),
+    proteinPerServing: roundMacro(sumField(ingredients, 'protein_g') / servings),
+    carbsPerServing: roundMacro(sumField(ingredients, 'carbs_g') / servings),
+    fatPerServing: roundMacro(sumField(ingredients, 'fat_g') / servings),
+    fiberPerServing: roundMacro(sumField(ingredients, 'fiber_g') / servings),
+  }
+}
+
+function validateRecipeInput(servings: number, ingredients: RecipeIngredientInput[], res: Response): boolean {
+  if (!servings || servings <= 0) {
+    res.status(400).json({ error: 'servings must be greater than 0' })
+    return false
+  }
+  if (!ingredients || ingredients.length === 0) {
+    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
+    return false
+  }
+  return true
+}
+
 // GET /api/nutrition/recipes — list saved recipes with their per-serving food's macros
 nutritionRouter.get('/recipes', (req, res) => {
   const recipes = db.prepare(`
@@ -406,21 +428,10 @@ nutritionRouter.post('/recipes', (req, res) => {
     ingredients: RecipeIngredientInput[]
   }
 
-  if (!servings || servings <= 0) {
-    res.status(400).json({ error: 'servings must be greater than 0' })
-    return
-  }
-  if (!ingredients || ingredients.length === 0) {
-    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
-    return
-  }
+  if (!validateRecipeInput(servings, ingredients, res)) return
 
   try {
-    const kcalPerServing = roundKcal(sumField(ingredients, 'calories') / servings)
-    const proteinPerServing = roundMacro(sumField(ingredients, 'protein_g') / servings)
-    const carbsPerServing = roundMacro(sumField(ingredients, 'carbs_g') / servings)
-    const fatPerServing = roundMacro(sumField(ingredients, 'fat_g') / servings)
-    const fiberPerServing = roundMacro(sumField(ingredients, 'fiber_g') / servings)
+    const { kcalPerServing, proteinPerServing, carbsPerServing, fatPerServing, fiberPerServing } = perServingMacros(ingredients, servings)
 
     const createRecipe = db.transaction(() => {
       const foodInfo = db.prepare(`
@@ -492,21 +503,14 @@ nutritionRouter.put('/recipes/:id', (req, res) => {
     res.status(404).json({ error: 'Recipe not found' })
     return
   }
-  if (!servings || servings <= 0) {
-    res.status(400).json({ error: 'servings must be greater than 0' })
-    return
-  }
-  if (!ingredients || ingredients.length === 0) {
-    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
+  if (!validateRecipeInput(servings, ingredients, res)) return
+  if (ingredients.some(ing => ing.food_id === recipe.food_id)) {
+    res.status(400).json({ error: 'A recipe cannot use itself as an ingredient' })
     return
   }
 
   try {
-    const kcalPerServing = roundKcal(sumField(ingredients, 'calories') / servings)
-    const proteinPerServing = roundMacro(sumField(ingredients, 'protein_g') / servings)
-    const carbsPerServing = roundMacro(sumField(ingredients, 'carbs_g') / servings)
-    const fatPerServing = roundMacro(sumField(ingredients, 'fat_g') / servings)
-    const fiberPerServing = roundMacro(sumField(ingredients, 'fiber_g') / servings)
+    const { kcalPerServing, proteinPerServing, carbsPerServing, fatPerServing, fiberPerServing } = perServingMacros(ingredients, servings)
 
     const updateRecipe = db.transaction(() => {
       db.prepare('UPDATE recipes SET name = ?, servings = ? WHERE id = ?').run(name, servings, id)

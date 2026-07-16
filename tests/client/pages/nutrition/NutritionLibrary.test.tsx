@@ -312,6 +312,20 @@ describe('NutritionLibrary — edit recipe', () => {
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument() // back on the list screen
   })
 
+  it('the "Add from saved foods" search excludes the recipe\'s own materialized food while editing', async () => {
+    const smoothieFood = { id: 9, source: 'custom', name: 'Protein Smoothie', brand: null, default_qty: 1, default_unit: 'serving', calories: 113, protein_g: 25, carbs_g: 15, fat_g: 0.5, fiber_g: 1.5 }
+    mockSearchFoods.mockResolvedValue([oats, smoothieFood])
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByLabelText('Edit Protein Smoothie')
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+    await screen.findByDisplayValue('Protein Smoothie')
+
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Protein Smoothie')
+
+    expect(screen.queryByRole('button', { name: 'Protein Smoothie' })).not.toBeInTheDocument()
+  })
+
   it('‹ BACK TO LIBRARY from the edit form does not call updateRecipe', async () => {
     const user = userEvent.setup()
     render(<NutritionLibrary />)

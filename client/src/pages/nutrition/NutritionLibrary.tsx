@@ -127,7 +127,9 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
   const [query, setQuery] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const matches = query ? foods.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5) : []
+  const matches = query
+    ? foods.filter(f => f.id !== editing?.food_id && f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5)
+    : []
 
   function addFromFood(food: Food) {
     setIngredients(rows => [...rows, {

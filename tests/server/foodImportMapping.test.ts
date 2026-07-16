@@ -39,6 +39,12 @@ describe('mapUsdaFoodToRow', () => {
     expect(mapUsdaFoodToRow({ fdcId: 999, description: 'Malformed', foodNutrients: 'not-an-array' } as any)).toBeNull()
   })
 
+  it('returns null (does not throw) for a null record, rather than crashing on record.foodNutrients — a real USDA Foundation Foods dump has literal null entries in its records array (32 of 395 in the 2026-04-30 export)', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    expect(mapUsdaFoodToRow(null as any)).toBeNull()
+    expect(mapUsdaFoodToRow(undefined as any)).toBeNull()
+  })
+
   describe('unmapped nutrient codes (e.g. a Branded/Survey Foods record outside the verified Foundation+SR Legacy scope)', () => {
     afterEach(() => {
       vi.restoreAllMocks()

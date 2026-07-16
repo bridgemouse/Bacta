@@ -47,6 +47,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   const { showToast } = useToast()
   const [meal, setMeal] = useState(initialMeal)
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [results, setResults] = useState<Food[]>([])
   const [recents, setRecents] = useState<FoodLogEntry[]>([])
   const [selectedFood, setSelectedFood] = useState<Food | null>(null)
@@ -86,11 +87,16 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   }, [open])
 
   useEffect(() => {
-    if (!query) { setResults([]); return }
-    let cancelled = false
-    searchFoods(query).then(r => { if (!cancelled) setResults(r) })
-    return () => { cancelled = true }
+    const timer = setTimeout(() => setDebouncedQuery(query), 280)
+    return () => clearTimeout(timer)
   }, [query])
+
+  useEffect(() => {
+    if (!debouncedQuery) { setResults([]); return }
+    let cancelled = false
+    searchFoods(debouncedQuery).then(r => { if (!cancelled) setResults(r) })
+    return () => { cancelled = true }
+  }, [debouncedQuery])
 
   async function handleSubmit() {
     if (submitting) return

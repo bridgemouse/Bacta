@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { LogEntrySheet } from '../../../../client/src/pages/nutrition/LogEntrySheet'
@@ -94,6 +94,31 @@ describe('LogEntrySheet — search and recents', () => {
     render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
     await user.type(screen.getByPlaceholderText('Search saved foods…'), 'zzz')
     expect(await screen.findByText(/No match for "zzz"/)).toBeInTheDocument()
+  })
+
+  it('debounces rapid typing into exactly one searchFoods call per pause, not one per keystroke', async () => {
+    vi.useFakeTimers()
+    try {
+      const { searchFoods: mockSearchFoods } = await import('../../../../client/src/lib/nutritionApi')
+      render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+      const input = screen.getByPlaceholderText('Search saved foods…')
+
+      // simulate rapid keystroke-by-keystroke typing via change events, same as a real
+      // controlled input receives, without userEvent's real-timer-dependent interaction delays
+      act(() => {
+        for (const partial of ['o', 'oa', 'oat', 'oatm', 'oatme', 'oatmea', 'oatmeal']) {
+          fireEvent.change(input, { target: { value: partial } })
+        }
+      })
+      // still within the debounce window — no call fired yet despite 7 keystrokes
+      expect(mockSearchFoods).not.toHaveBeenCalled()
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+      expect(mockSearchFoods).toHaveBeenCalledTimes(1)
+      expect(mockSearchFoods).toHaveBeenCalledWith('oatmeal')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

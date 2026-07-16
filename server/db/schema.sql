@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS food_log_entries (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_food_log_entries_date ON food_log_entries(date);
+-- Covers GET /log/recent's ORDER BY logged_at DESC, id DESC — without this, SQLite falls
+-- back to a full-table scan + temp b-tree sort for every Log Entry sheet open (#147).
+CREATE INDEX IF NOT EXISTS idx_food_log_entries_logged_at ON food_log_entries(logged_at DESC, id DESC);
 
 -- Daily macro/calorie targets. Date-keyed (not a single mutable settings row) so target
 -- changes over months stay visible in history — same reasoning as user_goals in SparkyFitness,

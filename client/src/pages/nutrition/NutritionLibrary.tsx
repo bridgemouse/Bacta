@@ -22,7 +22,7 @@ const accentButton = {
   background: A, color: COLORS.base, fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
 }
 
-function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack: () => void }) {
   const { showToast } = useToast()
   const [name, setName] = useState('')
   const [qty, setQty] = useState('')
@@ -37,7 +37,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
     if (!(Number(qty) > 0)) { showToast('Default quantity must be greater than 0.', 'error'); return }
     setSubmitting(true)
     try {
-      await createFood({
+      const food = await createFood({
         name, default_qty: Number(qty), default_unit: unit,
         calories: macros.calories === '' ? undefined : Number(macros.calories),
         protein_g: macros.protein_g === '' ? undefined : Number(macros.protein_g),
@@ -45,7 +45,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
         fat_g: macros.fat_g === '' ? undefined : Number(macros.fat_g),
         fiber_g: macros.fiber_g === '' ? undefined : Number(macros.fiber_g),
       })
-      onDone()
+      onDone(food)
     } catch (err) {
       showToast(errorMessage(err, 'Could not save food.'), 'error')
     } finally {
@@ -110,7 +110,7 @@ function scaleFromFood(food: Food, quantity: number) {
   }
 }
 
-function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () => void; onBack: () => void }) {
+function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: (recipe: Recipe) => void; onBack: () => void }) {
   const { showToast } = useToast()
   const [name, setName] = useState('')
   const [servings, setServings] = useState('')
@@ -149,7 +149,7 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
     if (!name || ingredients.length === 0 || servingsNum <= 0 || submitting) return
     setSubmitting(true)
     try {
-      await createRecipe({
+      const created = await createRecipe({
         name, servings: servingsNum,
         ingredients: ingredients.map(i => ({
           food_id: i.food_id, name: i.name, quantity: i.quantity, unit: i.unit,
@@ -157,7 +157,12 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
           carbs_g: i.carbs_g ?? undefined, fat_g: i.fat_g ?? undefined, fiber_g: i.fiber_g ?? undefined,
         })),
       })
-      onDone()
+      onDone({
+        id: created.id, name: created.name, servings: created.servings, food_id: created.food.id,
+        ingredient_count: ingredients.length,
+        per_serving_calories: created.food.calories, per_serving_protein_g: created.food.protein_g,
+        per_serving_carbs_g: created.food.carbs_g, per_serving_fat_g: created.food.fat_g, per_serving_fiber_g: created.food.fiber_g,
+      })
     } catch (err) {
       showToast(errorMessage(err, 'Could not save recipe.'), 'error')
     } finally {
@@ -269,11 +274,11 @@ export function NutritionLibrary() {
   }
 
   if (mode === 'new-food') {
-    return <NewFoodForm onDone={() => { setMode('list'); reload() }} onBack={() => setMode('list')} />
+    return <NewFoodForm onDone={food => { setFoods(fs => [...fs, food]); setMode('list') }} onBack={() => setMode('list')} />
   }
 
   if (mode === 'new-recipe') {
-    return <NewRecipeForm foods={foods} onDone={() => { setMode('list'); reload() }} onBack={() => setMode('list')} />
+    return <NewRecipeForm foods={foods} onDone={recipe => { setRecipes(rs => [...rs, recipe]); setMode('list') }} onBack={() => setMode('list')} />
   }
 
   return (

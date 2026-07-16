@@ -97,6 +97,25 @@ describe('NutritionLibrary — new food', () => {
     expect(mockCreateFood).not.toHaveBeenCalled()
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument()
   })
+
+  it('appends the created food to the list directly, with no extra searchFoods call', async () => {
+    const newFood = { id: 5, source: 'custom', name: 'Greek Yogurt', brand: null, default_qty: 170, default_unit: 'g', calories: 100, protein_g: 17, carbs_g: 6, fat_g: 0, fiber_g: 0 }
+    mockCreateFood.mockResolvedValue(newFood)
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    mockSearchFoods.mockClear() // only the initial list-mount call should be counted so far
+
+    await user.click(screen.getByText('+ NEW FOOD'))
+    await user.type(screen.getByLabelText('Food name'), 'Greek Yogurt')
+    await user.type(screen.getByLabelText('Default quantity'), '170')
+    await user.type(screen.getByLabelText('Default unit'), 'g')
+    await user.click(screen.getByText('SAVE FOOD — SEARCHABLE IMMEDIATELY'))
+
+    expect(await screen.findByText('Greek Yogurt')).toBeInTheDocument()
+    expect(screen.getByText('Test Oats')).toBeInTheDocument() // original list entry still present
+    expect(mockSearchFoods).not.toHaveBeenCalled() // no re-fetch of the whole list
+  })
 })
 
 describe('NutritionLibrary — new recipe', () => {
@@ -170,6 +189,28 @@ describe('NutritionLibrary — new recipe', () => {
       }],
     }))
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument() // back on the list screen
+  })
+
+  it('appends the created recipe to the list directly, with no extra fetchRecipes call', async () => {
+    mockCreateRecipe.mockResolvedValue({
+      id: 3, name: 'Oat Bowl', servings: 2,
+      food: { id: 10, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 },
+    })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    mockFetchRecipes.mockClear() // only the initial list-mount call should be counted so far
+
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Oat Bowl')
+    await user.type(screen.getByLabelText('Servings'), '2')
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Oat')
+    await user.click(await screen.findByText('Test Oats'))
+    await user.click(screen.getByText('SAVE RECIPE'))
+
+    expect(await screen.findByText('Oat Bowl')).toBeInTheDocument()
+    expect(screen.getByText('Protein Smoothie')).toBeInTheDocument() // original list entry still present
+    expect(mockFetchRecipes).not.toHaveBeenCalled() // no re-fetch of the whole list
   })
 
   it('SAVE RECIPE is blocked if servings is not filled in', async () => {

@@ -110,7 +110,11 @@ function findUsdaAmount(nutrients: UsdaFoodNutrient[], codes: readonly string[])
   return null
 }
 
-export function mapUsdaFoodToRow(record: UsdaFoodRecord): FoodImportRow | null {
+export function mapUsdaFoodToRow(record: UsdaFoodRecord | null | undefined): FoodImportRow | null {
+  // A real USDA Foundation Foods bulk export can contain literal `null` entries in its
+  // records array (32 of 395 in the 2026-04-30 export) — not just objects missing
+  // foodNutrients. Must be checked before touching any property of record.
+  if (!record) return null
   const nutrients = record.foodNutrients
   // A malformed/unexpected record (e.g. an unrelated array-valued key extractRecordsArray
   // concatenated in from a combined dump) must not throw here — importUsdaDumpFile wraps

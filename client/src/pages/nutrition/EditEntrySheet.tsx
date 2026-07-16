@@ -5,14 +5,13 @@ import { hexA } from '../../lib/hexA'
 import { updateLogEntry, deleteLogEntry, createLogEntry, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
 import { useToast } from '../../lib/ToastContext'
+import { MacroGridInputs, MACRO_KEYS, type MacroKey } from './MacroGridInputs'
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
 }
 
 const A = SECTION_ACCENTS.nutrition
-const MACRO_KEYS = ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const
-type MacroKey = typeof MACRO_KEYS[number]
 
 const inputStyle = {
   width: '100%', boxSizing: 'border-box' as const, background: COLORS.base,
@@ -121,13 +120,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
               <input aria-label="Unit" value={unit} onChange={e => setUnit(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             )}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
-            {MACRO_KEYS.map(key => (
-              <input key={key} aria-label={key} placeholder="—" value={macros[key]}
-                onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
-                style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
-            ))}
-          </div>
+          <MacroGridInputs values={macros} onChange={(key, value) => setMacros(m => ({ ...m, [key]: value }))} ariaLabel={key => key} />
           {!isToday && (
             <button onClick={handleCopyToToday} style={{
               width: '100%', padding: '9px 0', marginBottom: 10, borderRadius: 8,

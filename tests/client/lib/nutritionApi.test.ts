@@ -13,7 +13,9 @@ import {
   deleteFood,
   createRecipe,
   fetchRecipes,
-  deleteRecipe
+  deleteRecipe,
+  entryToLogInput,
+  type FoodLogEntry
 } from '../../../client/src/lib/nutritionApi'
 
 const mockFetch = vi.fn()
@@ -190,5 +192,40 @@ describe('nutritionApi', () => {
       body: JSON.stringify(input)
     }))
     expect(result.food.id).toBe(2)
+  })
+
+  describe('entryToLogInput', () => {
+    const linkedEntry: FoodLogEntry = {
+      id: 1, meal_type: 'lunch', food_id: 42, name: 'Test Oats', quantity: 100, unit: 'g',
+      calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6, logged_at: '2026-07-10 12:00:00',
+    }
+    const adHocEntry: FoodLogEntry = {
+      id: 2, meal_type: 'snack', food_id: null, name: 'Homemade smoothie', quantity: 1, unit: 'serving',
+      calories: 300, protein_g: 20, carbs_g: 40, fat_g: 5, fiber_g: 3, logged_at: '2026-07-10 15:00:00',
+    }
+
+    it('for a food-linked entry, sets food_id and omits name (mutual exclusivity)', () => {
+      const result = entryToLogInput(linkedEntry, { date: '2026-07-15' })
+      expect(result.food_id).toBe(42)
+      expect(result.name).toBeUndefined()
+      expect(result).toMatchObject({ quantity: 100, unit: 'g', calories: 389, protein_g: 16.9 })
+    })
+
+    it('for an ad-hoc entry, sets name and omits food_id (mutual exclusivity)', () => {
+      const result = entryToLogInput(adHocEntry, { date: '2026-07-15' })
+      expect(result.food_id).toBeUndefined()
+      expect(result.name).toBe('Homemade smoothie')
+      expect(result).toMatchObject({ quantity: 1, unit: 'serving', calories: 300 })
+    })
+
+    it('carries the entry meal_type by default but lets overrides replace it', () => {
+      expect(entryToLogInput(linkedEntry, { date: '2026-07-15' }).meal_type).toBe('lunch')
+      expect(entryToLogInput(linkedEntry, { date: '2026-07-15', meal_type: 'breakfast' }).meal_type).toBe('breakfast')
+    })
+
+    it('requires date via overrides — always the caller\'s target date, never the source entry\'s', () => {
+      const result = entryToLogInput(linkedEntry, { date: '2026-07-15' })
+      expect(result.date).toBe('2026-07-15')
+    })
   })
 })

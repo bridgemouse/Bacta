@@ -5,9 +5,10 @@ import { EditEntrySheet } from '../../../../client/src/pages/nutrition/EditEntry
 import { ToastProvider } from '../../../../client/src/lib/ToastContext'
 import { ToastContainer } from '../../../../client/src/components/ToastContainer'
 
-vi.mock('../../../../client/src/lib/nutritionApi', () => ({
-  updateLogEntry: vi.fn(), deleteLogEntry: vi.fn(), createLogEntry: vi.fn(),
-}))
+vi.mock('../../../../client/src/lib/nutritionApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../client/src/lib/nutritionApi')>()
+  return { ...actual, updateLogEntry: vi.fn(), deleteLogEntry: vi.fn(), createLogEntry: vi.fn() }
+})
 
 import { updateLogEntry, deleteLogEntry, createLogEntry } from '../../../../client/src/lib/nutritionApi'
 const mockUpdate = updateLogEntry as ReturnType<typeof vi.fn>

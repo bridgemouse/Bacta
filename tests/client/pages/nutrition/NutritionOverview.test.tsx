@@ -3,14 +3,18 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { NutritionOverview } from '../../../../client/src/pages/nutrition/NutritionOverview'
 import { todayLocal } from '../../../../client/src/lib/nutritionDate'
 
-vi.mock('../../../../client/src/lib/nutritionApi', () => ({
-  fetchLog: vi.fn(),
-  fetchSummary: vi.fn(),
-  createLogEntry: vi.fn(),
-  searchFoods: vi.fn().mockResolvedValue([]),
-  fetchRecentEntries: vi.fn().mockResolvedValue([]),
-  saveTargets: vi.fn(),
-}))
+vi.mock('../../../../client/src/lib/nutritionApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../client/src/lib/nutritionApi')>()
+  return {
+    ...actual,
+    fetchLog: vi.fn(),
+    fetchSummary: vi.fn(),
+    createLogEntry: vi.fn(),
+    searchFoods: vi.fn().mockResolvedValue([]),
+    fetchRecentEntries: vi.fn().mockResolvedValue([]),
+    saveTargets: vi.fn(),
+  }
+})
 
 import { fetchLog, fetchSummary } from '../../../../client/src/lib/nutritionApi'
 const mockFetchLog = fetchLog as ReturnType<typeof vi.fn>

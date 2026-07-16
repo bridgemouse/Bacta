@@ -49,11 +49,14 @@ describe('MoreNutrientsSection', () => {
 })
 
 describe('extendedNutrientsToPayload', () => {
-  it('converts blank string fields to undefined, not 0 or empty arrays', () => {
+  it('converts blank string fields to null, not undefined, 0, or empty arrays', () => {
+    // Must be null, not undefined: JSON.stringify drops undefined-valued keys entirely,
+    // and PUT /log/:id only updates a field when its key is present in the request body —
+    // an undefined here would silently leave a cleared field at its old stored value.
     const payload = extendedNutrientsToPayload(emptyExtendedNutrients())
-    expect(payload.sodium_mg).toBeUndefined()
-    expect(payload.allergens).toBeUndefined()
-    expect(payload.glycemic_index).toBeUndefined()
+    expect(payload.sodium_mg).toBeNull()
+    expect(payload.allergens).toBeNull()
+    expect(payload.glycemic_index).toBeNull()
   })
 
   it('parses numeric strings and splits comma-separated allergens/traces into arrays', () => {

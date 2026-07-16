@@ -38,20 +38,23 @@ export function emptyExtendedNutrients(): ExtendedNutrients {
   }
 }
 
-// Converts editable form state into the API payload shape (numbers, undefined for
-// blank, string arrays for allergens/traces) — the API itself JSON.stringifies
-// allergens/traces/custom_nutrients at the write boundary, so this stays a plain array.
+// Converts editable form state into the API payload shape (numbers, null for blank,
+// string arrays for allergens/traces) — the API itself JSON.stringifies allergens/traces/
+// custom_nutrients at the write boundary, so this stays a plain array. Blank MUST map to
+// null, not undefined: PUT /log/:id only updates a field when its key is present in the
+// request body, and JSON.stringify drops undefined-valued keys entirely — an undefined
+// here would silently leave a cleared field at its old value instead of clearing it.
 export function extendedNutrientsToPayload(data: ExtendedNutrients): Record<string, unknown> {
   const numeric = Object.fromEntries(
-    EXTENDED_NUTRIENT_KEYS.map(k => [k, data.values[k] === '' ? undefined : Number(data.values[k])])
+    EXTENDED_NUTRIENT_KEYS.map(k => [k, data.values[k] === '' ? null : Number(data.values[k])])
   )
-  const toList = (s: string): string[] | undefined => {
+  const toList = (s: string): string[] | null => {
     const trimmed = s.trim()
-    return trimmed ? trimmed.split(',').map(part => part.trim()).filter(Boolean) : undefined
+    return trimmed ? trimmed.split(',').map(part => part.trim()).filter(Boolean) : null
   }
   return {
     ...numeric,
-    glycemic_index: data.glycemicIndex || undefined,
+    glycemic_index: data.glycemicIndex || null,
     allergens: toList(data.allergens),
     traces: toList(data.traces),
   }

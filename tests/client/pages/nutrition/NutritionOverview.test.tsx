@@ -3,14 +3,18 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { NutritionOverview } from '../../../../client/src/pages/nutrition/NutritionOverview'
 import { todayLocal } from '../../../../client/src/lib/nutritionDate'
 
-vi.mock('../../../../client/src/lib/nutritionApi', () => ({
-  fetchLog: vi.fn(),
-  fetchSummary: vi.fn(),
-  createLogEntry: vi.fn(),
-  searchFoods: vi.fn().mockResolvedValue([]),
-  fetchRecentEntries: vi.fn().mockResolvedValue([]),
-  saveTargets: vi.fn(),
-}))
+vi.mock('../../../../client/src/lib/nutritionApi', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../../../client/src/lib/nutritionApi')>()
+  return {
+    ...actual,
+    fetchLog: vi.fn(),
+    fetchSummary: vi.fn(),
+    createLogEntry: vi.fn(),
+    searchFoods: vi.fn().mockResolvedValue([]),
+    fetchRecentEntries: vi.fn().mockResolvedValue([]),
+    saveTargets: vi.fn(),
+  }
+})
 
 import { fetchLog, fetchSummary } from '../../../../client/src/lib/nutritionApi'
 const mockFetchLog = fetchLog as ReturnType<typeof vi.fn>
@@ -229,5 +233,27 @@ describe('NutritionOverview — Copy to today', () => {
     await user.click(screen.getByText('COPY TO TODAY'))
 
     await waitFor(() => expect(createLogEntry).toHaveBeenCalledWith(expect.objectContaining({ name: 'Oatmeal', meal_type: 'breakfast' })))
+  })
+
+  it('copies the widened nutrient fields forward too, not just the 5 original macros', async () => {
+    const { createLogEntry } = await import('../../../../client/src/lib/nutritionApi')
+    ;(createLogEntry as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 99 })
+    mockFetchLog.mockResolvedValue({
+      meals: {
+        breakfast: {
+          entries: [{ id: 1, meal_type: 'breakfast', food_id: null, name: 'Oatmeal', quantity: 200, unit: 'g', calories: 778, protein_g: 33.8, carbs_g: 132.6, fat_g: 13.8, fiber_g: 21.2, logged_at: '', sodium_mg: 140 }],
+          totals: { calories: 778, protein_g: 33.8, carbs_g: 132.6, fat_g: 13.8, fiber_g: 21.2 },
+        },
+      },
+      daily: { calories: 778, protein_g: 33.8, carbs_g: 132.6, fat_g: 13.8, fiber_g: 21.2 },
+    })
+    const user = (await import('@testing-library/user-event')).default.setup()
+    render(<NutritionOverview />)
+    await waitFor(() => screen.getByLabelText('Previous day'))
+    await user.click(screen.getByLabelText('Previous day'))
+    await waitFor(() => screen.getByText('COPY TO TODAY'))
+    await user.click(screen.getByText('COPY TO TODAY'))
+
+    await waitFor(() => expect(createLogEntry).toHaveBeenCalledWith(expect.objectContaining({ sodium_mg: 140 })))
   })
 })

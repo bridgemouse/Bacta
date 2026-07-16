@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { updateLogEntry, deleteLogEntry, createLogEntry, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
+import { updateLogEntry, deleteLogEntry, createLogEntry, widenedNutrientFields, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
 import { useToast } from '../../lib/ToastContext'
 import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, payloadToExtendedNutrients, type ExtendedNutrients } from './MoreNutrientsSection'
@@ -70,7 +70,19 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
         const newVal = macros[key] === '' ? null : Number(macros[key])
         if (newVal !== currentEntry[key]) updates[key] = newVal
       }
-      Object.assign(updates, extendedNutrientsToPayload(extended))
+      // Compare against the entry's current widened fields round-tripped through the same
+      // parse/format functions (not the raw entry) — currentEntry.allergens is a JSON-string
+      // from the API, but extendedNutrientsToPayload produces a plain array, so a direct
+      // comparison would always look "changed" even when nothing was edited. Sending every
+      // widened field on every save (matching the pre-fix behavior here) would also stop the
+      // server from rescaling them on a quantity change, since it only rescales macros that
+      // are absent from the request body.
+      const originalExtendedPayload = extendedNutrientsToPayload(payloadToExtendedNutrients(currentEntry))
+      const newExtendedPayload = extendedNutrientsToPayload(extended)
+      const updatesRecord = updates as Record<string, unknown>
+      for (const [key, value] of Object.entries(newExtendedPayload)) {
+        if (JSON.stringify(value) !== JSON.stringify(originalExtendedPayload[key])) updatesRecord[key] = value
+      }
       await updateLogEntry(currentEntry.id, updates)
       onSaved(); onClose()
     } catch (err) {
@@ -98,6 +110,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
         date: todayLocal(), meal_type: currentEntry.meal_type, food_id: currentEntry.food_id ?? undefined,
         name: currentEntry.food_id == null ? currentEntry.name : undefined, quantity: currentEntry.quantity, unit: currentEntry.unit,
         calories: currentEntry.calories, protein_g: currentEntry.protein_g, carbs_g: currentEntry.carbs_g, fat_g: currentEntry.fat_g, fiber_g: currentEntry.fiber_g,
+        ...widenedNutrientFields(currentEntry),
       })
       onSaved(); onClose()
     } catch (err) {

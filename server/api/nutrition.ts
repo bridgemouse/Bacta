@@ -16,7 +16,6 @@ const NUMERIC_NUTRIENT_KEYS = [
   'calcium_mg', 'iron_mg',
 ] as const
 type NumericNutrientKey = typeof NUMERIC_NUTRIENT_KEYS[number]
-const NEW_NUMERIC_NUTRIENT_KEYS = NUMERIC_NUTRIENT_KEYS.slice(5) as readonly Exclude<NumericNutrientKey, 'calories' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g'>[]
 const JSON_NUTRIENT_KEYS = ['custom_nutrients', 'allergens', 'traces'] as const
 const DESCRIPTIVE_NUTRIENT_KEYS = ['glycemic_index', ...JSON_NUTRIENT_KEYS] as const
 type NumericRow = Partial<Record<NumericNutrientKey, number | null>>

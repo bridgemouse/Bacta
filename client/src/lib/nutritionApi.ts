@@ -24,6 +24,23 @@ export interface DescriptiveNutrients {
   traces?: unknown
 }
 
+const WIDENED_NUTRIENT_KEYS = [
+  'sodium_mg', 'sugar_g', 'saturated_fat_g', 'polyunsaturated_fat_g', 'monounsaturated_fat_g',
+  'trans_fat_g', 'cholesterol_mg', 'potassium_mg', 'vitamin_a_mcg', 'vitamin_c_mg',
+  'calcium_mg', 'iron_mg',
+] as const
+const DESCRIPTIVE_NUTRIENT_KEYS = ['glycemic_index', 'custom_nutrients', 'allergens', 'traces'] as const
+
+// Carries the widened nutrient set (#140) forward whenever a FoodLogEntry is used as the
+// basis for a new one (copy-to-today, one-tap re-log) — without this, those flows silently
+// reset sodium/sugar/allergens/etc. to null even though the source entry has them.
+export function widenedNutrientFields(entry: WidenedNutrients & DescriptiveNutrients): WidenedNutrients & DescriptiveNutrients {
+  const out: Record<string, unknown> = {}
+  for (const key of WIDENED_NUTRIENT_KEYS) out[key] = entry[key] ?? null
+  for (const key of DESCRIPTIVE_NUTRIENT_KEYS) out[key] = entry[key] ?? null
+  return out as WidenedNutrients & DescriptiveNutrients
+}
+
 export interface FoodLogEntry extends WidenedNutrients, DescriptiveNutrients {
   id: number
   meal_type: string

@@ -95,6 +95,20 @@ describe('LogEntrySheet — search and recents', () => {
     await user.type(screen.getByPlaceholderText('Search saved foods…'), 'zzz')
     expect(await screen.findByText(/No match for "zzz"/)).toBeInTheDocument()
   })
+
+  it('one-tap re-log from RECENT carries the widened nutrient fields forward, not just the 5 original macros', async () => {
+    const { fetchRecentEntries: mockFetchRecentEntries } = await import('../../../../client/src/lib/nutritionApi')
+    ;(mockFetchRecentEntries as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 1, name: 'Trail mix', quantity: 1, unit: 'handful', calories: 210, protein_g: 6, meal_type: 'lunch', food_id: null, carbs_g: null, fat_g: null, fiber_g: null, logged_at: '', sodium_mg: 45, allergens: JSON.stringify(['tree nuts']) },
+    ])
+    mockCreateLogEntry.mockResolvedValue({ id: 2 })
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.click(await screen.findByText('+ LOG'))
+    await waitFor(() => expect(mockCreateLogEntry).toHaveBeenCalledWith(expect.objectContaining({
+      sodium_mg: 45, allergens: JSON.stringify(['tree nuts']),
+    })))
+  })
 })
 
 describe('LogEntrySheet — selected food', () => {

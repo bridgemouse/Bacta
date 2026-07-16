@@ -13,7 +13,9 @@ import {
   deleteFood,
   createRecipe,
   fetchRecipes,
-  deleteRecipe
+  deleteRecipe,
+  widenedNutrientFields,
+  type FoodLogEntry
 } from '../../../client/src/lib/nutritionApi'
 
 const mockFetch = vi.fn()
@@ -190,5 +192,22 @@ describe('nutritionApi', () => {
       body: JSON.stringify(input)
     }))
     expect(result.food.id).toBe(2)
+  })
+
+  it('widenedNutrientFields carries the widened nutrient set forward from a FoodLogEntry, defaulting missing fields to null', () => {
+    const entry = {
+      id: 1, meal_type: 'lunch', food_id: null, name: 'Canned soup', quantity: 1, unit: 'serving',
+      calories: 200, protein_g: 5, carbs_g: 20, fat_g: 8, fiber_g: 2, logged_at: '2026-07-10T12:00:00Z',
+      sodium_mg: 890, allergens: JSON.stringify(['dairy']),
+    } as unknown as FoodLogEntry
+    const result = widenedNutrientFields(entry)
+    expect(result.sodium_mg).toBe(890)
+    expect(result.allergens).toBe(JSON.stringify(['dairy']))
+    // fields absent on the source entry must default to null, not be omitted —
+    // omitting them would mean "don't touch" on a PUT, but here they're being set on
+    // a brand-new entry via POST, where an omitted key and an explicit null are only
+    // equivalent for creation, not for copy/re-log call sites reusing this helper.
+    expect(result.sugar_g).toBeNull()
+    expect(result.glycemic_index).toBeNull()
   })
 })

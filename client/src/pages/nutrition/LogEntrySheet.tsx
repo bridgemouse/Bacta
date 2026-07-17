@@ -51,6 +51,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   const { showToast } = useToast()
   const [meal, setMeal] = useState(initialMeal)
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [results, setResults] = useState<Food[]>([])
   const [recents, setRecents] = useState<FoodLogEntry[]>([])
   const [selectedFood, setSelectedFood] = useState<Food | null>(null)
@@ -92,11 +93,16 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   }, [open])
 
   useEffect(() => {
-    if (!query) { setResults([]); return }
-    let cancelled = false
-    searchFoods(query).then(r => { if (!cancelled) setResults(r) })
-    return () => { cancelled = true }
+    const timer = setTimeout(() => setDebouncedQuery(query), 280)
+    return () => clearTimeout(timer)
   }, [query])
+
+  useEffect(() => {
+    if (!debouncedQuery) { setResults([]); return }
+    let cancelled = false
+    searchFoods(debouncedQuery).then(r => { if (!cancelled) setResults(r) })
+    return () => { cancelled = true }
+  }, [debouncedQuery])
 
   async function handleSubmit() {
     if (submitting) return
@@ -247,13 +253,13 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
             </div>
           )}
 
-          {query && results.length === 0 && (
+          {debouncedQuery && results.length === 0 && (
             <div style={{ border: `1px dashed ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 12, fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted }}>
-              No match for &quot;{query}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
+              No match for &quot;{debouncedQuery}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
             </div>
           )}
 
-          {query && results.length > 0 && (
+          {debouncedQuery && results.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               {results.map(f => (
                 <button key={f.id} onClick={() => { setSelectedFood(f); setQuery('') }} style={{

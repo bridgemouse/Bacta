@@ -4,6 +4,7 @@ import { SECTION_ACCENTS, COLORS, FONT_MONO, FONT_UI } from '../../theme'
 import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, type Food, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
 import { hexA } from '../../lib/hexA'
 import { useToast } from '../../lib/ToastContext'
+import { MacroGridInputs, MACRO_KEYS } from './MacroGridInputs'
 import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -74,12 +75,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
       <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginBottom: 8 }}>
         This becomes the LOCKED logging unit for this food.
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
-        {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
-          <input key={key} placeholder="—" value={macros[key]} onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
-            style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
-        ))}
-      </div>
+      <MacroGridInputs values={macros} onChange={(key, value) => setMacros(m => ({ ...m, [key]: value }))} />
       <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} />
       <button onClick={handleSave} disabled={submitting} style={{ ...accentButton, width: '100%' }}>SAVE FOOD — SEARCHABLE IMMEDIATELY</button>
     </>
@@ -220,14 +216,12 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
               <button aria-label={`Remove ingredient ${i}`} onClick={() => removeIngredient(i)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer' }}>✕</button>
             </div>
             {isAdHoc && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
-                {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
-                  <input key={key} aria-label={`Ingredient ${i} ${key}`} placeholder="—"
-                    value={ing[key] == null ? '' : String(ing[key])}
-                    onChange={e => updateIngredient(i, { [key]: e.target.value === '' ? null : Number(e.target.value) })}
-                    style={{ ...inputStyle, textAlign: 'center', padding: '5px 2px', fontSize: 9 }} />
-                ))}
-              </div>
+              <MacroGridInputs
+                values={Object.fromEntries(MACRO_KEYS.map(key => [key, ing[key] == null ? '' : String(ing[key])])) as Record<typeof MACRO_KEYS[number], string>}
+                onChange={(key, value) => updateIngredient(i, { [key]: value === '' ? null : Number(value) })}
+                ariaLabel={key => `Ingredient ${i} ${key}`}
+                gap={4} marginBottom={0} inputPadding="5px 2px" inputFontSize={9}
+              />
             )}
           </div>
         )

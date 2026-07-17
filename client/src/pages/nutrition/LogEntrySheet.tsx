@@ -4,6 +4,7 @@ import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
 import { createLogEntry, searchFoods, fetchRecentEntries, lookupFoodByBarcode, estimateMealFromPhoto, widenedNutrientFields, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
 import { useToast } from '../../lib/ToastContext'
+import { MacroGridInputs } from './MacroGridInputs'
 import { decodeBarcodeFromFile } from '../../lib/barcodeScan'
 import { fileToBase64 } from '../../lib/imageCapture'
 import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, type ExtendedNutrients } from './MoreNutrientsSection'
@@ -316,13 +317,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
               <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>
                 MACROS OPTIONAL — LOG WHAT YOU KNOW, LEAVE THE REST BLANK
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
-                {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
-                  <input key={key} placeholder="—" value={macros[key]}
-                    onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
-                    style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
-                ))}
-              </div>
+              <MacroGridInputs values={macros} onChange={(key, value) => setMacros(m => ({ ...m, [key]: value }))} />
               <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} />
             </>
           )}

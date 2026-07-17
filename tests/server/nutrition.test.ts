@@ -465,6 +465,37 @@ describe('Nutrition API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('GET and PUT /api/nutrition/recipes/:id round-trip the widened nutrient set (#140), not just the original 5 macros', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Salty Bowl', servings: 2,
+        ingredients: [{
+          name: 'Cured ham', quantity: 100, unit: 'g', calories: 145, protein_g: 21, carbs_g: 1.5, fat_g: 5, fiber_g: 0,
+          sodium_mg: 1200, allergens: ['pork'],
+        }],
+      })
+      const recipeId = created.body.id
+      expect(created.body.food.sodium_mg).toBe(600) // 1200 / 2 servings
+
+      // GET must return the ingredient's widened fields, not just the original 5
+      const fetched = await request(app).get(`/api/nutrition/recipes/${recipeId}`)
+      expect(fetched.body.ingredients[0].sodium_mg).toBe(1200)
+      expect(JSON.parse(fetched.body.ingredients[0].allergens)).toEqual(['pork'])
+
+      // PUT must recompute the widened per-serving fields, not silently drop them
+      const updated = await request(app).put(`/api/nutrition/recipes/${recipeId}`).send({
+        name: 'Salty Bowl', servings: 2,
+        ingredients: [{
+          name: 'Cured ham', quantity: 100, unit: 'g', calories: 145, protein_g: 21, carbs_g: 1.5, fat_g: 5, fiber_g: 0,
+          sodium_mg: 2400, allergens: ['pork'],
+        }],
+      })
+      expect(updated.body.food.sodium_mg).toBe(1200) // 2400 / 2 servings
+
+      const refetched = await request(app).get(`/api/nutrition/recipes/${recipeId}`)
+      expect(refetched.body.ingredients[0].sodium_mg).toBe(2400)
+    })
+
     it('PUT /api/nutrition/recipes/:id rejects an ingredient that references the recipe\'s own materialized food', async () => {
       const { app } = await import('../../server/index')
       const created = await request(app).post('/api/nutrition/recipes').send({
@@ -575,6 +606,134 @@ describe('Nutrition API', () => {
       expect(sandwichEntries.length).toBe(1) // deduped to exactly one
       expect(sandwichEntries[0].id).toBe(secondId) // the one with the higher id (inserted second)
       expect(sandwichEntries[0].calories).toBe(480) // and thus the correct calories value
+    })
+  })
+
+  describe('Extended nutrients (#140)', () => {
+    it('POST /api/nutrition/foods stores the widened nutrient set, round-tripping JSON fields', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Peanut Butter', default_qty: 32, default_unit: 'g', calories: 190,
+        sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0,
+        glycemic_index: 'Low',
+        custom_nutrients: { manganese_mg: 0.6 },
+        allergens: ['peanuts'],
+        traces: ['tree nuts'],
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({
+        sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0, glycemic_index: 'Low',
+      })
+      expect(JSON.parse(res.body.custom_nutrients)).toEqual({ manganese_mg: 0.6 })
+      expect(JSON.parse(res.body.allergens)).toEqual(['peanuts'])
+      expect(JSON.parse(res.body.traces)).toEqual(['tree nuts'])
+    })
+
+    it('a food saved without the new fields returns null for them, not 0 or []', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Plain Rice', default_qty: 100, default_unit: 'g', calories: 130,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body.sodium_mg).toBeNull()
+      expect(res.body.custom_nutrients).toBeNull()
+      expect(res.body.allergens).toBeNull()
+      expect(res.body.glycemic_index).toBeNull()
+    })
+
+    it('POST /api/nutrition/log scales the new numeric fields from the linked food, and passes through non-scalable fields (glycemic_index/allergens) unchanged', async () => {
+      const { app } = await import('../../server/index')
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Wheat Bread', default_qty: 100, default_unit: 'g', calories: 250,
+        sodium_mg: 400, glycemic_index: 'High', allergens: ['wheat', 'gluten'],
+      })
+      const res = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-12', meal_type: 'breakfast', food_id: food.body.id, quantity: 50, unit: 'g',
+      })
+      expect(res.status).toBe(201)
+      expect(res.body.sodium_mg).toBe(200) // scaled by factor 0.5, same as calories/protein etc
+      expect(res.body.glycemic_index).toBe('High') // not scaled — a descriptive property, not a quantity
+      expect(JSON.parse(res.body.allergens)).toEqual(['wheat', 'gluten'])
+    })
+
+    it('POST /api/nutrition/log stores caller-supplied new fields as-is for an ad-hoc entry', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-12', meal_type: 'snack', name: 'Trail mix', quantity: 1, unit: 'serving',
+        calories: 200, sodium_mg: 90, sugar_g: 12,
+        custom_nutrients: { zinc_mg: 1.2 }, allergens: ['tree nuts'],
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ sodium_mg: 90, sugar_g: 12 })
+      expect(JSON.parse(res.body.custom_nutrients)).toEqual({ zinc_mg: 1.2 })
+    })
+
+    it('PUT /api/nutrition/log/:id rescales the new numeric fields when quantity changes, same as the original five', async () => {
+      const { app } = await import('../../server/index')
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Salted Almonds', default_qty: 100, default_unit: 'g', calories: 600, sodium_mg: 300,
+      })
+      const created = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-13', meal_type: 'snack', food_id: food.body.id, quantity: 100, unit: 'g',
+      })
+      expect(created.body.sodium_mg).toBe(300)
+
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 50 })
+      expect(res.status).toBe(200)
+      expect(res.body.sodium_mg).toBe(150)
+    })
+
+    it('POST /api/nutrition/targets stores the new numeric target fields, unaffected kcal auto-sync', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/targets').send({
+        date: '2026-06-20', calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 25,
+        sodium_mg: 2300, vitamin_c_mg: 90,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ calories: 2000, sodium_mg: 2300, vitamin_c_mg: 90 })
+    })
+
+    it('GET /api/nutrition/summary aggregates the new numeric fields against the resolved target, same null-handling as the original five', async () => {
+      const { app } = await import('../../server/index')
+      await request(app).post('/api/nutrition/targets').send({ date: '2026-06-21', sodium_mg: 2300 })
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Canned Soup', default_qty: 1, default_unit: 'serving', calories: 100, sodium_mg: 890,
+      })
+      await request(app).post('/api/nutrition/log').send({
+        date: '2026-06-22', meal_type: 'lunch', food_id: food.body.id, quantity: 1, unit: 'serving',
+      })
+      const res = await request(app).get('/api/nutrition/summary').query({ date: '2026-06-22' })
+      expect(res.status).toBe(200)
+      expect(res.body.target.sodium_mg).toBe(2300)
+      expect(res.body.actual.sodium_mg).toBe(890)
+      expect(res.body.remaining.sodium_mg).toBe(2300 - 890)
+    })
+
+    it('GET /api/nutrition/trend aggregates the new numeric fields per day, zero-filled for empty days', async () => {
+      const { app } = await import('../../server/index')
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Trend Sodium Food', default_qty: 1, default_unit: 'serving', calories: 50, sodium_mg: 500,
+      })
+      const today = new Date().toISOString().slice(0, 10)
+      await request(app).post('/api/nutrition/log').send({
+        date: today, meal_type: 'lunch', food_id: food.body.id, quantity: 1, unit: 'serving',
+      })
+      const res = await request(app).get('/api/nutrition/trend').query({ days: 1 })
+      expect(res.status).toBe(200)
+      expect(res.body.days[0].sodium_mg).toBe(500)
+    })
+
+    it('POST /api/nutrition/recipes computes per-serving new numeric fields from the ingredient sum, same rounding as the original five', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Salty Snack Mix', servings: 2,
+        ingredients: [
+          { name: 'Pretzels', quantity: 50, unit: 'g', calories: 190, sodium_mg: 450 },
+          { name: 'Peanuts', quantity: 30, unit: 'g', calories: 170, sodium_mg: 110 },
+        ],
+      })
+      expect(res.status).toBe(201)
+      expect(res.body.food.sodium_mg).toBe(Math.round((450 + 110) / 2))
     })
   })
 })

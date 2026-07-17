@@ -5,7 +5,7 @@ import { useNutritionLog } from '../../hooks/useNutritionLog'
 import { useBriefing } from '../../hooks/useBriefing'
 import { todayLocal, addDaysLocal, relativeDayLabel, absoluteDateLabel } from '../../lib/nutritionDate'
 import type { MealGroup, NutritionSummary, FoodLogEntry } from '../../lib/nutritionApi'
-import { createLogEntry } from '../../lib/nutritionApi'
+import { createLogEntry, entryToLogInput } from '../../lib/nutritionApi'
 import { MX4Briefing } from '../../components/MX4Card'
 import { BRIEFS } from '../../lib/stubData'
 import { LogEntrySheet } from './LogEntrySheet'
@@ -16,11 +16,9 @@ const A = SECTION_ACCENTS.nutrition
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 
 async function copyMealToToday(group: MealGroup, mealKey: string) {
-  await Promise.all(group.entries.map(entry => createLogEntry({
-    date: todayLocal(), meal_type: mealKey, food_id: entry.food_id ?? undefined,
-    name: entry.food_id == null ? entry.name : undefined, quantity: entry.quantity, unit: entry.unit,
-    calories: entry.calories, protein_g: entry.protein_g, carbs_g: entry.carbs_g, fat_g: entry.fat_g, fiber_g: entry.fiber_g,
-  })))
+  await Promise.all(group.entries.map(entry =>
+    createLogEntry(entryToLogInput(entry, { date: todayLocal(), meal_type: mealKey }))
+  ))
 }
 
 function orderedMealKeys(meals: Record<string, MealGroup>): string[] {

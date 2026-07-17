@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { createLogEntry, searchFoods, fetchRecentEntries, lookupFoodByBarcode, estimateMealFromPhoto, widenedNutrientFields, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
+import { createLogEntry, searchFoods, fetchRecentEntries, entryToLogInput, lookupFoodByBarcode, estimateMealFromPhoto, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
 import { useToast } from '../../lib/ToastContext'
 import { MacroGridInputs } from './MacroGridInputs'
 import { decodeBarcodeFromFile } from '../../lib/barcodeScan'
@@ -236,7 +236,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
                   <span style={{ fontFamily: FONT_UI, fontSize: 12.5, color: COLORS.text }}>{r.name}</span>
                   <button onClick={async () => {
                     try {
-                      await createLogEntry({ date, meal_type: meal, food_id: r.food_id, name: r.food_id == null ? r.name : undefined, quantity: r.quantity, unit: r.unit, calories: r.calories, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g, ...widenedNutrientFields(r) })
+                      await createLogEntry(entryToLogInput(r, { date, meal_type: meal }))
                       onLogged(); onClose()
                     } catch (err) {
                       showToast(errorMessage(err, 'Could not log entry.'), 'error')

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { updateLogEntry, deleteLogEntry, createLogEntry, widenedNutrientFields, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
+import { updateLogEntry, deleteLogEntry, createLogEntry, entryToLogInput, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
 import { useToast } from '../../lib/ToastContext'
 import { MacroGridInputs, MACRO_KEYS, type MacroKey } from './MacroGridInputs'
@@ -105,12 +105,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
 
   async function handleCopyToToday() {
     try {
-      await createLogEntry({
-        date: todayLocal(), meal_type: currentEntry.meal_type, food_id: currentEntry.food_id ?? undefined,
-        name: currentEntry.food_id == null ? currentEntry.name : undefined, quantity: currentEntry.quantity, unit: currentEntry.unit,
-        calories: currentEntry.calories, protein_g: currentEntry.protein_g, carbs_g: currentEntry.carbs_g, fat_g: currentEntry.fat_g, fiber_g: currentEntry.fiber_g,
-        ...widenedNutrientFields(currentEntry),
-      })
+      await createLogEntry(entryToLogInput(currentEntry, { date: todayLocal() }))
       onSaved(); onClose()
     } catch (err) {
       showToast(errorMessage(err, 'Could not copy entry to today.'), 'error')

@@ -110,6 +110,29 @@ export interface LogEntryInput extends WidenedNutrients, DescriptiveNutrients {
   fiber_g?: number | null
 }
 
+// Converts a logged entry back into a POST /log payload — the copy/clone-into-a-new-entry
+// step shared by "copy to today" (NutritionOverview, EditEntrySheet) and the Log Entry
+// sheet's recents "+ LOG" button. food_id/name are mutually exclusive per the API's own
+// rule for linked vs. ad-hoc entries. `date` has no default — FoodLogEntry doesn't carry
+// one (its date is implied by whichever day's log it was fetched from), so the caller
+// must always supply the target date via overrides.
+export function entryToLogInput(entry: FoodLogEntry, overrides: Partial<LogEntryInput> & { date: string }): LogEntryInput {
+  return {
+    meal_type: entry.meal_type,
+    food_id: entry.food_id ?? undefined,
+    name: entry.food_id == null ? entry.name : undefined,
+    quantity: entry.quantity,
+    unit: entry.unit,
+    calories: entry.calories,
+    protein_g: entry.protein_g,
+    carbs_g: entry.carbs_g,
+    fat_g: entry.fat_g,
+    fiber_g: entry.fiber_g,
+    ...widenedNutrientFields(entry),
+    ...overrides,
+  }
+}
+
 export async function createLogEntry(input: LogEntryInput): Promise<FoodLogEntry> {
   const res = await fetch('/api/nutrition/log', {
     method: 'POST',

@@ -66,6 +66,17 @@ describe('food import loader', () => {
       expect(malformedRow).toBeUndefined()
     })
 
+    it('skips a null entry in the records array instead of aborting the whole batch — a real USDA Foundation Foods dump has literal null entries', async () => {
+      const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      const count = importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-with-null-entry.json'))
+      // 3 entries in the file's array: one valid record, one literal null, one valid record.
+      expect(count).toBe(2)
+
+      const { default: db } = await import('../../server/db/client')
+      const rows = db.prepare("SELECT * FROM foods WHERE source_id IN ('7777777', '8888888')").all() as any[]
+      expect(rows.length).toBe(2)
+    })
+
     it('running the import twice does not duplicate rows (idempotent upsert)', async () => {
       const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
       importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-sample.json'))

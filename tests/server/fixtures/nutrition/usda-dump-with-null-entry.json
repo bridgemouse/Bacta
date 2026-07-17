@@ -1,0 +1,23 @@
+{
+  "FoundationFoods": [
+    {
+      "fdcId": 7777777,
+      "description": "First Valid Record",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        { "type": "FoodNutrient", "nutrient": { "id": 1008, "number": "208", "name": "Energy", "unitName": "kcal" }, "amount": 150.0 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 3.0 }
+      ]
+    },
+    null,
+    {
+      "fdcId": 8888888,
+      "description": "Second Valid Record",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        { "type": "FoodNutrient", "nutrient": { "id": 1008, "number": "208", "name": "Energy", "unitName": "kcal" }, "amount": 300.0 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 6.0 }
+      ]
+    }
+  ]
+}

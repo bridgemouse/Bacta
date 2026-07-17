@@ -5,9 +5,10 @@ import { EditEntrySheet } from '../../../../client/src/pages/nutrition/EditEntry
 import { ToastProvider } from '../../../../client/src/lib/ToastContext'
 import { ToastContainer } from '../../../../client/src/components/ToastContainer'
 
-vi.mock('../../../../client/src/lib/nutritionApi', () => ({
-  updateLogEntry: vi.fn(), deleteLogEntry: vi.fn(), createLogEntry: vi.fn(),
-}))
+vi.mock('../../../../client/src/lib/nutritionApi', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../../../client/src/lib/nutritionApi')>()
+  return { ...actual, updateLogEntry: vi.fn(), deleteLogEntry: vi.fn(), createLogEntry: vi.fn() }
+})
 
 import { updateLogEntry, deleteLogEntry, createLogEntry } from '../../../../client/src/lib/nutritionApi'
 const mockUpdate = updateLogEntry as ReturnType<typeof vi.fn>
@@ -62,6 +63,16 @@ describe('EditEntrySheet', () => {
     await user.click(copyBtn)
     await waitFor(() => expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ name: 'Nuts', quantity: 1, unit: 'handful' })))
     expect(mockCreate.mock.calls[0][0].date).not.toBe('2026-06-01')
+  })
+
+  it('COPY THIS ITEM TO TODAY carries the widened nutrient fields forward, not just the 5 original macros', async () => {
+    const entryWithSodium = { ...adHocEntry, sodium_mg: 890, allergens: JSON.stringify(['dairy']) }
+    const user = userEvent.setup()
+    render(<EditEntrySheet open entry={entryWithSodium} date="2026-06-01" onClose={vi.fn()} onSaved={vi.fn()} />)
+    await user.click(screen.getByText('COPY THIS ITEM TO TODAY'))
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      sodium_mg: 890, allergens: JSON.stringify(['dairy']),
+    })))
   })
 
   it('does not show COPY THIS ITEM TO TODAY when viewing today', () => {

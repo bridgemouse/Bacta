@@ -1,8 +1,29 @@
-import { Router } from 'express'
+import { Router, type Response } from 'express'
 import db from '../db/client'
 import { estimateMealFromPhoto } from '../lib/ai/mealPhoto'
 
 const nutritionRouter = Router()
+
+// Widened nutrient set (#140). NUMERIC_NUTRIENT_KEYS covers every summable/scalable
+// quantity (the original 5 macros plus the 12 new ones) — used everywhere a per-key
+// loop already iterated the original 5, so scaling/totals/target-vs-actual logic stays
+// mechanical instead of hand-duplicated per field. DESCRIPTIVE_KEYS are NOT summed or
+// scaled — they describe the food itself (a "half" glycemic index or half an allergen
+// list makes no sense), so they're only read/written on a single row, never aggregated.
+const NUMERIC_NUTRIENT_KEYS = [
+  'calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g',
+  'sodium_mg', 'sugar_g', 'saturated_fat_g', 'polyunsaturated_fat_g', 'monounsaturated_fat_g',
+  'trans_fat_g', 'cholesterol_mg', 'potassium_mg', 'vitamin_a_mcg', 'vitamin_c_mg',
+  'calcium_mg', 'iron_mg',
+] as const
+type NumericNutrientKey = typeof NUMERIC_NUTRIENT_KEYS[number]
+const JSON_NUTRIENT_KEYS = ['custom_nutrients', 'allergens', 'traces'] as const
+const DESCRIPTIVE_NUTRIENT_KEYS = ['glycemic_index', ...JSON_NUTRIENT_KEYS] as const
+type NumericRow = Partial<Record<NumericNutrientKey, number | null>>
+
+function parseJsonField(value: unknown): unknown {
+  return value === undefined || value === null ? null : JSON.stringify(value)
+}
 
 // GET /api/nutrition/foods/barcode/:code — look up a food by barcode (#141 still-image
 // barcode capture: client decodes the photo via zxing-wasm, then looks up the decoded
@@ -49,19 +70,21 @@ nutritionRouter.get('/foods', (req, res) => {
   res.json({ foods: rows })
 })
 
+interface FoodBody extends NumericRow {
+  name: string
+  brand?: string
+  default_qty?: number
+  default_unit?: string
+  glycemic_index?: string
+  custom_nutrients?: unknown
+  allergens?: unknown
+  traces?: unknown
+}
+
 // POST /api/nutrition/foods — save a new custom/ad-hoc food for reuse
 nutritionRouter.post('/foods', (req, res) => {
-  const { name, brand, default_qty, default_unit, calories, protein_g, carbs_g, fat_g, fiber_g } = req.body as {
-    name: string
-    brand?: string
-    default_qty?: number
-    default_unit?: string
-    calories?: number
-    protein_g?: number
-    carbs_g?: number
-    fat_g?: number
-    fiber_g?: number
-  }
+  const body = req.body as FoodBody
+  const { name, brand, default_qty, default_unit, glycemic_index } = body
 
   if (default_qty !== undefined && default_qty <= 0) {
     res.status(400).json({ error: 'default_qty must be greater than 0' })
@@ -70,20 +93,26 @@ nutritionRouter.post('/foods', (req, res) => {
 
   try {
     const stmt = db.prepare(`
-      INSERT INTO foods (source, name, brand, default_qty, default_unit, calories, protein_g, carbs_g, fat_g, fiber_g)
-      VALUES ('custom', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO foods (
+        source, name, brand, default_qty, default_unit,
+        ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
+      )
+      VALUES (
+        'custom', @name, @brand, @default_qty, @default_unit,
+        ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')}, @glycemic_index, @custom_nutrients, @allergens, @traces
+      )
     `)
-    const info = stmt.run(
+    const info = stmt.run({
       name,
-      brand ?? null,
-      default_qty ?? 100,
-      default_unit ?? 'g',
-      calories ?? null,
-      protein_g ?? null,
-      carbs_g ?? null,
-      fat_g ?? null,
-      fiber_g ?? null,
-    )
+      brand: brand ?? null,
+      default_qty: default_qty ?? 100,
+      default_unit: default_unit ?? 'g',
+      ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, body[k] ?? null])),
+      glycemic_index: glycemic_index ?? null,
+      custom_nutrients: parseJsonField(body.custom_nutrients),
+      allergens: parseJsonField(body.allergens),
+      traces: parseJsonField(body.traces),
+    })
     const row = db.prepare('SELECT * FROM foods WHERE id = ?').get(info.lastInsertRowid)
     res.status(201).json(row)
   } catch (err: unknown) {
@@ -92,16 +121,15 @@ nutritionRouter.post('/foods', (req, res) => {
   }
 })
 
-interface FoodRow {
+interface FoodRow extends NumericRow {
   id: number
   name: string
   default_qty: number
   default_unit: string
-  calories: number | null
-  protein_g: number | null
-  carbs_g: number | null
-  fat_g: number | null
-  fiber_g: number | null
+  glycemic_index: string | null
+  custom_nutrients: string | null
+  allergens: string | null
+  traces: string | null
 }
 
 function scale(value: number | null, factor: number): number | null {
@@ -121,24 +149,17 @@ nutritionRouter.get('/log', (req, res) => {
   const date = req.query.date as string
   const rows = db.prepare(
     'SELECT * FROM food_log_entries WHERE date = ? ORDER BY logged_at'
-  ).all(date) as Array<{
-    id: number
-    meal_type: string
-    calories: number | null
-    protein_g: number | null
-    carbs_g: number | null
-    fat_g: number | null
-    fiber_g: number | null
-  }>
+  ).all(date) as Array<{ id: number; meal_type: string } & NumericRow>
 
+  const emptyTotals = (): Record<string, number> => Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, 0]))
   const meals: Record<string, { entries: typeof rows; totals: Record<string, number> }> = {}
 
   for (const row of rows) {
     if (!meals[row.meal_type]) {
-      meals[row.meal_type] = { entries: [], totals: { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 } }
+      meals[row.meal_type] = { entries: [], totals: emptyTotals() }
     }
     meals[row.meal_type].entries.push(row)
-    for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
+    for (const key of NUMERIC_NUTRIENT_KEYS) {
       meals[row.meal_type].totals[key] += row[key] ?? 0
     }
   }
@@ -171,31 +192,26 @@ nutritionRouter.get('/log/recent', (req, res) => {
   res.json({ entries })
 })
 
+interface LogEntryBody extends NumericRow {
+  date: string
+  meal_type: string
+  food_id?: number
+  name?: string
+  quantity: number
+  unit: string
+  glycemic_index?: string
+  custom_nutrients?: unknown
+  allergens?: unknown
+  traces?: unknown
+}
+
 // POST /api/nutrition/log — log a new entry, either against a reference food (scaled) or fully ad-hoc
 nutritionRouter.post('/log', (req, res) => {
-  const { date, meal_type, food_id, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g } = req.body as {
-    date: string
-    meal_type: string
-    food_id?: number
-    name?: string
-    quantity: number
-    unit: string
-    calories?: number
-    protein_g?: number
-    carbs_g?: number
-    fat_g?: number
-    fiber_g?: number
-  }
+  const body = req.body as LogEntryBody
+  const { date, meal_type, food_id, name, quantity, unit } = body
 
   try {
-    let entry: {
-      name: string
-      calories: number | null
-      protein_g: number | null
-      carbs_g: number | null
-      fat_g: number | null
-      fiber_g: number | null
-    }
+    let entry: { name: string } & NumericRow & { glycemic_index: string | null; custom_nutrients: unknown; allergens: unknown; traces: unknown }
 
     if (food_id !== undefined && food_id !== null) {
       const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(food_id) as FoodRow | undefined
@@ -217,31 +233,39 @@ nutritionRouter.post('/log', (req, res) => {
       const factor = quantity / food.default_qty
       entry = {
         name: food.name,
-        calories: scale(food.calories, factor),
-        protein_g: scale(food.protein_g, factor),
-        carbs_g: scale(food.carbs_g, factor),
-        fat_g: scale(food.fat_g, factor),
-        fiber_g: scale(food.fiber_g, factor),
+        ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, scale(food[k] ?? null, factor)])),
+        // Descriptive fields are not scaled by quantity (see DESCRIPTIVE_NUTRIENT_KEYS
+        // comment) — copied straight through from the food row, already TEXT/JSON-text.
+        glycemic_index: food.glycemic_index ?? null,
+        custom_nutrients: food.custom_nutrients ?? null,
+        allergens: food.allergens ?? null,
+        traces: food.traces ?? null,
       }
     } else {
       entry = {
         name: name ?? '',
-        calories: calories ?? null,
-        protein_g: protein_g ?? null,
-        carbs_g: carbs_g ?? null,
-        fat_g: fat_g ?? null,
-        fiber_g: fiber_g ?? null,
+        ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, body[k] ?? null])),
+        glycemic_index: body.glycemic_index ?? null,
+        custom_nutrients: parseJsonField(body.custom_nutrients),
+        allergens: parseJsonField(body.allergens),
+        traces: parseJsonField(body.traces),
       }
     }
 
     const stmt = db.prepare(`
-      INSERT INTO food_log_entries (date, meal_type, food_id, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO food_log_entries (
+        date, meal_type, food_id, name, quantity, unit,
+        ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
+      )
+      VALUES (
+        @date, @meal_type, @food_id, @name, @quantity, @unit,
+        ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')}, @glycemic_index, @custom_nutrients, @allergens, @traces
+      )
     `)
-    const info = stmt.run(
-      date, meal_type, food_id ?? null, entry.name, quantity, unit,
-      entry.calories, entry.protein_g, entry.carbs_g, entry.fat_g, entry.fiber_g,
-    )
+    const info = stmt.run({
+      date, meal_type, food_id: food_id ?? null, quantity, unit,
+      ...entry,
+    })
     const row = db.prepare('SELECT * FROM food_log_entries WHERE id = ?').get(info.lastInsertRowid)
     res.status(201).json(row)
   } catch (err: unknown) {
@@ -260,10 +284,12 @@ nutritionRouter.put('/log/:id', (req, res) => {
     return
   }
 
-  const editable = ['date', 'meal_type', 'name', 'quantity', 'unit', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const
+  const editable = ['date', 'meal_type', 'name', 'quantity', 'unit', ...NUMERIC_NUTRIENT_KEYS, ...DESCRIPTIVE_NUTRIENT_KEYS] as const
   const updates: Record<string, unknown> = {}
   for (const key of editable) {
-    if (key in req.body) updates[key] = req.body[key]
+    if (key in req.body) {
+      updates[key] = (JSON_NUTRIENT_KEYS as readonly string[]).includes(key) ? parseJsonField(req.body[key]) : req.body[key]
+    }
   }
 
   // A food-linked entry's macros are a denormalized snapshot, not a live join — a
@@ -288,9 +314,9 @@ nutritionRouter.put('/log/:id', (req, res) => {
       if ('quantity' in updates || 'unit' in updates) {
         const finalQuantity = (updates.quantity ?? existing.quantity) as number
         const factor = finalQuantity / food.default_qty
-        for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
+        for (const key of NUMERIC_NUTRIENT_KEYS) {
           if (!(key in updates)) {
-            updates[key] = scale(food[key], factor)
+            updates[key] = scale(food[key] ?? null, factor)
           }
         }
       }
@@ -300,13 +326,11 @@ nutritionRouter.put('/log/:id', (req, res) => {
   const merged = { ...existing, ...updates }
   db.prepare(`
     UPDATE food_log_entries SET
-      date = ?, meal_type = ?, name = ?, quantity = ?, unit = ?,
-      calories = ?, protein_g = ?, carbs_g = ?, fat_g = ?, fiber_g = ?
-    WHERE id = ?
-  `).run(
-    merged.date, merged.meal_type, merged.name, merged.quantity, merged.unit,
-    merged.calories, merged.protein_g, merged.carbs_g, merged.fat_g, merged.fiber_g, id,
-  )
+      date = @date, meal_type = @meal_type, name = @name, quantity = @quantity, unit = @unit,
+      ${NUMERIC_NUTRIENT_KEYS.map(k => `${k} = @${k}`).join(', ')},
+      glycemic_index = @glycemic_index, custom_nutrients = @custom_nutrients, allergens = @allergens, traces = @traces
+    WHERE id = @id
+  `).run({ ...merged, id })
 
   const row = db.prepare('SELECT * FROM food_log_entries WHERE id = ?').get(id)
   res.json(row)
@@ -323,13 +347,7 @@ nutritionRouter.delete('/log/:id', (req, res) => {
   res.json({ ok: true })
 })
 
-interface TargetRow {
-  calories: number | null
-  protein_g: number | null
-  carbs_g: number | null
-  fat_g: number | null
-  fiber_g: number | null
-}
+type TargetRow = NumericRow
 
 function resolveTarget(date: string): (TargetRow & { date: string }) | null {
   return (db.prepare(
@@ -339,12 +357,12 @@ function resolveTarget(date: string): (TargetRow & { date: string }) | null {
 
 function logTotals(date: string): TargetRow {
   const rows = db.prepare(
-    'SELECT calories, protein_g, carbs_g, fat_g, fiber_g FROM food_log_entries WHERE date = ?'
+    `SELECT ${NUMERIC_NUTRIENT_KEYS.join(', ')} FROM food_log_entries WHERE date = ?`
   ).all(date) as TargetRow[]
 
-  const totals: TargetRow = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 }
+  const totals: TargetRow = Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, 0]))
   for (const row of rows) {
-    for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
+    for (const key of NUMERIC_NUTRIENT_KEYS) {
       totals[key] = (totals[key] ?? 0) + (row[key] ?? 0)
     }
   }
@@ -358,28 +376,22 @@ nutritionRouter.get('/targets', (req, res) => {
   res.json(target)
 })
 
-// POST /api/nutrition/targets — upsert a target set effective from a given date
+// POST /api/nutrition/targets — upsert a target set effective from a given date. Only
+// the numeric fields participate — glycemic_index/custom_nutrients/allergens/traces
+// describe a food, not a daily target, so the targets API never reads/writes them (the
+// schema columns exist for uniformity across the 4 nutrient tables, per #140, but stay
+// unused here).
 nutritionRouter.post('/targets', (req, res) => {
-  const { date, calories, protein_g, carbs_g, fat_g, fiber_g } = req.body as {
-    date: string
-    calories?: number
-    protein_g?: number
-    carbs_g?: number
-    fat_g?: number
-    fiber_g?: number
-  }
+  const body = req.body as { date: string } & NumericRow
+  const { date } = body
 
   try {
     db.prepare(`
-      INSERT INTO nutrition_targets (date, calories, protein_g, carbs_g, fat_g, fiber_g)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO nutrition_targets (date, ${NUMERIC_NUTRIENT_KEYS.join(', ')})
+      VALUES (@date, ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')})
       ON CONFLICT(date) DO UPDATE SET
-        calories  = excluded.calories,
-        protein_g = excluded.protein_g,
-        carbs_g   = excluded.carbs_g,
-        fat_g     = excluded.fat_g,
-        fiber_g   = excluded.fiber_g
-    `).run(date, calories ?? null, protein_g ?? null, carbs_g ?? null, fat_g ?? null, fiber_g ?? null)
+        ${NUMERIC_NUTRIENT_KEYS.map(k => `${k} = excluded.${k}`).join(',\n        ')}
+    `).run({ date, ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, body[k] ?? null])) })
     const row = db.prepare('SELECT * FROM nutrition_targets WHERE date = ?').get(date)
     res.status(201).json(row)
   } catch (err: unknown) {
@@ -394,8 +406,8 @@ nutritionRouter.get('/summary', (req, res) => {
   const target = resolveTarget(date)
   const actual = logTotals(date)
 
-  const remaining: TargetRow = { calories: null, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null }
-  for (const key of ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const) {
+  const remaining: TargetRow = Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, null]))
+  for (const key of NUMERIC_NUTRIENT_KEYS) {
     remaining[key] = target?.[key] != null && actual[key] != null
       ? Math.round((target[key]! - actual[key]!) * 100) / 100
       : null
@@ -404,28 +416,48 @@ nutritionRouter.get('/summary', (req, res) => {
   res.json({ target, actual, remaining })
 })
 
-interface RecipeIngredientInput {
+interface RecipeIngredientInput extends NumericRow {
   food_id?: number
   name: string
   quantity: number
   unit: string
-  calories?: number
-  protein_g?: number
-  carbs_g?: number
-  fat_g?: number
-  fiber_g?: number
+  glycemic_index?: string
+  custom_nutrients?: unknown
+  allergens?: unknown
+  traces?: unknown
 }
 
-function sumField(items: RecipeIngredientInput[], key: keyof RecipeIngredientInput): number {
+function sumField(items: RecipeIngredientInput[], key: NumericNutrientKey): number {
   return items.reduce((s, i) => s + (Number(i[key]) || 0), 0)
+}
+
+// Per-serving macros for a recipe's materialized food. Only the summable numeric fields
+// participate — glycemic_index/custom_nutrients/allergens/traces have no sensible
+// "sum of ingredients" and stay null on the materialized food (see DESCRIPTIVE_NUTRIENT_KEYS).
+function perServingNutrients(ingredients: RecipeIngredientInput[], servings: number): NumericRow {
+  return Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(key => {
+    const total = sumField(ingredients, key)
+    return [key, key === 'calories' ? roundKcal(total / servings) : roundMacro(total / servings)]
+  }))
+}
+
+function validateRecipeInput(servings: number, ingredients: RecipeIngredientInput[], res: Response): boolean {
+  if (!servings || servings <= 0) {
+    res.status(400).json({ error: 'servings must be greater than 0' })
+    return false
+  }
+  if (!ingredients || ingredients.length === 0) {
+    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
+    return false
+  }
+  return true
 }
 
 // GET /api/nutrition/recipes — list saved recipes with their per-serving food's macros
 nutritionRouter.get('/recipes', (req, res) => {
   const recipes = db.prepare(`
     SELECT r.id, r.name, r.servings, r.food_id, r.created_at,
-      f.calories as per_serving_calories, f.protein_g as per_serving_protein_g,
-      f.carbs_g as per_serving_carbs_g, f.fat_g as per_serving_fat_g, f.fiber_g as per_serving_fiber_g,
+      ${NUMERIC_NUTRIENT_KEYS.map(k => `f.${k} as per_serving_${k}`).join(', ')},
       (SELECT COUNT(*) FROM recipe_ingredients ri WHERE ri.recipe_id = r.id) as ingredient_count
     FROM recipes r JOIN foods f ON f.id = r.food_id
     ORDER BY r.name
@@ -443,27 +475,16 @@ nutritionRouter.post('/recipes', (req, res) => {
     ingredients: RecipeIngredientInput[]
   }
 
-  if (!servings || servings <= 0) {
-    res.status(400).json({ error: 'servings must be greater than 0' })
-    return
-  }
-  if (!ingredients || ingredients.length === 0) {
-    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
-    return
-  }
+  if (!validateRecipeInput(servings, ingredients, res)) return
 
   try {
-    const kcalPerServing = roundKcal(sumField(ingredients, 'calories') / servings)
-    const proteinPerServing = roundMacro(sumField(ingredients, 'protein_g') / servings)
-    const carbsPerServing = roundMacro(sumField(ingredients, 'carbs_g') / servings)
-    const fatPerServing = roundMacro(sumField(ingredients, 'fat_g') / servings)
-    const fiberPerServing = roundMacro(sumField(ingredients, 'fiber_g') / servings)
+    const perServing = perServingNutrients(ingredients, servings)
 
     const createRecipe = db.transaction(() => {
       const foodInfo = db.prepare(`
-        INSERT INTO foods (source, name, default_qty, default_unit, calories, protein_g, carbs_g, fat_g, fiber_g)
-        VALUES ('custom', ?, 1, 'serving', ?, ?, ?, ?, ?)
-      `).run(name, kcalPerServing, proteinPerServing, carbsPerServing, fatPerServing, fiberPerServing)
+        INSERT INTO foods (source, name, default_qty, default_unit, ${NUMERIC_NUTRIENT_KEYS.join(', ')})
+        VALUES ('custom', @name, 1, 'serving', ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')})
+      `).run({ name, ...perServing })
       const foodId = foodInfo.lastInsertRowid
 
       const recipeInfo = db.prepare(
@@ -472,14 +493,24 @@ nutritionRouter.post('/recipes', (req, res) => {
       const recipeId = recipeInfo.lastInsertRowid
 
       const insertIngredient = db.prepare(`
-        INSERT INTO recipe_ingredients (recipe_id, food_id, name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO recipe_ingredients (
+          recipe_id, food_id, name, quantity, unit,
+          ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
+        )
+        VALUES (
+          @recipe_id, @food_id, @name, @quantity, @unit,
+          ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')}, @glycemic_index, @custom_nutrients, @allergens, @traces
+        )
       `)
       for (const ing of ingredients) {
-        insertIngredient.run(
-          recipeId, ing.food_id ?? null, ing.name, ing.quantity, ing.unit,
-          ing.calories ?? null, ing.protein_g ?? null, ing.carbs_g ?? null, ing.fat_g ?? null, ing.fiber_g ?? null,
-        )
+        insertIngredient.run({
+          recipe_id: recipeId, food_id: ing.food_id ?? null, name: ing.name, quantity: ing.quantity, unit: ing.unit,
+          ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, ing[k] ?? null])),
+          glycemic_index: ing.glycemic_index ?? null,
+          custom_nutrients: parseJsonField(ing.custom_nutrients),
+          allergens: parseJsonField(ing.allergens),
+          traces: parseJsonField(ing.traces),
+        })
       }
       return { recipeId, foodId }
     })
@@ -497,6 +528,87 @@ nutritionRouter.post('/recipes', (req, res) => {
 function isForeignKeyError(err: unknown): boolean {
   return err instanceof Error && err.message.includes('FOREIGN KEY constraint failed')
 }
+
+// GET /api/nutrition/recipes/:id — a single recipe's composition, for the edit flow
+nutritionRouter.get('/recipes/:id', (req, res) => {
+  const { id } = req.params
+  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id)
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' })
+    return
+  }
+  const ingredients = db.prepare(`
+    SELECT food_id, name, quantity, unit, ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
+    FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id
+  `).all(id)
+  res.json({ ...recipe, ingredients })
+})
+
+// PUT /api/nutrition/recipes/:id — re-save an existing recipe's composition: recomputes
+// per-serving macros and updates the materialized foods row IN PLACE (same food_id), so
+// past food_log_entries rows referencing it stay valid (they hold their own denormalized
+// snapshot regardless). Ingredient rows are replaced wholesale, same as a fresh POST.
+nutritionRouter.put('/recipes/:id', (req, res) => {
+  const { id } = req.params
+  const { name, servings, ingredients } = req.body as {
+    name: string
+    servings: number
+    ingredients: RecipeIngredientInput[]
+  }
+
+  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id) as { food_id: number } | undefined
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' })
+    return
+  }
+  if (!validateRecipeInput(servings, ingredients, res)) return
+  if (ingredients.some(ing => ing.food_id === recipe.food_id)) {
+    res.status(400).json({ error: 'A recipe cannot use itself as an ingredient' })
+    return
+  }
+
+  try {
+    const perServing = perServingNutrients(ingredients, servings)
+
+    const updateRecipe = db.transaction(() => {
+      db.prepare('UPDATE recipes SET name = ?, servings = ? WHERE id = ?').run(name, servings, id)
+      db.prepare(`
+        UPDATE foods SET name = @name, ${NUMERIC_NUTRIENT_KEYS.map(k => `${k} = @${k}`).join(', ')}
+        WHERE id = @food_id
+      `).run({ name, food_id: recipe.food_id, ...perServing })
+
+      db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id)
+      const insertIngredient = db.prepare(`
+        INSERT INTO recipe_ingredients (
+          recipe_id, food_id, name, quantity, unit,
+          ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
+        )
+        VALUES (
+          @recipe_id, @food_id, @name, @quantity, @unit,
+          ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')}, @glycemic_index, @custom_nutrients, @allergens, @traces
+        )
+      `)
+      for (const ing of ingredients) {
+        insertIngredient.run({
+          recipe_id: id, food_id: ing.food_id ?? null, name: ing.name, quantity: ing.quantity, unit: ing.unit,
+          ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, ing[k] ?? null])),
+          glycemic_index: ing.glycemic_index ?? null,
+          custom_nutrients: parseJsonField(ing.custom_nutrients),
+          allergens: parseJsonField(ing.allergens),
+          traces: parseJsonField(ing.traces),
+        })
+      }
+    })
+    updateRecipe()
+
+    const updatedRecipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id)
+    const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(recipe.food_id)
+    res.json({ ...updatedRecipe as object, food })
+  } catch (err: unknown) {
+    console.error('[nutrition] recipe update failed:', err)
+    res.status(400).json({ error: 'Could not update recipe' })
+  }
+})
 
 // DELETE /api/nutrition/recipes/:id — deletes the recipe, its ingredients, and its
 // materialized food as one unit. Blocked (400) if that food has already been logged
@@ -568,23 +680,20 @@ nutritionRouter.get('/trend', (req, res) => {
 
   const rows = db.prepare(`
     SELECT date,
-      COALESCE(SUM(calories), 0)  as calories,
-      COALESCE(SUM(protein_g), 0) as protein_g,
-      COALESCE(SUM(carbs_g), 0)   as carbs_g,
-      COALESCE(SUM(fat_g), 0)     as fat_g,
-      COALESCE(SUM(fiber_g), 0)   as fiber_g
+      ${NUMERIC_NUTRIENT_KEYS.map(k => `COALESCE(SUM(${k}), 0) as ${k}`).join(',\n      ')}
     FROM food_log_entries
     WHERE date >= ?
     GROUP BY date
-  `).all(dayLabel(days - 1)) as Array<{
-    date: string; calories: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number
-  }>
+  `).all(dayLabel(days - 1)) as Array<{ date: string } & Record<NumericNutrientKey, number>>
+
+  const zeroDay = (date: string): { date: string } & Record<NumericNutrientKey, number> =>
+    ({ date, ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, 0])) } as { date: string } & Record<NumericNutrientKey, number>)
 
   const byDate = new Map(rows.map(r => [r.date, r]))
   const result = []
   for (let i = days - 1; i >= 0; i--) {
     const date = dayLabel(i)
-    result.push(byDate.get(date) ?? { date, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 })
+    result.push(byDate.get(date) ?? zeroDay(date))
   }
 
   res.json({ days: result })

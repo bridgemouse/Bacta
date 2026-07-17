@@ -15,7 +15,11 @@ import {
   fetchRecipes,
   deleteRecipe,
   lookupFoodByBarcode,
-  estimateMealFromPhoto
+  estimateMealFromPhoto,
+  widenedNutrientFields,
+  fetchRecipe,
+  updateRecipe,
+  type FoodLogEntry
 } from '../../../client/src/lib/nutritionApi'
 
 const mockFetch = vi.fn()
@@ -220,5 +224,54 @@ describe('nutritionApi', () => {
   it('estimateMealFromPhoto throws with the server error message on failure', async () => {
     mockFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'Could not estimate meal from photo' }) })
     await expect(estimateMealFromPhoto('base64data', 'image/jpeg')).rejects.toThrow('Could not estimate meal from photo')
+  })
+
+  it('widenedNutrientFields carries the widened nutrient set forward from a FoodLogEntry, defaulting missing fields to null', () => {
+    const entry = {
+      id: 1, meal_type: 'lunch', food_id: null, name: 'Canned soup', quantity: 1, unit: 'serving',
+      calories: 200, protein_g: 5, carbs_g: 20, fat_g: 8, fiber_g: 2, logged_at: '2026-07-10T12:00:00Z',
+      sodium_mg: 890, allergens: JSON.stringify(['dairy']),
+    } as unknown as FoodLogEntry
+    const result = widenedNutrientFields(entry)
+    expect(result.sodium_mg).toBe(890)
+    expect(result.allergens).toBe(JSON.stringify(['dairy']))
+    // fields absent on the source entry must default to null, not be omitted —
+    // omitting them would mean "don't touch" on a PUT, but here they're being set on
+    // a brand-new entry via POST, where an omitted key and an explicit null are only
+    // equivalent for creation, not for copy/re-log call sites reusing this helper.
+    expect(result.sugar_g).toBeNull()
+    expect(result.glycemic_index).toBeNull()
+  })
+
+  it('fetchRecipe GETs a single recipe by id, including its ingredients', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 1, name: 'Smoothie', servings: 2, food_id: 2, ingredients: [{ name: 'Banana', quantity: 1, unit: 'each' }] }),
+    })
+    const result = await fetchRecipe(1)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/recipes/1')
+    expect(result.ingredients).toHaveLength(1)
+  })
+
+  it('fetchRecipe throws on a non-ok response', async () => {
+    mockFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'Recipe not found' }) })
+    await expect(fetchRecipe(999)).rejects.toThrow('Recipe not found')
+  })
+
+  it('updateRecipe PUTs name/servings/ingredients and returns the updated recipe+food', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ id: 1, food: { id: 2, calories: 200 } }) })
+    const input = { name: 'Smoothie', servings: 3, ingredients: [{ name: 'Banana', quantity: 1, unit: 'each' }] }
+    const result = await updateRecipe(1, input)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/recipes/1', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify(input)
+    }))
+    expect(result.food.calories).toBe(200)
+  })
+
+  it('updateRecipe surfaces the server error message on failure', async () => {
+    mockFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'Could not update recipe' }) })
+    await expect(updateRecipe(1, { name: 'X', servings: 1, ingredients: [] }))
+      .rejects.toThrow('Could not update recipe')
   })
 })

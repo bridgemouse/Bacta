@@ -16,9 +16,9 @@ const A = SECTION_ACCENTS.nutrition
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 
 async function copyMealToToday(group: MealGroup, mealKey: string) {
-  for (const entry of group.entries) {
-    await createLogEntry(entryToLogInput(entry, { date: todayLocal(), meal_type: mealKey }))
-  }
+  await Promise.all(group.entries.map(entry =>
+    createLogEntry(entryToLogInput(entry, { date: todayLocal(), meal_type: mealKey }))
+  ))
 }
 
 function orderedMealKeys(meals: Record<string, MealGroup>): string[] {

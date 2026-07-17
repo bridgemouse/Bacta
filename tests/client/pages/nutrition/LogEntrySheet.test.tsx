@@ -5,11 +5,22 @@ import { LogEntrySheet } from '../../../../client/src/pages/nutrition/LogEntrySh
 
 vi.mock('../../../../client/src/lib/nutritionApi', async () => {
   const actual = await vi.importActual('../../../../client/src/lib/nutritionApi')
-  return { ...actual, createLogEntry: vi.fn(), searchFoods: vi.fn().mockResolvedValue([]), fetchRecentEntries: vi.fn().mockResolvedValue([]) }
+  return {
+    ...actual, createLogEntry: vi.fn(), searchFoods: vi.fn().mockResolvedValue([]), fetchRecentEntries: vi.fn().mockResolvedValue([]),
+    lookupFoodByBarcode: vi.fn(), estimateMealFromPhoto: vi.fn(),
+  }
 })
+vi.mock('../../../../client/src/lib/barcodeScan', () => ({ decodeBarcodeFromFile: vi.fn() }))
+vi.mock('../../../../client/src/lib/imageCapture', () => ({ fileToBase64: vi.fn() }))
 
-import { createLogEntry, searchFoods, fetchRecentEntries } from '../../../../client/src/lib/nutritionApi'
+import { createLogEntry, searchFoods, fetchRecentEntries, lookupFoodByBarcode, estimateMealFromPhoto } from '../../../../client/src/lib/nutritionApi'
+import { decodeBarcodeFromFile } from '../../../../client/src/lib/barcodeScan'
+import { fileToBase64 } from '../../../../client/src/lib/imageCapture'
 const mockCreateLogEntry = createLogEntry as ReturnType<typeof vi.fn>
+const mockLookupFoodByBarcode = lookupFoodByBarcode as ReturnType<typeof vi.fn>
+const mockEstimateMealFromPhoto = estimateMealFromPhoto as ReturnType<typeof vi.fn>
+const mockDecodeBarcodeFromFile = decodeBarcodeFromFile as ReturnType<typeof vi.fn>
+const mockFileToBase64 = fileToBase64 as ReturnType<typeof vi.fn>
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -140,6 +151,20 @@ describe('LogEntrySheet — search and recents', () => {
       vi.useRealTimers()
     }
   })
+
+  it('one-tap re-log from RECENT carries the widened nutrient fields forward, not just the 5 original macros', async () => {
+    const { fetchRecentEntries: mockFetchRecentEntries } = await import('../../../../client/src/lib/nutritionApi')
+    ;(mockFetchRecentEntries as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 1, name: 'Trail mix', quantity: 1, unit: 'handful', calories: 210, protein_g: 6, meal_type: 'lunch', food_id: null, carbs_g: null, fat_g: null, fiber_g: null, logged_at: '', sodium_mg: 45, allergens: JSON.stringify(['tree nuts']) },
+    ])
+    mockCreateLogEntry.mockResolvedValue({ id: 2 })
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.click(await screen.findByText('+ LOG'))
+    await waitFor(() => expect(mockCreateLogEntry).toHaveBeenCalledWith(expect.objectContaining({
+      sodium_mg: 45, allergens: JSON.stringify(['tree nuts']),
+    })))
+  })
 })
 
 describe('LogEntrySheet — selected food', () => {
@@ -243,5 +268,65 @@ describe('LogEntrySheet — selected food', () => {
     rerender(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
     expect(screen.getByPlaceholderText(/what did you eat/i)).toBeInTheDocument()
     expect(screen.queryByText(/LOCKED/)).not.toBeInTheDocument()
+  })
+})
+
+describe('LogEntrySheet — camera capture (#141)', () => {
+  const cheerios = { id: 5, source: 'openfoodfacts', name: 'Cheerios', brand: 'Cheerios', default_qty: 100, default_unit: 'g', calories: 379, protein_g: 6.7, carbs_g: 74, fat_g: 6.7, fiber_g: 10 }
+
+  it('a decoded barcode that matches a saved food selects it, same as a search result', async () => {
+    mockDecodeBarcodeFromFile.mockResolvedValue('0016000275287')
+    mockLookupFoodByBarcode.mockResolvedValue(cheerios)
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+
+    const photo = new File(['fake'], 'barcode.jpg', { type: 'image/jpeg' })
+    await user.upload(screen.getByLabelText('Scan barcode photo'), photo)
+
+    await waitFor(() => expect(mockDecodeBarcodeFromFile).toHaveBeenCalledWith(photo))
+    await waitFor(() => expect(mockLookupFoodByBarcode).toHaveBeenCalledWith('0016000275287'))
+    expect(await screen.findByText('Cheerios')).toBeInTheDocument()
+    expect(screen.getByText(/LOCKED/)).toBeInTheDocument()
+  })
+
+  it('a barcode with no matching food falls back to ad-hoc entry with a toast, not a dead end', async () => {
+    mockDecodeBarcodeFromFile.mockResolvedValue('9999999999999')
+    mockLookupFoodByBarcode.mockResolvedValue(null)
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+
+    const photo = new File(['fake'], 'barcode.jpg', { type: 'image/jpeg' })
+    await user.upload(screen.getByLabelText('Scan barcode photo'), photo)
+
+    await waitFor(() => expect(mockLookupFoodByBarcode).toHaveBeenCalled())
+    // still on the ad-hoc entry view — no food got selected
+    expect(screen.getByPlaceholderText(/what did you eat/i)).toBeInTheDocument()
+  })
+
+  it('a photo with no decodable barcode falls back to ad-hoc entry without calling the lookup API', async () => {
+    mockDecodeBarcodeFromFile.mockResolvedValue(null)
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+
+    const photo = new File(['fake'], 'blurry.jpg', { type: 'image/jpeg' })
+    await user.upload(screen.getByLabelText('Scan barcode photo'), photo)
+
+    await waitFor(() => expect(mockDecodeBarcodeFromFile).toHaveBeenCalled())
+    expect(mockLookupFoodByBarcode).not.toHaveBeenCalled()
+  })
+
+  it('a meal photo pre-fills the ad-hoc name and macros from the AI estimate, without auto-logging it', async () => {
+    mockFileToBase64.mockResolvedValue({ data: 'base64data', mediaType: 'image/jpeg' })
+    mockEstimateMealFromPhoto.mockResolvedValue({ name: 'Burrito bowl', calories: 650, protein_g: 35, carbs_g: 70, fat_g: 22, fiber_g: 8 })
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+
+    const photo = new File(['fake'], 'meal.jpg', { type: 'image/jpeg' })
+    await user.upload(screen.getByLabelText('Scan meal photo'), photo)
+
+    await waitFor(() => expect(mockEstimateMealFromPhoto).toHaveBeenCalledWith('base64data', 'image/jpeg'))
+    expect(await screen.findByDisplayValue('Burrito bowl')).toBeInTheDocument()
+    // never auto-logged — the entry still requires an explicit LOG ENTRY tap
+    expect(mockCreateLogEntry).not.toHaveBeenCalled()
   })
 })

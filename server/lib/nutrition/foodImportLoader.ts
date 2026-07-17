@@ -19,19 +19,43 @@ export function extractRecordsArray(parsed: unknown): unknown[] {
 }
 
 const upsertFood = db.prepare(`
-  INSERT INTO foods (source, source_id, name, brand, default_qty, default_unit, calories, protein_g, carbs_g, fat_g, fiber_g, source_json)
-  VALUES (@source, @source_id, @name, @brand, @default_qty, @default_unit, @calories, @protein_g, @carbs_g, @fat_g, @fiber_g, @source_json)
+  INSERT INTO foods (
+    source, source_id, name, brand, default_qty, default_unit,
+    calories, protein_g, carbs_g, fat_g, fiber_g,
+    sodium_mg, sugar_g, saturated_fat_g, polyunsaturated_fat_g, monounsaturated_fat_g,
+    trans_fat_g, cholesterol_mg, potassium_mg, vitamin_a_mcg, vitamin_c_mg, calcium_mg, iron_mg,
+    source_json
+  )
+  VALUES (
+    @source, @source_id, @name, @brand, @default_qty, @default_unit,
+    @calories, @protein_g, @carbs_g, @fat_g, @fiber_g,
+    @sodium_mg, @sugar_g, @saturated_fat_g, @polyunsaturated_fat_g, @monounsaturated_fat_g,
+    @trans_fat_g, @cholesterol_mg, @potassium_mg, @vitamin_a_mcg, @vitamin_c_mg, @calcium_mg, @iron_mg,
+    @source_json
+  )
   ON CONFLICT(source, source_id) DO UPDATE SET
-    name         = excluded.name,
-    brand        = excluded.brand,
-    default_qty  = excluded.default_qty,
-    default_unit = excluded.default_unit,
-    calories     = excluded.calories,
-    protein_g    = excluded.protein_g,
-    carbs_g      = excluded.carbs_g,
-    fat_g        = excluded.fat_g,
-    fiber_g      = excluded.fiber_g,
-    source_json  = excluded.source_json
+    name                   = excluded.name,
+    brand                  = excluded.brand,
+    default_qty            = excluded.default_qty,
+    default_unit           = excluded.default_unit,
+    calories               = excluded.calories,
+    protein_g              = excluded.protein_g,
+    carbs_g                = excluded.carbs_g,
+    fat_g                  = excluded.fat_g,
+    fiber_g                = excluded.fiber_g,
+    sodium_mg              = excluded.sodium_mg,
+    sugar_g                = excluded.sugar_g,
+    saturated_fat_g        = excluded.saturated_fat_g,
+    polyunsaturated_fat_g  = excluded.polyunsaturated_fat_g,
+    monounsaturated_fat_g  = excluded.monounsaturated_fat_g,
+    trans_fat_g            = excluded.trans_fat_g,
+    cholesterol_mg         = excluded.cholesterol_mg,
+    potassium_mg           = excluded.potassium_mg,
+    vitamin_a_mcg          = excluded.vitamin_a_mcg,
+    vitamin_c_mg           = excluded.vitamin_c_mg,
+    calcium_mg             = excluded.calcium_mg,
+    iron_mg                = excluded.iron_mg,
+    source_json            = excluded.source_json
 `)
 
 function writeRow(row: FoodImportRow): void {

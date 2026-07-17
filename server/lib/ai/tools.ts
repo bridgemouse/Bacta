@@ -13,11 +13,12 @@ const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the healt
 Schema:
   health_snapshots(date TEXT, metric TEXT, source TEXT, value REAL, unit TEXT, source_json TEXT)
   health_activities(date TEXT, activity_id TEXT, source TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
-  food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL)
+  food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, sodium_mg REAL, sugar_g REAL, saturated_fat_g REAL, polyunsaturated_fat_g REAL, monounsaturated_fat_g REAL, trans_fat_g REAL, cholesterol_mg REAL, potassium_mg REAL, vitamin_a_mcg REAL, vitamin_c_mg REAL, calcium_mg REAL, iron_mg REAL, glycemic_index TEXT, custom_nutrients TEXT, allergens TEXT, traces TEXT)
     — a normal table, NOT EAV like health_snapshots. Multiple rows per day (one per logged food).
-  nutrition_targets(id INTEGER, date TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL)
+    — custom_nutrients/allergens/traces are JSON-encoded strings (object / string array); NULL means not tracked for that entry, not zero/empty.
+  nutrition_targets(id INTEGER, date TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, sodium_mg REAL, sugar_g REAL, saturated_fat_g REAL, polyunsaturated_fat_g REAL, monounsaturated_fat_g REAL, trans_fat_g REAL, cholesterol_mg REAL, potassium_mg REAL, vitamin_a_mcg REAL, vitamin_c_mg REAL, calcium_mg REAL, iron_mg REAL)
     — one row per date the targets changed. "Current" target = the row with the latest date <= the date in question.
-  foods(id INTEGER, source TEXT, name TEXT, brand TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, default_qty REAL, default_unit TEXT)
+  foods(id INTEGER, source TEXT, name TEXT, brand TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, sodium_mg REAL, sugar_g REAL, saturated_fat_g REAL, polyunsaturated_fat_g REAL, monounsaturated_fat_g REAL, trans_fat_g REAL, cholesterol_mg REAL, potassium_mg REAL, vitamin_a_mcg REAL, vitamin_c_mg REAL, calcium_mg REAL, iron_mg REAL, glycemic_index TEXT, custom_nutrients TEXT, allergens TEXT, traces TEXT, default_qty REAL, default_unit TEXT)
     — reference/ingredient data, not user logs. Rarely needs querying directly by MX-4.
   mx4_briefings(section TEXT, content_json TEXT, generated_at TEXT, model TEXT)
     — section values: 'recovery', 'sleep', 'training', 'nutrition', 'home'

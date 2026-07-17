@@ -122,6 +122,41 @@ export function migrate() {
     }
   }
 
+  // Widen tracked nutrients to SparkyFitness parity (#140) — sub-macro fat components,
+  // sodium/sugar/cholesterol/potassium, key vitamins/minerals, glycemic index, and open
+  // JSON escape hatches for custom nutrients/allergens/traces. Applied uniformly across
+  // all four nutrient-bearing tables (mirrors how the original 5 macro columns already
+  // exist on all four), even though not every field is meaningful on every table —
+  // uniformity keeps the API's per-table handling mechanical instead of table-special-cased.
+  const NEW_NUTRIENT_COLUMNS: Array<[string, string]> = [
+    ['sodium_mg', 'REAL'],
+    ['sugar_g', 'REAL'],
+    ['saturated_fat_g', 'REAL'],
+    ['polyunsaturated_fat_g', 'REAL'],
+    ['monounsaturated_fat_g', 'REAL'],
+    ['trans_fat_g', 'REAL'],
+    ['cholesterol_mg', 'REAL'],
+    ['potassium_mg', 'REAL'],
+    ['vitamin_a_mcg', 'REAL'],
+    ['vitamin_c_mg', 'REAL'],
+    ['calcium_mg', 'REAL'],
+    ['iron_mg', 'REAL'],
+    ['glycemic_index', 'TEXT'],
+    ['custom_nutrients', 'TEXT'],
+    ['allergens', 'TEXT'],
+    ['traces', 'TEXT'],
+  ]
+  for (const table of ['foods', 'food_log_entries', 'nutrition_targets', 'recipe_ingredients']) {
+    for (const [col, type] of NEW_NUTRIENT_COLUMNS) {
+      try {
+        db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`)
+      } catch (e: unknown) {
+        if (!(e instanceof Error) || !e.message.includes('duplicate column name')) throw e
+        // column already exists, idempotent
+      }
+    }
+  }
+
   initSettings()
 
   console.log('[db] migrations complete')

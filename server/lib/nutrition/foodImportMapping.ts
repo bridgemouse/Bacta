@@ -56,6 +56,18 @@ export interface FoodImportRow {
   carbs_g: number | null
   fat_g: number | null
   fiber_g: number | null
+  sodium_mg: number | null
+  sugar_g: number | null
+  saturated_fat_g: number | null
+  polyunsaturated_fat_g: number | null
+  monounsaturated_fat_g: number | null
+  trans_fat_g: number | null
+  cholesterol_mg: number | null
+  potassium_mg: number | null
+  vitamin_a_mcg: number | null
+  vitamin_c_mg: number | null
+  calcium_mg: number | null
+  iron_mg: number | null
   source_json: string
 }
 
@@ -68,6 +80,26 @@ const USDA_NUTRIENT_CODES = {
   carbs_g: ['205'],
   fat_g: ['204'],
   fiber_g: ['291', '293'],
+} as const
+
+// Widened nutrient set (#140) — verified live 2026-07-15 against real FDC records
+// (fdcId 173944 "Bananas, raw", SR Legacy, and fdcId 2058595 "MARGARINE", Branded, for
+// trans fat 605 which the banana record reports as an explicit 0.0 rather than omitting).
+// USDA Foundation/SR Legacy data has no glycemic-index/allergen/traces concept — those
+// three stay unmapped here and remain NULL for USDA-sourced rows.
+const USDA_WIDENED_NUTRIENT_CODES = {
+  sodium_mg: ['307'],
+  sugar_g: ['269'],
+  saturated_fat_g: ['606'],
+  polyunsaturated_fat_g: ['646'],
+  monounsaturated_fat_g: ['645'],
+  trans_fat_g: ['605'],
+  cholesterol_mg: ['601'],
+  potassium_mg: ['306'],
+  vitamin_a_mcg: ['320'],
+  vitamin_c_mg: ['401'],
+  calcium_mg: ['301'],
+  iron_mg: ['303'],
 } as const
 
 function findUsdaAmount(nutrients: UsdaFoodNutrient[], codes: readonly string[]): number | null {
@@ -103,6 +135,18 @@ export function mapUsdaFoodToRow(record: UsdaFoodRecord | null | undefined): Foo
     carbs_g: findUsdaAmount(nutrients, USDA_NUTRIENT_CODES.carbs_g),
     fat_g: findUsdaAmount(nutrients, USDA_NUTRIENT_CODES.fat_g),
     fiber_g: findUsdaAmount(nutrients, USDA_NUTRIENT_CODES.fiber_g),
+    sodium_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.sodium_mg),
+    sugar_g: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.sugar_g),
+    saturated_fat_g: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.saturated_fat_g),
+    polyunsaturated_fat_g: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.polyunsaturated_fat_g),
+    monounsaturated_fat_g: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.monounsaturated_fat_g),
+    trans_fat_g: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.trans_fat_g),
+    cholesterol_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.cholesterol_mg),
+    potassium_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.potassium_mg),
+    vitamin_a_mcg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.vitamin_a_mcg),
+    vitamin_c_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.vitamin_c_mg),
+    calcium_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.calcium_mg),
+    iron_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.iron_mg),
     source_json: JSON.stringify(record),
   }
 
@@ -149,6 +193,20 @@ export function mapOffProductToRow(record: OffProductRecord): FoodImportRow | nu
     carbs_g: numberOrNull(nutriments['carbohydrates_100g']),
     fat_g: numberOrNull(nutriments['fat_100g']),
     fiber_g: numberOrNull(nutriments['fiber_100g']),
+    // Open Food Facts mapping is not widened in #140 (scope limited to mapUsdaFoodToRow
+    // per the issue) — these stay null for OFF-sourced rows until a follow-up extends this.
+    sodium_mg: null,
+    sugar_g: null,
+    saturated_fat_g: null,
+    polyunsaturated_fat_g: null,
+    monounsaturated_fat_g: null,
+    trans_fat_g: null,
+    cholesterol_mg: null,
+    potassium_mg: null,
+    vitamin_a_mcg: null,
+    vitamin_c_mg: null,
+    calcium_mg: null,
+    iron_mg: null,
     source_json: JSON.stringify(record),
   }
 }

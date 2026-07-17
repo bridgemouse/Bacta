@@ -9,6 +9,14 @@ function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
 }
 
+// Appending a newly-saved food/recipe to local state (instead of a full reload) skips the
+// server's `ORDER BY name` — without re-sorting client-side, the new item would always
+// land at the end of the list regardless of its name. Plain `<`/`>` (not localeCompare)
+// to match SQLite's default BINARY collation, not locale-aware ordering.
+function sortByName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+}
+
 const A = SECTION_ACCENTS.nutrition
 
 const inputStyle = {
@@ -274,11 +282,11 @@ export function NutritionLibrary() {
   }
 
   if (mode === 'new-food') {
-    return <NewFoodForm onDone={food => { setFoods(fs => [...fs, food]); setMode('list') }} onBack={() => setMode('list')} />
+    return <NewFoodForm onDone={food => { setFoods(fs => sortByName([...fs, food])); setMode('list') }} onBack={() => setMode('list')} />
   }
 
   if (mode === 'new-recipe') {
-    return <NewRecipeForm foods={foods} onDone={recipe => { setRecipes(rs => [...rs, recipe]); setMode('list') }} onBack={() => setMode('list')} />
+    return <NewRecipeForm foods={foods} onDone={recipe => { setRecipes(rs => sortByName([...rs, recipe])); setMode('list') }} onBack={() => setMode('list')} />
   }
 
   return (

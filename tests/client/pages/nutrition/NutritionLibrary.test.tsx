@@ -116,6 +116,25 @@ describe('NutritionLibrary — new food', () => {
     expect(screen.getByText('Test Oats')).toBeInTheDocument() // original list entry still present
     expect(mockSearchFoods).not.toHaveBeenCalled() // no re-fetch of the whole list
   })
+
+  it('inserts the appended food in alphabetical order, not always at the end of the list', async () => {
+    // "Apple Slices" sorts before "Test Oats" — a naive append would put it after
+    mockCreateFood.mockResolvedValue({ id: 5, source: 'custom', name: 'Apple Slices', brand: null, default_qty: 1, default_unit: 'each', calories: 95, protein_g: 0.5, carbs_g: 25, fat_g: 0.3, fiber_g: 4.4 })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+
+    await user.click(screen.getByText('+ NEW FOOD'))
+    await user.type(screen.getByLabelText('Food name'), 'Apple Slices')
+    await user.type(screen.getByLabelText('Default quantity'), '1')
+    await user.type(screen.getByLabelText('Default unit'), 'each')
+    await user.click(screen.getByText('SAVE FOOD — SEARCHABLE IMMEDIATELY'))
+
+    const apple = await screen.findByText('Apple Slices')
+    const oats = screen.getByText('Test Oats')
+    // DOCUMENT_POSITION_FOLLOWING means `oats` comes after `apple` in the DOM
+    expect(apple.compareDocumentPosition(oats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })
 
 describe('NutritionLibrary — new recipe', () => {
@@ -211,6 +230,28 @@ describe('NutritionLibrary — new recipe', () => {
     expect(await screen.findByText('Oat Bowl')).toBeInTheDocument()
     expect(screen.getByText('Protein Smoothie')).toBeInTheDocument() // original list entry still present
     expect(mockFetchRecipes).not.toHaveBeenCalled() // no re-fetch of the whole list
+  })
+
+  it('inserts the appended recipe in alphabetical order, not always at the end of the list', async () => {
+    // "Oat Bowl" sorts before "Protein Smoothie" — a naive append would put it after
+    mockCreateRecipe.mockResolvedValue({
+      id: 3, name: 'Oat Bowl', servings: 2,
+      food: { id: 10, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 },
+    })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Oat Bowl')
+    await user.type(screen.getByLabelText('Servings'), '2')
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Oat')
+    await user.click(await screen.findByText('Test Oats'))
+    await user.click(screen.getByText('SAVE RECIPE'))
+
+    const oatBowl = await screen.findByText('Oat Bowl')
+    const smoothie = screen.getByText('Protein Smoothie')
+    expect(oatBowl.compareDocumentPosition(smoothie) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('SAVE RECIPE is blocked if servings is not filled in', async () => {

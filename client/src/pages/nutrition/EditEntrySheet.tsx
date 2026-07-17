@@ -5,14 +5,14 @@ import { hexA } from '../../lib/hexA'
 import { updateLogEntry, deleteLogEntry, createLogEntry, entryToLogInput, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
 import { useToast } from '../../lib/ToastContext'
+import { MacroGridInputs, MACRO_KEYS, type MacroKey } from './MacroGridInputs'
+import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, payloadToExtendedNutrients, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
 }
 
 const A = SECTION_ACCENTS.nutrition
-const MACRO_KEYS = ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const
-type MacroKey = typeof MACRO_KEYS[number]
 
 const inputStyle = {
   width: '100%', boxSizing: 'border-box' as const, background: COLORS.base,
@@ -34,6 +34,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
   const [qty, setQty] = useState('')
   const [unit, setUnit] = useState('')
   const [macros, setMacros] = useState<Record<MacroKey, string>>({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
+  const [extended, setExtended] = useState<ExtendedNutrients>(emptyExtendedNutrients())
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
         fat_g: entry.fat_g == null ? '' : String(entry.fat_g),
         fiber_g: entry.fiber_g == null ? '' : String(entry.fiber_g),
       })
+      setExtended(payloadToExtendedNutrients(entry))
     }
   }, [entry])
 
@@ -66,6 +68,19 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
       for (const key of MACRO_KEYS) {
         const newVal = macros[key] === '' ? null : Number(macros[key])
         if (newVal !== currentEntry[key]) updates[key] = newVal
+      }
+      // Compare against the entry's current widened fields round-tripped through the same
+      // parse/format functions (not the raw entry) — currentEntry.allergens is a JSON-string
+      // from the API, but extendedNutrientsToPayload produces a plain array, so a direct
+      // comparison would always look "changed" even when nothing was edited. Sending every
+      // widened field on every save (matching the pre-fix behavior here) would also stop the
+      // server from rescaling them on a quantity change, since it only rescales macros that
+      // are absent from the request body.
+      const originalExtendedPayload = extendedNutrientsToPayload(payloadToExtendedNutrients(currentEntry))
+      const newExtendedPayload = extendedNutrientsToPayload(extended)
+      const updatesRecord = updates as Record<string, unknown>
+      for (const [key, value] of Object.entries(newExtendedPayload)) {
+        if (JSON.stringify(value) !== JSON.stringify(originalExtendedPayload[key])) updatesRecord[key] = value
       }
       await updateLogEntry(currentEntry.id, updates)
       onSaved(); onClose()
@@ -117,13 +132,8 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
               <input aria-label="Unit" value={unit} onChange={e => setUnit(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             )}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
-            {MACRO_KEYS.map(key => (
-              <input key={key} aria-label={key} placeholder="—" value={macros[key]}
-                onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
-                style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
-            ))}
-          </div>
+          <MacroGridInputs values={macros} onChange={(key, value) => setMacros(m => ({ ...m, [key]: value }))} ariaLabel={key => key} />
+          <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} />
           {!isToday && (
             <button onClick={handleCopyToToday} style={{
               width: '100%', padding: '9px 0', marginBottom: 10, borderRadius: 8,

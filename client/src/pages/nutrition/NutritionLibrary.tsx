@@ -11,6 +11,14 @@ function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
 }
 
+// Appending a newly-saved food/recipe to local state (instead of a full reload) skips the
+// server's `ORDER BY name` — without re-sorting client-side, the new item would always
+// land at the end of the list regardless of its name. Plain `<`/`>` (not localeCompare)
+// to match SQLite's default BINARY collation, not locale-aware ordering.
+function sortByName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+}
+
 const A = SECTION_ACCENTS.nutrition
 
 const inputStyle = {
@@ -24,7 +32,7 @@ const accentButton = {
   background: A, color: COLORS.base, fontFamily: FONT_MONO, fontSize: 10, fontWeight: 700,
 }
 
-function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack: () => void }) {
   const { showToast } = useToast()
   const [name, setName] = useState('')
   const [qty, setQty] = useState('')
@@ -40,7 +48,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
     if (!(Number(qty) > 0)) { showToast('Default quantity must be greater than 0.', 'error'); return }
     setSubmitting(true)
     try {
-      await createFood({
+      const food = await createFood({
         name, default_qty: Number(qty), default_unit: unit,
         calories: macros.calories === '' ? undefined : Number(macros.calories),
         protein_g: macros.protein_g === '' ? undefined : Number(macros.protein_g),
@@ -49,7 +57,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: () => void; onBack: () => voi
         fiber_g: macros.fiber_g === '' ? undefined : Number(macros.fiber_g),
         ...extendedNutrientsToPayload(extended),
       })
-      onDone()
+      onDone(food)
     } catch (err) {
       showToast(errorMessage(err, 'Could not save food.'), 'error')
     } finally {
@@ -119,7 +127,7 @@ function toIngredientRows(ingredients: RecipeDetail['ingredients'], foods: Food[
   }))
 }
 
-function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; editing?: RecipeDetail; onDone: () => void; onBack: () => void }) {
+function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; editing?: RecipeDetail; onDone: (recipe: Recipe) => void; onBack: () => void }) {
   const { showToast } = useToast()
   const [name, setName] = useState(editing?.name ?? '')
   const [servings, setServings] = useState(editing ? String(editing.servings) : '')
@@ -168,12 +176,13 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
           carbs_g: i.carbs_g ?? undefined, fat_g: i.fat_g ?? undefined, fiber_g: i.fiber_g ?? undefined,
         })),
       }
-      if (editing) {
-        await updateRecipe(editing.id, payload)
-      } else {
-        await createRecipe(payload)
-      }
-      onDone()
+      const result = editing ? await updateRecipe(editing.id, payload) : await createRecipe(payload)
+      onDone({
+        id: result.id, name: result.name, servings: result.servings, food_id: result.food.id,
+        ingredient_count: ingredients.length,
+        per_serving_calories: result.food.calories, per_serving_protein_g: result.food.protein_g,
+        per_serving_carbs_g: result.food.carbs_g, per_serving_fat_g: result.food.fat_g, per_serving_fiber_g: result.food.fiber_g,
+      })
     } catch (err) {
       showToast(errorMessage(err, editing ? 'Could not update recipe.' : 'Could not save recipe.'), 'error')
     } finally {
@@ -293,15 +302,18 @@ export function NutritionLibrary() {
   }
 
   if (mode === 'new-food') {
-    return <NewFoodForm onDone={() => { setMode('list'); reload() }} onBack={() => setMode('list')} />
+    return <NewFoodForm onDone={food => { setFoods(fs => sortByName([...fs, food])); setMode('list') }} onBack={() => setMode('list')} />
   }
 
   if (mode === 'new-recipe') {
-    return <NewRecipeForm foods={foods} onDone={() => { setMode('list'); reload() }} onBack={() => setMode('list')} />
+    return <NewRecipeForm foods={foods} onDone={recipe => { setRecipes(rs => sortByName([...rs, recipe])); setMode('list') }} onBack={() => setMode('list')} />
   }
 
   if (mode === 'edit-recipe' && editingRecipe) {
-    return <NewRecipeForm foods={foods} editing={editingRecipe} onDone={() => { setMode('list'); setEditingRecipe(null); reload() }} onBack={() => { setMode('list'); setEditingRecipe(null) }} />
+    return <NewRecipeForm foods={foods} editing={editingRecipe} onDone={recipe => {
+      setRecipes(rs => sortByName(rs.map(r => r.id === recipe.id ? recipe : r)))
+      setMode('list'); setEditingRecipe(null)
+    }} onBack={() => { setMode('list'); setEditingRecipe(null) }} />
   }
 
   return (

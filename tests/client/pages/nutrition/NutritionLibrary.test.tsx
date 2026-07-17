@@ -100,6 +100,44 @@ describe('NutritionLibrary — new food', () => {
     expect(mockCreateFood).not.toHaveBeenCalled()
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument()
   })
+
+  it('appends the created food to the list directly, with no extra searchFoods call', async () => {
+    const newFood = { id: 5, source: 'custom', name: 'Greek Yogurt', brand: null, default_qty: 170, default_unit: 'g', calories: 100, protein_g: 17, carbs_g: 6, fat_g: 0, fiber_g: 0 }
+    mockCreateFood.mockResolvedValue(newFood)
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    mockSearchFoods.mockClear() // only the initial list-mount call should be counted so far
+
+    await user.click(screen.getByText('+ NEW FOOD'))
+    await user.type(screen.getByLabelText('Food name'), 'Greek Yogurt')
+    await user.type(screen.getByLabelText('Default quantity'), '170')
+    await user.type(screen.getByLabelText('Default unit'), 'g')
+    await user.click(screen.getByText('SAVE FOOD — SEARCHABLE IMMEDIATELY'))
+
+    expect(await screen.findByText('Greek Yogurt')).toBeInTheDocument()
+    expect(screen.getByText('Test Oats')).toBeInTheDocument() // original list entry still present
+    expect(mockSearchFoods).not.toHaveBeenCalled() // no re-fetch of the whole list
+  })
+
+  it('inserts the appended food in alphabetical order, not always at the end of the list', async () => {
+    // "Apple Slices" sorts before "Test Oats" — a naive append would put it after
+    mockCreateFood.mockResolvedValue({ id: 5, source: 'custom', name: 'Apple Slices', brand: null, default_qty: 1, default_unit: 'each', calories: 95, protein_g: 0.5, carbs_g: 25, fat_g: 0.3, fiber_g: 4.4 })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+
+    await user.click(screen.getByText('+ NEW FOOD'))
+    await user.type(screen.getByLabelText('Food name'), 'Apple Slices')
+    await user.type(screen.getByLabelText('Default quantity'), '1')
+    await user.type(screen.getByLabelText('Default unit'), 'each')
+    await user.click(screen.getByText('SAVE FOOD — SEARCHABLE IMMEDIATELY'))
+
+    const apple = await screen.findByText('Apple Slices')
+    const oats = screen.getByText('Test Oats')
+    // DOCUMENT_POSITION_FOLLOWING means `oats` comes after `apple` in the DOM
+    expect(apple.compareDocumentPosition(oats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })
 
 describe('NutritionLibrary — new recipe', () => {
@@ -173,6 +211,50 @@ describe('NutritionLibrary — new recipe', () => {
       }],
     }))
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument() // back on the list screen
+  })
+
+  it('appends the created recipe to the list directly, with no extra fetchRecipes call', async () => {
+    mockCreateRecipe.mockResolvedValue({
+      id: 3, name: 'Oat Bowl', servings: 2,
+      food: { id: 10, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 },
+    })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    mockFetchRecipes.mockClear() // only the initial list-mount call should be counted so far
+
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Oat Bowl')
+    await user.type(screen.getByLabelText('Servings'), '2')
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Oat')
+    await user.click(await screen.findByText('Test Oats'))
+    await user.click(screen.getByText('SAVE RECIPE'))
+
+    expect(await screen.findByText('Oat Bowl')).toBeInTheDocument()
+    expect(screen.getByText('Protein Smoothie')).toBeInTheDocument() // original list entry still present
+    expect(mockFetchRecipes).not.toHaveBeenCalled() // no re-fetch of the whole list
+  })
+
+  it('inserts the appended recipe in alphabetical order, not always at the end of the list', async () => {
+    // "Oat Bowl" sorts before "Protein Smoothie" — a naive append would put it after
+    mockCreateRecipe.mockResolvedValue({
+      id: 3, name: 'Oat Bowl', servings: 2,
+      food: { id: 10, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 },
+    })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    await user.type(screen.getByLabelText('Recipe name'), 'Oat Bowl')
+    await user.type(screen.getByLabelText('Servings'), '2')
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Oat')
+    await user.click(await screen.findByText('Test Oats'))
+    await user.click(screen.getByText('SAVE RECIPE'))
+
+    const oatBowl = await screen.findByText('Oat Bowl')
+    const smoothie = screen.getByText('Protein Smoothie')
+    expect(oatBowl.compareDocumentPosition(smoothie) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('SAVE RECIPE is blocked if servings is not filled in', async () => {
@@ -310,6 +392,25 @@ describe('NutritionLibrary — edit recipe', () => {
       }],
     }))
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument() // back on the list screen
+  })
+
+  it('SAVE CHANGES updates the recipe in the list directly, with no full re-fetch', async () => {
+    mockUpdateRecipe.mockResolvedValue({
+      id: 2, name: 'Protein Smoothie', servings: 2,
+      food: { id: 9, calories: 250, protein_g: 30, carbs_g: 20, fat_g: 5, fiber_g: 2 },
+    })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    mockFetchRecipes.mockClear() // only the initial list-mount call should be counted so far
+
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+    await screen.findByDisplayValue('Protein Smoothie')
+    await user.click(screen.getByText('SAVE CHANGES'))
+
+    // the prefilled edit form has 1 ingredient (Test Oats, per the beforeEach mock above)
+    expect(await screen.findByText('1 ingredients · 2 servings · 250 kcal / serving')).toBeInTheDocument()
+    expect(mockFetchRecipes).not.toHaveBeenCalled() // no re-fetch of the whole list
   })
 
   it('the "Add from saved foods" search excludes the recipe\'s own materialized food while editing', async () => {

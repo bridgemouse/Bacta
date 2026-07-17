@@ -615,6 +615,15 @@ describe('Nutrition API', () => {
       expect(sandwichEntries[0].id).toBe(secondId) // the one with the higher id (inserted second)
       expect(sandwichEntries[0].calories).toBe(480) // and thus the correct calories value
     })
+
+    it('the recent-entries sort (logged_at DESC, id DESC) is covered by an index, not a full-table temp-b-tree sort', async () => {
+      const { default: db } = await import('../../server/db/client')
+      const plan = db.prepare(
+        'EXPLAIN QUERY PLAN SELECT * FROM food_log_entries ORDER BY logged_at DESC, id DESC LIMIT 200'
+      ).all() as Array<{ detail: string }>
+      const planText = plan.map(p => p.detail).join(' | ')
+      expect(planText).not.toMatch(/USE TEMP B-TREE FOR ORDER BY/i)
+    })
   })
 
   describe('Camera-based logging (#141)', () => {

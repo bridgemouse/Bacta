@@ -14,6 +14,8 @@ import {
   createRecipe,
   fetchRecipes,
   deleteRecipe,
+  lookupFoodByBarcode,
+  estimateMealFromPhoto,
   widenedNutrientFields,
   fetchRecipe,
   updateRecipe,
@@ -194,6 +196,34 @@ describe('nutritionApi', () => {
       body: JSON.stringify(input)
     }))
     expect(result.food.id).toBe(2)
+  })
+
+  it('lookupFoodByBarcode GETs the barcode lookup route and returns the matched food', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ id: 5, name: 'Cheerios' }) })
+    const result = await lookupFoodByBarcode('0016000275287')
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/foods/barcode/0016000275287')
+    expect(result).toMatchObject({ name: 'Cheerios' })
+  })
+
+  it('lookupFoodByBarcode returns null (not a throw) on a 404 — no match, caller falls back to ad-hoc', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 404 })
+    const result = await lookupFoodByBarcode('9999999999999')
+    expect(result).toBeNull()
+  })
+
+  it('estimateMealFromPhoto POSTs the image and returns the parsed macro estimate', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ name: 'Burrito bowl', calories: 650 }) })
+    const result = await estimateMealFromPhoto('base64data', 'image/jpeg')
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/scan/meal-photo', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ image: 'base64data', mediaType: 'image/jpeg' }),
+    }))
+    expect(result).toMatchObject({ name: 'Burrito bowl', calories: 650 })
+  })
+
+  it('estimateMealFromPhoto throws with the server error message on failure', async () => {
+    mockFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'Could not estimate meal from photo' }) })
+    await expect(estimateMealFromPhoto('base64data', 'image/jpeg')).rejects.toThrow('Could not estimate meal from photo')
   })
 
   it('widenedNutrientFields carries the widened nutrient set forward from a FoodLogEntry, defaulting missing fields to null', () => {

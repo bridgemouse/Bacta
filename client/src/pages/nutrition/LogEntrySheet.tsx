@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { createLogEntry, searchFoods, fetchRecentEntries, widenedNutrientFields, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
+import { createLogEntry, searchFoods, fetchRecentEntries, lookupFoodByBarcode, estimateMealFromPhoto, widenedNutrientFields, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
 import { useToast } from '../../lib/ToastContext'
+import { decodeBarcodeFromFile } from '../../lib/barcodeScan'
+import { fileToBase64 } from '../../lib/imageCapture'
 import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -135,6 +137,51 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
     }
   }
 
+  // Still-image barcode capture (#141) — the input's own native camera UI hands back a
+  // photo, never a live video feed. A decoded code that matches a saved food selects it
+  // exactly like a search result; no match falls back to ad-hoc entry (never a dead end).
+  async function handleBarcodeFile(file: File) {
+    try {
+      const code = await decodeBarcodeFromFile(file)
+      if (!code) {
+        showToast('No barcode detected in that photo — log it as ad-hoc below.', 'info')
+        return
+      }
+      const food = await lookupFoodByBarcode(code)
+      if (!food) {
+        showToast('No saved food matches this barcode — log it as ad-hoc below.', 'info')
+        return
+      }
+      setSelectedFood(food)
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not read that barcode photo.'), 'error')
+    }
+  }
+
+  // Still-image meal recognition (#141) — pre-fills the ad-hoc fields with the AI's
+  // estimate; the user still has to review/edit and tap LOG ENTRY, same as any ad-hoc
+  // entry. Never calls createLogEntry directly — no auto-logging.
+  async function handleMealPhotoFile(file: File) {
+    try {
+      const { data, mediaType } = await fileToBase64(file)
+      const estimate = await estimateMealFromPhoto(data, mediaType)
+      setSelectedFood(null)
+      setName(estimate.name)
+      setUnit('serving')
+      if (qty === '') setQty('1')
+      setMacros({
+        calories: estimate.calories == null ? '' : String(estimate.calories),
+        protein_g: estimate.protein_g == null ? '' : String(estimate.protein_g),
+        carbs_g: estimate.carbs_g == null ? '' : String(estimate.carbs_g),
+        fat_g: estimate.fat_g == null ? '' : String(estimate.fat_g),
+        fiber_g: estimate.fiber_g == null ? '' : String(estimate.fiber_g),
+      })
+      showToast('AI estimate — review and adjust before logging.', 'info')
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not estimate that meal photo.'), 'error')
+    }
+  }
+
   return (
     <Sheet open={open} onClose={onClose}>
       <SheetShell accent={A} onClose={onClose}>
@@ -152,6 +199,25 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
 
           <input placeholder="Search saved foods…" value={query} onChange={e => setQuery(e.target.value)}
             style={{ ...inputStyle, marginBottom: 10 }} />
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <label style={{
+              flex: 1, textAlign: 'center', padding: '8px 0', borderRadius: 6, cursor: 'pointer',
+              border: `1px dashed ${hexA(A, 0.4)}`, color: A, fontFamily: FONT_MONO, fontSize: 9.5,
+            }}>
+              📷 SCAN BARCODE
+              <input type="file" accept="image/*" capture="environment" aria-label="Scan barcode photo" style={{ display: 'none' }}
+                onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) handleBarcodeFile(file) }} />
+            </label>
+            <label style={{
+              flex: 1, textAlign: 'center', padding: '8px 0', borderRadius: 6, cursor: 'pointer',
+              border: `1px dashed ${hexA(A, 0.4)}`, color: A, fontFamily: FONT_MONO, fontSize: 9.5,
+            }}>
+              📷 SCAN MEAL PHOTO
+              <input type="file" accept="image/*" capture="environment" aria-label="Scan meal photo" style={{ display: 'none' }}
+                onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) handleMealPhotoFile(file) }} />
+            </label>
+          </div>
 
           {!query && recents.length === 0 && (
             <div style={{ fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted, marginBottom: 12, lineHeight: 1.4 }}>

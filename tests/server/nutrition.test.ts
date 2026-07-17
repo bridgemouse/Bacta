@@ -1,7 +1,15 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import request from 'supertest'
 
 process.env.DB_PATH = ':memory:'
+
+vi.mock('ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('ai')>()
+  return {
+    ...actual,
+    generateObject: vi.fn(),
+  }
+})
 
 describe('Nutrition API', () => {
   beforeAll(async () => {
@@ -606,6 +614,68 @@ describe('Nutrition API', () => {
       expect(sandwichEntries.length).toBe(1) // deduped to exactly one
       expect(sandwichEntries[0].id).toBe(secondId) // the one with the higher id (inserted second)
       expect(sandwichEntries[0].calories).toBe(480) // and thus the correct calories value
+    })
+  })
+
+  describe('Camera-based logging (#141)', () => {
+    it('GET /api/nutrition/foods/barcode/:code finds a food previously imported from Open Food Facts by its barcode', async () => {
+      const { default: db } = await import('../../server/db/client')
+      db.prepare(`
+        INSERT INTO foods (source, source_id, name, default_qty, default_unit, calories)
+        VALUES ('openfoodfacts', '0016000275287', 'Cheerios', 100, 'g', 379)
+      `).run()
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/foods/barcode/0016000275287')
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ name: 'Cheerios', source: 'openfoodfacts' })
+    })
+
+    it('GET /api/nutrition/foods/barcode/:code returns 404 for an unrecognized barcode, so the client can fall back to ad-hoc entry', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/foods/barcode/9999999999999')
+      expect(res.status).toBe(404)
+    })
+
+    it('POST /api/nutrition/scan/meal-photo returns a macro estimate without creating a log entry — the user must still confirm and POST /log separately', async () => {
+      const { generateObject } = await import('ai')
+      vi.mocked(generateObject).mockResolvedValue({
+        object: { name: 'Burrito bowl', calories: 650, protein_g: 35, carbs_g: 70, fat_g: 22, fiber_g: 8 },
+      } as any)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/scan/meal-photo').send({ image: 'base64data', mediaType: 'image/jpeg' })
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ name: 'Burrito bowl', calories: 650 })
+
+      const { default: db } = await import('../../server/db/client')
+      const count = db.prepare("SELECT COUNT(*) as n FROM food_log_entries WHERE name = 'Burrito bowl'").get() as { n: number }
+      expect(count.n).toBe(0) // never auto-logged
+    })
+
+    it('POST /api/nutrition/scan/meal-photo returns 400 (not a raw 500) when the vision model call fails', async () => {
+      const { generateObject } = await import('ai')
+      vi.mocked(generateObject).mockRejectedValue(new Error('model unavailable'))
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/scan/meal-photo').send({ image: 'base64data', mediaType: 'image/jpeg' })
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBeDefined()
+    })
+
+    it('POST /api/nutrition/scan/meal-photo accepts a real phone-camera-sized photo — a base64 payload well over the old 1mb JSON body limit', async () => {
+      const { generateObject } = await import('ai')
+      vi.mocked(generateObject).mockResolvedValue({
+        object: { name: 'Burrito bowl', calories: 650, protein_g: 35, carbs_g: 70, fat_g: 22, fiber_g: 8 },
+      } as any)
+
+      // ~3MB of base64 — comfortably in range for an actual iPhone camera photo, well
+      // over the 1mb limit that would previously reject this with a 413 before the
+      // route handler ever ran.
+      const bigImage = 'A'.repeat(3 * 1024 * 1024)
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/scan/meal-photo').send({ image: bigImage, mediaType: 'image/jpeg' })
+      expect(res.status).toBe(200)
     })
   })
 

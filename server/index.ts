@@ -63,7 +63,11 @@ app.use(helmet({
   },
 }))
 
-app.use(express.json({ limit: '1mb' }))
+// 10mb, not 1mb — POST /api/nutrition/scan/meal-photo (#141) sends a base64-encoded
+// phone camera photo, which routinely runs several MB before base64's ~33% overhead;
+// the old 1mb limit would reject nearly every real photo with a 413 before the route
+// handler ever ran.
+app.use(express.json({ limit: '10mb' }))
 
 // Throttle the expensive / abusable endpoints (AI runs, chat, Garmin sync,
 // poll/force). Disabled under tests so the suite isn't rate-limited.
@@ -106,6 +110,11 @@ app.use('/api/garmin', requireAuth, garminRouter)
 app.use('/api/manual', requireAuth, manualRouter)
 app.use('/api/insights', requireAuth, insightsRouter)
 app.use('/api/bloodwork', requireAuth, bloodworkRouter)
+// scan/meal-photo (#141) calls the same AI vision model as MX-4/poll — needs the same
+// throttle those get, since it's just as expensive/abusable; registered before the
+// broader nutritionRouter mount so it applies only to this one subpath, not every
+// nutrition route.
+app.use('/api/nutrition/scan', requireAuth, aiLimiter)
 app.use('/api/nutrition', requireAuth, nutritionRouter)
 app.use('/api/poll', requireAuth, aiLimiter, pollRouter)
 app.use('/api/mx4', requireAuth, aiLimiter, mx4Router)

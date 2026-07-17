@@ -544,5 +544,20 @@ describe('Nutrition API', () => {
       expect(res.status).toBe(400)
       expect(res.body.error).toBeDefined()
     })
+
+    it('POST /api/nutrition/scan/meal-photo accepts a real phone-camera-sized photo — a base64 payload well over the old 1mb JSON body limit', async () => {
+      const { generateObject } = await import('ai')
+      vi.mocked(generateObject).mockResolvedValue({
+        object: { name: 'Burrito bowl', calories: 650, protein_g: 35, carbs_g: 70, fat_g: 22, fiber_g: 8 },
+      } as any)
+
+      // ~3MB of base64 — comfortably in range for an actual iPhone camera photo, well
+      // over the 1mb limit that would previously reject this with a 413 before the
+      // route handler ever ran.
+      const bigImage = 'A'.repeat(3 * 1024 * 1024)
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/scan/meal-photo').send({ image: bigImage, mediaType: 'image/jpeg' })
+      expect(res.status).toBe(200)
+    })
   })
 })

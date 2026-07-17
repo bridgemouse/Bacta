@@ -182,13 +182,13 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
             </div>
           )}
 
-          {query && results.length === 0 && (
+          {debouncedQuery && results.length === 0 && (
             <div style={{ border: `1px dashed ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 12, fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted }}>
-              No match for &quot;{query}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
+              No match for &quot;{debouncedQuery}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
             </div>
           )}
 
-          {query && results.length > 0 && (
+          {debouncedQuery && results.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               {results.map(f => (
                 <button key={f.id} onClick={() => { setSelectedFood(f); setQuery('') }} style={{

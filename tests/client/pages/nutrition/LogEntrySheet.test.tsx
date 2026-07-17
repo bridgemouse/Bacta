@@ -96,6 +96,26 @@ describe('LogEntrySheet — search and recents', () => {
     expect(await screen.findByText(/No match for "zzz"/)).toBeInTheDocument()
   })
 
+  it('does not flash a "No match" hint during the debounce window, before the search has actually run', async () => {
+    vi.useFakeTimers()
+    try {
+      const { searchFoods: mockSearchFoods } = await import('../../../../client/src/lib/nutritionApi')
+      ;(mockSearchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([])
+      render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+      const input = screen.getByPlaceholderText('Search saved foods…')
+
+      act(() => { fireEvent.change(input, { target: { value: 'zzz' } }) })
+      // still inside the 280ms debounce window — searchFoods hasn't even been called yet,
+      // so a "No match" hint here would be premature, not a real result
+      expect(screen.queryByText(/No match for/)).not.toBeInTheDocument()
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+      expect(screen.getByText(/No match for "zzz"/)).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('debounces rapid typing into exactly one searchFoods call per pause, not one per keystroke', async () => {
     vi.useFakeTimers()
     try {

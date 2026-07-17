@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Rail } from '../../components/viz/Rail'
 import { SECTION_ACCENTS, COLORS, FONT_MONO, FONT_UI } from '../../theme'
-import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, type Food, type Recipe } from '../../lib/nutritionApi'
+import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, type Food, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
 import { hexA } from '../../lib/hexA'
 import { useToast } from '../../lib/ToastContext'
+import { MacroGridInputs, MACRO_KEYS } from './MacroGridInputs'
+import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
@@ -38,6 +40,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack:
   const [macros, setMacros] = useState<Record<'calories' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g', string>>({
     calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '',
   })
+  const [extended, setExtended] = useState<ExtendedNutrients>(emptyExtendedNutrients())
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSave() {
@@ -52,6 +55,7 @@ function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack:
         carbs_g: macros.carbs_g === '' ? undefined : Number(macros.carbs_g),
         fat_g: macros.fat_g === '' ? undefined : Number(macros.fat_g),
         fiber_g: macros.fiber_g === '' ? undefined : Number(macros.fiber_g),
+        ...extendedNutrientsToPayload(extended),
       })
       onDone(food)
     } catch (err) {
@@ -79,12 +83,8 @@ function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack:
       <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginBottom: 8 }}>
         This becomes the LOCKED logging unit for this food.
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
-        {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
-          <input key={key} placeholder="—" value={macros[key]} onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
-            style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
-        ))}
-      </div>
+      <MacroGridInputs values={macros} onChange={(key, value) => setMacros(m => ({ ...m, [key]: value }))} />
+      <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} />
       <button onClick={handleSave} disabled={submitting} style={{ ...accentButton, width: '100%' }}>SAVE FOOD — SEARCHABLE IMMEDIATELY</button>
     </>
   )
@@ -118,15 +118,26 @@ function scaleFromFood(food: Food, quantity: number) {
   }
 }
 
-function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: (recipe: Recipe) => void; onBack: () => void }) {
+function toIngredientRows(ingredients: RecipeDetail['ingredients'], foods: Food[]): IngredientRow[] {
+  return ingredients.map(i => ({
+    food_id: i.food_id, name: i.name, quantity: i.quantity, unit: i.unit,
+    calories: i.calories ?? null, protein_g: i.protein_g ?? null, carbs_g: i.carbs_g ?? null,
+    fat_g: i.fat_g ?? null, fiber_g: i.fiber_g ?? null,
+    sourceFood: i.food_id != null ? foods.find(f => f.id === i.food_id) : undefined,
+  }))
+}
+
+function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; editing?: RecipeDetail; onDone: (recipe: Recipe) => void; onBack: () => void }) {
   const { showToast } = useToast()
-  const [name, setName] = useState('')
-  const [servings, setServings] = useState('')
-  const [ingredients, setIngredients] = useState<IngredientRow[]>([])
+  const [name, setName] = useState(editing?.name ?? '')
+  const [servings, setServings] = useState(editing ? String(editing.servings) : '')
+  const [ingredients, setIngredients] = useState<IngredientRow[]>(editing ? toIngredientRows(editing.ingredients, foods) : [])
   const [query, setQuery] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const matches = query ? foods.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5) : []
+  const matches = query
+    ? foods.filter(f => f.id !== editing?.food_id && f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5)
+    : []
 
   function addFromFood(food: Food) {
     setIngredients(rows => [...rows, {
@@ -157,22 +168,23 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: (reci
     if (!name || ingredients.length === 0 || servingsNum <= 0 || submitting) return
     setSubmitting(true)
     try {
-      const created = await createRecipe({
+      const payload = {
         name, servings: servingsNum,
         ingredients: ingredients.map(i => ({
           food_id: i.food_id, name: i.name, quantity: i.quantity, unit: i.unit,
           calories: i.calories ?? undefined, protein_g: i.protein_g ?? undefined,
           carbs_g: i.carbs_g ?? undefined, fat_g: i.fat_g ?? undefined, fiber_g: i.fiber_g ?? undefined,
         })),
-      })
+      }
+      const result = editing ? await updateRecipe(editing.id, payload) : await createRecipe(payload)
       onDone({
-        id: created.id, name: created.name, servings: created.servings, food_id: created.food.id,
+        id: result.id, name: result.name, servings: result.servings, food_id: result.food.id,
         ingredient_count: ingredients.length,
-        per_serving_calories: created.food.calories, per_serving_protein_g: created.food.protein_g,
-        per_serving_carbs_g: created.food.carbs_g, per_serving_fat_g: created.food.fat_g, per_serving_fiber_g: created.food.fiber_g,
+        per_serving_calories: result.food.calories, per_serving_protein_g: result.food.protein_g,
+        per_serving_carbs_g: result.food.carbs_g, per_serving_fat_g: result.food.fat_g, per_serving_fiber_g: result.food.fiber_g,
       })
     } catch (err) {
-      showToast(errorMessage(err, 'Could not save recipe.'), 'error')
+      showToast(errorMessage(err, editing ? 'Could not update recipe.' : 'Could not save recipe.'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -213,14 +225,12 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: (reci
               <button aria-label={`Remove ingredient ${i}`} onClick={() => removeIngredient(i)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer' }}>✕</button>
             </div>
             {isAdHoc && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
-                {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
-                  <input key={key} aria-label={`Ingredient ${i} ${key}`} placeholder="—"
-                    value={ing[key] == null ? '' : String(ing[key])}
-                    onChange={e => updateIngredient(i, { [key]: e.target.value === '' ? null : Number(e.target.value) })}
-                    style={{ ...inputStyle, textAlign: 'center', padding: '5px 2px', fontSize: 9 }} />
-                ))}
-              </div>
+              <MacroGridInputs
+                values={Object.fromEntries(MACRO_KEYS.map(key => [key, ing[key] == null ? '' : String(ing[key])])) as Record<typeof MACRO_KEYS[number], string>}
+                onChange={(key, value) => updateIngredient(i, { [key]: value === '' ? null : Number(value) })}
+                ariaLabel={key => `Ingredient ${i} ${key}`}
+                gap={4} marginBottom={0} inputPadding="5px 2px" inputFontSize={9}
+              />
             )}
           </div>
         )
@@ -242,17 +252,18 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: (reci
         RECIPE TOTAL {totalCalories} kcal · PER SERVING {perServingCalories} kcal
       </div>
 
-      <button onClick={handleSave} disabled={submitting} style={{ ...accentButton, width: '100%' }}>SAVE RECIPE</button>
+      <button onClick={handleSave} disabled={submitting} style={{ ...accentButton, width: '100%' }}>{editing ? 'SAVE CHANGES' : 'SAVE RECIPE'}</button>
     </>
   )
 }
 
 export function NutritionLibrary() {
   const { showToast } = useToast()
-  const [mode, setMode] = useState<'list' | 'new-food' | 'new-recipe'>('list')
+  const [mode, setMode] = useState<'list' | 'new-food' | 'new-recipe' | 'edit-recipe'>('list')
   const [foods, setFoods] = useState<Food[]>([])
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingRecipe, setEditingRecipe] = useState<RecipeDetail | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -280,6 +291,15 @@ export function NutritionLibrary() {
       showToast(errorMessage(err, 'Could not delete recipe.'), 'error')
     }
   }
+  async function handleEditRecipe(id: number) {
+    try {
+      const detail = await fetchRecipe(id)
+      setEditingRecipe(detail)
+      setMode('edit-recipe')
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not load recipe.'), 'error')
+    }
+  }
 
   if (mode === 'new-food') {
     return <NewFoodForm onDone={food => { setFoods(fs => sortByName([...fs, food])); setMode('list') }} onBack={() => setMode('list')} />
@@ -287,6 +307,13 @@ export function NutritionLibrary() {
 
   if (mode === 'new-recipe') {
     return <NewRecipeForm foods={foods} onDone={recipe => { setRecipes(rs => sortByName([...rs, recipe])); setMode('list') }} onBack={() => setMode('list')} />
+  }
+
+  if (mode === 'edit-recipe' && editingRecipe) {
+    return <NewRecipeForm foods={foods} editing={editingRecipe} onDone={recipe => {
+      setRecipes(rs => sortByName(rs.map(r => r.id === recipe.id ? recipe : r)))
+      setMode('list'); setEditingRecipe(null)
+    }} onBack={() => { setMode('list'); setEditingRecipe(null) }} />
   }
 
   return (
@@ -332,7 +359,10 @@ export function NutritionLibrary() {
                   {r.ingredient_count} ingredients · {r.servings} servings · {r.per_serving_calories ?? '—'} kcal / serving
                 </div>
               </div>
-              <button aria-label={`Delete ${r.name}`} onClick={() => handleDeleteRecipe(r.id)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 14 }}>✕</button>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button aria-label={`Edit ${r.name}`} onClick={() => handleEditRecipe(r.id)} style={{ background: 'none', border: 'none', color: COLORS.textMuted, cursor: 'pointer', fontSize: 12 }}>✎</button>
+                <button aria-label={`Delete ${r.name}`} onClick={() => handleDeleteRecipe(r.id)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 14 }}>✕</button>
+              </div>
             </div>
           ))}
         </>

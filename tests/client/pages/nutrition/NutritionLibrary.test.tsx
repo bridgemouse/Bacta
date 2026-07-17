@@ -5,15 +5,18 @@ import { NutritionLibrary } from '../../../../client/src/pages/nutrition/Nutriti
 
 vi.mock('../../../../client/src/lib/nutritionApi', () => ({
   searchFoods: vi.fn(), deleteFood: vi.fn(), fetchRecipes: vi.fn(), deleteRecipe: vi.fn(), createFood: vi.fn(), createRecipe: vi.fn(),
+  fetchRecipe: vi.fn(), updateRecipe: vi.fn(),
 }))
 
-import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe } from '../../../../client/src/lib/nutritionApi'
+import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe } from '../../../../client/src/lib/nutritionApi'
 const mockSearchFoods = searchFoods as ReturnType<typeof vi.fn>
 const mockDeleteFood = deleteFood as ReturnType<typeof vi.fn>
 const mockFetchRecipes = fetchRecipes as ReturnType<typeof vi.fn>
 const mockDeleteRecipe = deleteRecipe as ReturnType<typeof vi.fn>
 const mockCreateFood = createFood as ReturnType<typeof vi.fn>
 const mockCreateRecipe = createRecipe as ReturnType<typeof vi.fn>
+const mockFetchRecipe = fetchRecipe as ReturnType<typeof vi.fn>
+const mockUpdateRecipe = updateRecipe as ReturnType<typeof vi.fn>
 
 const oats = { id: 1, source: 'custom', name: 'Test Oats', brand: null, default_qty: 100, default_unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 }
 const smoothie = { id: 2, name: 'Protein Smoothie', servings: 2, food_id: 9, ingredient_count: 2, per_serving_calories: 113, per_serving_protein_g: 25, per_serving_carbs_g: 15, per_serving_fat_g: 0.5, per_serving_fiber_g: 1.5 }
@@ -344,5 +347,95 @@ describe('NutritionLibrary — new recipe', () => {
     await waitFor(() => expect(mockCreateRecipe).toHaveBeenCalledWith(expect.objectContaining({
       ingredients: [expect.objectContaining({ name: 'Honey', calories: 64, carbs_g: 17, protein_g: undefined })],
     })))
+  })
+})
+
+describe('NutritionLibrary — edit recipe', () => {
+  beforeEach(() => {
+    mockFetchRecipe.mockResolvedValue({
+      id: 2, name: 'Protein Smoothie', servings: 2, food_id: 9,
+      ingredients: [
+        { food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
+      ],
+    })
+  })
+
+  it('EDIT switches to the recipe form prefilled via fetchRecipe', async () => {
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+
+    await waitFor(() => expect(mockFetchRecipe).toHaveBeenCalledWith(2))
+    expect(await screen.findByDisplayValue('Protein Smoothie')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('2')).toBeInTheDocument() // servings
+    expect(screen.getByText('Test Oats')).toBeInTheDocument() // prefilled ingredient
+    expect(screen.getByText('SAVE CHANGES')).toBeInTheDocument()
+  })
+
+  it('SAVE CHANGES calls updateRecipe with the recipe id and current fields, then returns to the list', async () => {
+    mockUpdateRecipe.mockResolvedValue({ id: 2, food: { id: 9 } })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+    await screen.findByDisplayValue('Protein Smoothie')
+
+    await user.click(screen.getByText('SAVE CHANGES'))
+
+    await waitFor(() => expect(mockUpdateRecipe).toHaveBeenCalledWith(2, {
+      name: 'Protein Smoothie',
+      servings: 2,
+      ingredients: [{
+        food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g',
+        calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6,
+      }],
+    }))
+    expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument() // back on the list screen
+  })
+
+  it('SAVE CHANGES updates the recipe in the list directly, with no full re-fetch', async () => {
+    mockUpdateRecipe.mockResolvedValue({
+      id: 2, name: 'Protein Smoothie', servings: 2,
+      food: { id: 9, calories: 250, protein_g: 30, carbs_g: 20, fat_g: 5, fiber_g: 2 },
+    })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    mockFetchRecipes.mockClear() // only the initial list-mount call should be counted so far
+
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+    await screen.findByDisplayValue('Protein Smoothie')
+    await user.click(screen.getByText('SAVE CHANGES'))
+
+    // the prefilled edit form has 1 ingredient (Test Oats, per the beforeEach mock above)
+    expect(await screen.findByText('1 ingredients · 2 servings · 250 kcal / serving')).toBeInTheDocument()
+    expect(mockFetchRecipes).not.toHaveBeenCalled() // no re-fetch of the whole list
+  })
+
+  it('the "Add from saved foods" search excludes the recipe\'s own materialized food while editing', async () => {
+    const smoothieFood = { id: 9, source: 'custom', name: 'Protein Smoothie', brand: null, default_qty: 1, default_unit: 'serving', calories: 113, protein_g: 25, carbs_g: 15, fat_g: 0.5, fiber_g: 1.5 }
+    mockSearchFoods.mockResolvedValue([oats, smoothieFood])
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByLabelText('Edit Protein Smoothie')
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+    await screen.findByDisplayValue('Protein Smoothie')
+
+    await user.type(screen.getByPlaceholderText('Add from saved foods…'), 'Protein Smoothie')
+
+    expect(screen.queryByRole('button', { name: 'Protein Smoothie' })).not.toBeInTheDocument()
+  })
+
+  it('‹ BACK TO LIBRARY from the edit form does not call updateRecipe', async () => {
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+    await screen.findByDisplayValue('Protein Smoothie')
+    await user.click(screen.getByText('‹ BACK TO LIBRARY'))
+
+    expect(mockUpdateRecipe).not.toHaveBeenCalled()
+    expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument()
   })
 })

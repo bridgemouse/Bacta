@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { createLogEntry, searchFoods, fetchRecentEntries, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
+import { createLogEntry, searchFoods, fetchRecentEntries, entryToLogInput, lookupFoodByBarcode, estimateMealFromPhoto, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
 import { useToast } from '../../lib/ToastContext'
+import { MacroGridInputs } from './MacroGridInputs'
+import { decodeBarcodeFromFile } from '../../lib/barcodeScan'
+import { fileToBase64 } from '../../lib/imageCapture'
+import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, type ExtendedNutrients } from './MoreNutrientsSection'
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
@@ -47,6 +51,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   const { showToast } = useToast()
   const [meal, setMeal] = useState(initialMeal)
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [results, setResults] = useState<Food[]>([])
   const [recents, setRecents] = useState<FoodLogEntry[]>([])
   const [selectedFood, setSelectedFood] = useState<Food | null>(null)
@@ -58,11 +63,13 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   })
   const [goalMacro, setGoalMacro] = useState<'calories' | 'protein_g' | 'carbs_g' | 'fat_g' | null>(null)
   const [goalValue, setGoalValue] = useState('')
+  const [extended, setExtended] = useState<ExtendedNutrients>(emptyExtendedNutrients())
   const [submitting, setSubmitting] = useState(false)
 
   function reset() {
     setName(''); setQty(''); setUnit('')
     setMacros({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
+    setExtended(emptyExtendedNutrients())
     setSelectedFood(null); setGoalMacro(null); setGoalValue('')
   }
 
@@ -86,11 +93,16 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   }, [open])
 
   useEffect(() => {
-    if (!query) { setResults([]); return }
-    let cancelled = false
-    searchFoods(query).then(r => { if (!cancelled) setResults(r) })
-    return () => { cancelled = true }
+    const timer = setTimeout(() => setDebouncedQuery(query), 280)
+    return () => clearTimeout(timer)
   }, [query])
+
+  useEffect(() => {
+    if (!debouncedQuery) { setResults([]); return }
+    let cancelled = false
+    searchFoods(debouncedQuery).then(r => { if (!cancelled) setResults(r) })
+    return () => { cancelled = true }
+  }, [debouncedQuery])
 
   async function handleSubmit() {
     if (submitting) return
@@ -121,6 +133,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
         carbs_g: macros.carbs_g === '' ? null : Number(macros.carbs_g),
         fat_g: macros.fat_g === '' ? null : Number(macros.fat_g),
         fiber_g: macros.fiber_g === '' ? null : Number(macros.fiber_g),
+        ...extendedNutrientsToPayload(extended),
       })
       reset()
       onLogged(); onClose()
@@ -128,6 +141,51 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
       showToast(errorMessage(err, 'Could not log entry.'), 'error')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // Still-image barcode capture (#141) — the input's own native camera UI hands back a
+  // photo, never a live video feed. A decoded code that matches a saved food selects it
+  // exactly like a search result; no match falls back to ad-hoc entry (never a dead end).
+  async function handleBarcodeFile(file: File) {
+    try {
+      const code = await decodeBarcodeFromFile(file)
+      if (!code) {
+        showToast('No barcode detected in that photo — log it as ad-hoc below.', 'info')
+        return
+      }
+      const food = await lookupFoodByBarcode(code)
+      if (!food) {
+        showToast('No saved food matches this barcode — log it as ad-hoc below.', 'info')
+        return
+      }
+      setSelectedFood(food)
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not read that barcode photo.'), 'error')
+    }
+  }
+
+  // Still-image meal recognition (#141) — pre-fills the ad-hoc fields with the AI's
+  // estimate; the user still has to review/edit and tap LOG ENTRY, same as any ad-hoc
+  // entry. Never calls createLogEntry directly — no auto-logging.
+  async function handleMealPhotoFile(file: File) {
+    try {
+      const { data, mediaType } = await fileToBase64(file)
+      const estimate = await estimateMealFromPhoto(data, mediaType)
+      setSelectedFood(null)
+      setName(estimate.name)
+      setUnit('serving')
+      if (qty === '') setQty('1')
+      setMacros({
+        calories: estimate.calories == null ? '' : String(estimate.calories),
+        protein_g: estimate.protein_g == null ? '' : String(estimate.protein_g),
+        carbs_g: estimate.carbs_g == null ? '' : String(estimate.carbs_g),
+        fat_g: estimate.fat_g == null ? '' : String(estimate.fat_g),
+        fiber_g: estimate.fiber_g == null ? '' : String(estimate.fiber_g),
+      })
+      showToast('AI estimate — review and adjust before logging.', 'info')
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not estimate that meal photo.'), 'error')
     }
   }
 
@@ -149,6 +207,25 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
           <input placeholder="Search saved foods…" value={query} onChange={e => setQuery(e.target.value)}
             style={{ ...inputStyle, marginBottom: 10 }} />
 
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <label style={{
+              flex: 1, textAlign: 'center', padding: '8px 0', borderRadius: 6, cursor: 'pointer',
+              border: `1px dashed ${hexA(A, 0.4)}`, color: A, fontFamily: FONT_MONO, fontSize: 9.5,
+            }}>
+              📷 SCAN BARCODE
+              <input type="file" accept="image/*" capture="environment" aria-label="Scan barcode photo" style={{ display: 'none' }}
+                onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) handleBarcodeFile(file) }} />
+            </label>
+            <label style={{
+              flex: 1, textAlign: 'center', padding: '8px 0', borderRadius: 6, cursor: 'pointer',
+              border: `1px dashed ${hexA(A, 0.4)}`, color: A, fontFamily: FONT_MONO, fontSize: 9.5,
+            }}>
+              📷 SCAN MEAL PHOTO
+              <input type="file" accept="image/*" capture="environment" aria-label="Scan meal photo" style={{ display: 'none' }}
+                onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) handleMealPhotoFile(file) }} />
+            </label>
+          </div>
+
           {!query && recents.length === 0 && (
             <div style={{ fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted, marginBottom: 12, lineHeight: 1.4 }}>
               No saved foods yet — reference database grows as you save foods, or log ad-hoc below. Nothing to search is normal.
@@ -165,7 +242,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
                   <span style={{ fontFamily: FONT_UI, fontSize: 12.5, color: COLORS.text }}>{r.name}</span>
                   <button onClick={async () => {
                     try {
-                      await createLogEntry({ date, meal_type: meal, food_id: r.food_id, name: r.food_id == null ? r.name : undefined, quantity: r.quantity, unit: r.unit, calories: r.calories, protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })
+                      await createLogEntry(entryToLogInput(r, { date, meal_type: meal }))
                       onLogged(); onClose()
                     } catch (err) {
                       showToast(errorMessage(err, 'Could not log entry.'), 'error')
@@ -176,13 +253,13 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
             </div>
           )}
 
-          {query && results.length === 0 && (
+          {debouncedQuery && results.length === 0 && (
             <div style={{ border: `1px dashed ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 12, fontFamily: FONT_UI, fontSize: 12, color: COLORS.textMuted }}>
-              No match for &quot;{query}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
+              No match for &quot;{debouncedQuery}&quot; in saved foods — log it directly below, save it as a food to make it searchable next time.
             </div>
           )}
 
-          {query && results.length > 0 && (
+          {debouncedQuery && results.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               {results.map(f => (
                 <button key={f.id} onClick={() => { setSelectedFood(f); setQuery('') }} style={{
@@ -246,13 +323,8 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
               <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>
                 MACROS OPTIONAL — LOG WHAT YOU KNOW, LEAVE THE REST BLANK
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 14 }}>
-                {(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'] as const).map(key => (
-                  <input key={key} placeholder="—" value={macros[key]}
-                    onChange={e => setMacros(m => ({ ...m, [key]: e.target.value }))}
-                    style={{ ...inputStyle, textAlign: 'center', padding: '7px 4px' }} />
-                ))}
-              </div>
+              <MacroGridInputs values={macros} onChange={(key, value) => setMacros(m => ({ ...m, [key]: value }))} />
+              <MoreNutrientsSection accent={A} data={extended} onChange={setExtended} />
             </>
           )}
 

@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Response } from 'express'
 import db from '../db/client'
 
 const nutritionRouter = Router()
@@ -404,6 +404,18 @@ function perServingNutrients(ingredients: RecipeIngredientInput[], servings: num
   }))
 }
 
+function validateRecipeInput(servings: number, ingredients: RecipeIngredientInput[], res: Response): boolean {
+  if (!servings || servings <= 0) {
+    res.status(400).json({ error: 'servings must be greater than 0' })
+    return false
+  }
+  if (!ingredients || ingredients.length === 0) {
+    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
+    return false
+  }
+  return true
+}
+
 // GET /api/nutrition/recipes — list saved recipes with their per-serving food's macros
 nutritionRouter.get('/recipes', (req, res) => {
   const recipes = db.prepare(`
@@ -426,14 +438,7 @@ nutritionRouter.post('/recipes', (req, res) => {
     ingredients: RecipeIngredientInput[]
   }
 
-  if (!servings || servings <= 0) {
-    res.status(400).json({ error: 'servings must be greater than 0' })
-    return
-  }
-  if (!ingredients || ingredients.length === 0) {
-    res.status(400).json({ error: 'A recipe needs at least one ingredient' })
-    return
-  }
+  if (!validateRecipeInput(servings, ingredients, res)) return
 
   try {
     const perServing = perServingNutrients(ingredients, servings)
@@ -486,6 +491,87 @@ nutritionRouter.post('/recipes', (req, res) => {
 function isForeignKeyError(err: unknown): boolean {
   return err instanceof Error && err.message.includes('FOREIGN KEY constraint failed')
 }
+
+// GET /api/nutrition/recipes/:id — a single recipe's composition, for the edit flow
+nutritionRouter.get('/recipes/:id', (req, res) => {
+  const { id } = req.params
+  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id)
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' })
+    return
+  }
+  const ingredients = db.prepare(`
+    SELECT food_id, name, quantity, unit, ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
+    FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id
+  `).all(id)
+  res.json({ ...recipe, ingredients })
+})
+
+// PUT /api/nutrition/recipes/:id — re-save an existing recipe's composition: recomputes
+// per-serving macros and updates the materialized foods row IN PLACE (same food_id), so
+// past food_log_entries rows referencing it stay valid (they hold their own denormalized
+// snapshot regardless). Ingredient rows are replaced wholesale, same as a fresh POST.
+nutritionRouter.put('/recipes/:id', (req, res) => {
+  const { id } = req.params
+  const { name, servings, ingredients } = req.body as {
+    name: string
+    servings: number
+    ingredients: RecipeIngredientInput[]
+  }
+
+  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id) as { food_id: number } | undefined
+  if (!recipe) {
+    res.status(404).json({ error: 'Recipe not found' })
+    return
+  }
+  if (!validateRecipeInput(servings, ingredients, res)) return
+  if (ingredients.some(ing => ing.food_id === recipe.food_id)) {
+    res.status(400).json({ error: 'A recipe cannot use itself as an ingredient' })
+    return
+  }
+
+  try {
+    const perServing = perServingNutrients(ingredients, servings)
+
+    const updateRecipe = db.transaction(() => {
+      db.prepare('UPDATE recipes SET name = ?, servings = ? WHERE id = ?').run(name, servings, id)
+      db.prepare(`
+        UPDATE foods SET name = @name, ${NUMERIC_NUTRIENT_KEYS.map(k => `${k} = @${k}`).join(', ')}
+        WHERE id = @food_id
+      `).run({ name, food_id: recipe.food_id, ...perServing })
+
+      db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id)
+      const insertIngredient = db.prepare(`
+        INSERT INTO recipe_ingredients (
+          recipe_id, food_id, name, quantity, unit,
+          ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
+        )
+        VALUES (
+          @recipe_id, @food_id, @name, @quantity, @unit,
+          ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')}, @glycemic_index, @custom_nutrients, @allergens, @traces
+        )
+      `)
+      for (const ing of ingredients) {
+        insertIngredient.run({
+          recipe_id: id, food_id: ing.food_id ?? null, name: ing.name, quantity: ing.quantity, unit: ing.unit,
+          ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, ing[k] ?? null])),
+          glycemic_index: ing.glycemic_index ?? null,
+          custom_nutrients: parseJsonField(ing.custom_nutrients),
+          allergens: parseJsonField(ing.allergens),
+          traces: parseJsonField(ing.traces),
+        })
+      }
+    })
+    updateRecipe()
+
+    const updatedRecipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id)
+    const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(recipe.food_id)
+    res.json({ ...updatedRecipe as object, food })
+  } catch (err: unknown) {
+    console.error('[nutrition] recipe update failed:', err)
+    res.status(400).json({ error: 'Could not update recipe' })
+  }
+})
 
 // DELETE /api/nutrition/recipes/:id — deletes the recipe, its ingredients, and its
 // materialized food as one unit. Blocked (400) if that food has already been logged

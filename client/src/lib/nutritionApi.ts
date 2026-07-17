@@ -262,6 +262,20 @@ export async function fetchRecipes(): Promise<Recipe[]> {
   return recipes
 }
 
+export interface RecipeDetail {
+  id: number
+  name: string
+  servings: number
+  food_id: number
+  ingredients: RecipeIngredientInput[]
+}
+
+export async function fetchRecipe(id: number): Promise<RecipeDetail> {
+  const res = await fetch(`/api/nutrition/recipes/${id}`)
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not load recipe'))
+  return res.json()
+}
+
 export async function createRecipe(input: {
   name: string
   servings: number
@@ -273,6 +287,20 @@ export async function createRecipe(input: {
     body: JSON.stringify(input),
   })
   if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not save recipe'))
+  return res.json()
+}
+
+export async function updateRecipe(id: number, input: {
+  name: string
+  servings: number
+  ingredients: RecipeIngredientInput[]
+}): Promise<{ id: number; name: string; servings: number; food: Food }> {
+  const res = await fetch(`/api/nutrition/recipes/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not update recipe'))
   return res.json()
 }
 

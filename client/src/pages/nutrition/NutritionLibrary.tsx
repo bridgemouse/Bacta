@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Rail } from '../../components/viz/Rail'
 import { SECTION_ACCENTS, COLORS, FONT_MONO, FONT_UI } from '../../theme'
-import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, type Food, type Recipe } from '../../lib/nutritionApi'
+import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, type Food, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
 import { hexA } from '../../lib/hexA'
 import { useToast } from '../../lib/ToastContext'
 import { MoreNutrientsSection, emptyExtendedNutrients, extendedNutrientsToPayload, type ExtendedNutrients } from './MoreNutrientsSection'
@@ -114,15 +114,26 @@ function scaleFromFood(food: Food, quantity: number) {
   }
 }
 
-function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () => void; onBack: () => void }) {
+function toIngredientRows(ingredients: RecipeDetail['ingredients'], foods: Food[]): IngredientRow[] {
+  return ingredients.map(i => ({
+    food_id: i.food_id, name: i.name, quantity: i.quantity, unit: i.unit,
+    calories: i.calories ?? null, protein_g: i.protein_g ?? null, carbs_g: i.carbs_g ?? null,
+    fat_g: i.fat_g ?? null, fiber_g: i.fiber_g ?? null,
+    sourceFood: i.food_id != null ? foods.find(f => f.id === i.food_id) : undefined,
+  }))
+}
+
+function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; editing?: RecipeDetail; onDone: () => void; onBack: () => void }) {
   const { showToast } = useToast()
-  const [name, setName] = useState('')
-  const [servings, setServings] = useState('')
-  const [ingredients, setIngredients] = useState<IngredientRow[]>([])
+  const [name, setName] = useState(editing?.name ?? '')
+  const [servings, setServings] = useState(editing ? String(editing.servings) : '')
+  const [ingredients, setIngredients] = useState<IngredientRow[]>(editing ? toIngredientRows(editing.ingredients, foods) : [])
   const [query, setQuery] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const matches = query ? foods.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5) : []
+  const matches = query
+    ? foods.filter(f => f.id !== editing?.food_id && f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5)
+    : []
 
   function addFromFood(food: Food) {
     setIngredients(rows => [...rows, {
@@ -153,17 +164,22 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
     if (!name || ingredients.length === 0 || servingsNum <= 0 || submitting) return
     setSubmitting(true)
     try {
-      await createRecipe({
+      const payload = {
         name, servings: servingsNum,
         ingredients: ingredients.map(i => ({
           food_id: i.food_id, name: i.name, quantity: i.quantity, unit: i.unit,
           calories: i.calories ?? undefined, protein_g: i.protein_g ?? undefined,
           carbs_g: i.carbs_g ?? undefined, fat_g: i.fat_g ?? undefined, fiber_g: i.fiber_g ?? undefined,
         })),
-      })
+      }
+      if (editing) {
+        await updateRecipe(editing.id, payload)
+      } else {
+        await createRecipe(payload)
+      }
       onDone()
     } catch (err) {
-      showToast(errorMessage(err, 'Could not save recipe.'), 'error')
+      showToast(errorMessage(err, editing ? 'Could not update recipe.' : 'Could not save recipe.'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -233,17 +249,18 @@ function NewRecipeForm({ foods, onDone, onBack }: { foods: Food[]; onDone: () =>
         RECIPE TOTAL {totalCalories} kcal · PER SERVING {perServingCalories} kcal
       </div>
 
-      <button onClick={handleSave} disabled={submitting} style={{ ...accentButton, width: '100%' }}>SAVE RECIPE</button>
+      <button onClick={handleSave} disabled={submitting} style={{ ...accentButton, width: '100%' }}>{editing ? 'SAVE CHANGES' : 'SAVE RECIPE'}</button>
     </>
   )
 }
 
 export function NutritionLibrary() {
   const { showToast } = useToast()
-  const [mode, setMode] = useState<'list' | 'new-food' | 'new-recipe'>('list')
+  const [mode, setMode] = useState<'list' | 'new-food' | 'new-recipe' | 'edit-recipe'>('list')
   const [foods, setFoods] = useState<Food[]>([])
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingRecipe, setEditingRecipe] = useState<RecipeDetail | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -271,6 +288,15 @@ export function NutritionLibrary() {
       showToast(errorMessage(err, 'Could not delete recipe.'), 'error')
     }
   }
+  async function handleEditRecipe(id: number) {
+    try {
+      const detail = await fetchRecipe(id)
+      setEditingRecipe(detail)
+      setMode('edit-recipe')
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not load recipe.'), 'error')
+    }
+  }
 
   if (mode === 'new-food') {
     return <NewFoodForm onDone={() => { setMode('list'); reload() }} onBack={() => setMode('list')} />
@@ -278,6 +304,10 @@ export function NutritionLibrary() {
 
   if (mode === 'new-recipe') {
     return <NewRecipeForm foods={foods} onDone={() => { setMode('list'); reload() }} onBack={() => setMode('list')} />
+  }
+
+  if (mode === 'edit-recipe' && editingRecipe) {
+    return <NewRecipeForm foods={foods} editing={editingRecipe} onDone={() => { setMode('list'); setEditingRecipe(null); reload() }} onBack={() => { setMode('list'); setEditingRecipe(null) }} />
   }
 
   return (
@@ -323,7 +353,10 @@ export function NutritionLibrary() {
                   {r.ingredient_count} ingredients · {r.servings} servings · {r.per_serving_calories ?? '—'} kcal / serving
                 </div>
               </div>
-              <button aria-label={`Delete ${r.name}`} onClick={() => handleDeleteRecipe(r.id)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 14 }}>✕</button>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button aria-label={`Edit ${r.name}`} onClick={() => handleEditRecipe(r.id)} style={{ background: 'none', border: 'none', color: COLORS.textMuted, cursor: 'pointer', fontSize: 12 }}>✎</button>
+                <button aria-label={`Delete ${r.name}`} onClick={() => handleDeleteRecipe(r.id)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 14 }}>✕</button>
+              </div>
             </div>
           ))}
         </>

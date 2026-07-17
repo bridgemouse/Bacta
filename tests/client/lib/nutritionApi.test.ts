@@ -15,6 +15,8 @@ import {
   fetchRecipes,
   deleteRecipe,
   widenedNutrientFields,
+  fetchRecipe,
+  updateRecipe,
   type FoodLogEntry
 } from '../../../client/src/lib/nutritionApi'
 
@@ -209,5 +211,37 @@ describe('nutritionApi', () => {
     // equivalent for creation, not for copy/re-log call sites reusing this helper.
     expect(result.sugar_g).toBeNull()
     expect(result.glycemic_index).toBeNull()
+  })
+
+  it('fetchRecipe GETs a single recipe by id, including its ingredients', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 1, name: 'Smoothie', servings: 2, food_id: 2, ingredients: [{ name: 'Banana', quantity: 1, unit: 'each' }] }),
+    })
+    const result = await fetchRecipe(1)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/recipes/1')
+    expect(result.ingredients).toHaveLength(1)
+  })
+
+  it('fetchRecipe throws on a non-ok response', async () => {
+    mockFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'Recipe not found' }) })
+    await expect(fetchRecipe(999)).rejects.toThrow('Recipe not found')
+  })
+
+  it('updateRecipe PUTs name/servings/ingredients and returns the updated recipe+food', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ id: 1, food: { id: 2, calories: 200 } }) })
+    const input = { name: 'Smoothie', servings: 3, ingredients: [{ name: 'Banana', quantity: 1, unit: 'each' }] }
+    const result = await updateRecipe(1, input)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/recipes/1', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify(input)
+    }))
+    expect(result.food.calories).toBe(200)
+  })
+
+  it('updateRecipe surfaces the server error message on failure', async () => {
+    mockFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'Could not update recipe' }) })
+    await expect(updateRecipe(1, { name: 'X', servings: 1, ingredients: [] }))
+      .rejects.toThrow('Could not update recipe')
   })
 })

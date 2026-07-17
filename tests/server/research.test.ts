@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest'
+import dns from 'dns'
 
 process.env.DB_PATH = ':memory:'
 
@@ -217,6 +218,8 @@ describe('MX-4 fetchPage tool', () => {
     }
 
     it('still allows a normal public https URL through', async () => {
+      const lookupSpy = vi.spyOn(dns.promises, 'lookup')
+        .mockResolvedValue({ address: '93.184.216.34', family: 4 } as any)
       const fetchMock = vi.fn(async () => ({
         ok: true,
         text: async () => '<html><head><title>t</title></head><body>ok</body></html>',
@@ -228,6 +231,9 @@ describe('MX-4 fetchPage tool', () => {
 
       expect(result.error).toBeUndefined()
       expect(fetchMock).toHaveBeenCalledOnce()
+      // must resolve through the mocked resolver (deterministic value), never a real DNS lookup
+      expect(lookupSpy).toHaveBeenCalledWith('example.com')
+      await expect(lookupSpy.mock.results[0].value).resolves.toEqual({ address: '93.184.216.34', family: 4 })
     })
   })
 })

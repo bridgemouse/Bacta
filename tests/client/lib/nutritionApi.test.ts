@@ -176,6 +176,24 @@ describe('nutritionApi', () => {
     expect(result).toEqual([])
   })
 
+  it('Recipe carries the widened per-serving nutrient set (#140/#162), matching GET /recipes\' actual response shape', async () => {
+    const widenedRecipe = {
+      id: 1, name: 'Smoothie', servings: 2, food_id: 9, ingredient_count: 2,
+      per_serving_calories: 113, per_serving_protein_g: 25, per_serving_carbs_g: 15,
+      per_serving_fat_g: 0.5, per_serving_fiber_g: 1.5,
+      per_serving_sodium_mg: 140, per_serving_sugar_g: 3, per_serving_saturated_fat_g: 0.2,
+      per_serving_polyunsaturated_fat_g: 0.1, per_serving_monounsaturated_fat_g: 0.1,
+      per_serving_trans_fat_g: 0, per_serving_cholesterol_mg: 5, per_serving_potassium_mg: 200,
+      per_serving_vitamin_a_mcg: 10, per_serving_vitamin_c_mg: 8, per_serving_calcium_mg: 50,
+      per_serving_iron_mg: 1.2,
+    }
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ recipes: [widenedRecipe] }) })
+    const [result] = await fetchRecipes()
+    // Compiles only once Recipe declares these fields -- the real signal for this fix
+    expect(result.per_serving_sodium_mg).toBe(140)
+    expect(result.per_serving_iron_mg).toBe(1.2)
+  })
+
   it('deleteRecipe calls DELETE on the recipe id', async () => {
     mockFetch.mockResolvedValue({ ok: true })
     await deleteRecipe(1)

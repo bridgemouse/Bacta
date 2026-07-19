@@ -1,6 +1,7 @@
 import fs from 'fs'
 import db from '../../db/client'
 import { mapUsdaFoodToRow, mapOffProductToRow, type FoodImportRow, type UsdaFoodRecord, type OffProductRecord } from './foodImportMapping'
+import { NUMERIC_NUTRIENT_KEYS, DESCRIPTIVE_NUTRIENT_KEYS } from './nutrientKeys'
 
 // USDA's full bulk-download JSON top-level wrapper key was NOT verified against a real
 // downloaded file (only the per-record shape was, via the live /food/{fdcId} API — see
@@ -18,19 +19,23 @@ export function extractRecordsArray(parsed: unknown): unknown[] {
   throw new Error('Could not find a records array in the parsed JSON — unrecognized dump file shape')
 }
 
+// Column list derived from the shared NUMERIC_NUTRIENT_KEYS/DESCRIPTIVE_NUTRIENT_KEYS
+// (server/lib/nutrition/nutrientKeys.ts) instead of hand-typed here — previously this
+// list was a 3rd hand-copied duplicate (alongside server/api/nutrition.ts and
+// server/lib/ai/tools.ts), meaning a nutrient added to NUMERIC_NUTRIENT_KEYS silently
+// never made it into an imported food unless someone remembered to update this SQL too
+// (#161). `nonFixedCols` covers every column shared with the "name/brand/..." fixed
+// prefix and the "source_json" fixed suffix.
+const nonFixedCols = [...NUMERIC_NUTRIENT_KEYS, ...DESCRIPTIVE_NUTRIENT_KEYS] as const
 const upsertFood = db.prepare(`
   INSERT INTO foods (
     source, source_id, name, brand, default_qty, default_unit,
-    calories, protein_g, carbs_g, fat_g, fiber_g,
-    sodium_mg, sugar_g, saturated_fat_g, polyunsaturated_fat_g, monounsaturated_fat_g,
-    trans_fat_g, cholesterol_mg, potassium_mg, vitamin_a_mcg, vitamin_c_mg, calcium_mg, iron_mg,
+    ${nonFixedCols.join(', ')},
     source_json
   )
   VALUES (
     @source, @source_id, @name, @brand, @default_qty, @default_unit,
-    @calories, @protein_g, @carbs_g, @fat_g, @fiber_g,
-    @sodium_mg, @sugar_g, @saturated_fat_g, @polyunsaturated_fat_g, @monounsaturated_fat_g,
-    @trans_fat_g, @cholesterol_mg, @potassium_mg, @vitamin_a_mcg, @vitamin_c_mg, @calcium_mg, @iron_mg,
+    ${nonFixedCols.map(k => '@' + k).join(', ')},
     @source_json
   )
   ON CONFLICT(source, source_id) DO UPDATE SET
@@ -38,23 +43,7 @@ const upsertFood = db.prepare(`
     brand                  = excluded.brand,
     default_qty            = excluded.default_qty,
     default_unit           = excluded.default_unit,
-    calories               = excluded.calories,
-    protein_g              = excluded.protein_g,
-    carbs_g                = excluded.carbs_g,
-    fat_g                  = excluded.fat_g,
-    fiber_g                = excluded.fiber_g,
-    sodium_mg              = excluded.sodium_mg,
-    sugar_g                = excluded.sugar_g,
-    saturated_fat_g        = excluded.saturated_fat_g,
-    polyunsaturated_fat_g  = excluded.polyunsaturated_fat_g,
-    monounsaturated_fat_g  = excluded.monounsaturated_fat_g,
-    trans_fat_g            = excluded.trans_fat_g,
-    cholesterol_mg         = excluded.cholesterol_mg,
-    potassium_mg           = excluded.potassium_mg,
-    vitamin_a_mcg          = excluded.vitamin_a_mcg,
-    vitamin_c_mg           = excluded.vitamin_c_mg,
-    calcium_mg             = excluded.calcium_mg,
-    iron_mg                = excluded.iron_mg,
+    ${nonFixedCols.map(k => `${k} = excluded.${k}`).join(',\n    ')},
     source_json            = excluded.source_json
 `)
 

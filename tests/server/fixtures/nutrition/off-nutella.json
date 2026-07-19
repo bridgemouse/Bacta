@@ -7,5 +7,6 @@
     "energy-kcal_100g": 539,
     "fat_100g": 30.9,
     "proteins_100g": 6.3
-  }
+  },
+  "allergens_tags": ["en:milk", "en:nuts", "en:soybeans"]
 }

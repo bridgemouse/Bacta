@@ -493,6 +493,29 @@ describe('Nutrition API', () => {
       expect(res.body.calories).toBe(450) // 150/serving (as originally logged) * 3, not 400 * 3 = 1200
     })
 
+    it('POST /api/nutrition/log rejects a quantity <= 0 (#164 review finding) -- otherwise a zero quantity permanently zeroes a food-linked entry\'s macros with no way to recover them on a later edit', async () => {
+      const { app } = await import('../../server/index')
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Test Food', default_qty: 100, default_unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2,
+      })
+      const res = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-10', meal_type: 'lunch', food_id: food.body.id, quantity: 0, unit: 'g',
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('PUT /api/nutrition/log/:id rejects an edit that would leave the stored quantity at 0 or below (#164 review finding)', async () => {
+      const { app } = await import('../../server/index')
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Test Food 2', default_qty: 100, default_unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2,
+      })
+      const logRes = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-10', meal_type: 'lunch', food_id: food.body.id, quantity: 50, unit: 'g',
+      })
+      const res = await request(app).put(`/api/nutrition/log/${logRes.body.id}`).send({ quantity: 0 })
+      expect(res.status).toBe(400)
+    })
+
     it('PUT /api/nutrition/recipes/:id returns 404 for a nonexistent recipe', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).put('/api/nutrition/recipes/999999').send({

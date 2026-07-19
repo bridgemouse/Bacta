@@ -210,6 +210,15 @@ nutritionRouter.post('/log', (req, res) => {
   const body = req.body as LogEntryBody
   const { date, meal_type, food_id, name, quantity, unit } = body
 
+  if (!(quantity > 0)) {
+    // A zero/negative quantity would divide-by-zero (ad-hoc) or store zeroed macros
+    // (food-linked) at write time, and — worse — later become an unrescalable stored
+    // quantity: PUT /log/:id rescales from THIS entry's own prior quantity, so a zeroed
+    // entry can never recover its macros on a subsequent edit (#164 review finding).
+    res.status(400).json({ error: 'quantity must be greater than 0' })
+    return
+  }
+
   try {
     let entry: { name: string } & NumericRow & { glycemic_index: string | null; custom_nutrients: unknown; allergens: unknown; traces: unknown }
 
@@ -315,13 +324,23 @@ nutritionRouter.put('/log/:id', (req, res) => {
       }
       if ('quantity' in updates || 'unit' in updates) {
         const finalQuantity = (updates.quantity ?? existing.quantity) as number
+        if (finalQuantity <= 0) {
+          res.status(400).json({ error: 'quantity must be greater than 0' })
+          return
+        }
         const existingQuantity = existing.quantity as number
-        if (existingQuantity > 0) {
-          const factor = finalQuantity / existingQuantity
-          for (const key of NUMERIC_NUTRIENT_KEYS) {
-            if (!(key in updates)) {
-              updates[key] = scale((existing[key] as number | null) ?? null, factor)
-            }
+        if (existingQuantity <= 0) {
+          // Defense in depth against pre-existing bad data (mirrors the POST /log
+          // guard) — a stale row with quantity <= 0 has no valid ratio to rescale
+          // from, and silently skipping the rescale would freeze its macros at
+          // whatever they already (wrongly) were instead of surfacing the problem.
+          res.status(400).json({ error: 'Log entry has an invalid stored quantity' })
+          return
+        }
+        const factor = finalQuantity / existingQuantity
+        for (const key of NUMERIC_NUTRIENT_KEYS) {
+          if (!(key in updates)) {
+            updates[key] = scale((existing[key] as number | null) ?? null, factor)
           }
         }
       }

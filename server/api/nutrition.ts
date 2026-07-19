@@ -210,6 +210,15 @@ nutritionRouter.post('/log', (req, res) => {
   const body = req.body as LogEntryBody
   const { date, meal_type, food_id, name, quantity, unit } = body
 
+  if (!(quantity > 0)) {
+    // A zero/negative quantity would divide-by-zero (ad-hoc) or store zeroed macros
+    // (food-linked) at write time, and — worse — later become an unrescalable stored
+    // quantity: PUT /log/:id rescales from THIS entry's own prior quantity, so a zeroed
+    // entry can never recover its macros on a subsequent edit (#164 review finding).
+    res.status(400).json({ error: 'quantity must be greater than 0' })
+    return
+  }
+
   try {
     let entry: { name: string } & NumericRow & { glycemic_index: string | null; custom_nutrients: unknown; allergens: unknown; traces: unknown }
 
@@ -293,12 +302,18 @@ nutritionRouter.put('/log/:id', (req, res) => {
   }
 
   // A food-linked entry's macros are a denormalized snapshot, not a live join — a
-  // quantity or unit edit must rescale from the reference food, otherwise the stored
-  // macros silently keep reflecting the old quantity/unit combination. Only macros NOT
-  // explicitly overridden in this same request get rescaled — providing one corrected
-  // macro must not freeze the other four at their now-stale values. Unit is validated
-  // against the food's default_unit the same way POST does (no conversion in v1), since
-  // an entry's unit must always match the food it's linked to, edit or not.
+  // quantity or unit edit must rescale, otherwise the stored macros silently keep
+  // reflecting the old quantity/unit combination. Rescaling from the entry's OWN prior
+  // quantity/macros (not a fresh read of the current `foods` row) matters: the
+  // referenced food can itself have been edited since this entry was logged (e.g. a
+  // recipe re-save widens/narrows its per-serving macros), and a live re-read would
+  // silently rewrite this historical entry's macros to reflect that later edit instead
+  // of what was actually true when it was logged. Only macros NOT explicitly overridden
+  // in this same request get rescaled — providing one corrected macro must not freeze
+  // the other four at their now-stale values. Unit is still validated against the food's
+  // default_unit the same way POST does (no conversion in v1), since an entry's unit
+  // must always match the food it's linked to, edit or not — that check is the only
+  // remaining reason to read the live `foods` row here.
   if (existing.food_id != null) {
     const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(existing.food_id) as FoodRow | undefined
     if (food) {
@@ -307,16 +322,25 @@ nutritionRouter.put('/log/:id', (req, res) => {
         res.status(400).json({ error: `Unit mismatch — this food is logged in ${food.default_unit}` })
         return
       }
-      if (food.default_qty <= 0) {
-        res.status(400).json({ error: 'Referenced food has an invalid default_qty' })
-        return
-      }
       if ('quantity' in updates || 'unit' in updates) {
         const finalQuantity = (updates.quantity ?? existing.quantity) as number
-        const factor = finalQuantity / food.default_qty
+        if (finalQuantity <= 0) {
+          res.status(400).json({ error: 'quantity must be greater than 0' })
+          return
+        }
+        const existingQuantity = existing.quantity as number
+        if (existingQuantity <= 0) {
+          // Defense in depth against pre-existing bad data (mirrors the POST /log
+          // guard) — a stale row with quantity <= 0 has no valid ratio to rescale
+          // from, and silently skipping the rescale would freeze its macros at
+          // whatever they already (wrongly) were instead of surfacing the problem.
+          res.status(400).json({ error: 'Log entry has an invalid stored quantity' })
+          return
+        }
+        const factor = finalQuantity / existingQuantity
         for (const key of NUMERIC_NUTRIENT_KEYS) {
           if (!(key in updates)) {
-            updates[key] = scale(food[key] ?? null, factor)
+            updates[key] = scale((existing[key] as number | null) ?? null, factor)
           }
         }
       }

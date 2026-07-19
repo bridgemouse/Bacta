@@ -361,6 +361,15 @@ describe('Nutrition API', () => {
       expect(res.status).toBe(400)
     })
 
+    it('POST /api/nutrition/recipes rejects an ingredient with quantity <= 0 (#165 review finding) -- a persisted zero quantity divides by zero when that ingredient is later rescaled client-side from its baseline', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Bad Ingredient Recipe', servings: 1,
+        ingredients: [{ name: 'X', quantity: 0, unit: 'g', calories: 10 }],
+      })
+      expect(res.status).toBe(400)
+    })
+
     it('GET /api/nutrition/recipes lists saved recipes with their per-serving macros and ingredient count', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).get('/api/nutrition/recipes')

@@ -450,6 +450,13 @@ function validateRecipeInput(servings: number, ingredients: RecipeIngredientInpu
     res.status(400).json({ error: 'A recipe needs at least one ingredient' })
     return false
   }
+  if (ingredients.some(ing => !(ing.quantity > 0))) {
+    // A zero/negative ingredient quantity would get stored as this ingredient's
+    // baseline snapshot, then divide-by-zero the next time it's rescaled client-side
+    // in the recipe builder (#165 review finding) — reject at write time instead.
+    res.status(400).json({ error: 'Each ingredient needs a quantity greater than 0' })
+    return false
+  }
   return true
 }
 

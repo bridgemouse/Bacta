@@ -199,6 +199,18 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
         ingredient_count: ingredients.length,
         per_serving_calories: result.food.calories, per_serving_protein_g: result.food.protein_g,
         per_serving_carbs_g: result.food.carbs_g, per_serving_fat_g: result.food.fat_g, per_serving_fiber_g: result.food.fiber_g,
+        per_serving_sodium_mg: result.food.sodium_mg ?? null,
+        per_serving_sugar_g: result.food.sugar_g ?? null,
+        per_serving_saturated_fat_g: result.food.saturated_fat_g ?? null,
+        per_serving_polyunsaturated_fat_g: result.food.polyunsaturated_fat_g ?? null,
+        per_serving_monounsaturated_fat_g: result.food.monounsaturated_fat_g ?? null,
+        per_serving_trans_fat_g: result.food.trans_fat_g ?? null,
+        per_serving_cholesterol_mg: result.food.cholesterol_mg ?? null,
+        per_serving_potassium_mg: result.food.potassium_mg ?? null,
+        per_serving_vitamin_a_mcg: result.food.vitamin_a_mcg ?? null,
+        per_serving_vitamin_c_mg: result.food.vitamin_c_mg ?? null,
+        per_serving_calcium_mg: result.food.calcium_mg ?? null,
+        per_serving_iron_mg: result.food.iron_mg ?? null,
       })
     } catch (err) {
       showToast(errorMessage(err, editing ? 'Could not update recipe.' : 'Could not save recipe.'), 'error')

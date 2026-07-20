@@ -276,6 +276,22 @@ export interface Recipe {
   per_serving_carbs_g: number | null
   per_serving_fat_g: number | null
   per_serving_fiber_g: number | null
+  // Widened nutrient set (#140/#162) — GET /api/nutrition/recipes selects all of
+  // NUMERIC_NUTRIENT_KEYS as per_serving_*, not just the original 5 (see
+  // server/api/nutrition.ts). Food/FoodLogEntry/NutritionTarget were correctly widened
+  // in #140; this one was missed since it predates the per_serving_ prefix pattern.
+  per_serving_sodium_mg: number | null
+  per_serving_sugar_g: number | null
+  per_serving_saturated_fat_g: number | null
+  per_serving_polyunsaturated_fat_g: number | null
+  per_serving_monounsaturated_fat_g: number | null
+  per_serving_trans_fat_g: number | null
+  per_serving_cholesterol_mg: number | null
+  per_serving_potassium_mg: number | null
+  per_serving_vitamin_a_mcg: number | null
+  per_serving_vitamin_c_mg: number | null
+  per_serving_calcium_mg: number | null
+  per_serving_iron_mg: number | null
 }
 
 export async function fetchRecipes(): Promise<Recipe[]> {

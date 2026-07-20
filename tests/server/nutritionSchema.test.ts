@@ -1,6 +1,24 @@
 import { describe, it, expect, beforeAll } from 'vitest'
+import fs from 'fs'
+import path from 'path'
 
 process.env.DB_PATH = ':memory:'
+
+// Mirrors migrate.ts's NEW_NUTRIENT_COLUMNS list (#140) -- schema.sql should declare
+// these directly rather than relying solely on the runtime ALTER TABLE loop, matching
+// how health_activities' widened columns were folded back into schema.sql (#41).
+const WIDENED_NUTRIENT_COLUMNS = [
+  'sodium_mg', 'sugar_g', 'saturated_fat_g', 'polyunsaturated_fat_g',
+  'monounsaturated_fat_g', 'trans_fat_g', 'cholesterol_mg', 'potassium_mg',
+  'vitamin_a_mcg', 'vitamin_c_mg', 'calcium_mg', 'iron_mg',
+  'glycemic_index', 'custom_nutrients', 'allergens', 'traces',
+]
+
+function extractCreateTableBlock(schemaSql: string, table: string): string {
+  const match = schemaSql.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${table} \\(([\\s\\S]*?)\\);`))
+  if (!match) throw new Error(`CREATE TABLE ${table} not found in schema.sql`)
+  return match[1]
+}
 
 function tableExists(db: import('better-sqlite3').Database, name: string): boolean {
   return !!db.prepare(
@@ -46,5 +64,15 @@ describe('Nutrition schema migration', () => {
     const { migrate } = await import('../../server/db/migrate')
     expect(() => migrate()).not.toThrow()
     expect(tableExists(db, 'macrofactor_snapshots')).toBe(false)
+  })
+
+  it("schema.sql's CREATE TABLE statements for foods/food_log_entries/nutrition_targets/recipe_ingredients already declare the widened nutrient columns (#162), not just migrate.ts's runtime ALTER TABLE loop", () => {
+    const schemaSql = fs.readFileSync(path.join(__dirname, '../../server/db/schema.sql'), 'utf-8')
+    for (const table of ['foods', 'food_log_entries', 'nutrition_targets', 'recipe_ingredients']) {
+      const block = extractCreateTableBlock(schemaSql, table)
+      for (const col of WIDENED_NUTRIENT_COLUMNS) {
+        expect(block).toContain(col)
+      }
+    }
   })
 })

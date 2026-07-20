@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 
 process.env.DB_PATH = ':memory:'
 
@@ -57,5 +57,18 @@ describe('logEvent', () => {
     const rowsB = db.prepare('SELECT message FROM app_logs WHERE source = ?').all('source-b') as { message: string }[]
     expect(rowsA.length).toBe(2)
     expect(rowsB.length).toBe(1)
+  })
+
+  it('does not throw when the DB write fails (#163) -- a locked/busy SQLite must never crash the caller, since some call sites (e.g. garminSync.ts child.on(\'close\')) invoke logEvent() outside any request try/catch', async () => {
+    const { logEvent } = await import('../../server/lib/logger')
+    const { default: db } = await import('../../server/db/client')
+
+    const spy = vi.spyOn(db, 'prepare').mockImplementation(() => {
+      throw new Error('SQLITE_BUSY: database is locked')
+    })
+
+    expect(() => logEvent('garmin', 'error', 'this must not crash the process')).not.toThrow()
+
+    spy.mockRestore()
   })
 })

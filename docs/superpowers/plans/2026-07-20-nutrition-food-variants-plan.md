@@ -67,12 +67,15 @@ Add to `tests/server/nutritionSchema.test.ts` (append inside the existing `descr
     expect(ingredientCols).not.toContain('food_id')
   })
 
-  it('migrating an established DB (old foods shape with default_qty) to the variant schema is idempotent', async () => {
-    // Simulate a pre-migration production DB: recreate the OLD foods shape directly,
-    // then confirm migrate() both transforms it AND running it twice doesn't throw.
+  it('migrating an established DB (old foods/food_log_entries/recipe_ingredients shape) to the variant schema is idempotent', async () => {
+    // Simulate a pre-migration production DB: recreate the OLD shape of all three
+    // affected tables (not just foods) directly, then confirm migrate() both transforms
+    // them AND running it twice doesn't throw. Reverting food_log_entries/
+    // recipe_ingredients too (not just foods) is what actually exercises the DROP COLUMN
+    // food_id / ADD COLUMN variant_id path below — a version of this test that only
+    // reverted foods would pass without ever touching that code path.
     const { default: db } = await import('../../server/db/client')
     db.exec('DROP TABLE IF EXISTS food_variants')
-    db.exec('ALTER TABLE food_log_entries ADD COLUMN food_id_sim INTEGER') // won't collide, just proving ALTER works pre-migration in this sim
     db.exec('DROP TABLE foods')
     db.exec(`
       CREATE TABLE foods (
@@ -81,12 +84,21 @@ Add to `tests/server/nutritionSchema.test.ts` (append inside the existing `descr
         calories REAL, source_json TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `)
-    db.exec('ALTER TABLE food_log_entries DROP COLUMN food_id_sim')
+    db.exec('ALTER TABLE food_log_entries ADD COLUMN food_id INTEGER')
+    db.exec('ALTER TABLE food_log_entries DROP COLUMN variant_id')
+    db.exec('ALTER TABLE recipe_ingredients ADD COLUMN food_id INTEGER')
+    db.exec('ALTER TABLE recipe_ingredients DROP COLUMN variant_id')
 
     const { migrate } = await import('../../server/db/migrate')
     expect(() => migrate()).not.toThrow()
     expect(() => migrate()).not.toThrow()
 
+    const logCols = (db.prepare("SELECT name FROM pragma_table_info('food_log_entries')").all() as { name: string }[]).map(c => c.name)
+    expect(logCols).toContain('variant_id')
+    expect(logCols).not.toContain('food_id')
+    const ingredientCols = (db.prepare("SELECT name FROM pragma_table_info('recipe_ingredients')").all() as { name: string }[]).map(c => c.name)
+    expect(ingredientCols).toContain('variant_id')
+    expect(ingredientCols).not.toContain('food_id')
     const foodsCols = (db.prepare("SELECT name FROM pragma_table_info('foods')").all() as { name: string }[]).map(c => c.name)
     expect(foodsCols).not.toContain('default_qty')
     expect(tableExists(db, 'food_variants')).toBe(true)

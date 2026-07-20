@@ -7,18 +7,27 @@ import {
   listWikiPagesSync,
   archiveWikiPageSync,
 } from './wiki'
+import { NUMERIC_NUTRIENT_KEYS, DESCRIPTIVE_NUTRIENT_KEYS } from '../nutrition/nutrientKeys'
+
+// Derived from the shared nutrient-key lists (server/lib/nutrition/nutrientKeys.ts)
+// instead of hand-typed here — this was previously a 3rd hardcoded duplicate of the
+// same column list (alongside server/api/nutrition.ts and foodImportLoader.ts's SQL),
+// meaning a future nutrient addition/removal wouldn't reach MX-4's own understanding of
+// the schema unless someone remembered to update this string by hand too (#161).
+const NUMERIC_NUTRIENT_COLS = NUMERIC_NUTRIENT_KEYS.map(k => `${k} REAL`).join(', ')
+const DESCRIPTIVE_NUTRIENT_COLS = DESCRIPTIVE_NUTRIENT_KEYS.map(k => `${k} TEXT`).join(', ')
 
 const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the health biometric database.
 
 Schema:
   health_snapshots(date TEXT, metric TEXT, source TEXT, value REAL, unit TEXT, source_json TEXT)
   health_activities(date TEXT, activity_id TEXT, source TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
-  food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, sodium_mg REAL, sugar_g REAL, saturated_fat_g REAL, polyunsaturated_fat_g REAL, monounsaturated_fat_g REAL, trans_fat_g REAL, cholesterol_mg REAL, potassium_mg REAL, vitamin_a_mcg REAL, vitamin_c_mg REAL, calcium_mg REAL, iron_mg REAL, glycemic_index TEXT, custom_nutrients TEXT, allergens TEXT, traces TEXT)
+  food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, ${NUMERIC_NUTRIENT_COLS}, ${DESCRIPTIVE_NUTRIENT_COLS})
     — a normal table, NOT EAV like health_snapshots. Multiple rows per day (one per logged food).
     — custom_nutrients/allergens/traces are JSON-encoded strings (object / string array); NULL means not tracked for that entry, not zero/empty.
-  nutrition_targets(id INTEGER, date TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, sodium_mg REAL, sugar_g REAL, saturated_fat_g REAL, polyunsaturated_fat_g REAL, monounsaturated_fat_g REAL, trans_fat_g REAL, cholesterol_mg REAL, potassium_mg REAL, vitamin_a_mcg REAL, vitamin_c_mg REAL, calcium_mg REAL, iron_mg REAL)
+  nutrition_targets(id INTEGER, date TEXT, ${NUMERIC_NUTRIENT_COLS})
     — one row per date the targets changed. "Current" target = the row with the latest date <= the date in question.
-  foods(id INTEGER, source TEXT, name TEXT, brand TEXT, calories REAL, protein_g REAL, carbs_g REAL, fat_g REAL, fiber_g REAL, sodium_mg REAL, sugar_g REAL, saturated_fat_g REAL, polyunsaturated_fat_g REAL, monounsaturated_fat_g REAL, trans_fat_g REAL, cholesterol_mg REAL, potassium_mg REAL, vitamin_a_mcg REAL, vitamin_c_mg REAL, calcium_mg REAL, iron_mg REAL, glycemic_index TEXT, custom_nutrients TEXT, allergens TEXT, traces TEXT, default_qty REAL, default_unit TEXT)
+  foods(id INTEGER, source TEXT, name TEXT, brand TEXT, ${NUMERIC_NUTRIENT_COLS}, ${DESCRIPTIVE_NUTRIENT_COLS}, default_qty REAL, default_unit TEXT)
     — reference/ingredient data, not user logs. Rarely needs querying directly by MX-4.
   mx4_briefings(section TEXT, content_json TEXT, generated_at TEXT, model TEXT)
     — section values: 'recovery', 'sleep', 'training', 'nutrition', 'home'

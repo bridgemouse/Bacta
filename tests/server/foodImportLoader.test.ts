@@ -101,6 +101,16 @@ describe('food import loader', () => {
       expect(rows.find(r => r.source_id === '0000000000000')).toBeUndefined()
     })
 
+    it('persists the mapped allergens column all the way through the upsert, not just in mapOffProductToRow\'s return value (#161)', async () => {
+      const { importOffDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      importOffDumpFile(path.join(FIXTURES, 'off-dump-sample.jsonl'))
+
+      const { default: db } = await import('../../server/db/client')
+      const row = db.prepare("SELECT allergens, traces FROM foods WHERE source_id = '3017620422003'").get() as { allergens: string | null; traces: string | null }
+      expect(JSON.parse(row.allergens!)).toEqual(['milk', 'nuts', 'soybeans'])
+      expect(row.traces).toBeNull()
+    })
+
     it('running the import twice does not duplicate rows, and refreshes values', async () => {
       const { importOffDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
       importOffDumpFile(path.join(FIXTURES, 'off-dump-sample.jsonl'))

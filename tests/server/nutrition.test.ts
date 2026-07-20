@@ -361,6 +361,15 @@ describe('Nutrition API', () => {
       expect(res.status).toBe(400)
     })
 
+    it('POST /api/nutrition/recipes rejects an ingredient with quantity <= 0 (#165 review finding) -- a persisted zero quantity divides by zero when that ingredient is later rescaled client-side from its baseline', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Bad Ingredient Recipe', servings: 1,
+        ingredients: [{ name: 'X', quantity: 0, unit: 'g', calories: 10 }],
+      })
+      expect(res.status).toBe(400)
+    })
+
     it('GET /api/nutrition/recipes lists saved recipes with their per-serving macros and ingredient count', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).get('/api/nutrition/recipes')
@@ -463,6 +472,57 @@ describe('Nutrition API', () => {
       const logEntry = db.prepare('SELECT food_id, calories FROM food_log_entries WHERE id = ?').get(logRes.body.id) as { food_id: number; calories: number }
       expect(logEntry.food_id).toBe(foodId)
       expect(logEntry.calories).toBe(165)
+    })
+
+    it('PUT /api/nutrition/log/:id rescales a food-linked entry from its OWN prior macros on a quantity edit, not the food\'s current (possibly since-edited) macros', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Protein Smoothie', servings: 2,
+        ingredients: [{ name: 'Protein powder', quantity: 1, unit: 'scoop', calories: 300, protein_g: 60, carbs_g: 0, fat_g: 0, fiber_g: 0 }],
+      })
+      const foodId = created.body.food.id
+      expect(created.body.food.calories).toBe(150) // 300 / 2 servings
+
+      // logged 2 servings while the recipe was still 150 kcal/serving -> 300 kcal stored
+      const logRes = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 2, unit: 'serving',
+      })
+      expect(logRes.body.calories).toBe(300)
+
+      // recipe edited afterward -> materialized food's calories change from 150 to 400/serving
+      await request(app).put(`/api/nutrition/recipes/${created.body.id}`).send({
+        name: 'Protein Smoothie', servings: 2,
+        ingredients: [{ name: 'Protein powder', quantity: 1, unit: 'scoop', calories: 800, protein_g: 60, carbs_g: 0, fat_g: 0, fiber_g: 0 }],
+      })
+
+      // editing only the log entry's quantity must scale from its OWN prior 300kcal-for-2-servings
+      // ratio (150/serving), not the food's new 400/serving value
+      const res = await request(app).put(`/api/nutrition/log/${logRes.body.id}`).send({ quantity: 3 })
+      expect(res.status).toBe(200)
+      expect(res.body.calories).toBe(450) // 150/serving (as originally logged) * 3, not 400 * 3 = 1200
+    })
+
+    it('POST /api/nutrition/log rejects a quantity <= 0 (#164 review finding) -- otherwise a zero quantity permanently zeroes a food-linked entry\'s macros with no way to recover them on a later edit', async () => {
+      const { app } = await import('../../server/index')
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Test Food', default_qty: 100, default_unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2,
+      })
+      const res = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-10', meal_type: 'lunch', food_id: food.body.id, quantity: 0, unit: 'g',
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('PUT /api/nutrition/log/:id rejects an edit that would leave the stored quantity at 0 or below (#164 review finding)', async () => {
+      const { app } = await import('../../server/index')
+      const food = await request(app).post('/api/nutrition/foods').send({
+        name: 'Test Food 2', default_qty: 100, default_unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2,
+      })
+      const logRes = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-10', meal_type: 'lunch', food_id: food.body.id, quantity: 50, unit: 'g',
+      })
+      const res = await request(app).put(`/api/nutrition/log/${logRes.body.id}`).send({ quantity: 0 })
+      expect(res.status).toBe(400)
     })
 
     it('PUT /api/nutrition/recipes/:id returns 404 for a nonexistent recipe', async () => {
@@ -592,8 +652,11 @@ describe('Nutrition API', () => {
     it('breaks ties at the same logged_at timestamp by using id DESC (higher id wins)', async () => {
       const { default: db } = await import('../../server/db/client')
       // Insert two entries with the SAME name, unit, and logged_at timestamp
-      // but DIFFERENT calories to test the deterministic tiebreaker
-      const sameTimestamp = '2026-07-12 12:00:00'
+      // but DIFFERENT calories to test the deterministic tiebreaker. Far-future
+      // date (not just "recent") so these two rows always sort first regardless of
+      // how many other entries earlier tests in this file logged via the real API
+      // (which default logged_at to actual current time, not a fixed past date).
+      const sameTimestamp = '2099-07-12 12:00:00'
       const firstId = Number(db.prepare(`
         INSERT INTO food_log_entries (date, meal_type, name, quantity, unit, calories, logged_at, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)

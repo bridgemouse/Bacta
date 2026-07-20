@@ -32,6 +32,12 @@ export interface OffProductRecord {
   product_name?: string
   brands?: string
   nutriments?: Record<string, unknown>
+  // Verified live 2026-07-19 against a real product record (barcode 3017620422003):
+  // an array of tag strings, language-prefixed (e.g. "en:milk"). Can be entirely absent
+  // (not just an empty array) when a product has no documented traces, same "missing key
+  // vs. present-and-empty" ambiguity foodImportMapping already handles for nutriments.
+  allergens_tags?: string[]
+  traces_tags?: string[]
   // The single-product REST API (verified live) wraps the same document under a
   // "product" key alongside a "status" field. OFF's own docs describe the JSONL bulk
   // export as identical to their MongoDB dump, which is documented elsewhere as the
@@ -41,6 +47,8 @@ export interface OffProductRecord {
     product_name?: string
     brands?: string
     nutriments?: Record<string, unknown>
+    allergens_tags?: string[]
+    traces_tags?: string[]
   }
 }
 
@@ -68,6 +76,16 @@ export interface FoodImportRow {
   vitamin_c_mg: number | null
   calcium_mg: number | null
   iron_mg: number | null
+  // Widened descriptive fields (#140/#161). Always null for USDA -- Foundation/SR Legacy
+  // data has no glycemic-index/allergen/traces concept. For OFF, glycemic_index and
+  // custom_nutrients have no natural source field either and stay null; allergens/traces
+  // map from OFF's real allergens_tags/traces_tags (see tagListOrNull). JSON-stringified
+  // already (matching source_json below), not a raw array -- consistent with how these
+  // columns are written elsewhere (server/api/nutrition.ts's parseJsonField).
+  glycemic_index: string | null
+  custom_nutrients: string | null
+  allergens: string | null
+  traces: string | null
   source_json: string
 }
 
@@ -147,6 +165,10 @@ export function mapUsdaFoodToRow(record: UsdaFoodRecord | null | undefined): Foo
     vitamin_c_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.vitamin_c_mg),
     calcium_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.calcium_mg),
     iron_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.iron_mg),
+    glycemic_index: null,
+    custom_nutrients: null,
+    allergens: null,
+    traces: null,
     source_json: JSON.stringify(record),
   }
 
@@ -170,6 +192,15 @@ function numberOrNull(value: unknown): number | null {
     return Number(value)
   }
   return null
+}
+
+// Strips OFF's language-tag prefix (e.g. "en:milk" -> "milk") and JSON-stringifies for
+// storage, matching parseJsonField's convention elsewhere. An empty array (no allergens/
+// traces documented) maps to null, same as an absent key -- both mean "nothing recorded",
+// not "recorded as empty".
+function tagListOrNull(tags: string[] | undefined): string | null {
+  if (!tags || tags.length === 0) return null
+  return JSON.stringify(tags.map(tag => tag.replace(/^[a-z]{2}:/, '')))
 }
 
 export function mapOffProductToRow(record: OffProductRecord): FoodImportRow | null {
@@ -207,6 +238,12 @@ export function mapOffProductToRow(record: OffProductRecord): FoodImportRow | nu
     vitamin_c_mg: null,
     calcium_mg: null,
     iron_mg: null,
+    // glycemic_index/custom_nutrients have no natural OFF source field and stay null;
+    // allergens/traces map from OFF's real allergens_tags/traces_tags.
+    glycemic_index: null,
+    custom_nutrients: null,
+    allergens: tagListOrNull(doc.allergens_tags),
+    traces: tagListOrNull(doc.traces_tags),
     source_json: JSON.stringify(record),
   }
 }

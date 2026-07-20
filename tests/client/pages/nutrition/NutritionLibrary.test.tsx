@@ -427,6 +427,29 @@ describe('NutritionLibrary — edit recipe', () => {
     expect(screen.queryByRole('button', { name: 'Protein Smoothie' })).not.toBeInTheDocument()
   })
 
+  it('rescaling an existing ingredient\'s quantity uses the ingredient\'s OWN stored snapshot, not the referenced food\'s current (possibly since-edited) macros', async () => {
+    // The recipe's own stored snapshot for this ingredient (as saved at the time):
+    // 100g of Test Oats = 200 kcal. But "Test Oats" (food_id 1) has SINCE been edited —
+    // the live foods list (`oats`, from the top-of-file fixture) now says 389 kcal/100g.
+    mockFetchRecipe.mockResolvedValue({
+      id: 2, name: 'Protein Smoothie', servings: 2, food_id: 9,
+      ingredients: [
+        { food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2 },
+      ],
+    })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Protein Smoothie')
+    await user.click(screen.getByLabelText('Edit Protein Smoothie'))
+    await screen.findByDisplayValue('Protein Smoothie')
+
+    await user.clear(screen.getByLabelText('Ingredient 0 quantity'))
+    await user.type(screen.getByLabelText('Ingredient 0 quantity'), '50')
+
+    // 200 kcal stored per 100g * (50/100) = 100 -- NOT 389 (live Test Oats) * 0.5 = 194.5
+    expect(await screen.findByText('100 kcal')).toBeInTheDocument()
+  })
+
   it('‹ BACK TO LIBRARY from the edit form does not call updateRecipe', async () => {
     const user = userEvent.setup()
     render(<NutritionLibrary />)

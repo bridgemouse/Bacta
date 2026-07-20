@@ -66,6 +66,20 @@ describe('MX-4 Tools', () => {
       expect(queryDb.description).toContain('mx4_briefings')
     })
 
+    it('describes food_log_entries/nutrition_targets/foods\' nutrient columns from the shared NUMERIC_NUTRIENT_KEYS/DESCRIPTIVE_NUTRIENT_KEYS list, not a 3rd hand-typed copy (#161) -- so it can never silently drift out of sync with the real schema', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      const { NUMERIC_NUTRIENT_KEYS, DESCRIPTIVE_NUTRIENT_KEYS } = await import('../../server/lib/nutrition/nutrientKeys')
+      const numericCols = NUMERIC_NUTRIENT_KEYS.map(k => `${k} REAL`).join(', ')
+      const descriptiveCols = DESCRIPTIVE_NUTRIENT_KEYS.map(k => `${k} TEXT`).join(', ')
+
+      // food_log_entries and foods carry both numeric and descriptive columns
+      expect(queryDb.description).toContain(`food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, ${numericCols}, ${descriptiveCols})`)
+      expect(queryDb.description).toContain(`foods(id INTEGER, source TEXT, name TEXT, brand TEXT, ${numericCols}, ${descriptiveCols}, default_qty REAL, default_unit TEXT)`)
+      // nutrition_targets carries only the numeric columns -- a target row has no
+      // glycemic_index/allergens/traces concept, so it must not include descriptiveCols
+      expect(queryDb.description).toContain(`nutrition_targets(id INTEGER, date TEXT, ${numericCols})`)
+    })
+
     it('rejects UPDATE and does not mutate data', async () => {
       const { queryDb } = await import('../../server/lib/ai/tools')
       const { default: db } = await import('../../server/db/client')

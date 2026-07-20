@@ -90,48 +90,63 @@ function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack:
   )
 }
 
-interface IngredientRow {
-  food_id?: number
-  name: string
+interface MacroSnapshot {
   quantity: number
-  unit: string
   calories: number | null
   protein_g: number | null
   carbs_g: number | null
   fat_g: number | null
   fiber_g: number | null
-  // Present only for food-linked rows — the food this row was added from, kept
-  // around so a later quantity edit can rescale macros from its per-default_qty
-  // values instead of leaving them frozen at whatever quantity the row started at.
-  sourceFood?: Food
 }
 
-function scaleFromFood(food: Food, quantity: number) {
-  const factor = quantity / food.default_qty
+interface IngredientRow extends MacroSnapshot {
+  food_id?: number
+  name: string
+  unit: string
+  // Fixed at row-creation time (an existing recipe's stored snapshot, or a newly-added
+  // food's per-default_qty values) -- NEVER mutated afterward. A later quantity edit
+  // always rescales from this original baseline, not from the row's progressively-edited
+  // state: chaining from mutated state means a transient blank/0 quantity mid-typing
+  // (e.g. clear-then-retype) permanently zeroes the macros out, since 0 * anything is 0
+  // and there'd be nothing left to scale back up from. A fixed baseline can't be
+  // corrupted that way, and a food-linked ingredient's macros are meant to be an
+  // immutable snapshot regardless (see recipe_ingredients' own schema comment) -- the
+  // referenced food can itself have been edited since (e.g. it's another recipe's
+  // materialized food, re-saved with different macros), and rescaling from a live
+  // lookup would silently pull those later edits into THIS recipe's saved composition.
+  baseline?: MacroSnapshot
+}
+
+function scaleFromRow(baseline: MacroSnapshot, quantity: number) {
+  const factor = quantity / baseline.quantity
   const round2 = (v: number | null) => v == null ? null : Math.round(v * factor * 100) / 100
   return {
-    calories: food.calories == null ? null : Math.round(food.calories * factor),
-    protein_g: round2(food.protein_g),
-    carbs_g: round2(food.carbs_g),
-    fat_g: round2(food.fat_g),
-    fiber_g: round2(food.fiber_g),
+    calories: baseline.calories == null ? null : Math.round(baseline.calories * factor),
+    protein_g: round2(baseline.protein_g),
+    carbs_g: round2(baseline.carbs_g),
+    fat_g: round2(baseline.fat_g),
+    fiber_g: round2(baseline.fiber_g),
   }
 }
 
-function toIngredientRows(ingredients: RecipeDetail['ingredients'], foods: Food[]): IngredientRow[] {
-  return ingredients.map(i => ({
-    food_id: i.food_id, name: i.name, quantity: i.quantity, unit: i.unit,
-    calories: i.calories ?? null, protein_g: i.protein_g ?? null, carbs_g: i.carbs_g ?? null,
-    fat_g: i.fat_g ?? null, fiber_g: i.fiber_g ?? null,
-    sourceFood: i.food_id != null ? foods.find(f => f.id === i.food_id) : undefined,
-  }))
+function toIngredientRows(ingredients: RecipeDetail['ingredients']): IngredientRow[] {
+  return ingredients.map(i => {
+    const snapshot: MacroSnapshot = {
+      quantity: i.quantity, calories: i.calories ?? null, protein_g: i.protein_g ?? null,
+      carbs_g: i.carbs_g ?? null, fat_g: i.fat_g ?? null, fiber_g: i.fiber_g ?? null,
+    }
+    return {
+      food_id: i.food_id, name: i.name, unit: i.unit, ...snapshot,
+      baseline: i.food_id != null ? snapshot : undefined,
+    }
+  })
 }
 
 function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; editing?: RecipeDetail; onDone: (recipe: Recipe) => void; onBack: () => void }) {
   const { showToast } = useToast()
   const [name, setName] = useState(editing?.name ?? '')
   const [servings, setServings] = useState(editing ? String(editing.servings) : '')
-  const [ingredients, setIngredients] = useState<IngredientRow[]>(editing ? toIngredientRows(editing.ingredients, foods) : [])
+  const [ingredients, setIngredients] = useState<IngredientRow[]>(editing ? toIngredientRows(editing.ingredients) : [])
   const [query, setQuery] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -140,10 +155,12 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
     : []
 
   function addFromFood(food: Food) {
+    const snapshot: MacroSnapshot = {
+      quantity: food.default_qty, calories: food.calories, protein_g: food.protein_g,
+      carbs_g: food.carbs_g, fat_g: food.fat_g, fiber_g: food.fiber_g,
+    }
     setIngredients(rows => [...rows, {
-      food_id: food.id, name: food.name, quantity: food.default_qty, unit: food.default_unit,
-      calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g, fiber_g: food.fiber_g,
-      sourceFood: food,
+      food_id: food.id, name: food.name, unit: food.default_unit, ...snapshot, baseline: snapshot,
     }])
     setQuery('')
   }
@@ -223,7 +240,7 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
               <input aria-label={`Ingredient ${i} quantity`} value={String(ing.quantity)}
                 onChange={e => {
                   const quantity = Number(e.target.value)
-                  updateIngredient(i, ing.sourceFood ? { quantity, ...scaleFromFood(ing.sourceFood, quantity) } : { quantity })
+                  updateIngredient(i, ing.baseline ? { quantity, ...scaleFromRow(ing.baseline, quantity) } : { quantity })
                 }} style={{ ...inputStyle, width: 60 }} />
               {isAdHoc ? (
                 <input aria-label={`Ingredient ${i} unit`} value={ing.unit} onChange={e => updateIngredient(i, { unit: e.target.value })}

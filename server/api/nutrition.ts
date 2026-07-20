@@ -1,25 +1,9 @@
 import { Router, type Response } from 'express'
 import db from '../db/client'
 import { estimateMealFromPhoto } from '../lib/ai/mealPhoto'
+import { NUMERIC_NUTRIENT_KEYS, JSON_NUTRIENT_KEYS, DESCRIPTIVE_NUTRIENT_KEYS, type NumericNutrientKey, type NumericRow } from '../lib/nutrition/nutrientKeys'
 
 const nutritionRouter = Router()
-
-// Widened nutrient set (#140). NUMERIC_NUTRIENT_KEYS covers every summable/scalable
-// quantity (the original 5 macros plus the 12 new ones) — used everywhere a per-key
-// loop already iterated the original 5, so scaling/totals/target-vs-actual logic stays
-// mechanical instead of hand-duplicated per field. DESCRIPTIVE_KEYS are NOT summed or
-// scaled — they describe the food itself (a "half" glycemic index or half an allergen
-// list makes no sense), so they're only read/written on a single row, never aggregated.
-const NUMERIC_NUTRIENT_KEYS = [
-  'calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g',
-  'sodium_mg', 'sugar_g', 'saturated_fat_g', 'polyunsaturated_fat_g', 'monounsaturated_fat_g',
-  'trans_fat_g', 'cholesterol_mg', 'potassium_mg', 'vitamin_a_mcg', 'vitamin_c_mg',
-  'calcium_mg', 'iron_mg',
-] as const
-type NumericNutrientKey = typeof NUMERIC_NUTRIENT_KEYS[number]
-const JSON_NUTRIENT_KEYS = ['custom_nutrients', 'allergens', 'traces'] as const
-const DESCRIPTIVE_NUTRIENT_KEYS = ['glycemic_index', ...JSON_NUTRIENT_KEYS] as const
-type NumericRow = Partial<Record<NumericNutrientKey, number | null>>
 
 function parseJsonField(value: unknown): unknown {
   return value === undefined || value === null ? null : JSON.stringify(value)
@@ -210,6 +194,15 @@ nutritionRouter.post('/log', (req, res) => {
   const body = req.body as LogEntryBody
   const { date, meal_type, food_id, name, quantity, unit } = body
 
+  if (!(quantity > 0)) {
+    // A zero/negative quantity would divide-by-zero (ad-hoc) or store zeroed macros
+    // (food-linked) at write time, and — worse — later become an unrescalable stored
+    // quantity: PUT /log/:id rescales from THIS entry's own prior quantity, so a zeroed
+    // entry can never recover its macros on a subsequent edit (#164 review finding).
+    res.status(400).json({ error: 'quantity must be greater than 0' })
+    return
+  }
+
   try {
     let entry: { name: string } & NumericRow & { glycemic_index: string | null; custom_nutrients: unknown; allergens: unknown; traces: unknown }
 
@@ -293,12 +286,18 @@ nutritionRouter.put('/log/:id', (req, res) => {
   }
 
   // A food-linked entry's macros are a denormalized snapshot, not a live join — a
-  // quantity or unit edit must rescale from the reference food, otherwise the stored
-  // macros silently keep reflecting the old quantity/unit combination. Only macros NOT
-  // explicitly overridden in this same request get rescaled — providing one corrected
-  // macro must not freeze the other four at their now-stale values. Unit is validated
-  // against the food's default_unit the same way POST does (no conversion in v1), since
-  // an entry's unit must always match the food it's linked to, edit or not.
+  // quantity or unit edit must rescale, otherwise the stored macros silently keep
+  // reflecting the old quantity/unit combination. Rescaling from the entry's OWN prior
+  // quantity/macros (not a fresh read of the current `foods` row) matters: the
+  // referenced food can itself have been edited since this entry was logged (e.g. a
+  // recipe re-save widens/narrows its per-serving macros), and a live re-read would
+  // silently rewrite this historical entry's macros to reflect that later edit instead
+  // of what was actually true when it was logged. Only macros NOT explicitly overridden
+  // in this same request get rescaled — providing one corrected macro must not freeze
+  // the other four at their now-stale values. Unit is still validated against the food's
+  // default_unit the same way POST does (no conversion in v1), since an entry's unit
+  // must always match the food it's linked to, edit or not — that check is the only
+  // remaining reason to read the live `foods` row here.
   if (existing.food_id != null) {
     const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(existing.food_id) as FoodRow | undefined
     if (food) {
@@ -307,16 +306,25 @@ nutritionRouter.put('/log/:id', (req, res) => {
         res.status(400).json({ error: `Unit mismatch — this food is logged in ${food.default_unit}` })
         return
       }
-      if (food.default_qty <= 0) {
-        res.status(400).json({ error: 'Referenced food has an invalid default_qty' })
-        return
-      }
       if ('quantity' in updates || 'unit' in updates) {
         const finalQuantity = (updates.quantity ?? existing.quantity) as number
-        const factor = finalQuantity / food.default_qty
+        if (finalQuantity <= 0) {
+          res.status(400).json({ error: 'quantity must be greater than 0' })
+          return
+        }
+        const existingQuantity = existing.quantity as number
+        if (existingQuantity <= 0) {
+          // Defense in depth against pre-existing bad data (mirrors the POST /log
+          // guard) — a stale row with quantity <= 0 has no valid ratio to rescale
+          // from, and silently skipping the rescale would freeze its macros at
+          // whatever they already (wrongly) were instead of surfacing the problem.
+          res.status(400).json({ error: 'Log entry has an invalid stored quantity' })
+          return
+        }
+        const factor = finalQuantity / existingQuantity
         for (const key of NUMERIC_NUTRIENT_KEYS) {
           if (!(key in updates)) {
-            updates[key] = scale(food[key] ?? null, factor)
+            updates[key] = scale((existing[key] as number | null) ?? null, factor)
           }
         }
       }
@@ -448,6 +456,13 @@ function validateRecipeInput(servings: number, ingredients: RecipeIngredientInpu
   }
   if (!ingredients || ingredients.length === 0) {
     res.status(400).json({ error: 'A recipe needs at least one ingredient' })
+    return false
+  }
+  if (ingredients.some(ing => !(ing.quantity > 0))) {
+    // A zero/negative ingredient quantity would get stored as this ingredient's
+    // baseline snapshot, then divide-by-zero the next time it's rescaled client-side
+    // in the recipe builder (#165 review finding) — reject at write time instead.
+    res.status(400).json({ error: 'Each ingredient needs a quantity greater than 0' })
     return false
   }
   return true

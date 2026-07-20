@@ -120,6 +120,16 @@ describe('mapUsdaFoodToRow', () => {
     expect(row!.sodium_mg).toBeNull()
     expect(row!.vitamin_a_mcg).toBeNull()
   })
+
+  it('leaves all 4 descriptive fields null -- USDA Foundation/SR Legacy data has no glycemic-index/allergen/traces concept', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('usda-sr-legacy-banana-extended.json')
+    const row = mapUsdaFoodToRow(record as any)
+    expect(row!.glycemic_index).toBeNull()
+    expect(row!.custom_nutrients).toBeNull()
+    expect(row!.allergens).toBeNull()
+    expect(row!.traces).toBeNull()
+  })
 })
 
 describe('mapOffProductToRow', () => {
@@ -155,6 +165,37 @@ describe('mapOffProductToRow', () => {
       calories: 539,
     })
     expect(row!.fiber_g).toBeNull()
+  })
+
+  it('maps allergens_tags to the allergens column, stripping the "en:" language prefix, and traces to null when traces_tags is absent (verified live 2026-07-19 against the real Nutella product record)', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('off-nutella.json')
+    const row = mapOffProductToRow(record as any)
+
+    expect(JSON.parse(row!.allergens!)).toEqual(['milk', 'nuts', 'soybeans'])
+    expect(row!.traces).toBeNull()
+  })
+
+  it('maps traces_tags to the traces column the same way, and treats an empty allergens_tags array as null rather than an empty list', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const row = mapOffProductToRow({
+      code: '222', product_name: 'Trace Peanuts Product',
+      nutriments: { 'energy-kcal_100g': 100 },
+      allergens_tags: [],
+      traces_tags: ['en:peanuts', 'en:tree-nuts'],
+    } as any)
+
+    expect(row!.allergens).toBeNull()
+    expect(JSON.parse(row!.traces!)).toEqual(['peanuts', 'tree-nuts'])
+  })
+
+  it('leaves glycemic_index and custom_nutrients null -- OFF has no standard field for either', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('off-nutella.json')
+    const row = mapOffProductToRow(record as any)
+
+    expect(row!.glycemic_index).toBeNull()
+    expect(row!.custom_nutrients).toBeNull()
   })
 
   it('parses a nutriment value even when OFF returns it as a numeric string rather than a number', async () => {

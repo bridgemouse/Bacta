@@ -2,6 +2,7 @@ import db from './client'
 import fs from 'fs'
 import path from 'path'
 import { initSettings } from '../lib/settings'
+import { NUMERIC_NUTRIENT_KEYS, DESCRIPTIVE_NUTRIENT_KEYS } from '../lib/nutrition/nutrientKeys'
 
 // NEW_ACTIVITY_COLS: columns are now part of health_activities schema from the start
 // (legacy ALTER TABLE loop removed — garmin_activities no longer exists post-migration)
@@ -155,6 +156,68 @@ export function migrate() {
         // column already exists, idempotent
       }
     }
+  }
+
+  // Food variants (multi-serving model) — see
+  // docs/superpowers/specs/2026-07-15-nutrition-food-variants-design.md. foods loses
+  // default_qty/default_unit + all nutrient columns (moved to food_variants);
+  // food_log_entries/recipe_ingredients lose food_id, gain variant_id. As of 2026-07-20,
+  // nothing real referenced any of this data (0 log entries, 0 recipes; foods' rows are
+  // 100% reproducible from source files on disk) — this wipes and re-derives rather than
+  // converting rows in place. Gated on foods still having default_qty so this whole block
+  // is a no-op (and thus idempotent) once the swap has happened once.
+  const foodsHasDefaultQty = db.prepare(
+    "SELECT 1 FROM pragma_table_info('foods') WHERE name = 'default_qty'"
+  ).get()
+  if (foodsHasDefaultQty) {
+    db.exec('DROP TABLE IF EXISTS food_variants')
+    db.exec(`
+      CREATE TABLE food_variants (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        food_id       INTEGER NOT NULL REFERENCES foods(id),
+        label         TEXT NOT NULL,
+        serving_qty   REAL NOT NULL,
+        serving_unit  TEXT NOT NULL,
+        gram_weight   REAL,
+        is_default    INTEGER NOT NULL DEFAULT 0,
+        source        TEXT NOT NULL,
+        ${NUMERIC_NUTRIENT_KEYS.map(k => `${k} REAL`).join(',\n        ')},
+        ${DESCRIPTIVE_NUTRIENT_KEYS.map(k => `${k} TEXT`).join(',\n        ')},
+        created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_food_variants_food_id ON food_variants(food_id)')
+
+    db.exec('DELETE FROM food_log_entries')
+    db.exec('DELETE FROM recipe_ingredients')
+    db.exec('DELETE FROM recipes')
+    db.exec('DELETE FROM foods')
+
+    db.exec('ALTER TABLE food_log_entries DROP COLUMN food_id')
+    db.exec('ALTER TABLE food_log_entries ADD COLUMN variant_id INTEGER REFERENCES food_variants(id)')
+    db.exec('ALTER TABLE recipe_ingredients DROP COLUMN food_id')
+    db.exec('ALTER TABLE recipe_ingredients ADD COLUMN variant_id INTEGER REFERENCES food_variants(id)')
+
+    // Rebuild foods without default_qty/default_unit/macro columns — SQLite can DROP
+    // COLUMN one at a time but rebuilding via a new table is simpler for this many columns
+    // at once, matching this file's existing rename-via-rebuild precedent above.
+    db.exec(`
+      CREATE TABLE foods_new (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        source       TEXT NOT NULL,
+        source_id    TEXT,
+        name         TEXT NOT NULL,
+        brand        TEXT,
+        source_json  TEXT,
+        created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(source, source_id)
+      )
+    `)
+    db.exec('DROP TABLE foods')
+    db.exec('ALTER TABLE foods_new RENAME TO foods')
+    db.exec('CREATE INDEX IF NOT EXISTS idx_foods_name ON foods(name)')
+
+    console.log('[db] migrated to food_variants schema — foods/food_log_entries/recipe_ingredients/recipes wiped (0 real rows existed); re-run scripts/nutrition/importFoods.ts to repopulate foods')
   }
 
   initSettings()

@@ -10,18 +10,37 @@ CREATE TABLE IF NOT EXISTS health_snapshots (
   UNIQUE(date, metric, source)
 );
 
--- Reference food/ingredient data. Bulk-imported from USDA FoodData Central (SR Legacy +
--- Foundation Foods) and Open Food Facts, plus user-saved custom/ad-hoc foods (source='custom').
--- Macro values are per (default_qty, default_unit) — e.g. per 100g — mirroring how both
--- USDA and OFF publish their data, so import requires no unit conversion at write time.
+-- Reference food/ingredient data (identity only). Bulk-imported from USDA FoodData Central
+-- (SR Legacy + Foundation Foods), plus user-saved custom/ad-hoc foods (source='custom').
+-- Servable-unit data (quantity/unit/macros) lives on food_variants, not here — a food can
+-- have multiple variants ("100g", "1 slice", "1 cup"), each independently searchable and
+-- loggable. See docs/superpowers/specs/2026-07-15-nutrition-food-variants-design.md.
 CREATE TABLE IF NOT EXISTS foods (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   source       TEXT NOT NULL,              -- 'usda' | 'openfoodfacts' | 'custom'
   source_id    TEXT,                       -- USDA fdcId or OFF barcode/code; NULL for custom foods
   name         TEXT NOT NULL,
   brand        TEXT,                       -- packaged/branded foods only; NULL for generic/whole foods
-  default_qty  REAL NOT NULL DEFAULT 100,  -- the quantity the macro columns below refer to
-  default_unit TEXT NOT NULL DEFAULT 'g',
+  source_json  TEXT,                       -- raw import payload
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(source, source_id)
+);
+CREATE INDEX IF NOT EXISTS idx_foods_name ON foods(name);
+
+-- One row per servable unit of a food (e.g. "100 g", "1 tbsp", "1 cup"), each with its own
+-- precomputed macros. Every food must have at least one variant with is_default=1 — enforced
+-- at the application layer (POST /foods and the import path always create a food + its first
+-- variant together), not a DB constraint (SQLite can't express "at least one child row").
+CREATE TABLE IF NOT EXISTS food_variants (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  food_id       INTEGER NOT NULL REFERENCES foods(id),
+  label         TEXT NOT NULL,             -- display string, e.g. "1 tbsp"
+  serving_qty   REAL NOT NULL,             -- e.g. 100, 1, 1
+  serving_unit  TEXT NOT NULL,             -- e.g. "g", "tbsp", "cup"
+  gram_weight   REAL,                      -- e.g. 100, 14.3, 240; NULL if unknown (e.g. a custom
+                                            -- food logged in a non-mass unit with no gram equivalent)
+  is_default    INTEGER NOT NULL DEFAULT 0,-- SQLite has no native boolean; 0/1
+  source        TEXT NOT NULL,             -- 'usda' | 'openfoodfacts' | 'custom'
   calories     REAL,
   protein_g    REAL,
   carbs_g      REAL,
@@ -43,13 +62,9 @@ CREATE TABLE IF NOT EXISTS foods (
   custom_nutrients TEXT,
   allergens    TEXT,
   traces       TEXT,
-  source_json  TEXT,                       -- raw import payload — mirrors health_snapshots' source_json,
-                                            -- lets a future micronutrient feature mine
-                                            -- fields we don't surface yet without re-importing
-  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(source, source_id)
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX IF NOT EXISTS idx_foods_name ON foods(name);
+CREATE INDEX IF NOT EXISTS idx_food_variants_food_id ON food_variants(food_id);
 
 -- Logged diary entries. One row per food per meal per day — the same multi-row-per-day
 -- shape as health_activities, for the same reason (EAV can't represent it).
@@ -61,7 +76,7 @@ CREATE TABLE IF NOT EXISTS food_log_entries (
   date        TEXT NOT NULL,               -- ISO date this entry counts toward
   meal_type   TEXT NOT NULL,               -- 'breakfast' | 'lunch' | 'dinner' | 'snack' | free-form label
   logged_at   TEXT NOT NULL DEFAULT (datetime('now')),
-  food_id     INTEGER REFERENCES foods(id),-- NULL for a fully ad-hoc entry (FR3)
+  variant_id  INTEGER REFERENCES food_variants(id), -- NULL for a fully ad-hoc entry (FR3)
   name        TEXT NOT NULL,               -- denormalized display name, always present
   quantity    REAL NOT NULL,
   unit        TEXT NOT NULL,
@@ -140,7 +155,7 @@ CREATE TABLE IF NOT EXISTS recipes (
 CREATE TABLE IF NOT EXISTS recipe_ingredients (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   recipe_id  INTEGER NOT NULL REFERENCES recipes(id),
-  food_id    INTEGER REFERENCES foods(id),   -- NULL for an ad-hoc ingredient
+  variant_id INTEGER REFERENCES food_variants(id), -- NULL for an ad-hoc ingredient
   name       TEXT NOT NULL,
   quantity   REAL NOT NULL,
   unit       TEXT NOT NULL,

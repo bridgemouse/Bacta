@@ -90,6 +90,58 @@ describe('mapUsdaFoodToRow', () => {
     expect(result!.food).toMatchObject({ source: 'usda', source_id: '174988', name: 'Croissants, apple' })
     expect(result!.variants[0]).toMatchObject({ calories: 254, protein_g: 7.4, carbs_g: 37.1, fat_g: 8.7, fiber_g: 2.5 })
   })
+
+  it('maps the widened nutrient set (#140) — sodium 307, sugar 269, saturated/mono/poly/trans fat 606/645/646/605, cholesterol 601, potassium 306, vitamin A (RAE) 320, vitamin C 401, calcium 301, iron 303 — verified live against a real SR Legacy record', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('usda-sr-legacy-banana-extended.json')
+    const result = mapUsdaFoodToRow(record as any)
+
+    expect(result!.food).toMatchObject({ source_id: '173944' })
+    expect(result!.variants[0]).toMatchObject({
+      sodium_mg: 1.0,
+      sugar_g: 12.23,
+      saturated_fat_g: 0.112,
+      monounsaturated_fat_g: 0.032,
+      polyunsaturated_fat_g: 0.073,
+      trans_fat_g: 0.0,
+      cholesterol_mg: 0.0,
+      potassium_mg: 358.0,
+      vitamin_a_mcg: 3.0,
+      vitamin_c_mg: 8.7,
+      calcium_mg: 5.0,
+      iron_mg: 0.26,
+    })
+  })
+
+  it('maps a record missing a widened-nutrient code to null for that field, not 0', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    // The croissant fixture (used above) carries none of the widened codes.
+    const record = loadFixture('usda-sr-legacy-croissant.json')
+    const result = mapUsdaFoodToRow(record as any)
+    expect(result!.variants[0].sodium_mg).toBeNull()
+    expect(result!.variants[0].vitamin_a_mcg).toBeNull()
+  })
+
+  it('leaves all 4 descriptive fields null -- USDA Foundation/SR Legacy data has no glycemic-index/allergen/traces concept', async () => {
+    const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('usda-sr-legacy-banana-extended.json')
+    const result = mapUsdaFoodToRow(record as any)
+    expect(result!.variants[0].glycemic_index).toBeNull()
+    expect(result!.variants[0].custom_nutrients).toBeNull()
+    expect(result!.variants[0].allergens).toBeNull()
+    expect(result!.variants[0].traces).toBeNull()
+  })
+
+  describe('does not warn when a macro was successfully mapped', () => {
+    afterEach(() => { vi.restoreAllMocks() })
+
+    it('does not warn when at least one macro was successfully mapped', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { mapUsdaFoodToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+      mapUsdaFoodToRow(loadFixture('usda-sr-legacy-croissant.json') as any)
+      expect(warnSpy).not.toHaveBeenCalled()
+    })
+  })
 })
 
 describe('mapOffProductToRow', () => {
@@ -125,5 +177,53 @@ describe('mapOffProductToRow', () => {
   it('returns null for a record with no usable product name', async () => {
     const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
     expect(mapOffProductToRow({ code: '123', nutriments: {} } as any)).toBeNull()
+  })
+
+  it('maps allergens_tags to the allergens field, stripping the language prefix, and leaves traces null when traces_tags is absent', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('off-nutella.json')
+    const result = mapOffProductToRow(record as any)
+
+    expect(JSON.parse(result!.variants[0].allergens!)).toEqual(['milk', 'nuts', 'soybeans'])
+    expect(result!.variants[0].traces).toBeNull()
+  })
+
+  it('maps traces_tags to the traces field the same way, and treats an empty allergens_tags array as null rather than an empty list', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const result = mapOffProductToRow({
+      code: '222', product_name: 'Trace Peanuts Product',
+      nutriments: { 'energy-kcal_100g': 100 },
+      allergens_tags: [],
+      traces_tags: ['en:peanuts', 'en:tree-nuts'],
+    } as any)
+
+    expect(result!.variants[0].allergens).toBeNull()
+    expect(JSON.parse(result!.variants[0].traces!)).toEqual(['peanuts', 'tree-nuts'])
+  })
+
+  it('leaves glycemic_index and custom_nutrients null -- OFF has no standard field for either', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('off-nutella.json')
+    const result = mapOffProductToRow(record as any)
+
+    expect(result!.variants[0].glycemic_index).toBeNull()
+    expect(result!.variants[0].custom_nutrients).toBeNull()
+  })
+
+  it('parses a nutriment value even when OFF returns it as a numeric string rather than a number', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const result = mapOffProductToRow({
+      code: '111', product_name: 'String-valued nutriments',
+      nutriments: { 'energy-kcal_100g': '250', 'proteins_100g': '10.5' },
+    } as any)
+    expect(result!.variants[0]).toMatchObject({ calories: 250, protein_g: 10.5 })
+  })
+
+  it('also accepts the API-response shape (nested under "product") defensively', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    const record = loadFixture('off-api-nested-example.json')
+    const result = mapOffProductToRow(record as any)
+
+    expect(result!.food).toMatchObject({ source: 'openfoodfacts', source_id: '0016000275287', name: 'Cheerios' })
   })
 })

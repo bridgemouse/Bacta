@@ -20,3 +20,14 @@ export type NumericNutrientKey = typeof NUMERIC_NUTRIENT_KEYS[number]
 export const JSON_NUTRIENT_KEYS = ['custom_nutrients', 'allergens', 'traces'] as const
 export const DESCRIPTIVE_NUTRIENT_KEYS = ['glycemic_index', ...JSON_NUTRIENT_KEYS] as const
 export type NumericRow = Partial<Record<NumericNutrientKey, number | null>>
+
+// Scales every numeric nutrient in a row by a factor (e.g. converting a per-100g value to
+// a specific gram_weight), rounding to 2 decimal places. Shared so the import path's
+// variant-from-portion computation and any future scaling code use identical rounding —
+// this project has already paid once (#161) for hand-duplicated nutrient-column logic.
+export function scaleNumericRow(row: NumericRow, factor: number): NumericRow {
+  return Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => {
+    const v = row[k] ?? null
+    return [k, v == null ? null : Math.round(v * factor * 100) / 100]
+  })) as NumericRow
+}

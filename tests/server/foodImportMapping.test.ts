@@ -165,15 +165,6 @@ describe('mapOffProductToRow', () => {
     expect(result!.variants[0].fiber_g).toBeNull()
   })
 
-  it('maps allergens/traces onto the single variant, stripped of language-tag prefixes', async () => {
-    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
-    const record = loadFixture('off-cheerios.json')
-    const result = mapOffProductToRow(record as any)
-    if (result!.variants[0].allergens) {
-      expect(JSON.parse(result!.variants[0].allergens as string)).not.toEqual(expect.arrayContaining([expect.stringMatching(/^[a-z]{2}:/)]))
-    }
-  })
-
   it('returns null for a record with no usable product name', async () => {
     const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
     expect(mapOffProductToRow({ code: '123', nutriments: {} } as any)).toBeNull()

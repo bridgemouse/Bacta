@@ -1,0 +1,16 @@
+{
+  "FoundationFoods": [
+    {
+      "fdcId": 9999001,
+      "description": "Test Food With Portions",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        { "type": "FoodNutrient", "nutrient": { "id": 1008, "number": "208", "name": "Energy", "unitName": "kcal" }, "amount": 100.0 },
+        { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 5.0 }
+      ],
+      "foodPortions": [
+        { "id": 1, "amount": 1.0, "gramWeight": 50.0, "measureUnit": { "name": "slice", "abbreviation": "slice" } }
+      ]
+    }
+  ]
+}

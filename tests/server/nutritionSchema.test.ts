@@ -141,4 +141,22 @@ describe('Nutrition schema migration', () => {
     expect(foodsCols).not.toContain('default_qty')
     expect(tableExists(db, 'food_variants')).toBe(true)
   })
+
+  it('foods table must have ONLY identity columns, never nutrient columns (regression test for #162)', async () => {
+    // After food_variants migration, foods should be strictly identity-only. This test
+    // guards against the pre-existing NEW_NUTRIENT_COLUMNS loop re-adding them on
+    // subsequent migrate() calls (when foods no longer exists in its original state).
+    // See migrate.ts line 150: 'foods' must NOT be in that table list.
+    const { default: db } = await import('../../server/db/client')
+    const foodsCols = (db.prepare("SELECT name FROM pragma_table_info('foods')").all() as { name: string }[]).map(c => c.name)
+
+    // foods MUST have exactly these 7 identity columns (no more, no less)
+    const expectedCols = ['id', 'source', 'source_id', 'name', 'brand', 'source_json', 'created_at']
+    expect(foodsCols.sort()).toEqual(expectedCols.sort())
+
+    // foods MUST NOT have ANY of the 16 widened nutrient columns
+    for (const col of WIDENED_NUTRIENT_COLUMNS) {
+      expect(foodsCols).not.toContain(col)
+    }
+  })
 })

@@ -147,7 +147,7 @@ export function migrate() {
     ['allergens', 'TEXT'],
     ['traces', 'TEXT'],
   ]
-  for (const table of ['foods', 'food_log_entries', 'nutrition_targets', 'recipe_ingredients']) {
+  for (const table of ['food_log_entries', 'nutrition_targets', 'recipe_ingredients']) {
     for (const [col, type] of NEW_NUTRIENT_COLUMNS) {
       try {
         db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`)

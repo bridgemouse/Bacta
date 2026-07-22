@@ -412,8 +412,10 @@ describe('Nutrition API', () => {
       })
       expect(res.status).toBe(201)
       expect(res.body).toMatchObject({ name: 'Protein Smoothie', servings: 2 })
-      expect(res.body.food).toMatchObject({
-        name: 'Protein Smoothie', default_qty: 1, default_unit: 'serving',
+      expect(res.body.food).toMatchObject({ name: 'Protein Smoothie' })
+      expect(res.body.food.variants).toHaveLength(1)
+      expect(res.body.food.variants[0]).toMatchObject({
+        is_default: 1, label: '1 serving', serving_qty: 1, serving_unit: 'serving',
         calories: 113, protein_g: 25, carbs_g: 15, fat_g: 0.5, fiber_g: 1.5,
       })
     })
@@ -477,8 +479,9 @@ describe('Nutrition API', () => {
         name: 'Logged Recipe', servings: 1, ingredients: [{ name: 'X', quantity: 1, unit: 'g', calories: 80 }],
       })
       const foodId = created.body.food.id
+      const variantId = created.body.food.variants[0].id
       await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 1, unit: 'serving',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
 
       const del = await request(app).delete(`/api/nutrition/recipes/${created.body.id}`)
@@ -519,10 +522,11 @@ describe('Nutrition API', () => {
       })
       const recipeId = created.body.id
       const foodId = created.body.food.id
+      const variantId = created.body.food.variants[0].id
 
       // this recipe's materialized food has already been logged — editing must not orphan that entry
       const logRes = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 1, unit: 'serving',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
 
       const updated = await request(app).put(`/api/nutrition/recipes/${recipeId}`).send({
@@ -533,7 +537,8 @@ describe('Nutrition API', () => {
         ],
       })
       expect(updated.status).toBe(200)
-      expect(updated.body.food).toMatchObject({ id: foodId, calories: Math.round((330 + 195) / 2) })
+      expect(updated.body.food.id).toBe(foodId)
+      expect(updated.body.food.variants[0]).toMatchObject({ id: variantId, calories: Math.round((330 + 195) / 2) })
 
       const { default: db } = await import('../../server/db/client')
       // still exactly one foods row for this recipe — updated in place, not duplicated
@@ -541,9 +546,9 @@ describe('Nutrition API', () => {
       // the recipe's ingredient rows reflect the new composition
       const ingredients = db.prepare('SELECT name FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id').all(recipeId) as { name: string }[]
       expect(ingredients.map(i => i.name)).toEqual(['Chicken breast', 'Rice'])
-      // the earlier log entry still references a valid food_id and keeps its original snapshot
-      const logEntry = db.prepare('SELECT food_id, calories FROM food_log_entries WHERE id = ?').get(logRes.body.id) as { food_id: number; calories: number }
-      expect(logEntry.food_id).toBe(foodId)
+      // the earlier log entry still references the same variant and keeps its original snapshot
+      const logEntry = db.prepare('SELECT variant_id, calories FROM food_log_entries WHERE id = ?').get(logRes.body.id) as { variant_id: number; calories: number }
+      expect(logEntry.variant_id).toBe(variantId)
       expect(logEntry.calories).toBe(165)
     })
 
@@ -553,12 +558,12 @@ describe('Nutrition API', () => {
         name: 'Protein Smoothie', servings: 2,
         ingredients: [{ name: 'Protein powder', quantity: 1, unit: 'scoop', calories: 300, protein_g: 60, carbs_g: 0, fat_g: 0, fiber_g: 0 }],
       })
-      const foodId = created.body.food.id
-      expect(created.body.food.calories).toBe(150) // 300 / 2 servings
+      const variantId = created.body.food.variants[0].id
+      expect(created.body.food.variants[0].calories).toBe(150) // 300 / 2 servings
 
       // logged 2 servings while the recipe was still 150 kcal/serving -> 300 kcal stored
       const logRes = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 2, unit: 'serving',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 2,
       })
       expect(logRes.body.calories).toBe(300)
 
@@ -587,12 +592,10 @@ describe('Nutrition API', () => {
     })
 
     it('PUT /api/nutrition/log/:id rejects an edit that would leave the stored quantity at 0 or below (#164 review finding)', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 200, protein_g: 10 })
       const { app } = await import('../../server/index')
-      const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Test Food 2', default_qty: 100, default_unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2,
-      })
       const logRes = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: food.body.id, quantity: 50, unit: 'g',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
       const res = await request(app).put(`/api/nutrition/log/${logRes.body.id}`).send({ quantity: 0 })
       expect(res.status).toBe(400)
@@ -616,7 +619,7 @@ describe('Nutrition API', () => {
         }],
       })
       const recipeId = created.body.id
-      expect(created.body.food.sodium_mg).toBe(600) // 1200 / 2 servings
+      expect(created.body.food.variants[0].sodium_mg).toBe(600) // 1200 / 2 servings
 
       // GET must return the ingredient's widened fields, not just the original 5
       const fetched = await request(app).get(`/api/nutrition/recipes/${recipeId}`)
@@ -631,7 +634,7 @@ describe('Nutrition API', () => {
           sodium_mg: 2400, allergens: ['pork'],
         }],
       })
-      expect(updated.body.food.sodium_mg).toBe(1200) // 2400 / 2 servings
+      expect(updated.body.food.variants[0].sodium_mg).toBe(1200) // 2400 / 2 servings
 
       const refetched = await request(app).get(`/api/nutrition/recipes/${recipeId}`)
       expect(refetched.body.ingredients[0].sodium_mg).toBe(2400)
@@ -644,11 +647,11 @@ describe('Nutrition API', () => {
         ingredients: [{ name: 'Chicken breast', quantity: 200, unit: 'g', calories: 330, protein_g: 62, carbs_g: 0, fat_g: 7.2, fiber_g: 0 }],
       })
       const recipeId = created.body.id
-      const foodId = created.body.food.id
+      const variantId = created.body.food.variants[0].id
 
       const res = await request(app).put(`/api/nutrition/recipes/${recipeId}`).send({
         name: 'Self Ref Bowl', servings: 2,
-        ingredients: [{ food_id: foodId, name: 'Self Ref Bowl', quantity: 1, unit: 'serving', calories: 165, protein_g: 31, carbs_g: 0, fat_g: 3.6, fiber_g: 0 }],
+        ingredients: [{ variant_id: variantId, name: 'Self Ref Bowl', quantity: 1, unit: 'serving', calories: 165, protein_g: 31, carbs_g: 0, fat_g: 3.6, fiber_g: 0 }],
       })
       expect(res.status).toBe(400)
 
@@ -656,6 +659,47 @@ describe('Nutrition API', () => {
       // rejected — the recipe's ingredient composition must be untouched
       const ingredients = db.prepare('SELECT name FROM recipe_ingredients WHERE recipe_id = ?').all(recipeId) as { name: string }[]
       expect(ingredients.map(i => i.name)).toEqual(['Chicken breast'])
+    })
+  })
+
+  describe('POST /api/nutrition/recipes with variant_id ingredients', () => {
+    it('creates a recipe whose materialized food has exactly one (default) variant', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 200, protein_g: 10 })
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Test Recipe', servings: 2,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 200, protein_g: 10 }],
+      })
+      expect(res.status).toBe(201)
+      expect(res.body.food.variants).toHaveLength(1)
+      expect(res.body.food.variants[0]).toMatchObject({ is_default: 1, calories: 100 }) // 200/2 servings
+    })
+
+    it('PUT /recipes/:id updates ingredients keyed by variant_id', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 100 })
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Editable Recipe', servings: 1,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 100 }],
+      })
+      const res = await request(app).put(`/api/nutrition/recipes/${created.body.id}`).send({
+        name: 'Editable Recipe', servings: 2,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 100 }],
+      })
+      expect(res.status).toBe(200)
+      expect(res.body.food.variants[0].calories).toBe(50) // 100/2 servings
+    })
+
+    it('GET /recipes/:id returns ingredients with variant_id, not food_id', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 100 })
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Composition Recipe', servings: 1,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 100 }],
+      })
+      const res = await request(app).get(`/api/nutrition/recipes/${created.body.id}`)
+      expect(res.body.ingredients[0]).toMatchObject({ variant_id: variantId })
+      expect(res.body.ingredients[0].food_id).toBeUndefined()
     })
   })
 
@@ -920,7 +964,7 @@ describe('Nutrition API', () => {
         ],
       })
       expect(res.status).toBe(201)
-      expect(res.body.food.sodium_mg).toBe(Math.round((450 + 110) / 2))
+      expect(res.body.food.variants[0].sodium_mg).toBe(Math.round((450 + 110) / 2))
     })
   })
 })

@@ -780,42 +780,52 @@ describe('Nutrition API', () => {
     it('POST /api/nutrition/foods stores the widened nutrient set, round-tripping JSON fields', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Peanut Butter', default_qty: 32, default_unit: 'g', calories: 190,
-        sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0,
-        glycemic_index: 'Low',
-        custom_nutrients: { manganese_mg: 0.6 },
-        allergens: ['peanuts'],
-        traces: ['tree nuts'],
+        name: 'Peanut Butter',
+        variant: {
+          label: '32 g', serving_qty: 32, serving_unit: 'g', calories: 190,
+          sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0,
+          glycemic_index: 'Low',
+          custom_nutrients: { manganese_mg: 0.6 },
+          allergens: ['peanuts'],
+          traces: ['tree nuts'],
+        },
       })
       expect(res.status).toBe(201)
-      expect(res.body).toMatchObject({
+      const variant = res.body.variants[0]
+      expect(variant).toMatchObject({
         sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0, glycemic_index: 'Low',
       })
-      expect(JSON.parse(res.body.custom_nutrients)).toEqual({ manganese_mg: 0.6 })
-      expect(JSON.parse(res.body.allergens)).toEqual(['peanuts'])
-      expect(JSON.parse(res.body.traces)).toEqual(['tree nuts'])
+      expect(JSON.parse(variant.custom_nutrients)).toEqual({ manganese_mg: 0.6 })
+      expect(JSON.parse(variant.allergens)).toEqual(['peanuts'])
+      expect(JSON.parse(variant.traces)).toEqual(['tree nuts'])
     })
 
     it('a food saved without the new fields returns null for them, not 0 or []', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Plain Rice', default_qty: 100, default_unit: 'g', calories: 130,
+        name: 'Plain Rice',
+        variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 130 },
       })
       expect(res.status).toBe(201)
-      expect(res.body.sodium_mg).toBeNull()
-      expect(res.body.custom_nutrients).toBeNull()
-      expect(res.body.allergens).toBeNull()
-      expect(res.body.glycemic_index).toBeNull()
+      const variant = res.body.variants[0]
+      expect(variant.sodium_mg).toBeNull()
+      expect(variant.custom_nutrients).toBeNull()
+      expect(variant.allergens).toBeNull()
+      expect(variant.glycemic_index).toBeNull()
     })
 
     it('POST /api/nutrition/log scales the new numeric fields from the linked food, and passes through non-scalable fields (glycemic_index/allergens) unchanged', async () => {
       const { app } = await import('../../server/index')
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Wheat Bread', default_qty: 100, default_unit: 'g', calories: 250,
-        sodium_mg: 400, glycemic_index: 'High', allergens: ['wheat', 'gluten'],
+        name: 'Wheat Bread',
+        variant: {
+          label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 250,
+          sodium_mg: 400, glycemic_index: 'High', allergens: ['wheat', 'gluten'],
+        },
       })
+      const variantId = food.body.variants[0].id
       const res = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-12', meal_type: 'breakfast', food_id: food.body.id, quantity: 50, unit: 'g',
+        date: '2026-07-12', meal_type: 'breakfast', variant_id: variantId, quantity: 0.5,
       })
       expect(res.status).toBe(201)
       expect(res.body.sodium_mg).toBe(200) // scaled by factor 0.5, same as calories/protein etc
@@ -838,14 +848,16 @@ describe('Nutrition API', () => {
     it('PUT /api/nutrition/log/:id rescales the new numeric fields when quantity changes, same as the original five', async () => {
       const { app } = await import('../../server/index')
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Salted Almonds', default_qty: 100, default_unit: 'g', calories: 600, sodium_mg: 300,
+        name: 'Salted Almonds',
+        variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 600, sodium_mg: 300 },
       })
+      const variantId = food.body.variants[0].id
       const created = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-13', meal_type: 'snack', food_id: food.body.id, quantity: 100, unit: 'g',
+        date: '2026-07-13', meal_type: 'snack', variant_id: variantId, quantity: 1,
       })
       expect(created.body.sodium_mg).toBe(300)
 
-      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 50 })
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 0.5 })
       expect(res.status).toBe(200)
       expect(res.body.sodium_mg).toBe(150)
     })
@@ -864,10 +876,12 @@ describe('Nutrition API', () => {
       const { app } = await import('../../server/index')
       await request(app).post('/api/nutrition/targets').send({ date: '2026-06-21', sodium_mg: 2300 })
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Canned Soup', default_qty: 1, default_unit: 'serving', calories: 100, sodium_mg: 890,
+        name: 'Canned Soup',
+        variant: { label: '1 serving', serving_qty: 1, serving_unit: 'serving', calories: 100, sodium_mg: 890 },
       })
+      const variantId = food.body.variants[0].id
       await request(app).post('/api/nutrition/log').send({
-        date: '2026-06-22', meal_type: 'lunch', food_id: food.body.id, quantity: 1, unit: 'serving',
+        date: '2026-06-22', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
       const res = await request(app).get('/api/nutrition/summary').query({ date: '2026-06-22' })
       expect(res.status).toBe(200)
@@ -879,11 +893,17 @@ describe('Nutrition API', () => {
     it('GET /api/nutrition/trend aggregates the new numeric fields per day, zero-filled for empty days', async () => {
       const { app } = await import('../../server/index')
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Trend Sodium Food', default_qty: 1, default_unit: 'serving', calories: 50, sodium_mg: 500,
+        name: 'Trend Sodium Food',
+        variant: { label: '1 serving', serving_qty: 1, serving_unit: 'serving', calories: 50, sodium_mg: 500 },
       })
-      const today = new Date().toISOString().slice(0, 10)
+      const variantId = food.body.variants[0].id
+      // Local calendar date, matching the server's own localDateString() convention
+      // (see the "GET /api/nutrition/trend" describe block above) — a naive
+      // toISOString() UTC date can be a day ahead of the server's "today" in the
+      // evening EST hours, which is exactly the flake this sidesteps.
+      const today = new Date().toLocaleDateString('en-CA')
       await request(app).post('/api/nutrition/log').send({
-        date: today, meal_type: 'lunch', food_id: food.body.id, quantity: 1, unit: 'serving',
+        date: today, meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
       const res = await request(app).get('/api/nutrition/trend').query({ days: 1 })
       expect(res.status).toBe(200)

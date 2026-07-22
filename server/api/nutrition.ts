@@ -267,62 +267,60 @@ nutritionRouter.get('/log/recent', (req, res) => {
 interface LogEntryBody extends NumericRow {
   date: string
   meal_type: string
-  food_id?: number
+  variant_id?: number
   name?: string
   quantity: number
-  unit: string
+  unit?: string
   glycemic_index?: string
   custom_nutrients?: unknown
   allergens?: unknown
   traces?: unknown
 }
 
-// POST /api/nutrition/log — log a new entry, either against a reference food (scaled) or fully ad-hoc
+interface VariantRow extends NumericRow {
+  id: number
+  food_id: number
+  label: string
+  serving_unit: string
+  glycemic_index: string | null
+  custom_nutrients: string | null
+  allergens: string | null
+  traces: string | null
+}
+
+// POST /api/nutrition/log — log a new entry, either against a variant (quantity = count
+// of that variant's serving) or fully ad-hoc.
 nutritionRouter.post('/log', (req, res) => {
   const body = req.body as LogEntryBody
-  const { date, meal_type, food_id, name, quantity, unit } = body
+  const { date, meal_type, variant_id, name, quantity } = body
 
   if (!(quantity > 0)) {
-    // A zero/negative quantity would divide-by-zero (ad-hoc) or store zeroed macros
-    // (food-linked) at write time, and — worse — later become an unrescalable stored
-    // quantity: PUT /log/:id rescales from THIS entry's own prior quantity, so a zeroed
-    // entry can never recover its macros on a subsequent edit (#164 review finding).
     res.status(400).json({ error: 'quantity must be greater than 0' })
     return
   }
 
   try {
+    let unit: string
     let entry: { name: string } & NumericRow & { glycemic_index: string | null; custom_nutrients: unknown; allergens: unknown; traces: unknown }
 
-    if (food_id !== undefined && food_id !== null) {
-      const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(food_id) as FoodRow | undefined
-      if (!food) {
-        res.status(400).json({ error: 'food_id does not reference an existing food' })
+    if (variant_id !== undefined && variant_id !== null) {
+      const variant = db.prepare('SELECT fv.*, f.name as food_name FROM food_variants fv JOIN foods f ON f.id = fv.food_id WHERE fv.id = ?')
+        .get(variant_id) as (VariantRow & { food_name: string }) | undefined
+      if (!variant) {
+        res.status(400).json({ error: 'variant_id does not reference an existing variant' })
         return
       }
-      if (unit !== food.default_unit) {
-        res.status(400).json({ error: `Unit mismatch — this food is logged in ${food.default_unit}` })
-        return
-      }
-      if (food.default_qty <= 0) {
-        // Defense in depth against pre-existing bad data — POST /foods rejects
-        // default_qty <= 0 at write time, but a stale row would otherwise divide
-        // by zero here and silently write Infinity/NaN into a REAL column.
-        res.status(400).json({ error: 'Referenced food has an invalid default_qty' })
-        return
-      }
-      const factor = quantity / food.default_qty
+      unit = variant.serving_unit
       entry = {
-        name: food.name,
-        ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, scale(food[k] ?? null, factor)])),
-        // Descriptive fields are not scaled by quantity (see DESCRIPTIVE_NUTRIENT_KEYS
-        // comment) — copied straight through from the food row, already TEXT/JSON-text.
-        glycemic_index: food.glycemic_index ?? null,
-        custom_nutrients: food.custom_nutrients ?? null,
-        allergens: food.allergens ?? null,
-        traces: food.traces ?? null,
+        name: variant.food_name,
+        ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, scale(variant[k] ?? null, quantity)])),
+        glycemic_index: variant.glycemic_index ?? null,
+        custom_nutrients: variant.custom_nutrients ?? null,
+        allergens: variant.allergens ?? null,
+        traces: variant.traces ?? null,
       }
     } else {
+      unit = body.unit ?? ''
       entry = {
         name: name ?? '',
         ...Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, body[k] ?? null])),
@@ -335,18 +333,15 @@ nutritionRouter.post('/log', (req, res) => {
 
     const stmt = db.prepare(`
       INSERT INTO food_log_entries (
-        date, meal_type, food_id, name, quantity, unit,
+        date, meal_type, variant_id, name, quantity, unit,
         ${NUMERIC_NUTRIENT_KEYS.join(', ')}, glycemic_index, custom_nutrients, allergens, traces
       )
       VALUES (
-        @date, @meal_type, @food_id, @name, @quantity, @unit,
+        @date, @meal_type, @variant_id, @name, @quantity, @unit,
         ${NUMERIC_NUTRIENT_KEYS.map(k => '@' + k).join(', ')}, @glycemic_index, @custom_nutrients, @allergens, @traces
       )
     `)
-    const info = stmt.run({
-      date, meal_type, food_id: food_id ?? null, quantity, unit,
-      ...entry,
-    })
+    const info = stmt.run({ date, meal_type, variant_id: variant_id ?? null, quantity, unit, ...entry })
     const row = db.prepare('SELECT * FROM food_log_entries WHERE id = ?').get(info.lastInsertRowid)
     res.status(201).json(row)
   } catch (err: unknown) {
@@ -355,7 +350,9 @@ nutritionRouter.post('/log', (req, res) => {
   }
 })
 
-// PUT /api/nutrition/log/:id — edit a logged entry
+// PUT /api/nutrition/log/:id — edit a logged entry. Rescales from the entry's OWN prior
+// quantity/macros (not a live variant re-read) for the same reason as before PUT already
+// did this: the referenced variant can itself have changed since this entry was logged.
 nutritionRouter.put('/log/:id', (req, res) => {
   const { id } = req.params
   const existing = db.prepare('SELECT * FROM food_log_entries WHERE id = ?').get(id) as
@@ -373,48 +370,21 @@ nutritionRouter.put('/log/:id', (req, res) => {
     }
   }
 
-  // A food-linked entry's macros are a denormalized snapshot, not a live join — a
-  // quantity or unit edit must rescale, otherwise the stored macros silently keep
-  // reflecting the old quantity/unit combination. Rescaling from the entry's OWN prior
-  // quantity/macros (not a fresh read of the current `foods` row) matters: the
-  // referenced food can itself have been edited since this entry was logged (e.g. a
-  // recipe re-save widens/narrows its per-serving macros), and a live re-read would
-  // silently rewrite this historical entry's macros to reflect that later edit instead
-  // of what was actually true when it was logged. Only macros NOT explicitly overridden
-  // in this same request get rescaled — providing one corrected macro must not freeze
-  // the other four at their now-stale values. Unit is still validated against the food's
-  // default_unit the same way POST does (no conversion in v1), since an entry's unit
-  // must always match the food it's linked to, edit or not — that check is the only
-  // remaining reason to read the live `foods` row here.
-  if (existing.food_id != null) {
-    const food = db.prepare('SELECT * FROM foods WHERE id = ?').get(existing.food_id) as FoodRow | undefined
-    if (food) {
-      const finalUnit = (updates.unit ?? existing.unit) as string
-      if (finalUnit !== food.default_unit) {
-        res.status(400).json({ error: `Unit mismatch — this food is logged in ${food.default_unit}` })
-        return
-      }
-      if ('quantity' in updates || 'unit' in updates) {
-        const finalQuantity = (updates.quantity ?? existing.quantity) as number
-        if (finalQuantity <= 0) {
-          res.status(400).json({ error: 'quantity must be greater than 0' })
-          return
-        }
-        const existingQuantity = existing.quantity as number
-        if (existingQuantity <= 0) {
-          // Defense in depth against pre-existing bad data (mirrors the POST /log
-          // guard) — a stale row with quantity <= 0 has no valid ratio to rescale
-          // from, and silently skipping the rescale would freeze its macros at
-          // whatever they already (wrongly) were instead of surfacing the problem.
-          res.status(400).json({ error: 'Log entry has an invalid stored quantity' })
-          return
-        }
-        const factor = finalQuantity / existingQuantity
-        for (const key of NUMERIC_NUTRIENT_KEYS) {
-          if (!(key in updates)) {
-            updates[key] = scale((existing[key] as number | null) ?? null, factor)
-          }
-        }
+  if (existing.variant_id != null && 'quantity' in updates) {
+    const finalQuantity = updates.quantity as number
+    if (finalQuantity <= 0) {
+      res.status(400).json({ error: 'quantity must be greater than 0' })
+      return
+    }
+    const existingQuantity = existing.quantity as number
+    if (existingQuantity <= 0) {
+      res.status(400).json({ error: 'Log entry has an invalid stored quantity' })
+      return
+    }
+    const factor = finalQuantity / existingQuantity
+    for (const key of NUMERIC_NUTRIENT_KEYS) {
+      if (!(key in updates)) {
+        updates[key] = scale((existing[key] as number | null) ?? null, factor)
       }
     }
   }

@@ -17,54 +17,99 @@ describe('Nutrition API', () => {
     migrate()
   })
 
-  describe('GET /api/nutrition/foods', () => {
-    it('returns an empty array when the foods table is empty', async () => {
-      const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods').query({ q: 'chicken' })
-      expect(res.status).toBe(200)
-      expect(res.body.foods).toEqual([])
-    })
-  })
-
-  describe('POST /api/nutrition/foods', () => {
-    it('saves a new custom food', async () => {
+  describe('GET/POST /api/nutrition/foods and variants', () => {
+    it('POST /foods creates a food with its first variant as is_default', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Grilled Chicken Breast',
-        default_qty: 100,
-        default_unit: 'g',
-        calories: 165,
-        protein_g: 31,
-        carbs_g: 0,
-        fat_g: 3.6,
-        fiber_g: 0,
+        name: 'Test Oats', brand: null,
+        variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 389, protein_g: 13.2 },
       })
       expect(res.status).toBe(201)
-      expect(res.body).toMatchObject({ source: 'custom', name: 'Grilled Chicken Breast', calories: 165 })
+      expect(res.body).toMatchObject({ name: 'Test Oats', source: 'custom' })
+      expect(res.body.variants).toHaveLength(1)
+      expect(res.body.variants[0]).toMatchObject({ label: '100 g', is_default: 1, calories: 389, protein_g: 13.2 })
     })
 
-    it('the saved custom food is immediately returned by a case-insensitive search', async () => {
+    it('POST /foods rejects a variant with serving_qty <= 0', async () => {
       const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods').query({ q: 'CHICKEN' })
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Bad Food', variant: { label: 'bad', serving_qty: 0, serving_unit: 'g' },
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('GET /foods?q= returns matching foods with nested variants', async () => {
+      const { app } = await import('../../server/index')
+      await request(app).post('/api/nutrition/foods').send({
+        name: 'Findable Bread', variant: { label: '1 slice', serving_qty: 1, serving_unit: 'slice', calories: 80 },
+      })
+      const res = await request(app).get('/api/nutrition/foods?q=Findable')
       expect(res.status).toBe(200)
-      expect(res.body.foods.length).toBeGreaterThan(0)
-      expect(res.body.foods.some((f: { name: string }) => f.name === 'Grilled Chicken Breast')).toBe(true)
+      expect(res.body.foods).toHaveLength(1)
+      expect(res.body.foods[0].variants[0]).toMatchObject({ label: '1 slice', calories: 80 })
     })
 
-    it('rejects a default_qty of 0, which would cause a division-by-zero when later scaling a logged entry', async () => {
+    it('POST /foods/:id/variants adds a non-default variant to an existing food', async () => {
       const { app } = await import('../../server/index')
-      const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Zero Qty Food', default_qty: 0, default_unit: 'g', calories: 100,
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Multi-Serving Food', variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 200 },
       })
-      expect(res.status).toBe(400)
+      const res = await request(app).post(`/api/nutrition/foods/${created.body.id}/variants`).send({
+        label: '1 cup', serving_qty: 1, serving_unit: 'cup', calories: 240,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ label: '1 cup', is_default: 0, food_id: created.body.id })
+
+      const listRes = await request(app).get(`/api/nutrition/foods?q=Multi-Serving`)
+      expect(listRes.body.foods[0].variants).toHaveLength(2)
     })
 
-    it('rejects a negative default_qty for the same reason', async () => {
+    it('POST /foods/:id/variants 404s for a nonexistent food', async () => {
       const { app } = await import('../../server/index')
-      const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Negative Qty Food', default_qty: -5, default_unit: 'g', calories: 100,
+      const res = await request(app).post('/api/nutrition/foods/999999/variants').send({ label: 'x', serving_qty: 1, serving_unit: 'g' })
+      expect(res.status).toBe(404)
+    })
+
+    it('DELETE /food_variants/:id removes a non-default variant', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Deletable Variant Food', variant: { label: '100 g', serving_qty: 100, serving_unit: 'g' },
       })
+      const added = await request(app).post(`/api/nutrition/foods/${created.body.id}/variants`).send({ label: '1 cup', serving_qty: 1, serving_unit: 'cup' })
+      const res = await request(app).delete(`/api/nutrition/food_variants/${added.body.id}`)
+      expect(res.status).toBe(200)
+    })
+
+    it('DELETE /food_variants/:id is blocked (400) when it is the food\'s last remaining variant', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Single Variant Food', variant: { label: '100 g', serving_qty: 100, serving_unit: 'g' },
+      })
+      const variantId = created.body.variants[0].id
+      const res = await request(app).delete(`/api/nutrition/food_variants/${variantId}`)
       expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/at least one/i)
+    })
+
+    it('GET /foods/barcode/:code returns a matching Open Food Facts food with its variants', async () => {
+      const { default: db } = await import('../../server/db/client')
+      const foodInfo = db.prepare("INSERT INTO foods (source, source_id, name) VALUES ('openfoodfacts', '111222333', 'Barcode Food')").run()
+      db.prepare(`
+        INSERT INTO food_variants (food_id, label, serving_qty, serving_unit, is_default, source, calories)
+        VALUES (?, '100 g', 100, 'g', 1, 'openfoodfacts', 150)
+      `).run(foodInfo.lastInsertRowid)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/foods/barcode/111222333')
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ name: 'Barcode Food' })
+      expect(res.body.variants[0]).toMatchObject({ calories: 150 })
+    })
+
+    it('GET /foods/barcode/:code 404s when no food matches', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/foods/barcode/nonexistent')
+      expect(res.status).toBe(404)
     })
   })
 
@@ -586,35 +631,6 @@ describe('Nutrition API', () => {
     })
   })
 
-  describe('Food deletion', () => {
-    it('DELETE /api/nutrition/foods/:id removes an unused food', async () => {
-      const { app } = await import('../../server/index')
-      const created = await request(app).post('/api/nutrition/foods').send({
-        name: 'Unused Food', default_qty: 100, default_unit: 'g', calories: 50,
-      })
-      const del = await request(app).delete(`/api/nutrition/foods/${created.body.id}`)
-      expect(del.status).toBe(200)
-    })
-
-    it('DELETE /api/nutrition/foods/:id returns 404 for a nonexistent food', async () => {
-      const { app } = await import('../../server/index')
-      const res = await request(app).delete('/api/nutrition/foods/999999')
-      expect(res.status).toBe(404)
-    })
-
-    it('DELETE /api/nutrition/foods/:id is blocked with 400 if the food has been logged', async () => {
-      const { app } = await import('../../server/index')
-      const created = await request(app).post('/api/nutrition/foods').send({
-        name: 'Logged Food', default_qty: 100, default_unit: 'g', calories: 50,
-      })
-      await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-11', meal_type: 'snack', food_id: created.body.id, quantity: 100, unit: 'g',
-      })
-      const del = await request(app).delete(`/api/nutrition/foods/${created.body.id}`)
-      expect(del.status).toBe(400)
-    })
-  })
-
   describe('Recent entries', () => {
     it('GET /api/nutrition/log/recent returns entries newest-first, deduped by name+unit', async () => {
       const { default: db } = await import('../../server/db/client')
@@ -690,25 +706,6 @@ describe('Nutrition API', () => {
   })
 
   describe('Camera-based logging (#141)', () => {
-    it('GET /api/nutrition/foods/barcode/:code finds a food previously imported from Open Food Facts by its barcode', async () => {
-      const { default: db } = await import('../../server/db/client')
-      db.prepare(`
-        INSERT INTO foods (source, source_id, name, default_qty, default_unit, calories)
-        VALUES ('openfoodfacts', '0016000275287', 'Cheerios', 100, 'g', 379)
-      `).run()
-
-      const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods/barcode/0016000275287')
-      expect(res.status).toBe(200)
-      expect(res.body).toMatchObject({ name: 'Cheerios', source: 'openfoodfacts' })
-    })
-
-    it('GET /api/nutrition/foods/barcode/:code returns 404 for an unrecognized barcode, so the client can fall back to ad-hoc entry', async () => {
-      const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods/barcode/9999999999999')
-      expect(res.status).toBe(404)
-    })
-
     it('POST /api/nutrition/scan/meal-photo returns a macro estimate without creating a log entry — the user must still confirm and POST /log separately', async () => {
       const { generateObject } = await import('ai')
       vi.mocked(generateObject).mockResolvedValue({

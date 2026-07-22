@@ -10,6 +10,8 @@ import {
   fetchSummary,
   searchFoods,
   createFood,
+  addFoodVariant,
+  deleteFoodVariant,
   deleteFood,
   createRecipe,
   fetchRecipes,
@@ -62,6 +64,14 @@ describe('nutritionApi', () => {
       body: JSON.stringify(input)
     }))
     expect(result.name).toBe('Oats')
+  })
+
+  it('createLogEntry sends variant_id (not food_id)', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ id: 1 }) })
+    await createLogEntry({ date: '2026-07-20', meal_type: 'breakfast', variant_id: 3, quantity: 2, unit: 'g' })
+    const body = JSON.parse((mockFetch.mock.calls[0][1] as RequestInit).body as string)
+    expect(body.variant_id).toBe(3)
+    expect(body.food_id).toBeUndefined()
   })
 
   it('createLogEntry surfaces the server error message on failure', async () => {
@@ -136,7 +146,7 @@ describe('nutritionApi', () => {
 
   it('createFood POSTs the food and returns the created row', async () => {
     mockFetch.mockResolvedValue({ ok: true, json: async () => ({ id: 5, name: 'Banana', source: 'custom' }) })
-    const input = { name: 'Banana', default_qty: 1, default_unit: 'medium', calories: 105 }
+    const input = { name: 'Banana', variant: { label: '1 medium', serving_qty: 1, serving_unit: 'medium', calories: 105 } }
     const result = await createFood(input)
     expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/foods', expect.objectContaining({
       method: 'POST',
@@ -147,8 +157,31 @@ describe('nutritionApi', () => {
 
   it('createFood surfaces the server error message on failure', async () => {
     mockFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'Food already exists' }) })
-    await expect(createFood({ name: 'Banana', default_qty: 1, default_unit: 'medium' }))
+    await expect(createFood({ name: 'Banana', variant: { label: '1 medium', serving_qty: 1, serving_unit: 'medium' } }))
       .rejects.toThrow('Food already exists')
+  })
+
+  it('createFood sends name/brand/variant and returns the food with nested variants', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ id: 1, name: 'Test', variants: [{ id: 1, label: '100 g', is_default: 1 }] }) })
+    const input = { name: 'Test', variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 200 } }
+    const result = await createFood(input)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/foods', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify(input),
+    }))
+    expect(result.variants).toHaveLength(1)
+  })
+
+  it('addFoodVariant POSTs to /foods/:id/variants', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ id: 2, label: '1 cup' }) })
+    await addFoodVariant(1, { label: '1 cup', serving_qty: 1, serving_unit: 'cup' })
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/foods/1/variants', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('deleteFoodVariant DELETEs /food_variants/:id', async () => {
+    mockFetch.mockResolvedValue({ ok: true })
+    await deleteFoodVariant(5)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/food_variants/5', expect.objectContaining({ method: 'DELETE' }))
   })
 
   it('deleteFood calls DELETE on the food id', async () => {
@@ -219,24 +252,24 @@ describe('nutritionApi', () => {
 
   describe('entryToLogInput', () => {
     const linkedEntry: FoodLogEntry = {
-      id: 1, meal_type: 'lunch', food_id: 42, name: 'Test Oats', quantity: 100, unit: 'g',
+      id: 1, meal_type: 'lunch', variant_id: 42, name: 'Test Oats', quantity: 100, unit: 'g',
       calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6, logged_at: '2026-07-10 12:00:00',
     }
     const adHocEntry: FoodLogEntry = {
-      id: 2, meal_type: 'snack', food_id: null, name: 'Homemade smoothie', quantity: 1, unit: 'serving',
+      id: 2, meal_type: 'snack', variant_id: null, name: 'Homemade smoothie', quantity: 1, unit: 'serving',
       calories: 300, protein_g: 20, carbs_g: 40, fat_g: 5, fiber_g: 3, logged_at: '2026-07-10 15:00:00',
     }
 
-    it('for a food-linked entry, sets food_id and omits name (mutual exclusivity)', () => {
+    it('for a food-linked entry, sets variant_id and omits name (mutual exclusivity)', () => {
       const result = entryToLogInput(linkedEntry, { date: '2026-07-15' })
-      expect(result.food_id).toBe(42)
+      expect(result.variant_id).toBe(42)
       expect(result.name).toBeUndefined()
       expect(result).toMatchObject({ quantity: 100, unit: 'g', calories: 389, protein_g: 16.9 })
     })
 
-    it('for an ad-hoc entry, sets name and omits food_id (mutual exclusivity)', () => {
+    it('for an ad-hoc entry, sets name and omits variant_id (mutual exclusivity)', () => {
       const result = entryToLogInput(adHocEntry, { date: '2026-07-15' })
-      expect(result.food_id).toBeUndefined()
+      expect(result.variant_id).toBeUndefined()
       expect(result.name).toBe('Homemade smoothie')
       expect(result).toMatchObject({ quantity: 1, unit: 'serving', calories: 300 })
     })
@@ -289,7 +322,7 @@ describe('nutritionApi', () => {
 
   it('widenedNutrientFields carries the widened nutrient set forward from a FoodLogEntry, defaulting missing fields to null', () => {
     const entry = {
-      id: 1, meal_type: 'lunch', food_id: null, name: 'Canned soup', quantity: 1, unit: 'serving',
+      id: 1, meal_type: 'lunch', variant_id: null, name: 'Canned soup', quantity: 1, unit: 'serving',
       calories: 200, protein_g: 5, carbs_g: 20, fat_g: 8, fiber_g: 2, logged_at: '2026-07-10T12:00:00Z',
       sodium_mg: 890, allergens: JSON.stringify(['dairy']),
     } as unknown as FoodLogEntry

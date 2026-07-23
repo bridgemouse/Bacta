@@ -7,7 +7,7 @@ import { ToastContainer } from '../../../../client/src/components/ToastContainer
 
 vi.mock('../../../../client/src/lib/nutritionApi', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../../client/src/lib/nutritionApi')>()
-  return { ...actual, updateLogEntry: vi.fn(), deleteLogEntry: vi.fn(), createLogEntry: vi.fn() }
+  return { ...actual, updateLogEntry: vi.fn(), deleteLogEntry: vi.fn(), createLogEntry: vi.fn(), fetchFoodVariants: vi.fn().mockResolvedValue([]) }
 })
 
 import { updateLogEntry, deleteLogEntry, createLogEntry } from '../../../../client/src/lib/nutritionApi'
@@ -19,18 +19,44 @@ function renderWithToasts(ui: React.ReactElement) {
   return render(<ToastProvider>{ui}<ToastContainer /></ToastProvider>)
 }
 
-const linkedEntry = { id: 7, meal_type: 'breakfast', food_id: 3, name: 'Test Oats', quantity: 100, unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6, logged_at: '' }
-const adHocEntry = { id: 8, meal_type: 'snack', food_id: null, name: 'Nuts', quantity: 1, unit: 'handful', calories: 180, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null, logged_at: '' }
+const linkedEntry = { id: 7, meal_type: 'breakfast', variant_id: 3, food_id: 3, name: 'Test Oats', quantity: 100, unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6, logged_at: '' }
+const adHocEntry = { id: 8, meal_type: 'snack', variant_id: null, food_id: null, name: 'Nuts', quantity: 1, unit: 'handful', calories: 180, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null, logged_at: '' }
 
 beforeEach(() => vi.clearAllMocks())
 
 describe('EditEntrySheet', () => {
-  it('shows a locked unit chip for a food-linked entry, a free unit input for ad-hoc', () => {
+  it('shows a serving dropdown for a food-linked entry, a free unit input for ad-hoc', async () => {
     const { rerender } = render(<EditEntrySheet open entry={linkedEntry} date="2026-07-13" onClose={vi.fn()} onSaved={vi.fn()} />)
-    expect(screen.getByText(/LOCKED/)).toBeInTheDocument()
+    expect(await screen.findByLabelText('Serving')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Unit')).not.toBeInTheDocument()
     rerender(<EditEntrySheet open entry={adHocEntry} date="2026-07-13" onClose={vi.fn()} onSaved={vi.fn()} />)
-    expect(screen.queryByText(/LOCKED/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Serving')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Unit')).toBeInTheDocument()
+  })
+
+  it('shows a variant dropdown for a linked entry, fetched from the food\'s variant list', async () => {
+    const { fetchFoodVariants } = await import('../../../../client/src/lib/nutritionApi')
+    ;(fetchFoodVariants as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 10, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, calories: 389, protein_g: 13.2, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
+      { id: 11, label: '1 cup', serving_qty: 1, serving_unit: 'cup', is_default: 0, calories: 300, protein_g: 10, carbs_g: 50, fat_g: 5, fiber_g: 8 },
+    ])
+    render(<EditEntrySheet open entry={linkedEntry} date="2026-07-20" onClose={vi.fn()} onSaved={vi.fn()} />)
+    expect(await screen.findByLabelText('Serving')).toBeInTheDocument()
+    expect(await screen.findByText('1 cup')).toBeInTheDocument()
+  })
+
+  it('switching to a different variant sends the new variant_id on save', async () => {
+    const { fetchFoodVariants } = await import('../../../../client/src/lib/nutritionApi')
+    ;(fetchFoodVariants as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 10, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, calories: 389, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null },
+      { id: 11, label: '1 cup', serving_qty: 1, serving_unit: 'cup', is_default: 0, calories: 300, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null },
+    ])
+    const user = userEvent.setup()
+    render(<EditEntrySheet open entry={linkedEntry} date="2026-07-20" onClose={vi.fn()} onSaved={vi.fn()} />)
+    await screen.findByLabelText('Serving')
+    await user.selectOptions(screen.getByLabelText('Serving'), '11')
+    await user.click(screen.getByText('SAVE CHANGES'))
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith(7, expect.objectContaining({ variant_id: 11 })))
   })
 
   it('renders blank macro inputs for null macros, not "0"', () => {

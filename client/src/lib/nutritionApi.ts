@@ -45,6 +45,7 @@ export interface FoodLogEntry extends WidenedNutrients, DescriptiveNutrients {
   id: number
   meal_type: string
   variant_id: number | null
+  food_id: number | null
   name: string
   quantity: number
   unit: string
@@ -269,6 +270,15 @@ export async function addFoodVariant(foodId: number, input: VariantInput): Promi
   })
   if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not add variant'))
   return res.json()
+}
+
+// Fetches a food's full variant list, for the Edit Entry sheet's "switch serving" dropdown
+// — FoodLogEntry only carries the linked variant_id, not the food's other servings.
+export async function fetchFoodVariants(foodId: number): Promise<FoodVariant[]> {
+  const res = await fetch(`/api/nutrition/foods/${foodId}/variants`)
+  if (!res.ok) return []
+  const data = await res.json() as { variants: FoodVariant[] } | FoodVariant[]
+  return Array.isArray(data) ? data : data.variants
 }
 
 export async function deleteFoodVariant(id: number): Promise<void> {

@@ -150,6 +150,20 @@ nutritionRouter.post('/foods/:id/variants', (req, res) => {
   }
 })
 
+// GET /api/nutrition/foods/:id/variants — a food's variant list, for the Edit Entry
+// sheet's "switch serving" dropdown (it only has the linked variant's id, not the food's
+// full list of servings).
+nutritionRouter.get('/foods/:id/variants', (req, res) => {
+  const { id } = req.params
+  const food = db.prepare('SELECT id FROM foods WHERE id = ?').get(id)
+  if (!food) {
+    res.status(404).json({ error: 'Food not found' })
+    return
+  }
+  const variants = db.prepare('SELECT * FROM food_variants WHERE food_id = ? ORDER BY is_default DESC, id').all(id)
+  res.json({ variants })
+})
+
 // DELETE /api/nutrition/food_variants/:id — remove a serving size. Blocked (400) if it's
 // the food's last remaining variant (a food must always have at least one — see
 // schema.sql's comment on food_variants) or if food_log_entries/recipe_ingredients rows
@@ -220,8 +234,8 @@ function roundMacro(value: number): number {
 nutritionRouter.get('/log', (req, res) => {
   const date = req.query.date as string
   const rows = db.prepare(
-    'SELECT * FROM food_log_entries WHERE date = ? ORDER BY logged_at'
-  ).all(date) as Array<{ id: number; meal_type: string } & NumericRow>
+    'SELECT fle.*, fv.food_id as food_id FROM food_log_entries fle LEFT JOIN food_variants fv ON fv.id = fle.variant_id WHERE fle.date = ? ORDER BY fle.logged_at'
+  ).all(date) as Array<{ id: number; meal_type: string; food_id: number | null } & NumericRow>
 
   const emptyTotals = (): Record<string, number> => Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, 0]))
   const meals: Record<string, { entries: typeof rows; totals: Record<string, number> }> = {}
@@ -249,8 +263,8 @@ nutritionRouter.get('/log', (req, res) => {
 nutritionRouter.get('/log/recent', (req, res) => {
   const limit = Math.min(Math.max(1, Number(req.query.limit) || 4), 20)
   const rows = db.prepare(
-    'SELECT * FROM food_log_entries ORDER BY logged_at DESC, id DESC LIMIT 200'
-  ).all() as Array<{ name: string; unit: string }>
+    'SELECT fle.*, fv.food_id as food_id FROM food_log_entries fle LEFT JOIN food_variants fv ON fv.id = fle.variant_id ORDER BY fle.logged_at DESC, fle.id DESC LIMIT 200'
+  ).all() as Array<{ name: string; unit: string; food_id: number | null }>
 
   const seen = new Set<string>()
   const entries: typeof rows = []
@@ -370,7 +384,42 @@ nutritionRouter.put('/log/:id', (req, res) => {
     }
   }
 
-  if (existing.variant_id != null && 'quantity' in updates) {
+  // Switching to a different serving of the same food (Edit Entry sheet's variant
+  // dropdown) — re-derive unit/name/macros from the NEW variant's own base values times
+  // the final quantity, the same way POST /log does for a brand-new entry. A quantity-only
+  // change (variant_id unchanged) still rescales from the entry's OWN prior macros below,
+  // since the referenced variant can itself have changed since this entry was logged.
+  const variantIdProvided = 'variant_id' in req.body
+  const newVariantId = variantIdProvided ? (req.body.variant_id as number | null) : undefined
+  const switchingVariant = variantIdProvided && newVariantId !== existing.variant_id
+
+  if (switchingVariant && newVariantId != null) {
+    const variant = db.prepare('SELECT fv.*, f.name as food_name FROM food_variants fv JOIN foods f ON f.id = fv.food_id WHERE fv.id = ?')
+      .get(newVariantId) as (VariantRow & { food_name: string }) | undefined
+    if (!variant) {
+      res.status(400).json({ error: 'variant_id does not reference an existing variant' })
+      return
+    }
+    const finalQuantity = (updates.quantity as number | undefined) ?? (existing.quantity as number)
+    if (!(finalQuantity > 0)) {
+      res.status(400).json({ error: 'quantity must be greater than 0' })
+      return
+    }
+    updates.variant_id = newVariantId
+    if (!('name' in updates)) updates.name = variant.food_name
+    if (!('unit' in updates)) updates.unit = variant.serving_unit
+    for (const key of NUMERIC_NUTRIENT_KEYS) {
+      if (!(key in updates)) updates[key] = scale(variant[key] ?? null, finalQuantity)
+    }
+    if (!('glycemic_index' in updates)) updates.glycemic_index = variant.glycemic_index ?? null
+    if (!('custom_nutrients' in updates)) updates.custom_nutrients = variant.custom_nutrients ?? null
+    if (!('allergens' in updates)) updates.allergens = variant.allergens ?? null
+    if (!('traces' in updates)) updates.traces = variant.traces ?? null
+  } else if (switchingVariant) {
+    updates.variant_id = null
+  }
+
+  if (!switchingVariant && existing.variant_id != null && 'quantity' in updates) {
     const finalQuantity = updates.quantity as number
     if (finalQuantity <= 0) {
       res.status(400).json({ error: 'quantity must be greater than 0' })
@@ -392,7 +441,7 @@ nutritionRouter.put('/log/:id', (req, res) => {
   const merged = { ...existing, ...updates }
   db.prepare(`
     UPDATE food_log_entries SET
-      date = @date, meal_type = @meal_type, name = @name, quantity = @quantity, unit = @unit,
+      date = @date, meal_type = @meal_type, name = @name, quantity = @quantity, unit = @unit, variant_id = @variant_id,
       ${NUMERIC_NUTRIENT_KEYS.map(k => `${k} = @${k}`).join(', ')},
       glycemic_index = @glycemic_index, custom_nutrients = @custom_nutrients, allergens = @allergens, traces = @traces
     WHERE id = @id

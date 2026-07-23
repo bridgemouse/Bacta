@@ -178,6 +178,15 @@ describe('nutritionApi', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/foods/1/variants', expect.objectContaining({ method: 'POST' }))
   })
 
+  it('fetchFoodVariants GETs /foods/:id/variants', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ variants: [{ id: 1, label: '100 g' }] }) })
+    vi.stubGlobal('fetch', mockFetch)
+    const { fetchFoodVariants } = await import('../../../client/src/lib/nutritionApi')
+    const variants = await fetchFoodVariants(1)
+    expect(mockFetch).toHaveBeenCalledWith('/api/nutrition/foods/1/variants')
+    expect(variants).toEqual([{ id: 1, label: '100 g' }])
+  })
+
   it('deleteFoodVariant DELETEs /food_variants/:id', async () => {
     mockFetch.mockResolvedValue({ ok: true })
     await deleteFoodVariant(5)

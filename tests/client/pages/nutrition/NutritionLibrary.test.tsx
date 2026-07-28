@@ -5,10 +5,10 @@ import { NutritionLibrary } from '../../../../client/src/pages/nutrition/Nutriti
 
 vi.mock('../../../../client/src/lib/nutritionApi', () => ({
   searchFoods: vi.fn(), deleteFood: vi.fn(), fetchRecipes: vi.fn(), deleteRecipe: vi.fn(), createFood: vi.fn(), createRecipe: vi.fn(),
-  fetchRecipe: vi.fn(), updateRecipe: vi.fn(),
+  fetchRecipe: vi.fn(), updateRecipe: vi.fn(), addFoodVariant: vi.fn(), deleteFoodVariant: vi.fn(),
 }))
 
-import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe } from '../../../../client/src/lib/nutritionApi'
+import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, addFoodVariant, deleteFoodVariant } from '../../../../client/src/lib/nutritionApi'
 const mockSearchFoods = searchFoods as ReturnType<typeof vi.fn>
 const mockDeleteFood = deleteFood as ReturnType<typeof vi.fn>
 const mockFetchRecipes = fetchRecipes as ReturnType<typeof vi.fn>
@@ -17,8 +17,12 @@ const mockCreateFood = createFood as ReturnType<typeof vi.fn>
 const mockCreateRecipe = createRecipe as ReturnType<typeof vi.fn>
 const mockFetchRecipe = fetchRecipe as ReturnType<typeof vi.fn>
 const mockUpdateRecipe = updateRecipe as ReturnType<typeof vi.fn>
+const mockAddFoodVariant = addFoodVariant as ReturnType<typeof vi.fn>
+const mockDeleteFoodVariant = deleteFoodVariant as ReturnType<typeof vi.fn>
 
-const oats = { id: 1, source: 'custom', name: 'Test Oats', brand: null, default_qty: 100, default_unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 }
+const oats = { id: 1, source: 'custom', name: 'Test Oats', brand: null, variants: [
+  { id: 100, food_id: 1, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, source: 'custom', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
+] }
 const smoothie = { id: 2, name: 'Protein Smoothie', servings: 2, food_id: 9, ingredient_count: 2, per_serving_calories: 113, per_serving_protein_g: 25, per_serving_carbs_g: 15, per_serving_fat_g: 0.5, per_serving_fiber_g: 1.5 }
 
 beforeEach(() => {
@@ -78,7 +82,7 @@ describe('NutritionLibrary — new food', () => {
   })
 
   it('saving a new food calls createFood and returns to the list', async () => {
-    mockCreateFood.mockResolvedValue({ id: 5 })
+    mockCreateFood.mockResolvedValue({ id: 5, name: 'Greek Yogurt', variants: [{ id: 50, label: '170 g', is_default: 1 }] })
     const user = userEvent.setup()
     render(<NutritionLibrary />)
     await screen.findByText('Test Oats')
@@ -87,8 +91,43 @@ describe('NutritionLibrary — new food', () => {
     await user.type(screen.getByLabelText('Default quantity'), '170')
     await user.type(screen.getByLabelText('Default unit'), 'g')
     await user.click(screen.getByText('SAVE FOOD — SEARCHABLE IMMEDIATELY'))
-    await waitFor(() => expect(mockCreateFood).toHaveBeenCalledWith(expect.objectContaining({ name: 'Greek Yogurt', default_qty: 170, default_unit: 'g' })))
+    await waitFor(() => expect(mockCreateFood).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Greek Yogurt', variant: expect.objectContaining({ label: '170 g', serving_qty: 170, serving_unit: 'g' }),
+    })))
     expect(await screen.findByText('+ NEW FOOD')).toBeInTheDocument() // back on the list screen
+  })
+
+  it('NewFoodForm submits a single default variant', async () => {
+    mockCreateFood.mockResolvedValue({ id: 5, name: 'Greek Yogurt', variants: [{ id: 50, label: '170 g', is_default: 1 }] })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByText('+ NEW FOOD'))
+    await user.type(screen.getByLabelText('Food name'), 'Greek Yogurt')
+    await user.type(screen.getByLabelText('Default quantity'), '170')
+    await user.type(screen.getByLabelText('Default unit'), 'g')
+    await user.click(screen.getByText('SAVE FOOD — SEARCHABLE IMMEDIATELY'))
+    await waitFor(() => expect(mockCreateFood).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Greek Yogurt', variant: expect.objectContaining({ label: '170 g', serving_qty: 170, serving_unit: 'g' }),
+    })))
+  })
+
+  it('food list shows the default variant\'s macros', async () => {
+    render(<NutritionLibrary />)
+    expect(await screen.findByText(/per 100 g · 389 kcal/)).toBeInTheDocument()
+  })
+
+  it('+ ADD SERVING adds another variant to an existing food', async () => {
+    mockAddFoodVariant.mockResolvedValue({ id: 101, label: '1 cup', is_default: 0 })
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByLabelText('Add serving to Test Oats'))
+    await user.type(screen.getByLabelText('New serving label'), '1 cup')
+    await user.type(screen.getByLabelText('New serving quantity'), '1')
+    await user.type(screen.getByLabelText('New serving unit'), 'cup')
+    await user.click(screen.getByText('SAVE SERVING'))
+    await waitFor(() => expect(mockAddFoodVariant).toHaveBeenCalledWith(1, expect.objectContaining({ label: '1 cup', serving_qty: 1, serving_unit: 'cup' })))
   })
 
   it('‹ BACK TO LIBRARY returns without saving', async () => {
@@ -102,7 +141,9 @@ describe('NutritionLibrary — new food', () => {
   })
 
   it('appends the created food to the list directly, with no extra searchFoods call', async () => {
-    const newFood = { id: 5, source: 'custom', name: 'Greek Yogurt', brand: null, default_qty: 170, default_unit: 'g', calories: 100, protein_g: 17, carbs_g: 6, fat_g: 0, fiber_g: 0 }
+    const newFood = { id: 5, source: 'custom', name: 'Greek Yogurt', brand: null, variants: [
+      { id: 50, food_id: 5, label: '170 g', serving_qty: 170, serving_unit: 'g', is_default: 1, source: 'custom', calories: 100, protein_g: 17, carbs_g: 6, fat_g: 0, fiber_g: 0 },
+    ] }
     mockCreateFood.mockResolvedValue(newFood)
     const user = userEvent.setup()
     render(<NutritionLibrary />)
@@ -122,7 +163,9 @@ describe('NutritionLibrary — new food', () => {
 
   it('inserts the appended food in alphabetical order, not always at the end of the list', async () => {
     // "Apple Slices" sorts before "Test Oats" — a naive append would put it after
-    mockCreateFood.mockResolvedValue({ id: 5, source: 'custom', name: 'Apple Slices', brand: null, default_qty: 1, default_unit: 'each', calories: 95, protein_g: 0.5, carbs_g: 25, fat_g: 0.3, fiber_g: 4.4 })
+    mockCreateFood.mockResolvedValue({ id: 5, source: 'custom', name: 'Apple Slices', brand: null, variants: [
+      { id: 51, food_id: 5, label: '1 each', serving_qty: 1, serving_unit: 'each', is_default: 1, source: 'custom', calories: 95, protein_g: 0.5, carbs_g: 25, fat_g: 0.3, fiber_g: 4.4 },
+    ] })
     const user = userEvent.setup()
     render(<NutritionLibrary />)
     await screen.findByText('Test Oats')
@@ -206,7 +249,7 @@ describe('NutritionLibrary — new recipe', () => {
       name: 'Oat Bowl',
       servings: 2,
       ingredients: [{
-        food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g',
+        variant_id: 100, name: 'Test Oats', quantity: 100, unit: 'g',
         calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6,
       }],
     }))
@@ -216,7 +259,7 @@ describe('NutritionLibrary — new recipe', () => {
   it('appends the created recipe to the list directly, with no extra fetchRecipes call', async () => {
     mockCreateRecipe.mockResolvedValue({
       id: 3, name: 'Oat Bowl', servings: 2,
-      food: { id: 10, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 },
+      food: { id: 10, variants: [{ id: 200, is_default: 1, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 }] },
     })
     const user = userEvent.setup()
     render(<NutritionLibrary />)
@@ -239,7 +282,7 @@ describe('NutritionLibrary — new recipe', () => {
     // "Oat Bowl" sorts before "Protein Smoothie" — a naive append would put it after
     mockCreateRecipe.mockResolvedValue({
       id: 3, name: 'Oat Bowl', servings: 2,
-      food: { id: 10, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 },
+      food: { id: 10, variants: [{ id: 200, is_default: 1, calories: 195, protein_g: 8.45, carbs_g: 33.15, fat_g: 3.45, fiber_g: 5.3 }] },
     })
     const user = userEvent.setup()
     render(<NutritionLibrary />)
@@ -294,7 +337,7 @@ describe('NutritionLibrary — new recipe', () => {
       name: 'Custom Mix',
       servings: 1,
       ingredients: [{
-        food_id: undefined, name: 'Honey', quantity: 2, unit: 'tbsp',
+        variant_id: undefined, name: 'Honey', quantity: 2, unit: 'tbsp',
         calories: undefined, protein_g: undefined, carbs_g: undefined, fat_g: undefined, fiber_g: undefined,
       }],
     }))
@@ -355,7 +398,7 @@ describe('NutritionLibrary — edit recipe', () => {
     mockFetchRecipe.mockResolvedValue({
       id: 2, name: 'Protein Smoothie', servings: 2, food_id: 9,
       ingredients: [
-        { food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
+        { variant_id: 100, name: 'Test Oats', quantity: 100, unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
       ],
     })
   })
@@ -387,7 +430,7 @@ describe('NutritionLibrary — edit recipe', () => {
       name: 'Protein Smoothie',
       servings: 2,
       ingredients: [{
-        food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g',
+        variant_id: 100, name: 'Test Oats', quantity: 100, unit: 'g',
         calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6,
       }],
     }))
@@ -397,7 +440,7 @@ describe('NutritionLibrary — edit recipe', () => {
   it('SAVE CHANGES updates the recipe in the list directly, with no full re-fetch', async () => {
     mockUpdateRecipe.mockResolvedValue({
       id: 2, name: 'Protein Smoothie', servings: 2,
-      food: { id: 9, calories: 250, protein_g: 30, carbs_g: 20, fat_g: 5, fiber_g: 2 },
+      food: { id: 9, variants: [{ id: 201, is_default: 1, calories: 250, protein_g: 30, carbs_g: 20, fat_g: 5, fiber_g: 2 }] },
     })
     const user = userEvent.setup()
     render(<NutritionLibrary />)
@@ -414,7 +457,9 @@ describe('NutritionLibrary — edit recipe', () => {
   })
 
   it('the "Add from saved foods" search excludes the recipe\'s own materialized food while editing', async () => {
-    const smoothieFood = { id: 9, source: 'custom', name: 'Protein Smoothie', brand: null, default_qty: 1, default_unit: 'serving', calories: 113, protein_g: 25, carbs_g: 15, fat_g: 0.5, fiber_g: 1.5 }
+    const smoothieFood = { id: 9, source: 'custom', name: 'Protein Smoothie', brand: null, variants: [
+      { id: 900, food_id: 9, label: '1 serving', serving_qty: 1, serving_unit: 'serving', is_default: 1, source: 'custom', calories: 113, protein_g: 25, carbs_g: 15, fat_g: 0.5, fiber_g: 1.5 },
+    ] }
     mockSearchFoods.mockResolvedValue([oats, smoothieFood])
     const user = userEvent.setup()
     render(<NutritionLibrary />)
@@ -434,7 +479,7 @@ describe('NutritionLibrary — edit recipe', () => {
     mockFetchRecipe.mockResolvedValue({
       id: 2, name: 'Protein Smoothie', servings: 2, food_id: 9,
       ingredients: [
-        { food_id: 1, name: 'Test Oats', quantity: 100, unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2 },
+        { variant_id: 100, name: 'Test Oats', quantity: 100, unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2 },
       ],
     })
     const user = userEvent.setup()

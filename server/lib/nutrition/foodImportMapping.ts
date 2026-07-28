@@ -14,9 +14,17 @@
 //    null) — a real fetch of Nutella's product record has no "fiber_100g" key at all.
 //    Missing keys map to `null`, not 0 or a thrown error.
 
+import { NUMERIC_NUTRIENT_KEYS, scaleNumericRow, type NumericRow } from './nutrientKeys'
+
 interface UsdaFoodNutrient {
   nutrient: { number: string }
   amount: number
+}
+
+interface UsdaFoodPortion {
+  amount: number
+  gramWeight: number
+  measureUnit?: { name?: string; abbreviation?: string }
 }
 
 export interface UsdaFoodRecord {
@@ -25,6 +33,10 @@ export interface UsdaFoodRecord {
   brandOwner?: string
   brandName?: string
   foodNutrients: UsdaFoodNutrient[]
+  // Household-serving portions (e.g. "2 tbsp = 33.9g") — present on 7,818 of 8,156 records
+  // in the 2026-04-30 Foundation Foods + SR Legacy exports. Seeds food_variants beyond the
+  // always-present 100g default. Verified live 2026-07-15 against a real downloaded record.
+  foodPortions?: UsdaFoodPortion[]
 }
 
 export interface OffProductRecord {
@@ -52,41 +64,22 @@ export interface OffProductRecord {
   }
 }
 
-export interface FoodImportRow {
+export interface FoodVariantImportRow extends NumericRow {
+  label: string
+  serving_qty: number
+  serving_unit: string
+  gram_weight: number | null
+  is_default: boolean
   source: 'usda' | 'openfoodfacts'
-  source_id: string
-  name: string
-  brand: string | null
-  default_qty: number
-  default_unit: string
-  calories: number | null
-  protein_g: number | null
-  carbs_g: number | null
-  fat_g: number | null
-  fiber_g: number | null
-  sodium_mg: number | null
-  sugar_g: number | null
-  saturated_fat_g: number | null
-  polyunsaturated_fat_g: number | null
-  monounsaturated_fat_g: number | null
-  trans_fat_g: number | null
-  cholesterol_mg: number | null
-  potassium_mg: number | null
-  vitamin_a_mcg: number | null
-  vitamin_c_mg: number | null
-  calcium_mg: number | null
-  iron_mg: number | null
-  // Widened descriptive fields (#140/#161). Always null for USDA -- Foundation/SR Legacy
-  // data has no glycemic-index/allergen/traces concept. For OFF, glycemic_index and
-  // custom_nutrients have no natural source field either and stay null; allergens/traces
-  // map from OFF's real allergens_tags/traces_tags (see tagListOrNull). JSON-stringified
-  // already (matching source_json below), not a raw array -- consistent with how these
-  // columns are written elsewhere (server/api/nutrition.ts's parseJsonField).
   glycemic_index: string | null
   custom_nutrients: string | null
   allergens: string | null
   traces: string | null
-  source_json: string
+}
+
+export interface FoodImportResult {
+  food: { source: 'usda' | 'openfoodfacts'; source_id: string; name: string; brand: string | null; source_json: string }
+  variants: FoodVariantImportRow[]
 }
 
 // Priority-ordered nutrient-number candidates per macro. USDA's nutrient.number is a
@@ -128,26 +121,39 @@ function findUsdaAmount(nutrients: UsdaFoodNutrient[], codes: readonly string[])
   return null
 }
 
-export function mapUsdaFoodToRow(record: UsdaFoodRecord | null | undefined): FoodImportRow | null {
+function buildVariant(
+  label: string, serving_qty: number, serving_unit: string, gram_weight: number | null, is_default: boolean,
+  source: 'usda' | 'openfoodfacts', numeric: NumericRow,
+  descriptive: { glycemic_index: string | null; custom_nutrients: string | null; allergens: string | null; traces: string | null },
+): FoodVariantImportRow {
+  return { label, serving_qty, serving_unit, gram_weight, is_default, source, ...numeric, ...descriptive }
+}
+
+function portionToVariant(portion: UsdaFoodPortion, per100g: NumericRow): FoodVariantImportRow | null {
+  const { amount, gramWeight, measureUnit } = portion
+  if (!(amount > 0) || !(gramWeight > 0)) return null
+  const unit = measureUnit?.abbreviation?.trim() || measureUnit?.name?.trim()
+  if (!unit) return null
+  const factor = gramWeight / 100
+  return buildVariant(
+    `${amount} ${unit}`, amount, unit, gramWeight, false, 'usda',
+    scaleNumericRow(per100g, factor),
+    { glycemic_index: null, custom_nutrients: null, allergens: null, traces: null },
+  )
+}
+
+export function mapUsdaFoodToRow(record: UsdaFoodRecord | null | undefined): FoodImportResult | null {
   // A real USDA Foundation Foods bulk export can contain literal `null` entries in its
   // records array (32 of 395 in the 2026-04-30 export) — not just objects missing
   // foodNutrients. Must be checked before touching any property of record.
   if (!record) return null
   const nutrients = record.foodNutrients
-  // A malformed/unexpected record (e.g. an unrelated array-valued key extractRecordsArray
-  // concatenated in from a combined dump) must not throw here — importUsdaDumpFile wraps
-  // the whole batch in one db.transaction(), so an uncaught exception on record N would
-  // roll back every record already written in that call. Skip it instead, matching
-  // mapOffProductToRow's graceful null-return for an unmappable record.
+  // A malformed/unexpected record must not throw here — importUsdaDumpFile wraps the whole
+  // batch in one db.transaction(), so an uncaught exception on record N would roll back
+  // every record already written in that call. Skip it instead.
   if (!Array.isArray(nutrients)) return null
 
-  const row = {
-    source: 'usda' as const,
-    source_id: String(record.fdcId),
-    name: record.description,
-    brand: record.brandOwner ?? record.brandName ?? null,
-    default_qty: 100,
-    default_unit: 'g',
+  const per100g: NumericRow = {
     calories: findUsdaAmount(nutrients, USDA_NUTRIENT_CODES.calories),
     protein_g: findUsdaAmount(nutrients, USDA_NUTRIENT_CODES.protein_g),
     carbs_g: findUsdaAmount(nutrients, USDA_NUTRIENT_CODES.carbs_g),
@@ -165,23 +171,34 @@ export function mapUsdaFoodToRow(record: UsdaFoodRecord | null | undefined): Foo
     vitamin_c_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.vitamin_c_mg),
     calcium_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.calcium_mg),
     iron_mg: findUsdaAmount(nutrients, USDA_WIDENED_NUTRIENT_CODES.iron_mg),
-    glycemic_index: null,
-    custom_nutrients: null,
-    allergens: null,
-    traces: null,
-    source_json: JSON.stringify(record),
   }
 
-  // The nutrient-code priority lists were verified only against real Foundation Foods
-  // and SR Legacy records. A record where every macro comes back null is a sign none of
-  // the known codes matched at all — plausibly a dataType (Branded Foods, Survey/FNDDS)
-  // this mapper was never checked against — surface it instead of silently importing
-  // an all-null row with no visibility into the gap.
-  if (row.calories === null && row.protein_g === null && row.carbs_g === null && row.fat_g === null) {
-    console.warn(`[nutrition-import] USDA fdcId ${row.source_id} ("${row.name}") matched none of the known nutrient codes — check its dataType is Foundation Foods or SR Legacy`)
+  // A record where every macro comes back null is a sign none of the known codes matched
+  // at all — plausibly a dataType (Branded Foods, Survey/FNDDS) this mapper was never
+  // checked against — surface it instead of silently importing an all-null variant.
+  if (per100g.calories === null && per100g.protein_g === null && per100g.carbs_g === null && per100g.fat_g === null) {
+    console.warn(`[nutrition-import] USDA fdcId ${record.fdcId} ("${record.description}") matched none of the known nutrient codes — check its dataType is Foundation Foods or SR Legacy`)
   }
 
-  return row
+  const descriptive = { glycemic_index: null, custom_nutrients: null, allergens: null, traces: null }
+  const variants: FoodVariantImportRow[] = [
+    buildVariant('100 g', 100, 'g', 100, true, 'usda', per100g, descriptive),
+  ]
+  for (const portion of record.foodPortions ?? []) {
+    const variant = portionToVariant(portion, per100g)
+    if (variant) variants.push(variant)
+  }
+
+  return {
+    food: {
+      source: 'usda',
+      source_id: String(record.fdcId),
+      name: record.description,
+      brand: record.brandOwner ?? record.brandName ?? null,
+      source_json: JSON.stringify(record),
+    },
+    variants,
+  }
 }
 
 function numberOrNull(value: unknown): number | null {
@@ -203,47 +220,32 @@ function tagListOrNull(tags: string[] | undefined): string | null {
   return JSON.stringify(tags.map(tag => tag.replace(/^[a-z]{2}:/, '')))
 }
 
-export function mapOffProductToRow(record: OffProductRecord): FoodImportRow | null {
-  // Unwrap the REST API's "product" nesting if present; otherwise treat the record
-  // itself as the flat document (the shape inferred, not confirmed live, for the
-  // real JSONL bulk export — see the OffProductRecord type comment above).
+export function mapOffProductToRow(record: OffProductRecord): FoodImportResult | null {
   const doc = record.product ?? record
   const name = doc.product_name
   if (!name) return null
 
   const nutriments = doc.nutriments ?? {}
-  return {
-    source: 'openfoodfacts',
-    source_id: record.code,
-    name,
-    brand: doc.brands ?? null,
-    default_qty: 100,
-    default_unit: 'g',
+  const per100g: NumericRow = {
     calories: numberOrNull(nutriments['energy-kcal_100g']),
     protein_g: numberOrNull(nutriments['proteins_100g']),
     carbs_g: numberOrNull(nutriments['carbohydrates_100g']),
     fat_g: numberOrNull(nutriments['fat_100g']),
     fiber_g: numberOrNull(nutriments['fiber_100g']),
-    // Open Food Facts mapping is not widened in #140 (scope limited to mapUsdaFoodToRow
-    // per the issue) — these stay null for OFF-sourced rows until a follow-up extends this.
-    sodium_mg: null,
-    sugar_g: null,
-    saturated_fat_g: null,
-    polyunsaturated_fat_g: null,
-    monounsaturated_fat_g: null,
-    trans_fat_g: null,
-    cholesterol_mg: null,
-    potassium_mg: null,
-    vitamin_a_mcg: null,
-    vitamin_c_mg: null,
-    calcium_mg: null,
-    iron_mg: null,
-    // glycemic_index/custom_nutrients have no natural OFF source field and stay null;
-    // allergens/traces map from OFF's real allergens_tags/traces_tags.
+    sodium_mg: null, sugar_g: null, saturated_fat_g: null, polyunsaturated_fat_g: null,
+    monounsaturated_fat_g: null, trans_fat_g: null, cholesterol_mg: null, potassium_mg: null,
+    vitamin_a_mcg: null, vitamin_c_mg: null, calcium_mg: null, iron_mg: null,
+  }
+
+  const variant = buildVariant('100 g', 100, 'g', 100, true, 'openfoodfacts', per100g, {
     glycemic_index: null,
     custom_nutrients: null,
     allergens: tagListOrNull(doc.allergens_tags),
     traces: tagListOrNull(doc.traces_tags),
-    source_json: JSON.stringify(record),
+  })
+
+  return {
+    food: { source: 'openfoodfacts', source_id: record.code, name, brand: doc.brands ?? null, source_json: JSON.stringify(record) },
+    variants: [variant],
   }
 }

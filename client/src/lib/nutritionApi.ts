@@ -44,6 +44,7 @@ export function widenedNutrientFields(entry: WidenedNutrients & DescriptiveNutri
 export interface FoodLogEntry extends WidenedNutrients, DescriptiveNutrients {
   id: number
   meal_type: string
+  variant_id: number | null
   food_id: number | null
   name: string
   quantity: number
@@ -99,7 +100,7 @@ export async function fetchRecentEntries(limit = 4): Promise<FoodLogEntry[]> {
 export interface LogEntryInput extends WidenedNutrients, DescriptiveNutrients {
   date: string
   meal_type: string
-  food_id?: number | null
+  variant_id?: number | null
   name?: string
   quantity: number
   unit: string
@@ -112,15 +113,15 @@ export interface LogEntryInput extends WidenedNutrients, DescriptiveNutrients {
 
 // Converts a logged entry back into a POST /log payload — the copy/clone-into-a-new-entry
 // step shared by "copy to today" (NutritionOverview, EditEntrySheet) and the Log Entry
-// sheet's recents "+ LOG" button. food_id/name are mutually exclusive per the API's own
+// sheet's recents "+ LOG" button. variant_id/name are mutually exclusive per the API's own
 // rule for linked vs. ad-hoc entries. `date` has no default — FoodLogEntry doesn't carry
 // one (its date is implied by whichever day's log it was fetched from), so the caller
 // must always supply the target date via overrides.
 export function entryToLogInput(entry: FoodLogEntry, overrides: Partial<LogEntryInput> & { date: string }): LogEntryInput {
   return {
     meal_type: entry.meal_type,
-    food_id: entry.food_id ?? undefined,
-    name: entry.food_id == null ? entry.name : undefined,
+    variant_id: entry.variant_id ?? undefined,
+    name: entry.variant_id == null ? entry.name : undefined,
     quantity: entry.quantity,
     unit: entry.unit,
     calories: entry.calories,
@@ -208,18 +209,28 @@ export async function fetchSummary(date: string): Promise<NutritionSummary> {
   return res.json()
 }
 
-export interface Food extends WidenedNutrients, DescriptiveNutrients {
+export interface FoodVariant extends WidenedNutrients, DescriptiveNutrients {
   id: number
+  food_id: number
+  label: string
+  serving_qty: number
+  serving_unit: string
+  gram_weight: number | null
+  is_default: number
   source: string
-  name: string
-  brand: string | null
-  default_qty: number
-  default_unit: string
   calories: number | null
   protein_g: number | null
   carbs_g: number | null
   fat_g: number | null
   fiber_g: number | null
+}
+
+export interface Food {
+  id: number
+  source: string
+  name: string
+  brand: string | null
+  variants: FoodVariant[]
 }
 
 export async function searchFoods(q: string): Promise<Food[]> {
@@ -229,16 +240,19 @@ export async function searchFoods(q: string): Promise<Food[]> {
   return foods
 }
 
-export async function createFood(input: WidenedNutrients & DescriptiveNutrients & {
-  name: string
-  default_qty: number
-  default_unit: string
+export interface VariantInput extends WidenedNutrients, DescriptiveNutrients {
+  label: string
+  serving_qty: number
+  serving_unit: string
+  gram_weight?: number | null
   calories?: number
   protein_g?: number
   carbs_g?: number
   fat_g?: number
   fiber_g?: number
-}): Promise<Food> {
+}
+
+export async function createFood(input: { name: string; brand?: string; variant: VariantInput }): Promise<Food> {
   const res = await fetch('/api/nutrition/foods', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -248,13 +262,37 @@ export async function createFood(input: WidenedNutrients & DescriptiveNutrients 
   return res.json()
 }
 
+export async function addFoodVariant(foodId: number, input: VariantInput): Promise<FoodVariant> {
+  const res = await fetch(`/api/nutrition/foods/${foodId}/variants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not add variant'))
+  return res.json()
+}
+
+// Fetches a food's full variant list, for the Edit Entry sheet's "switch serving" dropdown
+// — FoodLogEntry only carries the linked variant_id, not the food's other servings.
+export async function fetchFoodVariants(foodId: number): Promise<FoodVariant[]> {
+  const res = await fetch(`/api/nutrition/foods/${foodId}/variants`)
+  if (!res.ok) return []
+  const data = await res.json() as { variants: FoodVariant[] } | FoodVariant[]
+  return Array.isArray(data) ? data : data.variants
+}
+
+export async function deleteFoodVariant(id: number): Promise<void> {
+  const res = await fetch(`/api/nutrition/food_variants/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not delete variant'))
+}
+
 export async function deleteFood(id: number): Promise<void> {
   const res = await fetch(`/api/nutrition/foods/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await parseErrorMessage(res, 'Could not delete food'))
 }
 
 export interface RecipeIngredientInput extends WidenedNutrients, DescriptiveNutrients {
-  food_id?: number
+  variant_id?: number
   name: string
   quantity: number
   unit: string

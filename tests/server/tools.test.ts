@@ -72,12 +72,22 @@ describe('MX-4 Tools', () => {
       const numericCols = NUMERIC_NUTRIENT_KEYS.map(k => `${k} REAL`).join(', ')
       const descriptiveCols = DESCRIPTIVE_NUTRIENT_KEYS.map(k => `${k} TEXT`).join(', ')
 
-      // food_log_entries and foods carry both numeric and descriptive columns
-      expect(queryDb.description).toContain(`food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, ${numericCols}, ${descriptiveCols})`)
-      expect(queryDb.description).toContain(`foods(id INTEGER, source TEXT, name TEXT, brand TEXT, ${numericCols}, ${descriptiveCols}, default_qty REAL, default_unit TEXT)`)
+      // food_log_entries and food_variants carry both numeric and descriptive columns
+      expect(queryDb.description).toContain(`food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, variant_id INTEGER, name TEXT, quantity REAL, unit TEXT, ${numericCols}, ${descriptiveCols})`)
+      expect(queryDb.description).toContain(`food_variants(id INTEGER, food_id INTEGER, label TEXT, serving_qty REAL, serving_unit TEXT, gram_weight REAL, is_default INTEGER, source TEXT, ${numericCols}, ${descriptiveCols})`)
       // nutrition_targets carries only the numeric columns -- a target row has no
       // glycemic_index/allergens/traces concept, so it must not include descriptiveCols
       expect(queryDb.description).toContain(`nutrition_targets(id INTEGER, date TEXT, ${numericCols})`)
+    })
+
+    it('queryDb schema description mentions food_variants and variant_id, not the old food_id/default_qty shape', async () => {
+      const { queryDb } = await import('../../server/lib/ai/tools')
+      expect(queryDb.description).toContain('food_variants')
+      expect(queryDb.description).toContain('variant_id')
+      expect(queryDb.description).toContain('foods(id INTEGER, source TEXT, source_id TEXT, name TEXT, brand TEXT)')
+      expect(queryDb.description).not.toContain('food_id INTEGER, name TEXT, quantity REAL')
+      expect(queryDb.description).not.toContain('default_qty')
+      expect(queryDb.description).not.toContain('default_unit')
     })
 
     it('rejects UPDATE and does not mutate data', async () => {

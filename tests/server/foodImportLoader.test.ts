@@ -40,28 +40,43 @@ describe('food import loader', () => {
   })
 
   describe('importUsdaDumpFile', () => {
-    it('populates foods from a wrapped USDA dump file', async () => {
+    it('populates foods and their variants from a wrapped USDA dump file', async () => {
       const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
       const count = importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-sample.json'))
       expect(count).toBe(2)
 
       const { default: db } = await import('../../server/db/client')
-      const rows = db.prepare("SELECT * FROM foods WHERE source = 'usda' ORDER BY source_id").all() as any[]
-      expect(rows.length).toBe(2)
-      expect(rows.find(r => r.source_id === '2261421')).toMatchObject({ name: 'Flour, oat, whole grain', calories: 389.125 })
-      expect(rows.find(r => r.source_id === '174988')).toMatchObject({ name: 'Croissants, apple', calories: 254 })
+      const foods = db.prepare("SELECT * FROM foods WHERE source = 'usda' ORDER BY source_id").all() as any[]
+      expect(foods.length).toBe(2)
+      const oatFlour = foods.find(f => f.source_id === '2261421')
+      expect(oatFlour).toMatchObject({ name: 'Flour, oat, whole grain' })
+      expect(oatFlour.default_qty).toBeUndefined() // foods is identity-only now
+
+      const variants = db.prepare('SELECT * FROM food_variants WHERE food_id = ?').all(oatFlour.id) as any[]
+      expect(variants.length).toBe(1) // usda-dump-sample.json's records have no foodPortions
+      expect(variants[0]).toMatchObject({ label: '100 g', is_default: 1, calories: 389.125 })
+    })
+
+    it('emits multiple variants for a record with foodPortions', async () => {
+      const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-with-portions.json'))
+
+      const { default: db } = await import('../../server/db/client')
+      const food = db.prepare("SELECT * FROM foods WHERE source_id = '9999001'").get() as any
+      const variants = db.prepare('SELECT * FROM food_variants WHERE food_id = ? ORDER BY is_default DESC').all(food.id) as any[]
+      expect(variants.length).toBe(2) // 100g default + "1 slice"
+      expect(variants[0]).toMatchObject({ label: '100 g', is_default: 1 })
+      expect(variants[1]).toMatchObject({ label: '1 slice', serving_qty: 1, serving_unit: 'slice', gram_weight: 50, is_default: 0, calories: 50 })
     })
 
     it('skips a malformed record (no foodNutrients) instead of aborting the whole batch', async () => {
       const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
       const count = importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-with-malformed.json'))
-      // 2 records in the file, but only 1 is well-formed — the malformed one is skipped,
-      // not thrown, and does not roll back the valid record's write.
       expect(count).toBe(1)
 
       const { default: db } = await import('../../server/db/client')
       const row = db.prepare("SELECT * FROM foods WHERE source_id = '5555555'").get()
-      expect(row).toMatchObject({ name: 'Valid Record', calories: 200 })
+      expect(row).toMatchObject({ name: 'Valid Record' })
       const malformedRow = db.prepare("SELECT * FROM foods WHERE source_id = '6666666'").get()
       expect(malformedRow).toBeUndefined()
     })
@@ -77,47 +92,61 @@ describe('food import loader', () => {
       expect(rows.length).toBe(2)
     })
 
-    it('running the import twice does not duplicate rows (idempotent upsert)', async () => {
+    it('running the import twice does not duplicate foods or variants (idempotent upsert, variants refreshed)', async () => {
       const { importUsdaDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-sample.json'))
       importUsdaDumpFile(path.join(FIXTURES, 'usda-dump-sample.json'))
 
       const { default: db } = await import('../../server/db/client')
-      const rows = db.prepare("SELECT * FROM foods WHERE source = 'usda' AND source_id IN ('2261421', '174988')").all() as any[]
-      expect(rows.length).toBe(2)
+      const foods = db.prepare("SELECT * FROM foods WHERE source = 'usda' AND source_id IN ('2261421', '174988')").all() as any[]
+      expect(foods.length).toBe(2)
+      const oatFlour = foods.find(f => f.source_id === '2261421')
+      const variants = db.prepare('SELECT * FROM food_variants WHERE food_id = ?').all(oatFlour.id) as any[]
+      expect(variants.length).toBe(1) // not duplicated to 2
     })
   })
 
   describe('importOffDumpFile', () => {
-    it('populates foods from a JSONL dump, skipping unmappable lines', async () => {
+    it('populates foods and their default variant from a JSONL dump, skipping unmappable lines', async () => {
       const { importOffDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
       const count = importOffDumpFile(path.join(FIXTURES, 'off-dump-sample.jsonl'))
       // 3 lines in the fixture, but the third has no product_name and should be skipped
       expect(count).toBe(2)
 
       const { default: db } = await import('../../server/db/client')
-      const rows = db.prepare("SELECT * FROM foods WHERE source = 'openfoodfacts' ORDER BY source_id").all() as any[]
-      expect(rows.length).toBe(2)
-      expect(rows.find(r => r.source_id === '0016000275287')).toMatchObject({ name: 'Cheerios', calories: 358.97 })
-      expect(rows.find(r => r.source_id === '0000000000000')).toBeUndefined()
+      const foods = db.prepare("SELECT * FROM foods WHERE source = 'openfoodfacts' ORDER BY source_id").all() as any[]
+      expect(foods.length).toBe(2)
+      const cheerios = foods.find(f => f.source_id === '0016000275287')
+      expect(cheerios).toMatchObject({ name: 'Cheerios' })
+      expect(foods.find(f => f.source_id === '0000000000000')).toBeUndefined()
+
+      const variants = db.prepare('SELECT * FROM food_variants WHERE food_id = ?').all(cheerios.id) as any[]
+      expect(variants.length).toBe(1)
+      expect(variants[0]).toMatchObject({ label: '100 g', is_default: 1, calories: 358.97 })
     })
 
-    it('persists the mapped allergens column all the way through the upsert, not just in mapOffProductToRow\'s return value (#161)', async () => {
+    it('persists the mapped allergens column on the variant all the way through the upsert, not just in mapOffProductToRow\'s return value (#161)', async () => {
       const { importOffDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
       importOffDumpFile(path.join(FIXTURES, 'off-dump-sample.jsonl'))
 
       const { default: db } = await import('../../server/db/client')
-      const row = db.prepare("SELECT allergens, traces FROM foods WHERE source_id = '3017620422003'").get() as { allergens: string | null; traces: string | null }
-      expect(JSON.parse(row.allergens!)).toEqual(['milk', 'nuts', 'soybeans'])
-      expect(row.traces).toBeNull()
+      const food = db.prepare("SELECT * FROM foods WHERE source_id = '3017620422003'").get() as any
+      const variant = db.prepare('SELECT allergens, traces FROM food_variants WHERE food_id = ?').get(food.id) as { allergens: string | null; traces: string | null }
+      expect(JSON.parse(variant.allergens!)).toEqual(['milk', 'nuts', 'soybeans'])
+      expect(variant.traces).toBeNull()
     })
 
-    it('running the import twice does not duplicate rows, and refreshes values', async () => {
+    it('running the import twice does not duplicate foods or variants, and refreshes values', async () => {
       const { importOffDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      importOffDumpFile(path.join(FIXTURES, 'off-dump-sample.jsonl'))
       importOffDumpFile(path.join(FIXTURES, 'off-dump-sample.jsonl'))
 
       const { default: db } = await import('../../server/db/client')
-      const rows = db.prepare("SELECT * FROM foods WHERE source = 'openfoodfacts'").all() as any[]
-      expect(rows.length).toBe(2)
+      const foods = db.prepare("SELECT * FROM foods WHERE source = 'openfoodfacts'").all() as any[]
+      expect(foods.length).toBe(2)
+      const cheerios = foods.find(f => f.source_id === '0016000275287')
+      const variants = db.prepare('SELECT * FROM food_variants WHERE food_id = ?').all(cheerios.id) as any[]
+      expect(variants.length).toBe(1) // not duplicated to 2
     })
 
     it('is atomic — a malformed line partway through aborts the whole import with no partial writes, since a real multi-million-line file should not be able to leave the table half-imported', async () => {

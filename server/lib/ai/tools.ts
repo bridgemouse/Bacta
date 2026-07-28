@@ -22,13 +22,16 @@ const QUERY_DB_DESCRIPTION = `Run a read-only SQL SELECT query against the healt
 Schema:
   health_snapshots(date TEXT, metric TEXT, source TEXT, value REAL, unit TEXT, source_json TEXT)
   health_activities(date TEXT, activity_id TEXT, source TEXT, type_key TEXT, duration_s REAL, distance_m REAL, calories REAL, avg_hr REAL, training_effect REAL)
-  food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, food_id INTEGER, name TEXT, quantity REAL, unit TEXT, ${NUMERIC_NUTRIENT_COLS}, ${DESCRIPTIVE_NUTRIENT_COLS})
+  food_log_entries(id INTEGER, date TEXT, meal_type TEXT, logged_at TEXT, variant_id INTEGER, name TEXT, quantity REAL, unit TEXT, ${NUMERIC_NUTRIENT_COLS}, ${DESCRIPTIVE_NUTRIENT_COLS})
     — a normal table, NOT EAV like health_snapshots. Multiple rows per day (one per logged food).
+    — variant_id references food_variants(id); NULL for a fully ad-hoc entry. quantity means "count of that variant's serving" (e.g. 2 = two of whatever unit the variant is), not raw grams.
     — custom_nutrients/allergens/traces are JSON-encoded strings (object / string array); NULL means not tracked for that entry, not zero/empty.
   nutrition_targets(id INTEGER, date TEXT, ${NUMERIC_NUTRIENT_COLS})
     — one row per date the targets changed. "Current" target = the row with the latest date <= the date in question.
-  foods(id INTEGER, source TEXT, name TEXT, brand TEXT, ${NUMERIC_NUTRIENT_COLS}, ${DESCRIPTIVE_NUTRIENT_COLS}, default_qty REAL, default_unit TEXT)
-    — reference/ingredient data, not user logs. Rarely needs querying directly by MX-4.
+  foods(id INTEGER, source TEXT, source_id TEXT, name TEXT, brand TEXT)
+    — reference identity only, not user logs. A food's servable units/macros live on food_variants, not here.
+  food_variants(id INTEGER, food_id INTEGER, label TEXT, serving_qty REAL, serving_unit TEXT, gram_weight REAL, is_default INTEGER, source TEXT, ${NUMERIC_NUTRIENT_COLS}, ${DESCRIPTIVE_NUTRIENT_COLS})
+    — one row per servable unit of a food (e.g. "100 g", "1 slice"). Rarely needs querying directly by MX-4.
   mx4_briefings(section TEXT, content_json TEXT, generated_at TEXT, model TEXT)
     — section values: 'recovery', 'sleep', 'training', 'nutrition', 'home'
     — content_json is a JSON string: { tone, headline, summary, body, recommendation, flags }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Rail } from '../../components/viz/Rail'
 import { SECTION_ACCENTS, COLORS, FONT_MONO, FONT_UI } from '../../theme'
-import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, type Food, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
+import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, addFoodVariant, type Food, type FoodVariant, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
 import { hexA } from '../../lib/hexA'
 import { useToast } from '../../lib/ToastContext'
 import { MacroGridInputs, MACRO_KEYS } from './MacroGridInputs'
@@ -49,13 +49,16 @@ function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack:
     setSubmitting(true)
     try {
       const food = await createFood({
-        name, default_qty: Number(qty), default_unit: unit,
-        calories: macros.calories === '' ? undefined : Number(macros.calories),
-        protein_g: macros.protein_g === '' ? undefined : Number(macros.protein_g),
-        carbs_g: macros.carbs_g === '' ? undefined : Number(macros.carbs_g),
-        fat_g: macros.fat_g === '' ? undefined : Number(macros.fat_g),
-        fiber_g: macros.fiber_g === '' ? undefined : Number(macros.fiber_g),
-        ...extendedNutrientsToPayload(extended),
+        name,
+        variant: {
+          label: `${qty} ${unit}`, serving_qty: Number(qty), serving_unit: unit,
+          calories: macros.calories === '' ? undefined : Number(macros.calories),
+          protein_g: macros.protein_g === '' ? undefined : Number(macros.protein_g),
+          carbs_g: macros.carbs_g === '' ? undefined : Number(macros.carbs_g),
+          fat_g: macros.fat_g === '' ? undefined : Number(macros.fat_g),
+          fiber_g: macros.fiber_g === '' ? undefined : Number(macros.fiber_g),
+          ...extendedNutrientsToPayload(extended),
+        },
       })
       onDone(food)
     } catch (err) {
@@ -90,6 +93,42 @@ function NewFoodForm({ onDone, onBack }: { onDone: (food: Food) => void; onBack:
   )
 }
 
+function AddVariantForm({ food, onDone, onCancel }: { food: Food; onDone: (variant: FoodVariant) => void; onCancel: () => void }) {
+  const { showToast } = useToast()
+  const [label, setLabel] = useState('')
+  const [qty, setQty] = useState('')
+  const [unit, setUnit] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSave() {
+    if (!(Number(qty) > 0) || !unit || submitting) { showToast('Quantity and unit are required.', 'error'); return }
+    setSubmitting(true)
+    try {
+      const variant = await addFoodVariant(food.id, { label: label || `${qty} ${unit}`, serving_qty: Number(qty), serving_unit: unit })
+      onDone(variant)
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not add serving.'), 'error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: 10, marginBottom: 6 }}>
+      <label htmlFor="new-variant-label" style={{ display: 'block', fontFamily: FONT_MONO, fontSize: 8, color: COLORS.textMuted, marginBottom: 3 }}>LABEL</label>
+      <input id="new-variant-label" aria-label="New serving label" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. 1 slice" style={{ ...inputStyle, marginBottom: 6 }} />
+      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+        <input aria-label="New serving quantity" value={qty} onChange={e => setQty(e.target.value)} placeholder="qty" style={inputStyle} />
+        <input aria-label="New serving unit" value={unit} onChange={e => setUnit(e.target.value)} placeholder="unit" style={inputStyle} />
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={onCancel} style={{ flex: 1, padding: '8px 0', borderRadius: 6, border: `1px solid ${COLORS.line}`, background: 'transparent', color: COLORS.textMuted, fontFamily: FONT_MONO, fontSize: 9, cursor: 'pointer' }}>CANCEL</button>
+        <button onClick={handleSave} disabled={submitting} style={{ flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', background: A, color: COLORS.base, fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, cursor: 'pointer' }}>SAVE SERVING</button>
+      </div>
+    </div>
+  )
+}
+
 interface MacroSnapshot {
   quantity: number
   calories: number | null
@@ -100,11 +139,11 @@ interface MacroSnapshot {
 }
 
 interface IngredientRow extends MacroSnapshot {
-  food_id?: number
+  variant_id?: number
   name: string
   unit: string
   // Fixed at row-creation time (an existing recipe's stored snapshot, or a newly-added
-  // food's per-default_qty values) -- NEVER mutated afterward. A later quantity edit
+  // food's default-variant values) -- NEVER mutated afterward. A later quantity edit
   // always rescales from this original baseline, not from the row's progressively-edited
   // state: chaining from mutated state means a transient blank/0 quantity mid-typing
   // (e.g. clear-then-retype) permanently zeroes the macros out, since 0 * anything is 0
@@ -136,8 +175,8 @@ function toIngredientRows(ingredients: RecipeDetail['ingredients']): IngredientR
       carbs_g: i.carbs_g ?? null, fat_g: i.fat_g ?? null, fiber_g: i.fiber_g ?? null,
     }
     return {
-      food_id: i.food_id, name: i.name, unit: i.unit, ...snapshot,
-      baseline: i.food_id != null ? snapshot : undefined,
+      variant_id: i.variant_id, name: i.name, unit: i.unit, ...snapshot,
+      baseline: i.variant_id != null ? snapshot : undefined,
     }
   })
 }
@@ -155,12 +194,14 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
     : []
 
   function addFromFood(food: Food) {
+    const variant = food.variants.find(v => v.is_default) ?? food.variants[0]
+    if (!variant) return
     const snapshot: MacroSnapshot = {
-      quantity: food.default_qty, calories: food.calories, protein_g: food.protein_g,
-      carbs_g: food.carbs_g, fat_g: food.fat_g, fiber_g: food.fiber_g,
+      quantity: variant.serving_qty, calories: variant.calories, protein_g: variant.protein_g,
+      carbs_g: variant.carbs_g, fat_g: variant.fat_g, fiber_g: variant.fiber_g,
     }
     setIngredients(rows => [...rows, {
-      food_id: food.id, name: food.name, unit: food.default_unit, ...snapshot, baseline: snapshot,
+      variant_id: variant.id, name: food.name, unit: variant.serving_unit, ...snapshot, baseline: snapshot,
     }])
     setQuery('')
   }
@@ -188,29 +229,32 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
       const payload = {
         name, servings: servingsNum,
         ingredients: ingredients.map(i => ({
-          food_id: i.food_id, name: i.name, quantity: i.quantity, unit: i.unit,
+          variant_id: i.variant_id, name: i.name, quantity: i.quantity, unit: i.unit,
           calories: i.calories ?? undefined, protein_g: i.protein_g ?? undefined,
           carbs_g: i.carbs_g ?? undefined, fat_g: i.fat_g ?? undefined, fiber_g: i.fiber_g ?? undefined,
         })),
       }
       const result = editing ? await updateRecipe(editing.id, payload) : await createRecipe(payload)
+      // The recipe materializes as a Food; its per-serving macros now live on that food's
+      // default variant (Task 9's variants rework), not on flat Food fields.
+      const dv = result.food.variants?.find(v => v.is_default) ?? result.food.variants?.[0]
       onDone({
         id: result.id, name: result.name, servings: result.servings, food_id: result.food.id,
         ingredient_count: ingredients.length,
-        per_serving_calories: result.food.calories, per_serving_protein_g: result.food.protein_g,
-        per_serving_carbs_g: result.food.carbs_g, per_serving_fat_g: result.food.fat_g, per_serving_fiber_g: result.food.fiber_g,
-        per_serving_sodium_mg: result.food.sodium_mg ?? null,
-        per_serving_sugar_g: result.food.sugar_g ?? null,
-        per_serving_saturated_fat_g: result.food.saturated_fat_g ?? null,
-        per_serving_polyunsaturated_fat_g: result.food.polyunsaturated_fat_g ?? null,
-        per_serving_monounsaturated_fat_g: result.food.monounsaturated_fat_g ?? null,
-        per_serving_trans_fat_g: result.food.trans_fat_g ?? null,
-        per_serving_cholesterol_mg: result.food.cholesterol_mg ?? null,
-        per_serving_potassium_mg: result.food.potassium_mg ?? null,
-        per_serving_vitamin_a_mcg: result.food.vitamin_a_mcg ?? null,
-        per_serving_vitamin_c_mg: result.food.vitamin_c_mg ?? null,
-        per_serving_calcium_mg: result.food.calcium_mg ?? null,
-        per_serving_iron_mg: result.food.iron_mg ?? null,
+        per_serving_calories: dv?.calories ?? null, per_serving_protein_g: dv?.protein_g ?? null,
+        per_serving_carbs_g: dv?.carbs_g ?? null, per_serving_fat_g: dv?.fat_g ?? null, per_serving_fiber_g: dv?.fiber_g ?? null,
+        per_serving_sodium_mg: dv?.sodium_mg ?? null,
+        per_serving_sugar_g: dv?.sugar_g ?? null,
+        per_serving_saturated_fat_g: dv?.saturated_fat_g ?? null,
+        per_serving_polyunsaturated_fat_g: dv?.polyunsaturated_fat_g ?? null,
+        per_serving_monounsaturated_fat_g: dv?.monounsaturated_fat_g ?? null,
+        per_serving_trans_fat_g: dv?.trans_fat_g ?? null,
+        per_serving_cholesterol_mg: dv?.cholesterol_mg ?? null,
+        per_serving_potassium_mg: dv?.potassium_mg ?? null,
+        per_serving_vitamin_a_mcg: dv?.vitamin_a_mcg ?? null,
+        per_serving_vitamin_c_mg: dv?.vitamin_c_mg ?? null,
+        per_serving_calcium_mg: dv?.calcium_mg ?? null,
+        per_serving_iron_mg: dv?.iron_mg ?? null,
       })
     } catch (err) {
       showToast(errorMessage(err, editing ? 'Could not update recipe.' : 'Could not save recipe.'), 'error')
@@ -227,7 +271,7 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
       <input id="new-recipe-servings" aria-label="Servings" value={servings} onChange={e => setServings(e.target.value)} style={{ ...inputStyle, marginBottom: 12, width: 80 }} />
 
       {ingredients.map((ing, i) => {
-        const isAdHoc = ing.food_id == null
+        const isAdHoc = ing.variant_id == null
         return (
           <div key={i} style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: isAdHoc ? 4 : 0 }}>
@@ -293,6 +337,7 @@ export function NutritionLibrary() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
   const [editingRecipe, setEditingRecipe] = useState<RecipeDetail | null>(null)
+  const [addingVariantTo, setAddingVariantTo] = useState<number | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -360,17 +405,32 @@ export function NutritionLibrary() {
       {foods.length > 0 && (
         <>
           <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary, marginBottom: 6 }}>FOODS</div>
-          {foods.map(f => (
-            <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: '8px 10px', marginBottom: 6 }}>
-              <div>
-                <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text }}>{f.name}</div>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
-                  per {f.default_qty} {f.default_unit} · {f.calories ?? '—'} kcal · P {f.protein_g ?? '—'} · C {f.carbs_g ?? '—'} · F {f.fat_g ?? '—'}
+          {foods.map(f => {
+            const dv = f.variants.find(v => v.is_default) ?? f.variants[0]
+            return (
+              <div key={f.id} style={{ marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLORS.surface, border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: '8px 10px' }}>
+                  <div>
+                    <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text }}>{f.name}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
+                      per {dv?.label ?? '—'} · {dv?.calories ?? '—'} kcal · P {dv?.protein_g ?? '—'} · C {dv?.carbs_g ?? '—'} · F {dv?.fat_g ?? '—'}
+                      {f.variants.length > 1 ? ` · ${f.variants.length} servings` : ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <button aria-label={`Add serving to ${f.name}`} onClick={() => setAddingVariantTo(id => id === f.id ? null : f.id)} style={{ background: 'none', border: 'none', color: A, cursor: 'pointer', fontSize: 12 }}>+</button>
+                    <button aria-label={`Delete ${f.name}`} onClick={() => handleDeleteFood(f.id)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 14 }}>✕</button>
+                  </div>
                 </div>
+                {addingVariantTo === f.id && (
+                  <AddVariantForm food={f} onCancel={() => setAddingVariantTo(null)} onDone={() => {
+                    setAddingVariantTo(null)
+                    reload()
+                  }} />
+                )}
               </div>
-              <button aria-label={`Delete ${f.name}`} onClick={() => handleDeleteFood(f.id)} style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 14 }}>✕</button>
-            </div>
-          ))}
+            )
+          })}
         </>
       )}
 

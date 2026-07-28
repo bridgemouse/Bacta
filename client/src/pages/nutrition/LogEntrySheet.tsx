@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, FONT_UI, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { createLogEntry, searchFoods, fetchRecentEntries, entryToLogInput, lookupFoodByBarcode, estimateMealFromPhoto, type Food, type FoodLogEntry } from '../../lib/nutritionApi'
+import { createLogEntry, searchFoods, fetchRecentEntries, entryToLogInput, lookupFoodByBarcode, estimateMealFromPhoto, type Food, type FoodVariant, type FoodLogEntry } from '../../lib/nutritionApi'
 import { useToast } from '../../lib/ToastContext'
 import { MacroGridInputs } from './MacroGridInputs'
 import { decodeBarcodeFromFile } from '../../lib/barcodeScan'
@@ -16,21 +16,20 @@ function errorMessage(err: unknown, fallback: string): string {
 const A = SECTION_ACCENTS.nutrition
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 
-function scaledPreview(food: Food, qty: number) {
-  const factor = qty / food.default_qty
-  const round2 = (v: number | null) => v == null ? null : Math.round(v * factor * 100) / 100
+function scaledPreview(variant: FoodVariant, qty: number) {
+  const round2 = (v: number | null) => v == null ? null : Math.round(v * qty * 100) / 100
   return {
-    calories: food.calories == null ? null : Math.round(food.calories * factor),
-    protein_g: round2(food.protein_g),
-    carbs_g: round2(food.carbs_g),
-    fat_g: round2(food.fat_g),
+    calories: variant.calories == null ? null : Math.round(variant.calories * qty),
+    protein_g: round2(variant.protein_g),
+    carbs_g: round2(variant.carbs_g),
+    fat_g: round2(variant.fat_g),
   }
 }
 
-function qtyForGoal(food: Food, macroKey: 'calories' | 'protein_g' | 'carbs_g' | 'fat_g', goal: number): number | null {
-  const perDefaultQty = food[macroKey]
-  if (perDefaultQty == null || perDefaultQty === 0) return null
-  return Math.round((goal * food.default_qty / perDefaultQty) * 100) / 100
+function qtyForGoal(variant: FoodVariant, macroKey: 'calories' | 'protein_g' | 'carbs_g' | 'fat_g', goal: number): number | null {
+  const perServing = variant[macroKey]
+  if (perServing == null || perServing === 0) return null
+  return Math.round((goal / perServing) * 100) / 100
 }
 
 interface LogEntrySheetProps {
@@ -55,6 +54,8 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   const [results, setResults] = useState<Food[]>([])
   const [recents, setRecents] = useState<FoodLogEntry[]>([])
   const [selectedFood, setSelectedFood] = useState<Food | null>(null)
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null)
+  const selectedVariant = selectedFood?.variants.find(v => v.id === selectedVariantId) ?? null
   const [name, setName] = useState('')
   const [qty, setQty] = useState('')
   const [unit, setUnit] = useState('')
@@ -70,7 +71,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
     setName(''); setQty(''); setUnit('')
     setMacros({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
     setExtended(emptyExtendedNutrients())
-    setSelectedFood(null); setGoalMacro(null); setGoalValue('')
+    setSelectedFood(null); setSelectedVariantId(null); setGoalMacro(null); setGoalValue('')
   }
 
   useEffect(() => {
@@ -82,10 +83,10 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
   }, [open, initialMeal])
 
   useEffect(() => {
-    if (!selectedFood || !goalMacro || goalValue === '') return
-    const computed = qtyForGoal(selectedFood, goalMacro, Number(goalValue))
+    if (!selectedVariant || !goalMacro || goalValue === '') return
+    const computed = qtyForGoal(selectedVariant, goalMacro, Number(goalValue))
     if (computed != null && !Number.isNaN(computed)) setQty(String(computed))
-  }, [selectedFood, goalMacro, goalValue])
+  }, [selectedVariant, goalMacro, goalValue])
 
   useEffect(() => {
     if (!open) return
@@ -110,8 +111,9 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
       if (!(Number(qty) > 0)) { showToast('Quantity must be greater than 0.', 'error'); return }
       setSubmitting(true)
       try {
-        await createLogEntry({ date, meal_type: meal, food_id: selectedFood.id, quantity: Number(qty), unit: selectedFood.default_unit })
-        setSelectedFood(null); setGoalMacro(null); setGoalValue('')
+        if (!selectedVariant) { showToast('Pick a serving.', 'error'); setSubmitting(false); return }
+        await createLogEntry({ date, meal_type: meal, variant_id: selectedVariant.id, quantity: Number(qty), unit: selectedVariant.serving_unit })
+        setSelectedFood(null); setSelectedVariantId(null); setGoalMacro(null); setGoalValue('')
         onLogged(); onClose()
       } catch (err) {
         showToast(errorMessage(err, 'Could not log entry.'), 'error')
@@ -160,6 +162,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
         return
       }
       setSelectedFood(food)
+      setSelectedVariantId(food.variants.find(v => v.is_default)?.id ?? food.variants[0]?.id ?? null)
     } catch (err) {
       showToast(errorMessage(err, 'Could not read that barcode photo.'), 'error')
     }
@@ -173,6 +176,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
       const { data, mediaType } = await fileToBase64(file)
       const estimate = await estimateMealFromPhoto(data, mediaType)
       setSelectedFood(null)
+      setSelectedVariantId(null)
       setName(estimate.name)
       setUnit('serving')
       if (qty === '') setQty('1')
@@ -261,17 +265,24 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
 
           {debouncedQuery && results.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              {results.map(f => (
-                <button key={f.id} onClick={() => { setSelectedFood(f); setQuery('') }} style={{
-                  display: 'block', width: '100%', textAlign: 'left', background: COLORS.surface,
-                  border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: '8px 10px', marginBottom: 6, cursor: 'pointer',
-                }}>
-                  <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text }}>{f.name}</div>
-                  <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
-                    per {f.default_qty} {f.default_unit} · {f.calories ?? '—'} kcal · unit locked to {f.default_unit}
-                  </div>
-                </button>
-              ))}
+              {results.map(f => {
+                const dv = f.variants.find(v => v.is_default) ?? f.variants[0]
+                return (
+                  <button key={f.id} onClick={() => {
+                    setSelectedFood(f)
+                    setSelectedVariantId(f.variants.find(v => v.is_default)?.id ?? f.variants[0]?.id ?? null)
+                    setQuery('')
+                  }} style={{
+                    display: 'block', width: '100%', textAlign: 'left', background: COLORS.surface,
+                    border: `1px solid ${COLORS.line}`, borderRadius: 6, padding: '8px 10px', marginBottom: 6, cursor: 'pointer',
+                  }}>
+                    <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text }}>{f.name}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
+                      per {dv?.serving_qty} {dv?.serving_unit} · {dv?.calories ?? '—'} kcal · {f.variants.length} serving{f.variants.length !== 1 ? 's' : ''} available
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -279,17 +290,18 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
             <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '12px', marginBottom: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <span style={{ fontFamily: FONT_UI, fontSize: 14, fontWeight: 600, color: COLORS.text }}>{selectedFood.name}</span>
-                <button aria-label="Clear selected food" onClick={() => { setSelectedFood(null); setGoalMacro(null); setGoalValue('') }}
+                <button aria-label="Clear selected food" onClick={() => { setSelectedFood(null); setSelectedVariantId(null); setGoalMacro(null); setGoalValue('') }}
                   style={{ background: 'none', border: 'none', color: COLORS.textMuted, cursor: 'pointer', fontSize: 16 }}>✕</button>
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <input aria-label="Quantity" value={qty} onChange={e => setQty(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
-                <span style={{ ...inputStyle, flex: 1, display: 'flex', alignItems: 'center', gap: 6, color: A, borderColor: hexA(A, 0.4) }}>
-                  🔒 <span style={{ fontFamily: FONT_MONO }}>{selectedFood.default_unit}</span> <span style={{ fontSize: 8, color: COLORS.textMuted, fontFamily: FONT_MONO }}>LOCKED</span>
-                </span>
+                <select aria-label="Serving" value={selectedVariantId ?? ''} onChange={e => setSelectedVariantId(Number(e.target.value))}
+                  style={{ ...inputStyle, flex: 1 }}>
+                  {selectedFood.variants.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+                </select>
               </div>
-              {qty !== '' && (() => {
-                const preview = scaledPreview(selectedFood, Number(qty))
+              {qty !== '' && selectedVariant && (() => {
+                const preview = scaledPreview(selectedVariant, Number(qty))
                 return (
                   <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, marginBottom: 10 }}>
                     auto: {preview.calories ?? '—'} kcal · P {preview.protein_g ?? '—'} · C {preview.carbs_g ?? '—'} · F {preview.fat_g ?? '—'}

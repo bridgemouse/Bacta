@@ -11,98 +11,164 @@ vi.mock('ai', async (importOriginal) => {
   }
 })
 
+async function seedFoodWithVariant(overrides: Partial<{ name: string; serving_qty: number; serving_unit: string; calories: number; protein_g: number }> = {}) {
+  const { default: db } = await import('../../server/db/client')
+  const foodInfo = db.prepare("INSERT INTO foods (source, name) VALUES ('custom', ?)").run(overrides.name ?? 'Test Oats')
+  const variantInfo = db.prepare(`
+    INSERT INTO food_variants (food_id, label, serving_qty, serving_unit, is_default, source, calories, protein_g)
+    VALUES (?, '100 g', ?, ?, 1, 'custom', ?, ?)
+  `).run(
+    foodInfo.lastInsertRowid,
+    overrides.serving_qty ?? 100, overrides.serving_unit ?? 'g',
+    overrides.calories ?? 389, overrides.protein_g ?? 13.2,
+  )
+  return { foodId: foodInfo.lastInsertRowid as number, variantId: variantInfo.lastInsertRowid as number }
+}
+
 describe('Nutrition API', () => {
   beforeAll(async () => {
     const { migrate } = await import('../../server/db/migrate')
     migrate()
   })
 
-  describe('GET /api/nutrition/foods', () => {
-    it('returns an empty array when the foods table is empty', async () => {
-      const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods').query({ q: 'chicken' })
-      expect(res.status).toBe(200)
-      expect(res.body.foods).toEqual([])
-    })
-  })
-
-  describe('POST /api/nutrition/foods', () => {
-    it('saves a new custom food', async () => {
+  describe('GET/POST /api/nutrition/foods and variants', () => {
+    it('POST /foods creates a food with its first variant as is_default', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Grilled Chicken Breast',
-        default_qty: 100,
-        default_unit: 'g',
-        calories: 165,
-        protein_g: 31,
-        carbs_g: 0,
-        fat_g: 3.6,
-        fiber_g: 0,
+        name: 'Test Oats', brand: null,
+        variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 389, protein_g: 13.2 },
       })
       expect(res.status).toBe(201)
-      expect(res.body).toMatchObject({ source: 'custom', name: 'Grilled Chicken Breast', calories: 165 })
+      expect(res.body).toMatchObject({ name: 'Test Oats', source: 'custom' })
+      expect(res.body.variants).toHaveLength(1)
+      expect(res.body.variants[0]).toMatchObject({ label: '100 g', is_default: 1, calories: 389, protein_g: 13.2 })
     })
 
-    it('the saved custom food is immediately returned by a case-insensitive search', async () => {
+    it('POST /foods rejects a variant with serving_qty <= 0', async () => {
       const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods').query({ q: 'CHICKEN' })
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Bad Food', variant: { label: 'bad', serving_qty: 0, serving_unit: 'g' },
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('GET /foods?q= returns matching foods with nested variants', async () => {
+      const { app } = await import('../../server/index')
+      await request(app).post('/api/nutrition/foods').send({
+        name: 'Findable Bread', variant: { label: '1 slice', serving_qty: 1, serving_unit: 'slice', calories: 80 },
+      })
+      const res = await request(app).get('/api/nutrition/foods?q=Findable')
       expect(res.status).toBe(200)
-      expect(res.body.foods.length).toBeGreaterThan(0)
-      expect(res.body.foods.some((f: { name: string }) => f.name === 'Grilled Chicken Breast')).toBe(true)
+      expect(res.body.foods).toHaveLength(1)
+      expect(res.body.foods[0].variants[0]).toMatchObject({ label: '1 slice', calories: 80 })
     })
 
-    it('rejects a default_qty of 0, which would cause a division-by-zero when later scaling a logged entry', async () => {
+    it('POST /foods/:id/variants adds a non-default variant to an existing food', async () => {
       const { app } = await import('../../server/index')
-      const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Zero Qty Food', default_qty: 0, default_unit: 'g', calories: 100,
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Multi-Serving Food', variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 200 },
       })
-      expect(res.status).toBe(400)
+      const res = await request(app).post(`/api/nutrition/foods/${created.body.id}/variants`).send({
+        label: '1 cup', serving_qty: 1, serving_unit: 'cup', calories: 240,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ label: '1 cup', is_default: 0, food_id: created.body.id })
+
+      const listRes = await request(app).get(`/api/nutrition/foods?q=Multi-Serving`)
+      expect(listRes.body.foods[0].variants).toHaveLength(2)
     })
 
-    it('rejects a negative default_qty for the same reason', async () => {
+    it('POST /foods/:id/variants 404s for a nonexistent food', async () => {
       const { app } = await import('../../server/index')
-      const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Negative Qty Food', default_qty: -5, default_unit: 'g', calories: 100,
+      const res = await request(app).post('/api/nutrition/foods/999999/variants').send({ label: 'x', serving_qty: 1, serving_unit: 'g' })
+      expect(res.status).toBe(404)
+    })
+
+    it('DELETE /food_variants/:id removes a non-default variant', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Deletable Variant Food', variant: { label: '100 g', serving_qty: 100, serving_unit: 'g' },
       })
+      const added = await request(app).post(`/api/nutrition/foods/${created.body.id}/variants`).send({ label: '1 cup', serving_qty: 1, serving_unit: 'cup' })
+      const res = await request(app).delete(`/api/nutrition/food_variants/${added.body.id}`)
+      expect(res.status).toBe(200)
+    })
+
+    it('DELETE /food_variants/:id is blocked (400) when it is the food\'s last remaining variant', async () => {
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/foods').send({
+        name: 'Single Variant Food', variant: { label: '100 g', serving_qty: 100, serving_unit: 'g' },
+      })
+      const variantId = created.body.variants[0].id
+      const res = await request(app).delete(`/api/nutrition/food_variants/${variantId}`)
       expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/at least one/i)
+    })
+
+    it('GET /foods/:id/variants returns a food\'s variant list', async () => {
+      const { foodId } = await seedFoodWithVariant()
+      const { app } = await import('../../server/index')
+      const res = await request(app).get(`/api/nutrition/foods/${foodId}/variants`)
+      expect(res.status).toBe(200)
+      expect(res.body.variants).toHaveLength(1)
+    })
+
+    it('GET /foods/:id/variants 404s for a nonexistent food', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/foods/999999/variants')
+      expect(res.status).toBe(404)
+    })
+
+    it('GET /foods/barcode/:code returns a matching Open Food Facts food with its variants', async () => {
+      const { default: db } = await import('../../server/db/client')
+      const foodInfo = db.prepare("INSERT INTO foods (source, source_id, name) VALUES ('openfoodfacts', '111222333', 'Barcode Food')").run()
+      db.prepare(`
+        INSERT INTO food_variants (food_id, label, serving_qty, serving_unit, is_default, source, calories)
+        VALUES (?, '100 g', 100, 'g', 1, 'openfoodfacts', 150)
+      `).run(foodInfo.lastInsertRowid)
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/foods/barcode/111222333')
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ name: 'Barcode Food' })
+      expect(res.body.variants[0]).toMatchObject({ calories: 150 })
+    })
+
+    it('GET /foods/barcode/:code 404s when no food matches', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).get('/api/nutrition/foods/barcode/nonexistent')
+      expect(res.status).toBe(404)
     })
   })
 
   describe('Food log CRUD', () => {
     const logDate = '2026-07-01'
-    let oatsFoodId: number
+    let oatsVariantId: number
     let adHocEntryId: number
 
     beforeAll(async () => {
-      const { default: db } = await import('../../server/db/client')
-      const info = db.prepare(`
-        INSERT INTO foods (source, name, default_qty, default_unit, calories, protein_g, carbs_g, fat_g, fiber_g)
-        VALUES ('custom', 'Test Oats', 100, 'g', 389, 16.9, 66.3, 6.9, 10.6)
-      `).run()
-      oatsFoodId = Number(info.lastInsertRowid)
+      const { variantId } = await seedFoodWithVariant({ name: 'Test Oats', calories: 389, protein_g: 16.9 })
+      oatsVariantId = variantId
     })
 
-    it('POST with food_id + quantity scales macros server-side', async () => {
+    it('POST with variant_id + quantity scales macros server-side', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/log').send({
         date: logDate,
         meal_type: 'breakfast',
-        food_id: oatsFoodId,
-        quantity: 200,
-        unit: 'g',
+        variant_id: oatsVariantId,
+        quantity: 2,
       })
       expect(res.status).toBe(201)
       expect(res.body).toMatchObject({
         name: 'Test Oats',
         calories: 778,
         protein_g: 33.8,
-        carbs_g: 132.6,
-        fat_g: 13.8,
-        fiber_g: 21.2,
+        unit: 'g',
       })
     })
 
-    it('POST without food_id stores an ad-hoc entry with caller-supplied macros as-is', async () => {
+    it('POST without variant_id stores an ad-hoc entry with caller-supplied macros as-is', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/log').send({
         date: logDate,
@@ -121,14 +187,13 @@ describe('Nutrition API', () => {
       adHocEntryId = res.body.id
     })
 
-    it('POST with a food_id that does not exist in foods returns 400, not a raw 500', async () => {
+    it('POST with a variant_id that does not exist in food_variants returns 400, not a raw 500', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/log').send({
         date: logDate,
         meal_type: 'lunch',
-        food_id: 999999,
-        quantity: 100,
-        unit: 'g',
+        variant_id: 999999,
+        quantity: 1,
       })
       expect(res.status).toBe(400)
     })
@@ -143,6 +208,23 @@ describe('Nutrition API', () => {
       expect(res.body.daily.protein_g).toBe(53.8)
     })
 
+    it('GET ?date= includes food_id (the underlying food, distinct from variant_id) on linked entries, null on ad-hoc', async () => {
+      // A date not reused by the later "Targets + summary" block's aggregate-total
+      // assertions on logDate (same reasoning as rescaleDate/overrideDate above).
+      const foodIdJoinDate = '2026-07-06'
+      const { app } = await import('../../server/index')
+      const linkedPost = await request(app).post('/api/nutrition/log').send({
+        date: foodIdJoinDate, meal_type: 'lunch', variant_id: oatsVariantId, quantity: 1,
+      })
+      const adHocPost = await request(app).post('/api/nutrition/log').send({
+        date: foodIdJoinDate, meal_type: 'lunch', name: 'Ad-hoc side', quantity: 1, unit: 'serving', calories: 50,
+      })
+      const res = await request(app).get('/api/nutrition/log').query({ date: foodIdJoinDate })
+      const entries = res.body.meals.lunch.entries as Array<{ id: number; variant_id: number | null; food_id: number | null }>
+      expect(entries.find(e => e.id === linkedPost.body.id)?.food_id).not.toBeNull()
+      expect(entries.find(e => e.id === adHocPost.body.id)).toMatchObject({ variant_id: null, food_id: null })
+    })
+
     it('PUT edits a logged entry', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).put(`/api/nutrition/log/${adHocEntryId}`).send({ calories: 350 })
@@ -150,59 +232,43 @@ describe('Nutrition API', () => {
       expect(res.body).toMatchObject({ id: adHocEntryId, calories: 350 })
     })
 
-    it('PUT with a new quantity on a food-linked entry rescales macros from the reference food', async () => {
+    it('PUT with a new quantity on a variant-linked entry rescales macros from the entry\'s own prior values', async () => {
       // A separate date from logDate — this block only asserts the created/edited
-      // entry's own fields, but reuses logDate elsewhere would pollute the later
+      // entry's own fields, but reusing logDate elsewhere would pollute the later
       // Targets + summary block's aggregate totals for logDate.
       const rescaleDate = '2026-07-03'
       const { app } = await import('../../server/index')
       const created = await request(app).post('/api/nutrition/log').send({
-        date: rescaleDate, meal_type: 'lunch', food_id: oatsFoodId, quantity: 100, unit: 'g',
+        date: rescaleDate, meal_type: 'lunch', variant_id: oatsVariantId, quantity: 1,
       })
-      expect(created.body.calories).toBe(389) // 100g == default_qty, factor 1
+      expect(created.body.calories).toBe(389) // quantity 1 == exactly one of this variant's servings, factor 1
 
-      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 50 })
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 0.5 })
       expect(res.status).toBe(200)
-      expect(res.body).toMatchObject({ quantity: 50, calories: 194.5, protein_g: 8.45 })
+      expect(res.body).toMatchObject({ quantity: 0.5, calories: 194.5, protein_g: 8.45 })
     })
 
     it('PUT with quantity + one explicit macro override rescales the OTHER macros too, not just the one provided', async () => {
       const overrideDate = '2026-07-05'
       const { app } = await import('../../server/index')
       const created = await request(app).post('/api/nutrition/log').send({
-        date: overrideDate, meal_type: 'lunch', food_id: oatsFoodId, quantity: 100, unit: 'g',
+        date: overrideDate, meal_type: 'lunch', variant_id: oatsVariantId, quantity: 1,
       })
       expect(created.body).toMatchObject({ calories: 389, protein_g: 16.9 })
 
-      // Change quantity to 50 (would normally halve everything) AND explicitly override
-      // calories to a manually-corrected value. protein_g/carbs_g/fat_g/fiber_g were not
-      // explicitly provided, so they must still rescale to the new quantity (194.5-style
-      // halving), not remain stuck at the old quantity=100 values.
-      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 50, calories: 100 })
+      // Change quantity to 0.5 (would normally halve everything) AND explicitly override
+      // calories to a manually-corrected value. protein_g was not explicitly provided, so
+      // it must still rescale to the new quantity (halving), not remain stuck at the old
+      // quantity=1 value.
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 0.5, calories: 100 })
       expect(res.status).toBe(200)
-      expect(res.body).toMatchObject({ quantity: 50, calories: 100, protein_g: 8.45 })
+      expect(res.body).toMatchObject({ quantity: 0.5, calories: 100, protein_g: 8.45 })
     })
 
-    it('PUT rejects changing unit away from the linked food\'s default_unit, same as POST', async () => {
-      const unitDate = '2026-07-06'
-      const { app } = await import('../../server/index')
-      const created = await request(app).post('/api/nutrition/log').send({
-        date: unitDate, meal_type: 'lunch', food_id: oatsFoodId, quantity: 100, unit: 'g',
-      })
-
-      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ unit: 'oz' })
-      expect(res.status).toBe(400)
-
-      // and the original entry must be unchanged, not partially written
-      const { default: db } = await import('../../server/db/client')
-      const row = db.prepare('SELECT unit, quantity, calories FROM food_log_entries WHERE id = ?').get(created.body.id)
-      expect(row).toMatchObject({ unit: 'g', quantity: 100, calories: 389 })
-    })
-
-    it('POST with an explicit food_id: null is treated as ad-hoc, not an invalid food reference', async () => {
+    it('POST with an explicit variant_id: null is treated as ad-hoc, not an invalid variant reference', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-04', meal_type: 'snack', food_id: null,
+        date: '2026-07-04', meal_type: 'snack', variant_id: null,
         name: 'Handful of nuts', quantity: 1, unit: 'serving', calories: 180,
       })
       expect(res.status).toBe(201)
@@ -216,6 +282,102 @@ describe('Nutrition API', () => {
 
       const res = await request(app).get('/api/nutrition/log').query({ date: logDate })
       expect(res.body.meals.breakfast.entries.some((e: { id: number }) => e.id === adHocEntryId)).toBe(false)
+    })
+  })
+
+  describe('POST /api/nutrition/log with variant_id', () => {
+    it('scales macros from the variant times quantity (quantity = count of that serving)', async () => {
+      const { variantId } = await seedFoodWithVariant({ serving_qty: 100, calories: 389, protein_g: 13.2 })
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-20', meal_type: 'breakfast', variant_id: variantId, quantity: 2,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ calories: 778, protein_g: 26.4, unit: 'g', quantity: 2 })
+    })
+
+    it('400s for a variant_id that does not reference an existing variant', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/log').send({ date: '2026-07-20', meal_type: 'lunch', variant_id: 999999, quantity: 1 })
+      expect(res.status).toBe(400)
+    })
+
+    it('ad-hoc entries (no variant_id) are unaffected', async () => {
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-20', meal_type: 'snack', name: 'Handful of nuts', quantity: 1, unit: 'handful', calories: 180,
+      })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ name: 'Handful of nuts', calories: 180 })
+    })
+  })
+
+  describe('PUT /api/nutrition/log/:id with variant_id', () => {
+    it('rescales from the entry\'s own stored quantity/macros on a quantity change, same as before', async () => {
+      const { variantId } = await seedFoodWithVariant({ serving_qty: 100, calories: 200, protein_g: 10 })
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/log').send({ date: '2026-07-20', meal_type: 'lunch', variant_id: variantId, quantity: 1 })
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 2 })
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ quantity: 2, calories: 400, protein_g: 20 })
+    })
+
+    it('switching to a different variant_id re-derives unit and macros from the NEW variant times the current quantity', async () => {
+      const { default: db } = await import('../../server/db/client')
+      const foodInfo = db.prepare("INSERT INTO foods (source, name) VALUES ('custom', 'Switchable Food')").run()
+      const gramsVariant = db.prepare(`
+        INSERT INTO food_variants (food_id, label, serving_qty, serving_unit, is_default, source, calories, protein_g)
+        VALUES (?, '100 g', 100, 'g', 1, 'custom', 200, 10)
+      `).run(foodInfo.lastInsertRowid)
+      const cupVariant = db.prepare(`
+        INSERT INTO food_variants (food_id, label, serving_qty, serving_unit, is_default, source, calories, protein_g)
+        VALUES (?, '1 cup', 1, 'cup', 0, 'custom', 300, 25)
+      `).run(foodInfo.lastInsertRowid)
+
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-20', meal_type: 'lunch', variant_id: gramsVariant.lastInsertRowid, quantity: 1,
+      })
+      expect(created.body).toMatchObject({ unit: 'g', calories: 200, protein_g: 10 })
+
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({
+        variant_id: cupVariant.lastInsertRowid,
+      })
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({
+        variant_id: Number(cupVariant.lastInsertRowid), unit: 'cup', calories: 300, protein_g: 25,
+      })
+    })
+
+    it('switching variant_id together with a new quantity scales the new variant\'s macros by that quantity, not the old one\'s', async () => {
+      const { default: db } = await import('../../server/db/client')
+      const foodInfo = db.prepare("INSERT INTO foods (source, name) VALUES ('custom', 'Switchable Food 2')").run()
+      const gramsVariant = db.prepare(`
+        INSERT INTO food_variants (food_id, label, serving_qty, serving_unit, is_default, source, calories)
+        VALUES (?, '100 g', 100, 'g', 1, 'custom', 200)
+      `).run(foodInfo.lastInsertRowid)
+      const cupVariant = db.prepare(`
+        INSERT INTO food_variants (food_id, label, serving_qty, serving_unit, is_default, source, calories)
+        VALUES (?, '1 cup', 1, 'cup', 0, 'custom', 300)
+      `).run(foodInfo.lastInsertRowid)
+
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-20', meal_type: 'dinner', variant_id: gramsVariant.lastInsertRowid, quantity: 1,
+      })
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({
+        variant_id: cupVariant.lastInsertRowid, quantity: 2,
+      })
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ quantity: 2, calories: 600 })
+    })
+
+    it('switching to a variant_id that does not exist returns 400, not a silent no-op', async () => {
+      const { variantId } = await seedFoodWithVariant()
+      const { app } = await import('../../server/index')
+      const created = await request(app).post('/api/nutrition/log').send({ date: '2026-07-20', meal_type: 'lunch', variant_id: variantId, quantity: 1 })
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ variant_id: 999999 })
+      expect(res.status).toBe(400)
     })
   })
 
@@ -339,8 +501,10 @@ describe('Nutrition API', () => {
       })
       expect(res.status).toBe(201)
       expect(res.body).toMatchObject({ name: 'Protein Smoothie', servings: 2 })
-      expect(res.body.food).toMatchObject({
-        name: 'Protein Smoothie', default_qty: 1, default_unit: 'serving',
+      expect(res.body.food).toMatchObject({ name: 'Protein Smoothie' })
+      expect(res.body.food.variants).toHaveLength(1)
+      expect(res.body.food.variants[0]).toMatchObject({
+        is_default: 1, label: '1 serving', serving_qty: 1, serving_unit: 'serving',
         calories: 113, protein_g: 25, carbs_g: 15, fat_g: 0.5, fiber_g: 1.5,
       })
     })
@@ -404,8 +568,9 @@ describe('Nutrition API', () => {
         name: 'Logged Recipe', servings: 1, ingredients: [{ name: 'X', quantity: 1, unit: 'g', calories: 80 }],
       })
       const foodId = created.body.food.id
+      const variantId = created.body.food.variants[0].id
       await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 1, unit: 'serving',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
 
       const del = await request(app).delete(`/api/nutrition/recipes/${created.body.id}`)
@@ -446,10 +611,11 @@ describe('Nutrition API', () => {
       })
       const recipeId = created.body.id
       const foodId = created.body.food.id
+      const variantId = created.body.food.variants[0].id
 
       // this recipe's materialized food has already been logged — editing must not orphan that entry
       const logRes = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 1, unit: 'serving',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
 
       const updated = await request(app).put(`/api/nutrition/recipes/${recipeId}`).send({
@@ -460,7 +626,8 @@ describe('Nutrition API', () => {
         ],
       })
       expect(updated.status).toBe(200)
-      expect(updated.body.food).toMatchObject({ id: foodId, calories: Math.round((330 + 195) / 2) })
+      expect(updated.body.food.id).toBe(foodId)
+      expect(updated.body.food.variants[0]).toMatchObject({ id: variantId, calories: Math.round((330 + 195) / 2) })
 
       const { default: db } = await import('../../server/db/client')
       // still exactly one foods row for this recipe — updated in place, not duplicated
@@ -468,9 +635,9 @@ describe('Nutrition API', () => {
       // the recipe's ingredient rows reflect the new composition
       const ingredients = db.prepare('SELECT name FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id').all(recipeId) as { name: string }[]
       expect(ingredients.map(i => i.name)).toEqual(['Chicken breast', 'Rice'])
-      // the earlier log entry still references a valid food_id and keeps its original snapshot
-      const logEntry = db.prepare('SELECT food_id, calories FROM food_log_entries WHERE id = ?').get(logRes.body.id) as { food_id: number; calories: number }
-      expect(logEntry.food_id).toBe(foodId)
+      // the earlier log entry still references the same variant and keeps its original snapshot
+      const logEntry = db.prepare('SELECT variant_id, calories FROM food_log_entries WHERE id = ?').get(logRes.body.id) as { variant_id: number; calories: number }
+      expect(logEntry.variant_id).toBe(variantId)
       expect(logEntry.calories).toBe(165)
     })
 
@@ -480,12 +647,12 @@ describe('Nutrition API', () => {
         name: 'Protein Smoothie', servings: 2,
         ingredients: [{ name: 'Protein powder', quantity: 1, unit: 'scoop', calories: 300, protein_g: 60, carbs_g: 0, fat_g: 0, fiber_g: 0 }],
       })
-      const foodId = created.body.food.id
-      expect(created.body.food.calories).toBe(150) // 300 / 2 servings
+      const variantId = created.body.food.variants[0].id
+      expect(created.body.food.variants[0].calories).toBe(150) // 300 / 2 servings
 
       // logged 2 servings while the recipe was still 150 kcal/serving -> 300 kcal stored
       const logRes = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: foodId, quantity: 2, unit: 'serving',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 2,
       })
       expect(logRes.body.calories).toBe(300)
 
@@ -514,12 +681,10 @@ describe('Nutrition API', () => {
     })
 
     it('PUT /api/nutrition/log/:id rejects an edit that would leave the stored quantity at 0 or below (#164 review finding)', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 200, protein_g: 10 })
       const { app } = await import('../../server/index')
-      const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Test Food 2', default_qty: 100, default_unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2,
-      })
       const logRes = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: food.body.id, quantity: 50, unit: 'g',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
       const res = await request(app).put(`/api/nutrition/log/${logRes.body.id}`).send({ quantity: 0 })
       expect(res.status).toBe(400)
@@ -543,7 +708,7 @@ describe('Nutrition API', () => {
         }],
       })
       const recipeId = created.body.id
-      expect(created.body.food.sodium_mg).toBe(600) // 1200 / 2 servings
+      expect(created.body.food.variants[0].sodium_mg).toBe(600) // 1200 / 2 servings
 
       // GET must return the ingredient's widened fields, not just the original 5
       const fetched = await request(app).get(`/api/nutrition/recipes/${recipeId}`)
@@ -558,7 +723,7 @@ describe('Nutrition API', () => {
           sodium_mg: 2400, allergens: ['pork'],
         }],
       })
-      expect(updated.body.food.sodium_mg).toBe(1200) // 2400 / 2 servings
+      expect(updated.body.food.variants[0].sodium_mg).toBe(1200) // 2400 / 2 servings
 
       const refetched = await request(app).get(`/api/nutrition/recipes/${recipeId}`)
       expect(refetched.body.ingredients[0].sodium_mg).toBe(2400)
@@ -571,11 +736,11 @@ describe('Nutrition API', () => {
         ingredients: [{ name: 'Chicken breast', quantity: 200, unit: 'g', calories: 330, protein_g: 62, carbs_g: 0, fat_g: 7.2, fiber_g: 0 }],
       })
       const recipeId = created.body.id
-      const foodId = created.body.food.id
+      const variantId = created.body.food.variants[0].id
 
       const res = await request(app).put(`/api/nutrition/recipes/${recipeId}`).send({
         name: 'Self Ref Bowl', servings: 2,
-        ingredients: [{ food_id: foodId, name: 'Self Ref Bowl', quantity: 1, unit: 'serving', calories: 165, protein_g: 31, carbs_g: 0, fat_g: 3.6, fiber_g: 0 }],
+        ingredients: [{ variant_id: variantId, name: 'Self Ref Bowl', quantity: 1, unit: 'serving', calories: 165, protein_g: 31, carbs_g: 0, fat_g: 3.6, fiber_g: 0 }],
       })
       expect(res.status).toBe(400)
 
@@ -586,32 +751,44 @@ describe('Nutrition API', () => {
     })
   })
 
-  describe('Food deletion', () => {
-    it('DELETE /api/nutrition/foods/:id removes an unused food', async () => {
+  describe('POST /api/nutrition/recipes with variant_id ingredients', () => {
+    it('creates a recipe whose materialized food has exactly one (default) variant', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 200, protein_g: 10 })
       const { app } = await import('../../server/index')
-      const created = await request(app).post('/api/nutrition/foods').send({
-        name: 'Unused Food', default_qty: 100, default_unit: 'g', calories: 50,
+      const res = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Test Recipe', servings: 2,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 200, protein_g: 10 }],
       })
-      const del = await request(app).delete(`/api/nutrition/foods/${created.body.id}`)
-      expect(del.status).toBe(200)
+      expect(res.status).toBe(201)
+      expect(res.body.food.variants).toHaveLength(1)
+      expect(res.body.food.variants[0]).toMatchObject({ is_default: 1, calories: 100 }) // 200/2 servings
     })
 
-    it('DELETE /api/nutrition/foods/:id returns 404 for a nonexistent food', async () => {
+    it('PUT /recipes/:id updates ingredients keyed by variant_id', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 100 })
       const { app } = await import('../../server/index')
-      const res = await request(app).delete('/api/nutrition/foods/999999')
-      expect(res.status).toBe(404)
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Editable Recipe', servings: 1,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 100 }],
+      })
+      const res = await request(app).put(`/api/nutrition/recipes/${created.body.id}`).send({
+        name: 'Editable Recipe', servings: 2,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 100 }],
+      })
+      expect(res.status).toBe(200)
+      expect(res.body.food.variants[0].calories).toBe(50) // 100/2 servings
     })
 
-    it('DELETE /api/nutrition/foods/:id is blocked with 400 if the food has been logged', async () => {
+    it('GET /recipes/:id returns ingredients with variant_id, not food_id', async () => {
+      const { variantId } = await seedFoodWithVariant({ calories: 100 })
       const { app } = await import('../../server/index')
-      const created = await request(app).post('/api/nutrition/foods').send({
-        name: 'Logged Food', default_qty: 100, default_unit: 'g', calories: 50,
+      const created = await request(app).post('/api/nutrition/recipes').send({
+        name: 'Composition Recipe', servings: 1,
+        ingredients: [{ variant_id: variantId, name: 'Test Oats', quantity: 1, unit: 'g', calories: 100 }],
       })
-      await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-11', meal_type: 'snack', food_id: created.body.id, quantity: 100, unit: 'g',
-      })
-      const del = await request(app).delete(`/api/nutrition/foods/${created.body.id}`)
-      expect(del.status).toBe(400)
+      const res = await request(app).get(`/api/nutrition/recipes/${created.body.id}`)
+      expect(res.body.ingredients[0]).toMatchObject({ variant_id: variantId })
+      expect(res.body.ingredients[0].food_id).toBeUndefined()
     })
   })
 
@@ -647,6 +824,20 @@ describe('Nutrition API', () => {
       // After the previous test, there should be at least some entries in the database
       expect(res.body.entries.length).toBeGreaterThan(0)
       expect(res.body.entries.length).toBeLessThanOrEqual(1)
+    })
+
+    it('GET /api/nutrition/log/recent includes food_id (the underlying food, distinct from variant_id) on linked entries, null on ad-hoc', async () => {
+      const { variantId, foodId } = await seedFoodWithVariant({ name: 'Recent Join Test Food' })
+      const { app } = await import('../../server/index')
+      await request(app).post('/api/nutrition/log').send({
+        date: '2026-07-08', meal_type: 'dinner', variant_id: variantId, quantity: 1,
+      })
+      const res = await request(app).get('/api/nutrition/log/recent').query({ limit: 20 })
+      const entries = res.body.entries as Array<{ name: string; variant_id: number | null; food_id: number | null }>
+      const linked = entries.find(e => e.name === 'Recent Join Test Food')
+      expect(linked?.food_id).toBe(foodId)
+      const salmon = entries.find(e => e.name === 'Salmon bowl')
+      expect(salmon).toMatchObject({ variant_id: null, food_id: null })
     })
 
     it('breaks ties at the same logged_at timestamp by using id DESC (higher id wins)', async () => {
@@ -690,25 +881,6 @@ describe('Nutrition API', () => {
   })
 
   describe('Camera-based logging (#141)', () => {
-    it('GET /api/nutrition/foods/barcode/:code finds a food previously imported from Open Food Facts by its barcode', async () => {
-      const { default: db } = await import('../../server/db/client')
-      db.prepare(`
-        INSERT INTO foods (source, source_id, name, default_qty, default_unit, calories)
-        VALUES ('openfoodfacts', '0016000275287', 'Cheerios', 100, 'g', 379)
-      `).run()
-
-      const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods/barcode/0016000275287')
-      expect(res.status).toBe(200)
-      expect(res.body).toMatchObject({ name: 'Cheerios', source: 'openfoodfacts' })
-    })
-
-    it('GET /api/nutrition/foods/barcode/:code returns 404 for an unrecognized barcode, so the client can fall back to ad-hoc entry', async () => {
-      const { app } = await import('../../server/index')
-      const res = await request(app).get('/api/nutrition/foods/barcode/9999999999999')
-      expect(res.status).toBe(404)
-    })
-
     it('POST /api/nutrition/scan/meal-photo returns a macro estimate without creating a log entry — the user must still confirm and POST /log separately', async () => {
       const { generateObject } = await import('ai')
       vi.mocked(generateObject).mockResolvedValue({
@@ -755,42 +927,52 @@ describe('Nutrition API', () => {
     it('POST /api/nutrition/foods stores the widened nutrient set, round-tripping JSON fields', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Peanut Butter', default_qty: 32, default_unit: 'g', calories: 190,
-        sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0,
-        glycemic_index: 'Low',
-        custom_nutrients: { manganese_mg: 0.6 },
-        allergens: ['peanuts'],
-        traces: ['tree nuts'],
+        name: 'Peanut Butter',
+        variant: {
+          label: '32 g', serving_qty: 32, serving_unit: 'g', calories: 190,
+          sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0,
+          glycemic_index: 'Low',
+          custom_nutrients: { manganese_mg: 0.6 },
+          allergens: ['peanuts'],
+          traces: ['tree nuts'],
+        },
       })
       expect(res.status).toBe(201)
-      expect(res.body).toMatchObject({
+      const variant = res.body.variants[0]
+      expect(variant).toMatchObject({
         sodium_mg: 140, sugar_g: 3, saturated_fat_g: 3.5, cholesterol_mg: 0, glycemic_index: 'Low',
       })
-      expect(JSON.parse(res.body.custom_nutrients)).toEqual({ manganese_mg: 0.6 })
-      expect(JSON.parse(res.body.allergens)).toEqual(['peanuts'])
-      expect(JSON.parse(res.body.traces)).toEqual(['tree nuts'])
+      expect(JSON.parse(variant.custom_nutrients)).toEqual({ manganese_mg: 0.6 })
+      expect(JSON.parse(variant.allergens)).toEqual(['peanuts'])
+      expect(JSON.parse(variant.traces)).toEqual(['tree nuts'])
     })
 
     it('a food saved without the new fields returns null for them, not 0 or []', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).post('/api/nutrition/foods').send({
-        name: 'Plain Rice', default_qty: 100, default_unit: 'g', calories: 130,
+        name: 'Plain Rice',
+        variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 130 },
       })
       expect(res.status).toBe(201)
-      expect(res.body.sodium_mg).toBeNull()
-      expect(res.body.custom_nutrients).toBeNull()
-      expect(res.body.allergens).toBeNull()
-      expect(res.body.glycemic_index).toBeNull()
+      const variant = res.body.variants[0]
+      expect(variant.sodium_mg).toBeNull()
+      expect(variant.custom_nutrients).toBeNull()
+      expect(variant.allergens).toBeNull()
+      expect(variant.glycemic_index).toBeNull()
     })
 
     it('POST /api/nutrition/log scales the new numeric fields from the linked food, and passes through non-scalable fields (glycemic_index/allergens) unchanged', async () => {
       const { app } = await import('../../server/index')
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Wheat Bread', default_qty: 100, default_unit: 'g', calories: 250,
-        sodium_mg: 400, glycemic_index: 'High', allergens: ['wheat', 'gluten'],
+        name: 'Wheat Bread',
+        variant: {
+          label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 250,
+          sodium_mg: 400, glycemic_index: 'High', allergens: ['wheat', 'gluten'],
+        },
       })
+      const variantId = food.body.variants[0].id
       const res = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-12', meal_type: 'breakfast', food_id: food.body.id, quantity: 50, unit: 'g',
+        date: '2026-07-12', meal_type: 'breakfast', variant_id: variantId, quantity: 0.5,
       })
       expect(res.status).toBe(201)
       expect(res.body.sodium_mg).toBe(200) // scaled by factor 0.5, same as calories/protein etc
@@ -813,14 +995,16 @@ describe('Nutrition API', () => {
     it('PUT /api/nutrition/log/:id rescales the new numeric fields when quantity changes, same as the original five', async () => {
       const { app } = await import('../../server/index')
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Salted Almonds', default_qty: 100, default_unit: 'g', calories: 600, sodium_mg: 300,
+        name: 'Salted Almonds',
+        variant: { label: '100 g', serving_qty: 100, serving_unit: 'g', calories: 600, sodium_mg: 300 },
       })
+      const variantId = food.body.variants[0].id
       const created = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-13', meal_type: 'snack', food_id: food.body.id, quantity: 100, unit: 'g',
+        date: '2026-07-13', meal_type: 'snack', variant_id: variantId, quantity: 1,
       })
       expect(created.body.sodium_mg).toBe(300)
 
-      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 50 })
+      const res = await request(app).put(`/api/nutrition/log/${created.body.id}`).send({ quantity: 0.5 })
       expect(res.status).toBe(200)
       expect(res.body.sodium_mg).toBe(150)
     })
@@ -839,10 +1023,12 @@ describe('Nutrition API', () => {
       const { app } = await import('../../server/index')
       await request(app).post('/api/nutrition/targets').send({ date: '2026-06-21', sodium_mg: 2300 })
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Canned Soup', default_qty: 1, default_unit: 'serving', calories: 100, sodium_mg: 890,
+        name: 'Canned Soup',
+        variant: { label: '1 serving', serving_qty: 1, serving_unit: 'serving', calories: 100, sodium_mg: 890 },
       })
+      const variantId = food.body.variants[0].id
       await request(app).post('/api/nutrition/log').send({
-        date: '2026-06-22', meal_type: 'lunch', food_id: food.body.id, quantity: 1, unit: 'serving',
+        date: '2026-06-22', meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
       const res = await request(app).get('/api/nutrition/summary').query({ date: '2026-06-22' })
       expect(res.status).toBe(200)
@@ -854,11 +1040,17 @@ describe('Nutrition API', () => {
     it('GET /api/nutrition/trend aggregates the new numeric fields per day, zero-filled for empty days', async () => {
       const { app } = await import('../../server/index')
       const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Trend Sodium Food', default_qty: 1, default_unit: 'serving', calories: 50, sodium_mg: 500,
+        name: 'Trend Sodium Food',
+        variant: { label: '1 serving', serving_qty: 1, serving_unit: 'serving', calories: 50, sodium_mg: 500 },
       })
-      const today = new Date().toISOString().slice(0, 10)
+      const variantId = food.body.variants[0].id
+      // Local calendar date, matching the server's own localDateString() convention
+      // (see the "GET /api/nutrition/trend" describe block above) — a naive
+      // toISOString() UTC date can be a day ahead of the server's "today" in the
+      // evening EST hours, which is exactly the flake this sidesteps.
+      const today = new Date().toLocaleDateString('en-CA')
       await request(app).post('/api/nutrition/log').send({
-        date: today, meal_type: 'lunch', food_id: food.body.id, quantity: 1, unit: 'serving',
+        date: today, meal_type: 'lunch', variant_id: variantId, quantity: 1,
       })
       const res = await request(app).get('/api/nutrition/trend').query({ days: 1 })
       expect(res.status).toBe(200)
@@ -875,7 +1067,7 @@ describe('Nutrition API', () => {
         ],
       })
       expect(res.status).toBe(201)
-      expect(res.body.food.sodium_mg).toBe(Math.round((450 + 110) / 2))
+      expect(res.body.food.variants[0].sodium_mg).toBe(Math.round((450 + 110) / 2))
     })
   })
 })

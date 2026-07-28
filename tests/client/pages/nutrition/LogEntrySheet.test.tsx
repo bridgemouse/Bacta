@@ -168,9 +168,11 @@ describe('LogEntrySheet — search and recents', () => {
 })
 
 describe('LogEntrySheet — selected food', () => {
-  const oats = { id: 5, source: 'custom', name: 'Test Oats', brand: null, default_qty: 100, default_unit: 'g', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 }
+  const oats = { id: 5, name: 'Test Oats', variants: [
+    { id: 50, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
+  ] }
 
-  it('shows a locked unit chip and auto-rescale preview after picking a search result', async () => {
+  it('shows a variant dropdown and auto-rescale preview after picking a search result', async () => {
     const { searchFoods } = await import('../../../../client/src/lib/nutritionApi')
     ;(searchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([oats])
     const user = userEvent.setup()
@@ -178,11 +180,13 @@ describe('LogEntrySheet — selected food', () => {
     await user.type(screen.getByPlaceholderText('Search saved foods…'), 'oat')
     await user.click(await screen.findByText('Test Oats'))
 
-    expect(screen.getByText(/LOCKED/)).toBeInTheDocument()
-    expect(screen.getByText('g')).toBeInTheDocument()
+    expect(screen.getByLabelText('Serving')).toHaveValue('50')
+    await user.clear(screen.getByLabelText('Quantity'))
+    await user.type(screen.getByLabelText('Quantity'), '2')
+    expect(await screen.findByText(/auto: 778 kcal/)).toBeInTheDocument() // 389 * 2
   })
 
-  it('submits with food_id + quantity + the food\'s locked unit, not raw macros', async () => {
+  it('submits with variant_id + quantity + the variant\'s unit, not raw macros', async () => {
     const { searchFoods } = await import('../../../../client/src/lib/nutritionApi')
     ;(searchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([oats])
     mockCreateLogEntry.mockResolvedValue({ id: 9 })
@@ -191,17 +195,54 @@ describe('LogEntrySheet — selected food', () => {
     await user.type(screen.getByPlaceholderText('Search saved foods…'), 'oat')
     await user.click(await screen.findByText('Test Oats'))
     await user.clear(screen.getByLabelText('Quantity'))
-    await user.type(screen.getByLabelText('Quantity'), '200')
+    await user.type(screen.getByLabelText('Quantity'), '2')
     await user.click(screen.getByRole('button', { name: 'LOG ENTRY' }))
 
     await waitFor(() => expect(mockCreateLogEntry).toHaveBeenCalledWith(expect.objectContaining({
-      food_id: 5, quantity: 200, unit: 'g',
+      variant_id: 50, quantity: 2, unit: 'g',
     })))
     const call = mockCreateLogEntry.mock.calls[0][0]
     expect(call.calories).toBeUndefined() // server computes the scale, client sends none
   })
 
-  it('recomputes quantity from a macro goal (protein) using reverse math', async () => {
+  it('shows a variant dropdown after picking a search result, defaulting to the is_default variant', async () => {
+    const food = { id: 1, name: 'Test Bread', variants: [
+      { id: 10, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, calories: 265, protein_g: 9 },
+      { id: 11, label: '1 slice', serving_qty: 1, serving_unit: 'slice', is_default: 0, calories: 80, protein_g: 3 },
+    ] }
+    const { searchFoods } = await import('../../../../client/src/lib/nutritionApi')
+    ;(searchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([food])
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-20" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.type(screen.getByPlaceholderText('Search saved foods…'), 'bread')
+    await user.click(await screen.findByText('Test Bread'))
+
+    const select = screen.getByLabelText('Serving') as HTMLSelectElement
+    expect(select.value).toBe('10') // defaults to the is_default variant's id
+    expect(screen.getByText('1 slice')).toBeInTheDocument() // the other option is present
+  })
+
+  it('submits with variant_id + quantity (count of servings), switching variant_id when a different serving is picked', async () => {
+    const food = { id: 1, name: 'Test Bread', variants: [
+      { id: 10, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, calories: 265 },
+      { id: 11, label: '1 slice', serving_qty: 1, serving_unit: 'slice', is_default: 0, calories: 80 },
+    ] }
+    const { searchFoods, createLogEntry } = await import('../../../../client/src/lib/nutritionApi')
+    ;(searchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([food])
+    ;(createLogEntry as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 1 })
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-20" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.type(screen.getByPlaceholderText('Search saved foods…'), 'bread')
+    await user.click(await screen.findByText('Test Bread'))
+    await user.selectOptions(screen.getByLabelText('Serving'), '11')
+    await user.clear(screen.getByLabelText('Quantity'))
+    await user.type(screen.getByLabelText('Quantity'), '2')
+    await user.click(screen.getByRole('button', { name: 'LOG ENTRY' }))
+
+    expect(createLogEntry).toHaveBeenCalledWith(expect.objectContaining({ variant_id: 11, quantity: 2 }))
+  })
+
+  it('recomputes quantity from a macro goal (protein) using reverse math against the selected variant', async () => {
     const { searchFoods } = await import('../../../../client/src/lib/nutritionApi')
     ;(searchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([oats])
     const user = userEvent.setup()
@@ -211,8 +252,8 @@ describe('LogEntrySheet — selected food', () => {
     await user.click(screen.getByText('P'))
     await user.type(screen.getByPlaceholderText('goal'), '40')
 
-    // 40g protein ÷ (16.9g protein / 100g) = 236.7g
-    await waitFor(() => expect(screen.getByLabelText('Quantity')).toHaveValue('236.69'))
+    // 40g protein ÷ 16.9g protein per serving = 2.37 servings
+    await waitFor(() => expect(screen.getByLabelText('Quantity')).toHaveValue('2.37'))
   })
 
   it('blocks submit when quantity is "0" for a selected food', async () => {
@@ -249,7 +290,7 @@ describe('LogEntrySheet — selected food', () => {
     await user.click(await screen.findByText('Test Oats'))
     await user.click(screen.getByLabelText('Clear selected food'))
     expect(screen.getByPlaceholderText('Search saved foods…')).toBeInTheDocument()
-    expect(screen.queryByText(/LOCKED/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Serving')).not.toBeInTheDocument()
   })
 
   it('clears selectedFood, goalMacro, and goalValue when the sheet closes', async () => {
@@ -259,7 +300,7 @@ describe('LogEntrySheet — selected food', () => {
     const { rerender } = render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
     await user.type(screen.getByPlaceholderText('Search saved foods…'), 'oat')
     await user.click(await screen.findByText('Test Oats'))
-    expect(screen.getByText(/LOCKED/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Serving')).toBeInTheDocument()
 
     // Close the sheet
     rerender(<LogEntrySheet open={false} date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
@@ -267,12 +308,14 @@ describe('LogEntrySheet — selected food', () => {
     // Reopen and verify selectedFood is cleared (Quick Track is visible)
     rerender(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
     expect(screen.getByPlaceholderText(/what did you eat/i)).toBeInTheDocument()
-    expect(screen.queryByText(/LOCKED/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Serving')).not.toBeInTheDocument()
   })
 })
 
 describe('LogEntrySheet — camera capture (#141)', () => {
-  const cheerios = { id: 5, source: 'openfoodfacts', name: 'Cheerios', brand: 'Cheerios', default_qty: 100, default_unit: 'g', calories: 379, protein_g: 6.7, carbs_g: 74, fat_g: 6.7, fiber_g: 10 }
+  const cheerios = { id: 5, name: 'Cheerios', variants: [
+    { id: 60, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, calories: 379, protein_g: 6.7, carbs_g: 74, fat_g: 6.7, fiber_g: 10 },
+  ] }
 
   it('a decoded barcode that matches a saved food selects it, same as a search result', async () => {
     mockDecodeBarcodeFromFile.mockResolvedValue('0016000275287')
@@ -286,7 +329,7 @@ describe('LogEntrySheet — camera capture (#141)', () => {
     await waitFor(() => expect(mockDecodeBarcodeFromFile).toHaveBeenCalledWith(photo))
     await waitFor(() => expect(mockLookupFoodByBarcode).toHaveBeenCalledWith('0016000275287'))
     expect(await screen.findByText('Cheerios')).toBeInTheDocument()
-    expect(screen.getByText(/LOCKED/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Serving')).toBeInTheDocument()
   })
 
   it('a barcode with no matching food falls back to ad-hoc entry with a toast, not a dead end', async () => {

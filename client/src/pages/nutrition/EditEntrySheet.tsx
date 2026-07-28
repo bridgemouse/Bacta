@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetShell, SheetHeader } from '../../components/Sheet'
 import { COLORS, FONT_MONO, SECTION_ACCENTS } from '../../theme'
 import { hexA } from '../../lib/hexA'
-import { updateLogEntry, deleteLogEntry, createLogEntry, entryToLogInput, type FoodLogEntry, type LogEntryInput } from '../../lib/nutritionApi'
+import { updateLogEntry, deleteLogEntry, createLogEntry, entryToLogInput, fetchFoodVariants, type FoodLogEntry, type FoodVariant, type LogEntryInput } from '../../lib/nutritionApi'
 import { todayLocal } from '../../lib/nutritionDate'
 import { useToast } from '../../lib/ToastContext'
 import { MacroGridInputs, MACRO_KEYS, type MacroKey } from './MacroGridInputs'
@@ -36,12 +36,15 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
   const [macros, setMacros] = useState<Record<MacroKey, string>>({ calories: '', protein_g: '', carbs_g: '', fat_g: '', fiber_g: '' })
   const [extended, setExtended] = useState<ExtendedNutrients>(emptyExtendedNutrients())
   const [submitting, setSubmitting] = useState(false)
+  const [variants, setVariants] = useState<FoodVariant[]>([])
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null)
 
   useEffect(() => {
     if (entry) {
       setDisplayEntry(entry)
       setQty(String(entry.quantity))
       setUnit(entry.unit)
+      setSelectedVariantId(entry.variant_id)
       setMacros({
         calories: entry.calories == null ? '' : String(entry.calories),
         protein_g: entry.protein_g == null ? '' : String(entry.protein_g),
@@ -50,6 +53,11 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
         fiber_g: entry.fiber_g == null ? '' : String(entry.fiber_g),
       })
       setExtended(payloadToExtendedNutrients(entry))
+      if (entry.variant_id != null && entry.food_id != null) {
+        fetchFoodVariants(entry.food_id).then(setVariants)
+      } else {
+        setVariants([])
+      }
     }
   }, [entry])
 
@@ -64,6 +72,7 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
     try {
       const updates: Partial<LogEntryInput> = {}
       if (Number(qty) !== currentEntry.quantity) updates.quantity = Number(qty)
+      if (isLinked && selectedVariantId !== currentEntry.variant_id) updates.variant_id = selectedVariantId
       if (!isLinked && unit !== currentEntry.unit) updates.unit = unit
       for (const key of MACRO_KEYS) {
         const newVal = macros[key] === '' ? null : Number(macros[key])
@@ -119,15 +128,15 @@ export function EditEntrySheet({ open, entry, date, onClose, onSaved }: EditEntr
         <div style={{ padding: '0 18px 18px' }}>
           <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 10, lineHeight: 1.5 }}>
             {isLinked
-              ? 'LINKED TO A SAVED FOOD — UNIT IS FIXED, NO CONVERSION · CHANGING QUANTITY RESCALES EACH MACRO UNLESS YOU OVERRIDE IT BELOW · TO CHANGE THE FOOD ITSELF, DELETE AND RE-LOG'
+              ? 'LINKED TO A SAVED FOOD — PICK A DIFFERENT SERVING ABOVE, OR CHANGE QUANTITY (RESCALES EACH MACRO UNLESS YOU OVERRIDE IT BELOW) · TO CHANGE THE FOOD ITSELF, DELETE AND RE-LOG'
               : 'ALL FIELDS FREE · BLANK MACROS STAY UNKNOWN (SHOWN AS —)'}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <input aria-label="Quantity" value={qty} onChange={e => setQty(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             {isLinked ? (
-              <span style={{ ...inputStyle, flex: 1, display: 'flex', alignItems: 'center', gap: 6, color: A, borderColor: hexA(A, 0.4) }}>
-                🔒 {unit} <span style={{ fontSize: 8, color: COLORS.textMuted }}>LOCKED</span>
-              </span>
+              <select aria-label="Serving" value={selectedVariantId ?? ''} onChange={e => setSelectedVariantId(Number(e.target.value))} style={{ ...inputStyle, flex: 1 }}>
+                {variants.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+              </select>
             ) : (
               <input aria-label="Unit" value={unit} onChange={e => setUnit(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             )}

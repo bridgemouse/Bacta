@@ -1,0 +1,16 @@
+{
+  "fdcId": 2261421,
+  "description": "Flour, oat, whole grain",
+  "dataType": "Foundation",
+  "foodNutrients": [
+    { "type": "FoodNutrient", "nutrient": { "id": 1257, "number": "957", "name": "Energy (Atwater General Factors)", "unitName": "kcal" }, "amount": 389.125 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1003, "number": "203", "name": "Protein", "unitName": "g" }, "amount": 13.16875 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "g" }, "amount": 69.91725 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "g" }, "amount": 6.309 },
+    { "type": "FoodNutrient", "nutrient": { "id": 1079, "number": "291", "name": "Fiber, total dietary", "unitName": "g" }, "amount": 10.5 }
+  ],
+  "foodPortions": [
+    { "id": 118804, "amount": 2.0, "gramWeight": 33.9, "measureUnit": { "id": 1001, "name": "tablespoon", "abbreviation": "tbsp" } },
+    { "id": 312701, "amount": 1.0, "gramWeight": 94.0, "measureUnit": { "id": 1002, "name": "cup", "abbreviation": "cup" } }
+  ]
+}

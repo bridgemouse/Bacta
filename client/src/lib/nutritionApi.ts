@@ -45,6 +45,7 @@ export interface FoodLogEntry extends WidenedNutrients, DescriptiveNutrients {
   id: number
   meal_type: string
   variant_id: number | null
+  variant_label?: string | null
   food_id: number | null
   name: string
   quantity: number

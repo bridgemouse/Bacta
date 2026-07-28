@@ -76,6 +76,41 @@ describe('NutritionOverview — ledger', () => {
     await waitFor(() => expect(screen.getByText('P — · C — · F —')).toBeInTheDocument())
   })
 
+  it('shows the variant label (not raw quantity+unit) for a saved-food entry logged at 2 servings', async () => {
+    mockFetchLog.mockResolvedValue({
+      meals: {
+        breakfast: {
+          entries: [{
+            id: 3, meal_type: 'breakfast', food_id: 172, variant_id: 397, variant_label: '100 g',
+            name: 'Flour, oat, whole grain', quantity: 2, unit: 'g',
+            calories: 778, protein_g: 26.4, carbs_g: 139.8, fat_g: 12.62, fiber_g: 19.4, logged_at: '',
+          }],
+          totals: { calories: 778, protein_g: 26.4, carbs_g: 139.8, fat_g: 12.62, fiber_g: 19.4 },
+        },
+      },
+      daily: { calories: 778, protein_g: 26.4, carbs_g: 139.8, fat_g: 12.62, fiber_g: 19.4 },
+    })
+    render(<NutritionOverview />)
+    // Bug being guarded against: raw quantity(2)+unit("g", the bare serving_unit) rendered as
+    // "2 g" — misreading 2 servings of a 100g variant (200g total) as 2 grams of food.
+    await waitFor(() => expect(screen.getByText('2 × 100 g · saved food')).toBeInTheDocument())
+    expect(screen.queryByText('2 g · saved food')).not.toBeInTheDocument()
+  })
+
+  it('still shows quantity+unit literally for an ad-hoc entry with no variant', async () => {
+    mockFetchLog.mockResolvedValue({
+      meals: {
+        breakfast: {
+          entries: [{ id: 4, meal_type: 'breakfast', food_id: null, variant_id: null, name: 'Coffee', quantity: 1, unit: 'cup', calories: 45, protein_g: null, carbs_g: null, fat_g: null, fiber_g: null, logged_at: '' }],
+          totals: { calories: 45, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 },
+        },
+      },
+      daily: { calories: 45, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 },
+    })
+    render(<NutritionOverview />)
+    await waitFor(() => expect(screen.getByText('1 cup · ad-hoc')).toBeInTheDocument())
+  })
+
   it('shows NO TARGET SET when summary.target is null, not a crash', async () => {
     mockFetchSummary.mockResolvedValue({
       target: null,

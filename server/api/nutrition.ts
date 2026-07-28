@@ -234,8 +234,8 @@ function roundMacro(value: number): number {
 nutritionRouter.get('/log', (req, res) => {
   const date = req.query.date as string
   const rows = db.prepare(
-    'SELECT fle.*, fv.food_id as food_id FROM food_log_entries fle LEFT JOIN food_variants fv ON fv.id = fle.variant_id WHERE fle.date = ? ORDER BY fle.logged_at'
-  ).all(date) as Array<{ id: number; meal_type: string; food_id: number | null } & NumericRow>
+    'SELECT fle.*, fv.food_id as food_id, fv.label as variant_label FROM food_log_entries fle LEFT JOIN food_variants fv ON fv.id = fle.variant_id WHERE fle.date = ? ORDER BY fle.logged_at'
+  ).all(date) as Array<{ id: number; meal_type: string; food_id: number | null; variant_label: string | null } & NumericRow>
 
   const emptyTotals = (): Record<string, number> => Object.fromEntries(NUMERIC_NUTRIENT_KEYS.map(k => [k, 0]))
   const meals: Record<string, { entries: typeof rows; totals: Record<string, number> }> = {}

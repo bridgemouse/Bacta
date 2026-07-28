@@ -225,6 +225,21 @@ describe('Nutrition API', () => {
       expect(entries.find(e => e.id === adHocPost.body.id)).toMatchObject({ variant_id: null, food_id: null })
     })
 
+    it('GET ?date= includes the variant\'s label on linked entries, null on ad-hoc — needed so the client can display "2 x 100g" instead of misreading quantity(servings)+unit(bare serving_unit) as a raw amount', async () => {
+      const variantLabelDate = '2026-07-07'
+      const { app } = await import('../../server/index')
+      const linkedPost = await request(app).post('/api/nutrition/log').send({
+        date: variantLabelDate, meal_type: 'lunch', variant_id: oatsVariantId, quantity: 2,
+      })
+      const adHocPost = await request(app).post('/api/nutrition/log').send({
+        date: variantLabelDate, meal_type: 'lunch', name: 'Ad-hoc side', quantity: 1, unit: 'serving', calories: 50,
+      })
+      const res = await request(app).get('/api/nutrition/log').query({ date: variantLabelDate })
+      const entries = res.body.meals.lunch.entries as Array<{ id: number; variant_label: string | null }>
+      expect(entries.find(e => e.id === linkedPost.body.id)?.variant_label).not.toBeNull()
+      expect(entries.find(e => e.id === adHocPost.body.id)?.variant_label).toBeNull()
+    })
+
     it('PUT edits a logged entry', async () => {
       const { app } = await import('../../server/index')
       const res = await request(app).put(`/api/nutrition/log/${adHocEntryId}`).send({ calories: 350 })

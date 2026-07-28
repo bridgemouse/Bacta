@@ -120,7 +120,7 @@ function MealGroupCard({ mealKey, group, onOpenLog, onEntryClick, isToday, onCop
           <div>
             <div style={{ fontFamily: FONT_UI, fontSize: 13.5, fontWeight: 600, color: COLORS.text }}>{entry.name}</div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>
-              {entry.quantity} {entry.unit} · {entry.variant_id != null ? 'saved food' : 'ad-hoc'}
+              {entry.variant_id != null && entry.variant_label ? `${entry.quantity} × ${entry.variant_label}` : `${entry.quantity} ${entry.unit}`} · {entry.variant_id != null ? 'saved food' : 'ad-hoc'}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>

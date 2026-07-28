@@ -411,10 +411,9 @@ nutritionRouter.put('/log/:id', (req, res) => {
     for (const key of NUMERIC_NUTRIENT_KEYS) {
       if (!(key in updates)) updates[key] = scale(variant[key] ?? null, finalQuantity)
     }
-    if (!('glycemic_index' in updates)) updates.glycemic_index = variant.glycemic_index ?? null
-    if (!('custom_nutrients' in updates)) updates.custom_nutrients = variant.custom_nutrients ?? null
-    if (!('allergens' in updates)) updates.allergens = variant.allergens ?? null
-    if (!('traces' in updates)) updates.traces = variant.traces ?? null
+    for (const key of DESCRIPTIVE_NUTRIENT_KEYS) {
+      if (!(key in updates)) updates[key] = variant[key] ?? null
+    }
   } else if (switchingVariant) {
     updates.variant_id = null
   }

@@ -63,7 +63,7 @@ export function HealthStatusTile({
         </span>
         {unit && <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{unit}</span>}
       </div>
-      <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, minHeight: 11 }}>
+      <span style={{ display: 'inline-block', fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, minHeight: 11 }}>
         {sub}
       </span>
       {data && <Sparkline data={data} accent={accent} w={120} h={18} sw={1.5} dot={false} fill={false} />}

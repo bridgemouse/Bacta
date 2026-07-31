@@ -24,6 +24,12 @@ describe('HealthStatusTile', () => {
     expect(rows85.length).toBe(2)
   })
 
+  it('renders the sub-line row as a block-level element, so its minHeight is actually honored (min-height has no effect on a plain inline span)', () => {
+    const { container } = wrap(<HealthStatusTile label="Heart Rate" value={52} unit="bpm" accent="#64b5f6" />)
+    const subRow = container.querySelector('span[style*="min-height"]')
+    expect(subRow).toHaveStyle({ display: 'inline-block' })
+  })
+
   it('renders status dot when inRange is true', () => {
     const { container } = wrap(
       <HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />

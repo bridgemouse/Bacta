@@ -63,11 +63,9 @@ export function HealthStatusTile({
         </span>
         {unit && <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{unit}</span>}
       </div>
-      {sub && (
-        <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
-          {sub}
-        </span>
-      )}
+      <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, minHeight: 11 }}>
+        {sub}
+      </span>
       {data && <Sparkline data={data} accent={accent} w={120} h={18} sw={1.5} dot={false} fill={false} />}
       {isOpen && info && <InfoOverlay info={info} accent={accent} radius={8} compact onClick={handleTap} />}
     </div>

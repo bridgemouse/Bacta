@@ -685,12 +685,10 @@ describe('Nutrition API', () => {
     })
 
     it('POST /api/nutrition/log rejects a quantity <= 0 (#164 review finding) -- otherwise a zero quantity permanently zeroes a food-linked entry\'s macros with no way to recover them on a later edit', async () => {
+      const { variantId } = await seedFoodWithVariant({ name: 'Test Food', calories: 200, protein_g: 10 })
       const { app } = await import('../../server/index')
-      const food = await request(app).post('/api/nutrition/foods').send({
-        name: 'Test Food', default_qty: 100, default_unit: 'g', calories: 200, protein_g: 10, carbs_g: 20, fat_g: 5, fiber_g: 2,
-      })
       const res = await request(app).post('/api/nutrition/log').send({
-        date: '2026-07-10', meal_type: 'lunch', food_id: food.body.id, quantity: 0, unit: 'g',
+        date: '2026-07-10', meal_type: 'lunch', variant_id: variantId, quantity: 0,
       })
       expect(res.status).toBe(400)
     })

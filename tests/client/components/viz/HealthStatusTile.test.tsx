@@ -17,6 +17,19 @@ describe('HealthStatusTile', () => {
     expect(screen.getByText('LOW')).toBeInTheDocument()
   })
 
+  it('reserves the sub-line row even when sub is omitted, so cards without a sub match the height of cards with one', () => {
+    const { container } = wrap(<HealthStatusTile label="Heart Rate" value={52} unit="bpm" accent="#64b5f6" />)
+    const rows85 = container.querySelectorAll('span[style*="font-size: 8.5px"]')
+    // Label row + sub row — present regardless of whether `sub` has text, so grid siblings stay equal height.
+    expect(rows85.length).toBe(2)
+  })
+
+  it('renders the sub-line row as a block-level element, so its minHeight is actually honored (min-height has no effect on a plain inline span)', () => {
+    const { container } = wrap(<HealthStatusTile label="Heart Rate" value={52} unit="bpm" accent="#64b5f6" />)
+    const subRow = container.querySelector('span[style*="min-height"]')
+    expect(subRow).toHaveStyle({ display: 'inline-block' })
+  })
+
   it('renders status dot when inRange is true', () => {
     const { container } = wrap(
       <HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />

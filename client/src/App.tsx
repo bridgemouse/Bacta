@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthGate } from './components/AuthGate'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastProvider } from './lib/ToastContext'
 import { ToastContainer } from './components/ToastContainer'
 import { HomePage } from './pages/HomePage'
@@ -17,17 +18,19 @@ export default function App() {
     <ToastProvider>
       <AuthGate>
         <ToastContainer />
-        <Routes>
-          <Route path="/"          element={<HomePage />} />
-          <Route path="/recovery"  element={<RecoveryPage />} />
-          <Route path="/training"  element={<TrainingPage />} />
-          <Route path="/sleep"     element={<SleepPage />} />
-          <Route path="/nutrition" element={<NutritionPage />} />
-          <Route path="/bloodwork" element={<BloodWorkPage />} />
-          <Route path="/dailylog"  element={<DailyLogPage />} />
-          <Route path="/settings"  element={<SettingsPage />} />
-          <Route path="/settings/logs" element={<LogsPage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/"          element={<HomePage />} />
+            <Route path="/recovery"  element={<RecoveryPage />} />
+            <Route path="/training"  element={<TrainingPage />} />
+            <Route path="/sleep"     element={<SleepPage />} />
+            <Route path="/nutrition" element={<NutritionPage />} />
+            <Route path="/bloodwork" element={<BloodWorkPage />} />
+            <Route path="/dailylog"  element={<DailyLogPage />} />
+            <Route path="/settings"  element={<SettingsPage />} />
+            <Route path="/settings/logs" element={<LogsPage />} />
+          </Routes>
+        </ErrorBoundary>
       </AuthGate>
     </ToastProvider>
   )

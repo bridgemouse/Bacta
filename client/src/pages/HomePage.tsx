@@ -14,7 +14,7 @@ import { useHomeData } from '../hooks/useHomeData'
 import { useRecoveryData } from '../hooks/useRecoveryData'
 import { useSleepData } from '../hooks/useSleepData'
 import { useTrainingData } from '../hooks/useTrainingData'
-import { useNutritionLog } from '../hooks/useNutritionLog'
+import { useNutritionSummary } from '../hooks/useNutritionSummary'
 import { todayLocal } from '../lib/nutritionDate'
 
 const CALIBRATING_TILES: SystemCardTile[] = [
@@ -26,7 +26,7 @@ const A = MX4_COLOR
 
 function HomeOverview({ onNavigate, liveData, onRefresh }: { onNavigate: (path: string) => void; liveData?: import('../lib/briefing').BriefingResult; onRefresh?: () => void }) {
   const { data: home } = useHomeData()
-  const { summary: nutrition } = useNutritionLog(todayLocal())
+  const { summary: nutrition } = useNutritionSummary(todayLocal())
 
   const nutritionCalories = nutrition?.actual.calories
   const nutritionTarget = nutrition?.target?.calories

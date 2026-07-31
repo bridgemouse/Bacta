@@ -14,9 +14,10 @@ import { useHomeData } from '../hooks/useHomeData'
 import { useRecoveryData } from '../hooks/useRecoveryData'
 import { useSleepData } from '../hooks/useSleepData'
 import { useTrainingData } from '../hooks/useTrainingData'
+import { useNutritionLog } from '../hooks/useNutritionLog'
+import { todayLocal } from '../lib/nutritionDate'
 
 const CALIBRATING_TILES: SystemCardTile[] = [
-  { key: 'nutrition', value: '', unit: '', sub: '', viz: 'spark', status: '', calibrating: true },
   { key: 'bloodwork', value: '', unit: '', sub: '', viz: 'spark', status: '', calibrating: true },
   { key: 'dailylog',  value: '', unit: '', sub: '', viz: 'spark', status: '', calibrating: true },
 ]
@@ -25,6 +26,10 @@ const A = MX4_COLOR
 
 function HomeOverview({ onNavigate, liveData, onRefresh }: { onNavigate: (path: string) => void; liveData?: import('../lib/briefing').BriefingResult; onRefresh?: () => void }) {
   const { data: home } = useHomeData()
+  const { summary: nutrition } = useNutritionLog(todayLocal())
+
+  const nutritionCalories = nutrition?.actual.calories
+  const nutritionTarget = nutrition?.target?.calories
 
   const LIVE_TILES: SystemCardTile[] = [
     {
@@ -54,6 +59,15 @@ function HomeOverview({ onNavigate, liveData, onRefresh }: { onNavigate: (path: 
       ring: home.sleep.ring,
       status: 'Solid',
     },
+    {
+      key: 'nutrition',
+      value: nutritionCalories != null ? String(Math.round(nutritionCalories)) : '—',
+      unit: 'kcal',
+      sub: nutritionTarget != null ? `of ${nutritionTarget} kcal` : 'No target set',
+      viz: 'ring',
+      ring: nutritionTarget ? Math.min(1, (nutritionCalories ?? 0) / nutritionTarget) : 0,
+      status: 'On track',
+    },
   ]
   const TILES = [...LIVE_TILES, ...CALIBRATING_TILES]
 
@@ -61,7 +75,7 @@ function HomeOverview({ onNavigate, liveData, onRefresh }: { onNavigate: (path: 
     <>
       <MX4Briefing accent={A} brief={BRIEFS.home} liveData={liveData} section="home" onRefresh={onRefresh} />
 
-      <Rail label="SYSTEMS" accent={A} right="3 ONLINE · 3 CALIBRATING" />
+      <Rail label="SYSTEMS" accent={A} right="4 ONLINE · 2 CALIBRATING" />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
         {TILES.map((tile, i) => (

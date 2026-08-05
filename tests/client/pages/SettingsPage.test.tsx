@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { SettingsPage } from '../../../client/src/pages/SettingsPage'
 
 global.ResizeObserver = class {
@@ -89,5 +89,27 @@ describe('SettingsPage — Restart Bacta', () => {
 
     expect(screen.queryByText('CONFIRM')).not.toBeInTheDocument()
     expect(fetch).not.toHaveBeenCalledWith('/api/settings/restart', { method: 'POST' })
+  })
+})
+
+describe('SettingsPage — Application logs row (#190)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch())
+  })
+
+  test('the Application logs row is keyboard-operable — reachable via getByRole and navigates with Enter', async () => {
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <Routes>
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/logs" element={<div>LOGS PAGE</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+    const user = userEvent.setup()
+    await user.click(await screen.findByText('DIAGNOSTICS'))
+    const row = await screen.findByRole('button', { name: /application logs/i })
+    fireEvent.keyDown(row, { key: 'Enter' })
+    expect(await screen.findByText('LOGS PAGE')).toBeInTheDocument()
   })
 })

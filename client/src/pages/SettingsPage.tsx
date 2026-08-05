@@ -1369,7 +1369,9 @@ export function SettingsPage() {
       {/* Rail: DIAGNOSTICS */}
       <CollapsibleSection label="DIAGNOSTICS" accent={MX4_COLOR}>
       <div style={cardStyle}>
-        <div onClick={() => navigate('/settings/logs')} style={{ ...rowStyleLast, cursor: 'pointer' }}>
+        <div onClick={() => navigate('/settings/logs')}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/settings/logs') } }}
+          role="button" tabIndex={0} style={{ ...rowStyleLast, cursor: 'pointer' }}>
           <span style={labelStyle}>Application logs</span>
           <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: MX4_COLOR }}>
             VIEW LOGS ›

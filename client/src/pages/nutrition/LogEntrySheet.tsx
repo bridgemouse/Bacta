@@ -208,7 +208,7 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
             ))}
           </div>
 
-          <input placeholder="Search saved foods…" value={query} onChange={e => setQuery(e.target.value)}
+          <input aria-label="Search saved foods" placeholder="Search saved foods…" value={query} onChange={e => setQuery(e.target.value)}
             style={{ ...inputStyle, marginBottom: 10 }} />
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -319,17 +319,17 @@ export function LogEntrySheet({ open, date, meal: initialMeal, onClose, onLogged
                     color: goalMacro === key ? A : COLORS.textMuted,
                   }}>{key === 'protein_g' ? 'P' : key === 'carbs_g' ? 'C' : key === 'fat_g' ? 'F' : 'KCAL'}</button>
                 ))}
-                <input placeholder="goal" value={goalValue} onChange={e => setGoalValue(e.target.value)} style={{ ...inputStyle, width: 70 }} />
+                <input aria-label="Goal value" placeholder="goal" value={goalValue} onChange={e => setGoalValue(e.target.value)} style={{ ...inputStyle, width: 70 }} />
               </div>
             </div>
           ) : (
             <>
-              <input placeholder="What did you eat? (e.g. tacos from the truck)" value={name}
+              <input aria-label="Food name" placeholder="What did you eat? (e.g. tacos from the truck)" value={name}
                 onChange={e => setName(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <input placeholder="qty" value={qty} onChange={e => setQty(e.target.value)} style={inputStyle} />
-                <input placeholder="unit (any)" value={unit} onChange={e => setUnit(e.target.value)} style={inputStyle} />
+                <input aria-label="Quantity" placeholder="qty" value={qty} onChange={e => setQty(e.target.value)} style={inputStyle} />
+                <input aria-label="Unit" placeholder="unit (any)" value={unit} onChange={e => setUnit(e.target.value)} style={inputStyle} />
               </div>
 
               <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted, marginBottom: 6 }}>

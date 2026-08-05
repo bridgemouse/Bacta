@@ -309,7 +309,7 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
         )
       })}
 
-      <input placeholder="Add from saved foods…" value={query} onChange={e => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} />
+      <input aria-label="Add from saved foods" placeholder="Add from saved foods…" value={query} onChange={e => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} />
       {matches.map(f => (
         <button key={f.id} onClick={() => addFromFood(f)} style={{
           display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none',

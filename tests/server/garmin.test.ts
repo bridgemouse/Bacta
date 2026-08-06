@@ -279,3 +279,27 @@ describe('sources endpoint', () => {
     expect(res.body.hrv).toBe('garmin')
   })
 })
+
+describe('health_snapshots(metric, date) index (#201)', () => {
+  it('the /summary and /sources correlated MAX(date)-per-metric subquery does not do a full table SCAN', async () => {
+    const { default: db } = await import('../../server/db/client')
+    const plan = db.prepare(
+      `EXPLAIN QUERY PLAN SELECT metric, value, date FROM health_snapshots gs
+       WHERE date = (SELECT MAX(date) FROM health_snapshots WHERE metric = gs.metric)`
+    ).all() as Array<{ detail: string }>
+    const planText = plan.map(p => p.detail).join(' | ')
+    expect(planText).not.toMatch(/SCAN health_snapshots/i)
+    expect(planText).toMatch(/health_snapshots.*USING (COVERING )?INDEX idx_health_snapshots_metric_date/i)
+  })
+
+  it('the /:metric trend query (metric = ? AND date BETWEEN ? AND ? ORDER BY date) uses the index, not a temp b-tree sort', async () => {
+    const { default: db } = await import('../../server/db/client')
+    const plan = db.prepare(
+      `EXPLAIN QUERY PLAN SELECT date, metric, value, unit FROM health_snapshots
+       WHERE metric = ? AND date BETWEEN ? AND ? ORDER BY date`
+    ).all('hrv', '2026-01-01', '2026-12-31') as Array<{ detail: string }>
+    const planText = plan.map(p => p.detail).join(' | ')
+    expect(planText).not.toMatch(/USE TEMP B-TREE FOR ORDER BY/i)
+    expect(planText).toMatch(/idx_health_snapshots_metric_date/i)
+  })
+})

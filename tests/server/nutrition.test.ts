@@ -63,6 +63,27 @@ describe('Nutrition API', () => {
       expect(res.body.foods[0].variants[0]).toMatchObject({ label: '1 slice', calories: 80 })
     })
 
+    it('GET /foods?q= makes a bounded number of DB queries, not one pair per matching food (#200)', async () => {
+      const { app } = await import('../../server/index')
+      const { default: db } = await import('../../server/db/client')
+
+      for (let i = 0; i < 25; i++) {
+        await seedFoodWithVariant({ name: `NPlusOne Food ${i}` })
+      }
+
+      const prepareSpy = vi.spyOn(db, 'prepare')
+      const res = await request(app).get('/api/nutrition/foods?q=NPlusOne')
+      expect(res.status).toBe(200)
+      expect(res.body.foods).toHaveLength(25)
+
+      // A per-food N+1 pattern would call db.prepare() roughly 2x per food (one for
+      // the food row, one for its variants) — 50+ calls for 25 foods. A batched fetch
+      // makes a small constant number of queries regardless of result count.
+      expect(prepareSpy.mock.calls.length).toBeLessThan(10)
+
+      prepareSpy.mockRestore()
+    })
+
     it('POST /foods/:id/variants adds a non-default variant to an existing food', async () => {
       const { app } = await import('../../server/index')
       const created = await request(app).post('/api/nutrition/foods').send({

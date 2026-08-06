@@ -93,11 +93,25 @@ nutritionRouter.get('/foods/barcode/:code', (req, res) => {
   res.json(foodWithVariants(food.id))
 })
 
-// GET /api/nutrition/foods?q= — search reference foods by name, each with its variants nested
+// GET /api/nutrition/foods?q= — search reference foods by name, each with its variants nested.
+// Batched into 2 queries total regardless of result count (#200) — a per-food
+// foodWithVariants() call here was ~16,314 DB round-trips on the live 8,157-food table for
+// an empty search. The variants query reuses the same LIKE via a subquery rather than an
+// `IN (?, ?, ...)` list, so it doesn't risk hitting SQLite's bound-parameter limit at scale.
 nutritionRouter.get('/foods', (req, res) => {
   const q = (req.query.q as string | undefined) ?? ''
-  const foods = db.prepare('SELECT * FROM foods WHERE name LIKE ? ORDER BY name').all(`%${q}%`) as Array<{ id: number }>
-  const withVariants = foods.map(f => foodWithVariants(f.id))
+  const like = `%${q}%`
+  const foods = db.prepare('SELECT * FROM foods WHERE name LIKE ? ORDER BY name').all(like) as Array<{ id: number }>
+  const variants = db.prepare(
+    'SELECT * FROM food_variants WHERE food_id IN (SELECT id FROM foods WHERE name LIKE ?) ORDER BY food_id, is_default DESC, id'
+  ).all(like) as Array<{ food_id: number }>
+  const variantsByFood = new Map<number, unknown[]>()
+  for (const v of variants) {
+    const list = variantsByFood.get(v.food_id)
+    if (list) list.push(v)
+    else variantsByFood.set(v.food_id, [v])
+  }
+  const withVariants = foods.map(f => ({ ...f, variants: variantsByFood.get(f.id) ?? [] }))
   res.json({ foods: withVariants })
 })
 

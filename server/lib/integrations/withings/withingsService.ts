@@ -1,4 +1,4 @@
-import { ProviderTokens, tokensExpired } from '../shared/types'
+import { ProviderTokens, tokensExpired, validateTokenFields } from '../shared/types'
 
 const TOKEN_URL = 'https://wbsapi.withings.net/v2/oauth2'
 const MEASURE_URL = 'https://wbsapi.withings.net/measure'
@@ -21,12 +21,14 @@ async function tokenRequest(body: URLSearchParams): Promise<ProviderTokens> {
     body: body.toString(),
   })
   if (!res.ok) throw new Error(`Withings token request failed: ${res.status}`)
-  const d = await res.json() as { status: number; body: { access_token: string; refresh_token: string; expires_in: number } }
+  const d = await res.json() as { status: number; body: unknown }
   if (d.status !== 0) throw new Error(`Withings token error status: ${d.status}`)
+  const tokenBody = validateTokenFields<{ access_token: string; refresh_token: string; expires_in: number }>(
+    d.body, ['access_token', 'refresh_token', 'expires_in'], 'Withings tokenRequest')
   return {
-    access_token:  d.body.access_token,
-    refresh_token: d.body.refresh_token,
-    expires_at:    Math.floor(Date.now() / 1000) + d.body.expires_in,
+    access_token:  tokenBody.access_token,
+    refresh_token: tokenBody.refresh_token,
+    expires_at:    Math.floor(Date.now() / 1000) + tokenBody.expires_in,
   }
 }
 

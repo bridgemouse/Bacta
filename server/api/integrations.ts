@@ -7,7 +7,7 @@ import { logEvent } from '../lib/logger'
 import { getSetting, setSetting, PROVIDERS, Provider } from '../lib/settings'
 import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from '../lib/auth'
 import { encrypt, decrypt } from '../lib/integrations/shared/encryption'
-import { ProviderTokens, daysAgo, toEpoch } from '../lib/integrations/shared/types'
+import { ProviderTokens, daysAgo, toEpoch, validateTokenFields } from '../lib/integrations/shared/types'
 import { getAuthUrl as stravaAuthUrl, exchangeCode as stravaExchange, refreshTokens as stravaRefresh, fetchActivities } from '../lib/integrations/strava/stravaService'
 import { processActivities } from '../lib/integrations/strava/stravaProcessor'
 import { fetchWorkoutsSince } from '../lib/integrations/hevy/hevyService'
@@ -43,7 +43,16 @@ function getTokens(provider: Provider): ProviderTokens | null {
   if (!raw) return null
   const plain = decrypt(raw)
   if (!plain) return null
-  try { return JSON.parse(plain) as ProviderTokens } catch { return null }
+  try {
+    const parsed = JSON.parse(plain)
+    return validateTokenFields<ProviderTokens>(
+      parsed, ['access_token', 'refresh_token', 'expires_at'], `getTokens(${provider})`)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[integrations] getTokens(${provider}) failed:`, message)
+    logEvent('integrations', 'error', `getTokens(${provider}) failed: ${message}`)
+    return null
+  }
 }
 
 function saveTokens(provider: Provider, tokens: ProviderTokens): void {

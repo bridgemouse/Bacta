@@ -99,4 +99,13 @@ describe('polarService', () => {
     expect(data.recharges).toHaveLength(1)
     expect(fetch).toHaveBeenCalledTimes(3)
   })
+
+  it('exchangeCode rejects a malformed token response missing x_user_id (#197)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'acc', token_type: 'Bearer' }), // x_user_id missing
+    } as Response)
+    const { exchangeCode } = await import('../../server/lib/integrations/polar/polarService')
+    await expect(exchangeCode('cid', 'csec', 'code123', 'http://redirect')).rejects.toThrow(/x_user_id/)
+  })
 })

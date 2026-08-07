@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { LogEntry } from '../../../../client/src/components/viz/LogEntry'
+import { InfoCardProvider } from '../../../../client/src/lib/InfoCardContext'
 import type { GarminActivity, ActivityLeg } from '../../../../client/src/lib/garminApi'
 import * as garminApi from '../../../../client/src/lib/garminApi'
 
@@ -217,6 +218,15 @@ describe('LogEntry — Run Dynamics section', () => {
     render(<LogEntry activity={WITH_RUN_DYNAMICS} accent="#fb923c" />)
     await user.click(screen.getByRole('button'))
     expect(screen.getByText('172')).toBeInTheDocument()
+  })
+
+  it('the Cadence tile is keyboard-operable — reachable via getByRole and opens its info overlay with Enter (#190)', async () => {
+    const user = userEvent.setup()
+    render(<InfoCardProvider><LogEntry activity={WITH_RUN_DYNAMICS} accent="#fb923c" /></InfoCardProvider>)
+    await user.click(screen.getByRole('button'))
+    const cadenceTile = screen.getByRole('button', { name: /cadence/i })
+    fireEvent.keyDown(cadenceTile, { key: 'Enter' })
+    expect(await screen.findByText('Steps per minute. Optimal range: 170–185 spm.')).toBeInTheDocument()
   })
 
   it('does not show RUNNING DYNAMICS for non-run activity', async () => {

@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react'
+import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { COLORS, FONT_MONO, FONT_UI, MX4_COLOR } from '../theme'
 
 interface Props {
@@ -16,8 +16,16 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true }
   }
 
-  componentDidCatch(error: unknown) {
+  componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
     console.error('[ErrorBoundary] caught render error:', error)
+    const message = error instanceof Error ? error.message : String(error)
+    // Best-effort — the whole point is to survive a crash, so a failed log call
+    // must never throw or surface to the user on top of the original error.
+    fetch('/api/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, componentStack: errorInfo.componentStack ?? undefined }),
+    }).catch(() => {})
   }
 
   render() {

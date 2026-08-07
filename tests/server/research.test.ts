@@ -222,6 +222,8 @@ describe('MX-4 fetchPage tool', () => {
         .mockResolvedValue({ address: '93.184.216.34', family: 4 } as any)
       const fetchMock = vi.fn(async () => ({
         ok: true,
+        status: 200,
+        headers: { get: () => null },
         text: async () => '<html><head><title>t</title></head><body>ok</body></html>',
       }))
       vi.stubGlobal('fetch', fetchMock)
@@ -234,6 +236,81 @@ describe('MX-4 fetchPage tool', () => {
       // must resolve through the mocked resolver (deterministic value), never a real DNS lookup
       expect(lookupSpy).toHaveBeenCalledWith('example.com')
       await expect(lookupSpy.mock.results[0].value).resolves.toEqual({ address: '93.184.216.34', family: 4 })
+    })
+
+    // #179: assertPublicUrl validated the original URL, but fetch() followed redirects
+    // (Node's default redirect: 'follow') with no re-validation of the redirect target —
+    // a public-looking URL that 302s to an internal address bypassed the whole guard.
+    //
+    // A mocked global fetch() can't simulate real transparent redirect-following (that
+    // happens *inside* fetch, invisible to a top-level mock), so the observable proof
+    // that the fix actually inspects the redirect target — rather than just erroring on
+    // any non-2xx status, which unfixed code already does too — is that it resolves the
+    // *redirect target's* hostname via dns.lookup before deciding whether to follow it.
+    // Unfixed code never looks at the Location header at all, so it never does this.
+    it('refuses to follow a redirect to a private/internal address instead of transparently chasing it', async () => {
+      const lookupSpy = vi.spyOn(dns.promises, 'lookup').mockImplementation(async (hostname: string) => {
+        if (hostname === 'internal.example.net') return { address: '10.0.0.5', family: 4 } as any
+        return { address: '93.184.216.34', family: 4 } as any
+      })
+      const fetchMock = vi.fn(async () => ({
+        ok: false,
+        status: 302,
+        headers: { get: (h: string) => (h.toLowerCase() === 'location' ? 'http://internal.example.net/leak' : null) },
+        text: async () => '',
+      }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { fetchPage } = await import('../../server/lib/ai/research')
+      const result = await fetchPage.execute!({ url: 'https://example.com/redirects-to-internal' }, {} as any) as any
+
+      expect(result.error).toBeDefined()
+      expect(result.text).toBeUndefined()
+      // proves the redirect target's hostname was actually inspected/validated, not ignored
+      expect(lookupSpy).toHaveBeenCalledWith('internal.example.net')
+      // must never make a second network call to the (blocked) redirect target
+      expect(fetchMock).toHaveBeenCalledOnce()
+    })
+
+    it('follows a redirect to another public address, re-validating it first', async () => {
+      vi.spyOn(dns.promises, 'lookup').mockResolvedValue({ address: '93.184.216.34', family: 4 } as any)
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce({
+          ok: false, status: 301,
+          headers: { get: (h: string) => (h.toLowerCase() === 'location' ? 'https://example.com/final' : null) },
+          text: async () => '',
+        })
+        .mockResolvedValueOnce({
+          ok: true, status: 200,
+          headers: { get: () => null },
+          text: async () => '<html><head><title>final</title></head><body>ok</body></html>',
+        })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { fetchPage } = await import('../../server/lib/ai/research')
+      const result = await fetchPage.execute!({ url: 'https://example.com/redirects-once' }, {} as any) as any
+
+      expect(result.error).toBeUndefined()
+      expect(result.title).toBe('final')
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('pins the fetch to the address it already validated, instead of letting the connection re-resolve DNS independently (rebinding guard)', async () => {
+      const lookupSpy = vi.spyOn(dns.promises, 'lookup').mockResolvedValue({ address: '93.184.216.34', family: 4 } as any)
+      const fetchMock = vi.fn(async () => ({
+        ok: true, status: 200,
+        headers: { get: () => null },
+        text: async () => '<html><head><title>t</title></head><body>ok</body></html>',
+      }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { fetchPage } = await import('../../server/lib/ai/research')
+      await fetchPage.execute!({ url: 'https://example.com/page' }, {} as any)
+
+      // exactly one resolution of the hostname — the address that was validated is the
+      // same one the connection uses, not a second independent lookup that DNS could
+      // answer differently (classic rebinding TOCTOU)
+      expect(lookupSpy).toHaveBeenCalledTimes(1)
     })
   })
 })

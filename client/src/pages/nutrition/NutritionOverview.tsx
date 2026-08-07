@@ -112,7 +112,9 @@ function MealGroupCard({ mealKey, group, onOpenLog, onEntryClick, isToday, onCop
         <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted }}>{group.totals.calories} KCAL</span>
       </div>
       {group.entries.map(entry => (
-        <div key={entry.id} onClick={() => onEntryClick(entry)} style={{
+        <div key={entry.id} onClick={() => onEntryClick(entry)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEntryClick(entry) } }}
+          role="button" tabIndex={0} aria-label={`Edit ${entry.name}`} style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           borderLeft: `2px solid ${A}`, background: COLORS.surface, borderRadius: 6,
           padding: '9px 11px', marginBottom: 6, cursor: 'pointer',

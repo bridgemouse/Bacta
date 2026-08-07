@@ -2,6 +2,7 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import dns from 'dns'
 import net from 'net'
+import { Agent } from 'undici'
 import { getSetting } from '../settings'
 import { logEvent } from '../logger'
 
@@ -176,7 +177,11 @@ function isPrivateIPv6(ip: string): boolean {
   return false
 }
 
-async function assertPublicUrl(rawUrl: string): Promise<void> {
+// Validates a URL's target and returns the exact address it resolved to, so the
+// caller can pin the actual network connection to that address (see fetchPinned
+// below) — resolving the hostname again for the connection itself would let DNS
+// answer differently between the check and the request (rebinding).
+async function assertPublicUrl(rawUrl: string): Promise<{ hostname: string; address: string; family: 4 | 6 }> {
   const parsed = new URL(rawUrl)
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error(`Blocked protocol: ${parsed.protocol}`)
@@ -186,13 +191,56 @@ async function assertPublicUrl(rawUrl: string): Promise<void> {
     throw new Error('Blocked local/internal hostname')
   }
   const ipVersion = net.isIP(hostname)
-  if (ipVersion === 4 && isPrivateIPv4(hostname)) throw new Error('Blocked private IPv4 target')
-  if (ipVersion === 6 && isPrivateIPv6(hostname)) throw new Error('Blocked private IPv6 target')
-  if (ipVersion === 0) {
-    const { address, family } = await dns.promises.lookup(hostname)
-    if (family === 4 && isPrivateIPv4(address)) throw new Error('Blocked hostname resolving to a private IPv4')
-    if (family === 6 && isPrivateIPv6(address)) throw new Error('Blocked hostname resolving to a private IPv6')
+  if (ipVersion === 4) {
+    if (isPrivateIPv4(hostname)) throw new Error('Blocked private IPv4 target')
+    return { hostname, address: hostname, family: 4 }
   }
+  if (ipVersion === 6) {
+    if (isPrivateIPv6(hostname)) throw new Error('Blocked private IPv6 target')
+    return { hostname, address: hostname, family: 6 }
+  }
+  const { address, family } = await dns.promises.lookup(hostname)
+  if (family === 4 && isPrivateIPv4(address)) throw new Error('Blocked hostname resolving to a private IPv4')
+  if (family === 6 && isPrivateIPv6(address)) throw new Error('Blocked hostname resolving to a private IPv6')
+  return { hostname, address, family: family as 4 | 6 }
+}
+
+const MAX_REDIRECTS = 5
+
+// Fetches url, following redirects manually (never Node's default redirect:
+// 'follow') — each redirect target is re-validated with assertPublicUrl before
+// being followed, and every request is pinned via a custom Agent to the exact
+// address that was just validated, so the connection itself can't resolve DNS
+// to something different than what was checked (#179).
+async function fetchPinned(initialUrl: string): Promise<Response> {
+  let currentUrl = initialUrl
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const resolved = await assertPublicUrl(currentUrl)
+    const dispatcher = new Agent({
+      connect: {
+        // Node's net.connect uses Happy Eyeballs (options.all: true) by default, which
+        // expects an array-shaped callback — match dns.lookup's full contract, not just
+        // its single-address form, or the connection fails with ERR_INVALID_IP_ADDRESS.
+        lookup: (_hostname, options, callback) => {
+          if (options?.all) return callback(null, [{ address: resolved.address, family: resolved.family }])
+          return callback(null, resolved.address, resolved.family)
+        },
+      },
+    })
+    const resp = await fetch(currentUrl, {
+      signal: AbortSignal.timeout(12_000),
+      redirect: 'manual',
+      dispatcher,
+    } as RequestInit)
+    if (resp.status >= 300 && resp.status < 400) {
+      const location = resp.headers.get('location')
+      if (!location) throw new Error(`Redirect (HTTP ${resp.status}) with no Location header`)
+      currentUrl = new URL(location, currentUrl).toString()
+      continue
+    }
+    return resp
+  }
+  throw new Error(`Too many redirects (>${MAX_REDIRECTS})`)
 }
 
 function htmlToText(html: string): string {
@@ -221,8 +269,7 @@ export const fetchPage = tool({
   }),
   execute: async ({ url }) => {
     try {
-      await assertPublicUrl(url)
-      const resp = await fetch(url, { signal: AbortSignal.timeout(12_000) })
+      const resp = await fetchPinned(url)
       if (!resp.ok) return { url, error: `Fetch failed: HTTP ${resp.status}` }
       const contentLength = Number(resp.headers?.get?.('content-length'))
       if (contentLength > MAX_RESPONSE_BYTES) return { url, error: 'Page too large to fetch' }

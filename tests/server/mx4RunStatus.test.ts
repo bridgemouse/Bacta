@@ -30,6 +30,22 @@ describe('GET /api/mx4/run/:section/status', () => {
     expect(res.body.error).toBe('No AI provider configured. Check Settings → Intelligence.')
   })
 
+  it('logs a failed section refresh to app_logs, matching the nightly orchestrator run\'s logging (#182)', async () => {
+    const { runSectionById } = await import('../../server/lib/ai/orchestrator') as any
+    runSectionById.mockRejectedValueOnce(new Error('Provider rate limit exceeded'))
+
+    const { app } = await import('../../server/index')
+    await request(app).post('/api/mx4/run/recovery')
+    await new Promise(r => setTimeout(r, 50))
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT source, level, message FROM app_logs WHERE source = 'mx4' ORDER BY id DESC LIMIT 5"
+    ).all() as { source: string; level: string; message: string }[]
+
+    expect(rows.some(r => r.level === 'error' && r.message.includes('recovery') && r.message.includes('Provider rate limit exceeded'))).toBe(true)
+  })
+
   it('clears the error once a subsequent run is triggered', async () => {
     const { runSectionById } = await import('../../server/lib/ai/orchestrator') as any
     runSectionById.mockRejectedValueOnce(new Error('No API key configured'))

@@ -1,7 +1,9 @@
 import { Router } from 'express'
 import db from '../db/client'
+import { logEvent } from '../lib/logger'
 
 const logsRouter = Router()
+const MAX_FIELD_LENGTH = 2000
 
 const KNOWN_SOURCES = ['garmin', 'mx4', 'mx4-chat']
 const DEFAULT_LIMIT = 100
@@ -25,6 +27,23 @@ logsRouter.get('/', (req, res) => {
     : db.prepare('SELECT source, level, message, created_at FROM app_logs ORDER BY id DESC LIMIT ?').all(limit)
 
   res.json({ logs: rows })
+})
+
+// POST /api/logs — client-side error reports (e.g. from ErrorBoundary), recorded as
+// source 'client' so a crash is queryable here later instead of dead-ending at
+// console.error on a tab that's about to reload (#183). Sits behind the same
+// requireAuth gate as the rest of this router (applied at the app.use mount).
+logsRouter.post('/', (req, res) => {
+  const { message, componentStack } = req.body ?? {}
+  if (typeof message !== 'string' || message.trim().length === 0) {
+    res.status(400).json({ error: 'message is required' })
+    return
+  }
+  const detail = typeof componentStack === 'string' && componentStack.trim().length > 0
+    ? `${message.slice(0, MAX_FIELD_LENGTH)} | stack: ${componentStack.slice(0, MAX_FIELD_LENGTH)}`
+    : message.slice(0, MAX_FIELD_LENGTH)
+  logEvent('client', 'error', detail)
+  res.status(201).json({ ok: true })
 })
 
 export default logsRouter

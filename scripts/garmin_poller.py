@@ -81,6 +81,47 @@ def extract_activity_summary_fields(dto, type_key):
     }
 
 
+def extract_activity_te_recovery_fields(act):
+    """Training effect + recovery time — available directly on the activity list item,
+    no extra API call needed. Shared by garmin_poller.py and garmin_ingest.py (#194)."""
+    return {
+        'aerobic_te':      safe(act, 'aerobicTrainingEffect'),
+        'anaerobic_te':    safe(act, 'anaerobicTrainingEffect'),
+        'recovery_time_h': safe(act, 'recoveryTime'),
+    }
+
+
+def extract_run_dynamics_fields(dto, type_key):
+    """Run dynamics — only populated for run-type activities, from get_activity()
+    summaryDTO. Shared by garmin_poller.py and garmin_ingest.py (#194)."""
+    is_run = type_key in ('running', 'trail_running', 'treadmill_running')
+    cadence  = dto.get('averageRunCadence') if is_run else None
+    stride   = dto.get('strideLength')      if is_run else None
+    vert_osc = dto.get('verticalOscillation') if is_run else None
+    gct_ms   = dto.get('groundContactTime') if is_run else None
+    return {
+        'run_cadence':     round(cadence) if cadence is not None else None,
+        'run_stride_cm':   round(stride, 1) if stride is not None else None,
+        'run_vert_osc_cm': round(vert_osc, 1) if vert_osc is not None else None,
+        'run_gct_ms':      round(gct_ms) if gct_ms is not None else None,
+    }
+
+
+def aggregate_hr_zone_seconds(zone_entries):
+    """Sum secsInZone per zone number across a list of zone dicts, as returned by
+    get_activity_hr_in_timezones (possibly concatenated across multiple child
+    activities for a multi_sport container). Shared by garmin_poller.py and
+    garmin_ingest.py (#194)."""
+    zones = {1: None, 2: None, 3: None, 4: None, 5: None}
+    for z in (zone_entries or []):
+        n = z.get('zoneNumber')
+        if n not in zones:
+            continue
+        secs = int(z.get('secsInZone') or 0)
+        zones[n] = (zones[n] or 0) + secs
+    return {f'zone{n}_s': zones[n] for n in (1, 2, 3, 4, 5)}
+
+
 def _child_activity_ids(c, act_id):
     """Return child activity IDs for a multi_sport container, or [] if unavailable."""
     try:
@@ -426,27 +467,26 @@ def sync_range(db, c, start, end):
                 continue
             act_id = safe(act, 'activityId')
             type_key = safe(act, 'activityType', 'typeKey') or 'other'
-            is_run = type_key in ('running', 'trail_running', 'treadmill_running')
 
             # Training effect + recovery time — available in activity list response
-            aerobic_te      = safe(act, 'aerobicTrainingEffect')
-            anaerobic_te    = safe(act, 'anaerobicTrainingEffect')
-            recovery_time_h = safe(act, 'recoveryTime')  # Garmin returns hours
+            te_fields = extract_activity_te_recovery_fields(act)
+            aerobic_te      = te_fields['aerobic_te']
+            anaerobic_te    = te_fields['anaerobic_te']
+            recovery_time_h = te_fields['recovery_time_h']  # Garmin returns hours
 
             # Per-activity HR zones — multi_sport containers return empty; use child IDs instead
             zone1_s = zone2_s = zone3_s = zone4_s = zone5_s = None
             if act_id:
                 try:
                     query_ids = _child_activity_ids(c, act_id) if type_key == 'multi_sport' else [act_id]
+                    zone_entries = []
                     for qid in query_ids:
-                        for z in (c.get_activity_hr_in_timezones(qid) or []):
-                            n = z.get('zoneNumber')
-                            secs = int(z.get('secsInZone') or 0)
-                            if   n == 1: zone1_s = (zone1_s or 0) + secs
-                            elif n == 2: zone2_s = (zone2_s or 0) + secs
-                            elif n == 3: zone3_s = (zone3_s or 0) + secs
-                            elif n == 4: zone4_s = (zone4_s or 0) + secs
-                            elif n == 5: zone5_s = (zone5_s or 0) + secs
+                        zone_entries.extend(c.get_activity_hr_in_timezones(qid) or [])
+                    zone_fields = aggregate_hr_zone_seconds(zone_entries)
+                    zone1_s, zone2_s, zone3_s, zone4_s, zone5_s = (
+                        zone_fields['zone1_s'], zone_fields['zone2_s'], zone_fields['zone3_s'],
+                        zone_fields['zone4_s'], zone_fields['zone5_s'],
+                    )
                     time.sleep(SLEEP_BETWEEN)
                 except Exception:
                     pass
@@ -461,15 +501,11 @@ def sync_range(db, c, start, end):
                     act_data = c.get_activity(act_id) or {}
                     dto = act_data.get('summaryDTO') or {}
                     summary_fields = extract_activity_summary_fields(dto, type_key)
-                    if is_run:
-                        cadence  = dto.get('averageRunCadence')
-                        stride   = dto.get('strideLength')         # returned in cm
-                        vert_osc = dto.get('verticalOscillation')  # returned in cm
-                        gct_ms   = dto.get('groundContactTime')
-                        run_cadence     = round(cadence) if cadence is not None else None
-                        run_stride_cm   = round(stride, 1) if stride is not None else None
-                        run_vert_osc_cm = round(vert_osc, 1) if vert_osc is not None else None
-                        run_gct_ms      = round(gct_ms) if gct_ms is not None else None
+                    run_fields = extract_run_dynamics_fields(dto, type_key)
+                    run_cadence     = run_fields['run_cadence']
+                    run_stride_cm   = run_fields['run_stride_cm']
+                    run_vert_osc_cm = run_fields['run_vert_osc_cm']
+                    run_gct_ms      = run_fields['run_gct_ms']
                     time.sleep(SLEEP_BETWEEN)
                 except Exception:
                     pass

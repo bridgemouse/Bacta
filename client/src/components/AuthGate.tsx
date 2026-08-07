@@ -75,6 +75,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
         <input
           autoFocus
+          aria-label="PIN"
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"

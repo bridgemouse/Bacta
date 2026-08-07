@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { getModel } from './provider'
 import { listWikiPagesSync, archiveWikiPageSync, writeWikiPageSync } from './wiki'
+import { logEvent } from '../logger'
 
 const WIKI_DIR = () => process.env.WIKI_DIR ?? path.join(process.cwd(), 'mx4', 'wiki')
 
@@ -27,7 +28,12 @@ export async function wrapSession(): Promise<void> {
         writeWikiPageSync(page.name, synthesis)
         console.log(`[mx4:wrap] synthesized ${page.name} (was ${page.tokenEstimate} tokens)`)
       } catch (e: unknown) {
-        console.error(`[mx4:wrap] failed to synthesize ${page.name}:`, e instanceof Error ? e.message : e)
+        const detail = e instanceof Error ? e.message : String(e)
+        console.error(`[mx4:wrap] failed to synthesize ${page.name}:`, detail)
+        // The per-page catch keeps one bad page from aborting synthesis for the rest —
+        // but that also means orchestrator.ts's own logEvent-on-catch around wrapSession()
+        // never fires for this failure mode, so it must log directly here (#184).
+        logEvent('mx4', 'error', `wiki synthesis failed for ${page.name}: ${detail}`)
       }
     }
   }

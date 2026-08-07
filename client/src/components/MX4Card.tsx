@@ -55,7 +55,7 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
         const d = new Date(liveData.generated_at)
         return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()} · ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`
       })()
-    : brief.meta
+    : undefined
 
   const tc = toneColor(rawTone)
   const verdictLabel = rawTone === 'flag' ? 'FLAG' : rawTone === 'caution' ? 'CAUTION' : 'POSITIVE'
@@ -384,20 +384,8 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
             </div>
           </>
         ) : (
-          <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 16, lineHeight: 1.55, color: '#eef4fb' }}>
-            {brief.line}
-            <span
-              aria-hidden
-              style={{
-                display: 'inline-block',
-                width: 7,
-                height: '0.9em',
-                background: accent,
-                marginLeft: 3,
-                verticalAlign: 'middle',
-                animation: 'mx4blink 1.1s step-end infinite',
-              }}
-            />
+          <p style={{ margin: 0, fontFamily: FONT_UI, fontSize: 15, fontStyle: 'italic', lineHeight: 1.55, color: COLORS.textMuted }}>
+            MX-4 hasn't analyzed this section yet. Trigger a run to generate a briefing.
           </p>
         )}
       </div>
@@ -412,12 +400,11 @@ export function MX4Briefing({ accent, brief, liveData, section, onRefresh }: MX4
           borderTop: `1px solid ${hexA(accent, 0.18)}`,
         }}
       >
-        {!liveData && brief.chips.map(([key, val]) => (
-          <span key={key} style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
-            {key}{' '}
-            <span style={{ color: accent }}>{val}</span>
+        {!liveData && (
+          <span style={{ fontFamily: FONT_MONO, fontSize: 8.5, letterSpacing: '0.1em', color: COLORS.textMuted }}>
+            STATUS <span style={{ color: accent }}>NOT YET RUN</span>
           </span>
-        ))}
+        )}
         {liveData?.summary && (
           <button
             onClick={handleFullAnalysis}

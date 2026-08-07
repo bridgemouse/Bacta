@@ -5,7 +5,7 @@ import path from 'path'
 import db from '../db/client'
 import { logEvent } from '../lib/logger'
 import { getSetting, setSetting, PROVIDERS, Provider } from '../lib/settings'
-import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from '../lib/auth'
+import { isAuthConfigured, verifyToken, verifyInternalToken, parseCookies, SESSION_COOKIE } from '../lib/auth'
 import { encrypt, decrypt } from '../lib/integrations/shared/encryption'
 import { ProviderTokens, daysAgo, toEpoch, validateTokenFields } from '../lib/integrations/shared/types'
 import { getAuthUrl as stravaAuthUrl, exchangeCode as stravaExchange, refreshTokens as stravaRefresh, fetchActivities } from '../lib/integrations/strava/stravaService'
@@ -30,7 +30,7 @@ const OAUTH_PROVIDERS = new Set<Provider>(['strava', 'polar', 'oura', 'whoop', '
 function requireSyncAuth(req: Request, res: Response, next: () => void): void {
   const bearer   = (req.headers.authorization ?? '').replace('Bearer ', '')
   const internal = process.env.BACTA_INTERNAL_TOKEN ?? ''
-  if (internal && bearer === internal) return next()
+  if (verifyInternalToken(bearer)) return next()
   // Auth bypass only applies when neither a PIN nor an internal token is configured
   if (!isAuthConfigured() && !internal) return next()
   const token = parseCookies(req.headers.cookie)[SESSION_COOKIE]

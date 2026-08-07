@@ -62,6 +62,17 @@ export function verifyToken(token: string | undefined): boolean {
   return Date.now() - Number(iat) < SESSION_MAX_AGE_MS
 }
 
+// Timing-safe comparison against BACTA_INTERNAL_TOKEN, matching verifyPin/verifyToken's
+// pattern rather than a plain === — a network attacker with enough samples could
+// otherwise use response-time variance to recover the token character-by-character.
+export function verifyInternalToken(bearer: string): boolean {
+  const internal = process.env.BACTA_INTERNAL_TOKEN ?? ''
+  if (!internal) return false
+  const a = Buffer.from(bearer)
+  const b = Buffer.from(internal)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+
 export function parseCookies(header: string | undefined): Record<string, string> {
   const out: Record<string, string> = {}
   if (!header) return out

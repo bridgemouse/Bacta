@@ -59,4 +59,30 @@ describe('Logs API', () => {
     // Only 3 rows exist, but this confirms the request doesn't error on a huge limit
     expect(res.body.logs.length).toBe(3)
   })
+
+  it('POST /api/logs writes a client-side error report to app_logs with source "client" (#183)', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).post('/api/logs').send({
+      message: 'Cannot read properties of null (reading \'name\')',
+      componentStack: 'in NewRecipeForm\n  in NutritionLibrary',
+    })
+    expect(res.status).toBe(201)
+
+    const { default: db } = await import('../../server/db/client')
+    const rows = db.prepare(
+      "SELECT source, level, message FROM app_logs WHERE source = 'client' ORDER BY id DESC LIMIT 5"
+    ).all() as { source: string; level: string; message: string }[]
+
+    expect(rows.some(r =>
+      r.level === 'error' &&
+      r.message.includes("Cannot read properties of null (reading 'name')") &&
+      r.message.includes('NewRecipeForm')
+    )).toBe(true)
+  })
+
+  it('POST /api/logs requires a message', async () => {
+    const { app } = await import('../../server/index')
+    const res = await request(app).post('/api/logs').send({})
+    expect(res.status).toBe(400)
+  })
 })

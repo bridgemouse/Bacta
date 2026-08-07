@@ -1,0 +1,3 @@
+{"code": "1111111111111", "product_name": "First Valid Product", "nutriments": {"energy-kcal_100g": 200, "proteins_100g": 5, "carbohydrates_100g": 30, "fat_100g": 8, "fiber_100g": 2}}
+null
+{"code": "2222222222222", "product_name": "Second Valid Product", "nutriments": {"energy-kcal_100g": 400, "proteins_100g": 10, "carbohydrates_100g": 50, "fat_100g": 15, "fiber_100g": 4}}

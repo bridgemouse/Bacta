@@ -98,13 +98,17 @@ export function importOffDumpFile(filePath: string): number {
   const lines = fs.readFileSync(filePath, 'utf-8').split('\n').filter(line => line.trim().length > 0)
   let written = 0
   const writeAll = db.transaction((allLines: string[]) => {
-    for (const line of allLines) {
-      const record = JSON.parse(line) as OffProductRecord
+    allLines.forEach((line, index) => {
+      const record = JSON.parse(line) as OffProductRecord | null
+      if (!record) {
+        console.warn(`[nutrition-import] OFF line ${index + 1}: skipped (record is null)`)
+        return
+      }
       const result = mapOffProductToRow(record)
-      if (!result) continue
+      if (!result) return
       writeResult(result)
       written++
-    }
+    })
   })
   writeAll(lines)
   return written

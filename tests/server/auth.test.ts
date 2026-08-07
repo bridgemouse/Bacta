@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach } from 'vitest'
 import request from 'supertest'
 
 process.env.DB_PATH = ':memory:'
@@ -64,5 +64,38 @@ describe('App authentication', () => {
     const { app } = await import('../../server/index')
     const res = await request(app).get('/api/health')
     expect(res.status).toBe(200)
+  })
+})
+
+describe('verifyInternalToken (#180 — timing-safe internal-token comparison)', () => {
+  const ORIGINAL_TOKEN = process.env.BACTA_INTERNAL_TOKEN
+
+  afterEach(() => {
+    process.env.BACTA_INTERNAL_TOKEN = ORIGINAL_TOKEN
+  })
+
+  it('accepts a matching token', async () => {
+    process.env.BACTA_INTERNAL_TOKEN = 'a-real-internal-token'
+    const { verifyInternalToken } = await import('../../server/lib/auth')
+    expect(verifyInternalToken('a-real-internal-token')).toBe(true)
+  })
+
+  it('rejects a non-matching token of the same length', async () => {
+    process.env.BACTA_INTERNAL_TOKEN = 'a-real-internal-token'
+    const { verifyInternalToken } = await import('../../server/lib/auth')
+    expect(verifyInternalToken('a-real-internal-tokeX')).toBe(false)
+  })
+
+  it('rejects a non-matching token of a different length, without throwing (timingSafeEqual throws on length mismatch)', async () => {
+    process.env.BACTA_INTERNAL_TOKEN = 'a-real-internal-token'
+    const { verifyInternalToken } = await import('../../server/lib/auth')
+    expect(() => verifyInternalToken('short')).not.toThrow()
+    expect(verifyInternalToken('short')).toBe(false)
+  })
+
+  it('rejects when no internal token is configured, even against an empty bearer', async () => {
+    process.env.BACTA_INTERNAL_TOKEN = ''
+    const { verifyInternalToken } = await import('../../server/lib/auth')
+    expect(verifyInternalToken('')).toBe(false)
   })
 })

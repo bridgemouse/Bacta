@@ -46,6 +46,13 @@ describe('MoreNutrientsSection', () => {
     expect(screen.queryByLabelText('Glycemic index')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Allergens')).not.toBeInTheDocument()
   })
+
+  it('extended nutrient inputs use font-size 16 to prevent iOS zoom-on-focus (#178)', async () => {
+    const user = userEvent.setup()
+    render(<MoreNutrientsSection accent="#3ecf8e" data={emptyExtendedNutrients()} onChange={() => {}} />)
+    await user.click(screen.getByText('+ MORE NUTRIENTS'))
+    expect(screen.getByLabelText('sodium_mg')).toHaveStyle({ fontSize: '16px' })
+  })
 })
 
 describe('extendedNutrientsToPayload', () => {

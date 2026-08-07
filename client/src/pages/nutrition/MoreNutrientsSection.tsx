@@ -97,7 +97,7 @@ export function MoreNutrientsSection({ accent, data, onChange, numericOnly }: Mo
   const inputStyle = {
     width: '100%', boxSizing: 'border-box' as const, background: COLORS.base,
     border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '9px 11px',
-    color: COLORS.text, fontFamily: FONT_MONO, fontSize: 12,
+    color: COLORS.text, fontFamily: FONT_MONO, fontSize: 16,
   }
   const fieldLabelStyle = { display: 'block', fontFamily: FONT_MONO, fontSize: 7, color: COLORS.textMuted, marginBottom: 3 }
 
@@ -116,7 +116,7 @@ export function MoreNutrientsSection({ accent, data, onChange, numericOnly }: Mo
                 <label style={fieldLabelStyle}>{LABELS[key]}</label>
                 <input aria-label={key} placeholder="—" value={data.values[key]}
                   onChange={e => onChange({ ...data, values: { ...data.values, [key]: e.target.value } })}
-                  style={{ ...inputStyle, textAlign: 'center', padding: '6px 3px', fontSize: 10 }} />
+                  style={{ ...inputStyle, textAlign: 'center', padding: '6px 3px' }} />
               </div>
             ))}
           </div>

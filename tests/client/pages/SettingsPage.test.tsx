@@ -91,3 +91,34 @@ describe('SettingsPage — Restart Bacta', () => {
     expect(fetch).not.toHaveBeenCalledWith('/api/settings/restart', { method: 'POST' })
   })
 })
+
+describe('SettingsPage — iOS zoom-on-focus (#178)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch())
+  })
+
+  test('AI provider API key input uses font-size 16', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+    await user.click(await screen.findByText('AI PROVIDER'))
+    expect(screen.getByPlaceholderText('Enter key…')).toHaveStyle({ fontSize: '16px' })
+  })
+
+  test('MX-4 briefing model select and chat compression threshold input use font-size 16', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+    await user.click(await screen.findByText('MX-4 INTELLIGENCE'))
+    const selects = screen.getAllByRole('combobox')
+    expect(selects[0]).toHaveStyle({ fontSize: '16px' })
+    expect(screen.getByRole('spinbutton')).toHaveStyle({ fontSize: '16px' })
+  })
+
+  test('Instance base URL input and Garmin background-sync select use font-size 16', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+    await user.click(await screen.findByText('INSTANCE'))
+    expect(screen.getByPlaceholderText('http://bacta.home')).toHaveStyle({ fontSize: '16px' })
+    await user.click(await screen.findByText('GARMIN'))
+    expect(screen.getByDisplayValue('Every hour')).toHaveStyle({ fontSize: '16px' })
+  })
+})

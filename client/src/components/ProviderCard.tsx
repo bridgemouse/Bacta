@@ -36,7 +36,7 @@ export interface ProviderCardProps {
 const inputStyle: React.CSSProperties = {
   width: '100%',
   fontFamily: FONT_MONO,
-  fontSize: 11,
+  fontSize: 16,
   padding: '7px 10px',
   marginTop: 8,
   borderRadius: 8,

@@ -54,4 +54,10 @@ describe('TargetsSheet', () => {
     })))
     expect(mockSave.mock.calls[0][0].date).toBe(new Date().toLocaleDateString('en-CA'))
   })
+
+  it('macro/calorie goal inputs use font-size 16 to prevent iOS zoom-on-focus (#178)', () => {
+    render(<TargetsSheet open initialTarget={target} onClose={vi.fn()} onSaved={vi.fn()} />)
+    expect(screen.getByLabelText('Protein goal')).toHaveStyle({ fontSize: '16px' })
+    expect(screen.getByLabelText('Calorie goal')).toHaveStyle({ fontSize: '16px' })
+  })
 })

@@ -159,6 +159,7 @@ mx4Router.post('/run/:section', (req, res) => {
       }
     } catch (err) {
       console.error(`[mx4] section run error (${section}):`, err)
+      logEvent('mx4', 'error', `${section} refresh failed: ${errorDetail(err)}`)
       sectionRunErrors[section] = categorizeError(err)
     } finally {
       orchestratorRunning = false

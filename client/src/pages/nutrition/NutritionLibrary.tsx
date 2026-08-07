@@ -24,7 +24,7 @@ const A = SECTION_ACCENTS.nutrition
 const inputStyle = {
   width: '100%', boxSizing: 'border-box' as const, background: COLORS.base,
   border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '9px 11px',
-  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 12,
+  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 16,
 }
 
 const accentButton = {
@@ -277,7 +277,7 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: isAdHoc ? 4 : 0 }}>
               {isAdHoc ? (
                 <input aria-label={`Ingredient ${i} name`} value={ing.name} onChange={e => updateIngredient(i, { name: e.target.value })}
-                  placeholder="Name" style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
+                  placeholder="Name" style={{ ...inputStyle, flex: 1 }} />
               ) : (
                 <span style={{ flex: 1, fontFamily: FONT_UI, fontSize: 12, color: COLORS.text }}>{ing.name}</span>
               )}
@@ -288,7 +288,7 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
                 }} style={{ ...inputStyle, width: 60 }} />
               {isAdHoc ? (
                 <input aria-label={`Ingredient ${i} unit`} value={ing.unit} onChange={e => updateIngredient(i, { unit: e.target.value })}
-                  placeholder="g" style={{ ...inputStyle, width: 30, fontSize: 9, padding: '5px 4px' }} />
+                  placeholder="g" style={{ ...inputStyle, width: 58, padding: '5px 4px' }} />
               ) : (
                 <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 30 }}>{ing.unit}</span>
               )}
@@ -302,14 +302,14 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
                 values={Object.fromEntries(MACRO_KEYS.map(key => [key, ing[key] == null ? '' : String(ing[key])])) as Record<typeof MACRO_KEYS[number], string>}
                 onChange={(key, value) => updateIngredient(i, { [key]: value === '' ? null : Number(value) })}
                 ariaLabel={key => `Ingredient ${i} ${key}`}
-                gap={4} marginBottom={0} inputPadding="5px 2px" inputFontSize={9}
+                gap={4} marginBottom={0} inputPadding="5px 2px"
               />
             )}
           </div>
         )
       })}
 
-      <input placeholder="Add from saved foods…" value={query} onChange={e => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} />
+      <input aria-label="Add from saved foods" placeholder="Add from saved foods…" value={query} onChange={e => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} />
       {matches.map(f => (
         <button key={f.id} onClick={() => addFromFood(f)} style={{
           display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none',

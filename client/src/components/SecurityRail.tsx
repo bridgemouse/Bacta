@@ -68,10 +68,10 @@ export function SecurityRail() {
             : 'No PIN set — anyone on the network can open the app. Set a PIN to secure it.'}
         </div>
         {configured && (
-          <input style={input} type="password" inputMode="numeric" placeholder="Current PIN"
+          <input aria-label="Current PIN" style={input} type="password" inputMode="numeric" placeholder="Current PIN"
             value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 12))} />
         )}
-        <input style={input} type="password" inputMode="numeric" placeholder={configured ? 'New PIN' : 'Set PIN (4–12 digits)'}
+        <input aria-label={configured ? 'New PIN' : 'Set PIN'} style={input} type="password" inputMode="numeric" placeholder={configured ? 'New PIN' : 'Set PIN (4–12 digits)'}
           value={newPin} onChange={e => { setNewPin(e.target.value.replace(/\D/g, '').slice(0, 12)); setMsg('') }} />
         {msg && (
           <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: err ? COLORS.red : COLORS.green }}>{msg}</div>

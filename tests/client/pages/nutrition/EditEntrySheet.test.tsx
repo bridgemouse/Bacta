@@ -134,4 +134,10 @@ describe('EditEntrySheet', () => {
     await user.click(screen.getByText('DELETE'))
     expect(await screen.findByText('Cannot delete — this food has been logged')).toBeInTheDocument()
   })
+
+  it('quantity and serving inputs use font-size 16 to prevent iOS zoom-on-focus (#178)', async () => {
+    render(<EditEntrySheet open entry={linkedEntry} date="2026-07-13" onClose={vi.fn()} onSaved={vi.fn()} />)
+    expect(screen.getByLabelText('Quantity')).toHaveStyle({ fontSize: '16px' })
+    expect(await screen.findByLabelText('Serving')).toHaveStyle({ fontSize: '16px' })
+  })
 })

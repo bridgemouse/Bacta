@@ -197,7 +197,7 @@ const labelStyle: React.CSSProperties = {
 
 const selectStyle: React.CSSProperties = {
   fontFamily: FONT_MONO,
-  fontSize: 11,
+  fontSize: 16,
   padding: '6px 10px',
   borderRadius: 8,
   border: `1px solid ${COLORS.line}`,
@@ -605,7 +605,7 @@ export function SettingsPage() {
               onBlur={() => setApiKeyFocused(false)}
               style={{
                 fontFamily: FONT_MONO,
-                fontSize: 11,
+                fontSize: 16,
                 padding: '6px 10px',
                 borderRadius: 8,
                 border: `1px solid ${apiKeyFocused ? MX4_COLOR : COLORS.line}`,
@@ -708,7 +708,7 @@ export function SettingsPage() {
                 onChange={e => save('mx4_nightly_time', e.target.value)}
                 style={{
                   fontFamily: FONT_MONO,
-                  fontSize: 11,
+                  fontSize: 16,
                   padding: '5px 8px',
                   borderRadius: 8,
                   border: `1px solid ${COLORS.line}`,
@@ -752,7 +752,7 @@ export function SettingsPage() {
               onChange={e => save('mx4_chat_compression_threshold', e.target.value)}
               style={{
                 fontFamily: FONT_MONO,
-                fontSize: 11,
+                fontSize: 16,
                 padding: '5px 8px',
                 borderRadius: 8,
                 border: `1px solid ${COLORS.line}`,

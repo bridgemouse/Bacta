@@ -372,4 +372,10 @@ describe('LogEntrySheet — camera capture (#141)', () => {
     // never auto-logged — the entry still requires an explicit LOG ENTRY tap
     expect(mockCreateLogEntry).not.toHaveBeenCalled()
   })
+
+  it('ad-hoc quantity/unit inputs use font-size 16 to prevent iOS zoom-on-focus (#178)', () => {
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+    expect(screen.getByPlaceholderText('qty')).toHaveStyle({ fontSize: '16px' })
+    expect(screen.getByPlaceholderText('unit (any)')).toHaveStyle({ fontSize: '16px' })
+  })
 })

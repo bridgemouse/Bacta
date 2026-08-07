@@ -15,7 +15,7 @@ const A = SECTION_ACCENTS.nutrition
 const inputStyle = {
   width: '100%', boxSizing: 'border-box' as const, background: COLORS.base,
   border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '9px 11px',
-  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 12,
+  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 16,
 }
 
 function sumKcal(p: number, c: number, f: number): number {

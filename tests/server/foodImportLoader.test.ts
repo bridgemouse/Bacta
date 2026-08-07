@@ -149,6 +149,17 @@ describe('food import loader', () => {
       expect(variants.length).toBe(1) // not duplicated to 2
     })
 
+    it('skips a null line instead of aborting the whole batch — a real OFF JSONL dump can contain a literal null line (#181)', async () => {
+      const { importOffDumpFile } = await import('../../server/lib/nutrition/foodImportLoader')
+      const count = importOffDumpFile(path.join(FIXTURES, 'off-dump-with-null-line.jsonl'))
+      // 3 lines in the fixture: one valid product, one literal null, one valid product.
+      expect(count).toBe(2)
+
+      const { default: db } = await import('../../server/db/client')
+      const rows = db.prepare("SELECT * FROM foods WHERE source_id IN ('1111111111111', '2222222222222')").all() as any[]
+      expect(rows.length).toBe(2)
+    })
+
     it('is atomic — a malformed line partway through aborts the whole import with no partial writes, since a real multi-million-line file should not be able to leave the table half-imported', async () => {
       const fs = await import('fs')
       const os = await import('os')

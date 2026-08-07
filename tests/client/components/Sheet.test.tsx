@@ -1,4 +1,6 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { Sheet, SheetShell } from '../../../client/src/components/Sheet'
 
 function renderSheet(onClose: () => void) {
@@ -8,6 +10,23 @@ function renderSheet(onClose: () => void) {
         <div>content</div>
       </SheetShell>
     </Sheet>
+  )
+}
+
+// Mirrors the real app's shape: main.tsx mounts everything under #root, and Sheet
+// portals to document.body (outside #root) — so #root is exactly the "background"
+// this issue wants marked inert while a sheet covers it.
+function ToggleHarness() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div id="root">
+      <button onClick={() => setOpen(true)}>Open Sheet</button>
+      <Sheet open={open} onClose={() => setOpen(false)}>
+        <SheetShell accent="#2bc4e8" onClose={() => setOpen(false)}>
+          <button>Inside action</button>
+        </SheetShell>
+      </Sheet>
+    </div>
   )
 }
 
@@ -22,6 +41,39 @@ describe('Sheet — portaled font inheritance', () => {
     renderSheet(onClose)
     const backdrop = screen.getByTestId('sheet-backdrop')
     expect(backdrop.style.fontFamily).toContain('Hanken Grotesk')
+  })
+})
+
+describe('Sheet — focus management (#187)', () => {
+  it('moves focus to an element inside the sheet when it opens', async () => {
+    const user = userEvent.setup()
+    render(<ToggleHarness />)
+    await user.click(screen.getByText('Open Sheet'))
+    await waitFor(() => expect(document.activeElement?.textContent).toBe('Inside action'))
+  })
+
+  it('returns focus to the trigger element when the sheet closes', async () => {
+    const user = userEvent.setup()
+    render(<ToggleHarness />)
+    const trigger = screen.getByText('Open Sheet')
+    await user.click(trigger)
+    await waitFor(() => expect(document.activeElement).not.toBe(trigger))
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+  })
+
+  it('marks #root inert while the sheet is open, and clears it on close', async () => {
+    const user = userEvent.setup()
+    render(<ToggleHarness />)
+    const root = document.getElementById('root')!
+    expect(root.hasAttribute('inert')).toBe(false)
+
+    await user.click(screen.getByText('Open Sheet'))
+    await waitFor(() => expect(root.hasAttribute('inert')).toBe(true))
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(root.hasAttribute('inert')).toBe(false))
   })
 })
 

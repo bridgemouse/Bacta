@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchLog, fetchSummary, type LogResponse, type NutritionSummary } from '../lib/nutritionApi'
+import { useToast } from '../lib/ToastContext'
 
 export function useNutritionLog(date: string): {
   log: LogResponse | null
@@ -11,6 +12,7 @@ export function useNutritionLog(date: string): {
   const [summary, setSummary] = useState<NutritionSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const { showToast } = useToast()
 
   const refresh = useCallback(() => setRefreshTrigger(n => n + 1), [])
 
@@ -24,7 +26,8 @@ export function useNutritionLog(date: string): {
         setLog(logData)
         setSummary(summaryData)
       } catch {
-        // keep previous data on error
+        // keep previous data visible — just surface that it may be stale
+        if (!cancelled) showToast('Could not load nutrition data — showing the last known data.', 'error')
       } finally {
         if (!cancelled) setLoading(false)
       }

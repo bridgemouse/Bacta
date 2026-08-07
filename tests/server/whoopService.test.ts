@@ -76,4 +76,23 @@ describe('whoopService', () => {
     expect(result.workouts).toHaveLength(1)
     expect(result.recovery[0].score?.recovery_score).toBe(75)
   })
+
+  it('exchangeCode rejects a malformed token response missing refresh_token (#197)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'acc', expires_in: 3600 }), // refresh_token missing
+    } as Response)
+    const { exchangeCode } = await import('../../server/lib/integrations/whoop/whoopService')
+    await expect(exchangeCode('cid', 'csec', 'code123', 'http://redirect')).rejects.toThrow(/refresh_token/)
+  })
+
+  it('refreshTokens rejects a malformed token response missing expires_in (#197)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'new-acc', refresh_token: 'new-ref' }), // expires_in missing
+    } as Response)
+    const { refreshTokens } = await import('../../server/lib/integrations/whoop/whoopService')
+    const expired = { access_token: 'old', refresh_token: 'old-ref', expires_at: 100 }
+    await expect(refreshTokens('cid', 'csec', expired)).rejects.toThrow(/expires_in/)
+  })
 })

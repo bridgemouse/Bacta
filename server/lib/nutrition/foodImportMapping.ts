@@ -220,7 +220,12 @@ function tagListOrNull(tags: string[] | undefined): string | null {
   return JSON.stringify(tags.map(tag => tag.replace(/^[a-z]{2}:/, '')))
 }
 
-export function mapOffProductToRow(record: OffProductRecord): FoodImportResult | null {
+export function mapOffProductToRow(record: OffProductRecord | null | undefined): FoodImportResult | null {
+  // A real Open Food Facts JSONL dump can contain a literal `null` line, same as USDA's
+  // bulk exports can contain null entries (see mapUsdaFoodToRow above) — must be checked
+  // before touching any property of record, or one bad line aborts the whole batch since
+  // importOffDumpFile wraps it in a single db.transaction().
+  if (!record) return null
   const doc = record.product ?? record
   const name = doc.product_name
   if (!name) return null

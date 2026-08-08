@@ -372,4 +372,36 @@ describe('LogEntrySheet — camera capture (#141)', () => {
     // never auto-logged — the entry still requires an explicit LOG ENTRY tap
     expect(mockCreateLogEntry).not.toHaveBeenCalled()
   })
+
+  it('ad-hoc quantity/unit inputs use font-size 16 to prevent iOS zoom-on-focus (#178)', () => {
+    render(<LogEntrySheet open date="2026-07-13" meal="breakfast" onClose={vi.fn()} onLogged={vi.fn()} />)
+    expect(screen.getByPlaceholderText('qty')).toHaveStyle({ fontSize: '16px' })
+    expect(screen.getByPlaceholderText('unit (any)')).toHaveStyle({ fontSize: '16px' })
+  })
+})
+
+describe('LogEntrySheet — accessible labels (#191)', () => {
+  it('the saved-foods search field is reachable via getByLabelText, not placeholder alone', () => {
+    render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+    expect(screen.getByLabelText('Search saved foods')).toBeInTheDocument()
+  })
+
+  it('the ad-hoc name, qty, and unit fields are each reachable via getByLabelText', () => {
+    render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+    expect(screen.getByLabelText('Food name')).toBeInTheDocument()
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument()
+    expect(screen.getByLabelText('Unit')).toBeInTheDocument()
+  })
+
+  it('the goal-value field on a selected saved food is reachable via getByLabelText', async () => {
+    const { searchFoods: mockSearchFoods } = await import('../../../../client/src/lib/nutritionApi')
+    ;(mockSearchFoods as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 1, name: 'Oatmeal', variants: [{ id: 11, label: '1 cup', is_default: true, serving_qty: 1, serving_unit: 'cup', calories: 150, protein_g: 5, carbs_g: 27, fat_g: 3, fiber_g: 4 }] },
+    ])
+    const user = userEvent.setup()
+    render(<LogEntrySheet open date="2026-07-13" meal="lunch" onClose={vi.fn()} onLogged={vi.fn()} />)
+    await user.type(screen.getByLabelText('Search saved foods'), 'oat')
+    await user.click(await screen.findByText('Oatmeal'))
+    expect(screen.getByLabelText('Goal value')).toBeInTheDocument()
+  })
 })

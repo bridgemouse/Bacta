@@ -2,11 +2,18 @@ import { Router, type Response } from 'express'
 import db from '../db/client'
 import { estimateMealFromPhoto } from '../lib/ai/mealPhoto'
 import { NUMERIC_NUTRIENT_KEYS, JSON_NUTRIENT_KEYS, DESCRIPTIVE_NUTRIENT_KEYS, type NumericNutrientKey, type NumericRow } from '../lib/nutrition/nutrientKeys'
+import { logEvent } from '../lib/logger'
 
 const nutritionRouter = Router()
 
 function parseJsonField(value: unknown): unknown {
   return value === undefined || value === null ? null : JSON.stringify(value)
+}
+
+function errorDetail(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
+  return String(e)
 }
 
 // POST /api/nutrition/scan/meal-photo — still-image meal recognition (#141). Returns a
@@ -122,6 +129,7 @@ nutritionRouter.post('/foods', (req, res) => {
     res.status(201).json(foodWithVariants(foodId))
   } catch (err: unknown) {
     console.error('[nutrition] custom food save failed:', err)
+    logEvent('nutrition', 'error', 'custom food save failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not save custom food' })
   }
 })
@@ -146,6 +154,7 @@ nutritionRouter.post('/foods/:id/variants', (req, res) => {
     res.status(201).json(row)
   } catch (err: unknown) {
     console.error('[nutrition] add variant failed:', err)
+    logEvent('nutrition', 'error', 'add variant failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not add variant' })
   }
 })
@@ -189,6 +198,7 @@ nutritionRouter.delete('/food_variants/:id', (req, res) => {
       return
     }
     console.error('[nutrition] variant delete failed:', err)
+    logEvent('nutrition', 'error', 'variant delete failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not delete variant' })
   }
 })
@@ -214,6 +224,7 @@ nutritionRouter.delete('/foods/:id', (req, res) => {
       return
     }
     console.error('[nutrition] food delete failed:', err)
+    logEvent('nutrition', 'error', 'food delete failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not delete food' })
   }
 })
@@ -360,6 +371,7 @@ nutritionRouter.post('/log', (req, res) => {
     res.status(201).json(row)
   } catch (err: unknown) {
     console.error('[nutrition] log entry save failed:', err)
+    logEvent('nutrition', 'error', 'log entry save failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not save log entry' })
   }
 })
@@ -510,6 +522,7 @@ nutritionRouter.post('/targets', (req, res) => {
     res.status(201).json(row)
   } catch (err: unknown) {
     console.error('[nutrition] target upsert failed:', err)
+    logEvent('nutrition', 'error', 'target upsert failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not save nutrition targets' })
   }
 })
@@ -644,6 +657,7 @@ nutritionRouter.post('/recipes', (req, res) => {
     res.status(201).json({ ...recipe, food })
   } catch (err: unknown) {
     console.error('[nutrition] recipe save failed:', err)
+    logEvent('nutrition', 'error', 'recipe save failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not save recipe' })
   }
 })
@@ -729,6 +743,7 @@ nutritionRouter.put('/recipes/:id', (req, res) => {
     res.json({ ...updatedRecipe as object, food })
   } catch (err: unknown) {
     console.error('[nutrition] recipe update failed:', err)
+    logEvent('nutrition', 'error', 'recipe update failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not update recipe' })
   }
 })
@@ -760,6 +775,7 @@ nutritionRouter.delete('/recipes/:id', (req, res) => {
       return
     }
     console.error('[nutrition] recipe delete failed:', err)
+    logEvent('nutrition', 'error', 'recipe delete failed: ' + errorDetail(err))
     res.status(400).json({ error: 'Could not delete recipe' })
   }
 })

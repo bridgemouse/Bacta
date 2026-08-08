@@ -16,7 +16,7 @@ import settingsRouter from './api/settings'
 import logsRouter from './api/logs'
 import authRouter from './api/auth'
 import { integrationsRouter, callbackHandler } from './api/integrations'
-import { isAuthConfigured, verifyToken, parseCookies, SESSION_COOKIE } from './lib/auth'
+import { isAuthConfigured, verifyToken, verifyInternalToken, parseCookies, SESSION_COOKIE } from './lib/auth'
 import { VALID_LOGOS } from './api/settings'
 import { scheduleNightly } from './lib/ai/scheduler'
 import { scheduleGarminBackgroundSync } from './lib/garminSync'
@@ -94,9 +94,8 @@ const loginLimiter = rateLimit({
 // can reach protected routes without a browser session.
 function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction): void {
   if (!isAuthConfigured()) return next()
-  const internal = process.env.BACTA_INTERNAL_TOKEN ?? ''
   const bearer = (req.headers.authorization ?? '').replace('Bearer ', '')
-  if (internal && bearer === internal) return next()
+  if (verifyInternalToken(bearer)) return next()
   const token = parseCookies(req.headers.cookie)[SESSION_COOKIE]
   if (verifyToken(token)) return next()
   res.status(401).json({ error: 'Authentication required' })

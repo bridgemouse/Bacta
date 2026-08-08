@@ -11,7 +11,13 @@ Shows a progress indicator. Adds small sleeps between calls to avoid rate limits
 import os, json, sqlite3, sys, time, argparse
 from datetime import date, timedelta
 from garminconnect import Garmin
-from garmin_poller import extract_activity_summary_fields
+from garmin_poller import (
+    extract_activity_summary_fields,
+    extract_activity_te_recovery_fields,
+    extract_run_dynamics_fields,
+    aggregate_hr_zone_seconds,
+    _child_activity_ids,
+)
 
 DB_PATH = os.environ.get('BACTA_DB', '/opt/bacta/data/bacta.db')
 TOKEN_DIR = os.path.expanduser('~/.garminconnect')
@@ -318,11 +324,9 @@ def sync_range_bulk(db, store, c, start, end):
         print(f'  blood_pressure error: {e}')
     time.sleep(SLEEP_PER_CALL)
 
-    # Activities
-    # NOTE: pre-existing gap (not introduced by #41) — this bulk-ingest path stores fewer
-    # columns than garmin_poller.py's sync_range (no aerobic_te/zones/run-dynamics here).
-    # Out of scope for #41; only the new expansion fields below are added to close that gap
-    # incrementally, per the issue's requirement that ingest and poller both populate them.
+    # Activities — includes training effect, HR zones, run dynamics (#194: kept in
+    # parity with garmin_poller.py's sync_range via the shared extract_*/aggregate_*
+    # functions, not a separate re-implementation that can silently drift)
     try:
         acts = c.get_activities_by_date(start, end)
         for act in (acts or []):
@@ -331,30 +335,59 @@ def sync_range_bulk(db, store, c, start, end):
                 continue
             act_id = safe(act, 'activityId')
             type_key = safe(act, 'activityType', 'typeKey') or 'other'
-            summary_fields = extract_activity_summary_fields({}, type_key)
+
+            te_fields = extract_activity_te_recovery_fields(act)
+
+            zone1_s = zone2_s = zone3_s = zone4_s = zone5_s = None
             if act_id:
                 try:
-                    act_data = c.get_activity(act_id) or {}
-                    summary_fields = extract_activity_summary_fields(
-                        act_data.get('summaryDTO') or {}, type_key)
+                    query_ids = _child_activity_ids(c, act_id) if type_key == 'multi_sport' else [act_id]
+                    zone_entries = []
+                    for qid in query_ids:
+                        zone_entries.extend(c.get_activity_hr_in_timezones(qid) or [])
+                    zone_fields = aggregate_hr_zone_seconds(zone_entries)
+                    zone1_s, zone2_s, zone3_s, zone4_s, zone5_s = (
+                        zone_fields['zone1_s'], zone_fields['zone2_s'], zone_fields['zone3_s'],
+                        zone_fields['zone4_s'], zone_fields['zone5_s'],
+                    )
                     time.sleep(SLEEP_PER_CALL)
                 except Exception:
                     pass
+
+            summary_fields = extract_activity_summary_fields({}, type_key)
+            run_fields = extract_run_dynamics_fields({}, type_key)
+            if act_id:
+                try:
+                    act_data = c.get_activity(act_id) or {}
+                    dto = act_data.get('summaryDTO') or {}
+                    summary_fields = extract_activity_summary_fields(dto, type_key)
+                    run_fields = extract_run_dynamics_fields(dto, type_key)
+                    time.sleep(SLEEP_PER_CALL)
+                except Exception:
+                    pass
+
             db.execute(
                 'INSERT OR REPLACE INTO health_activities '
-                '(activity_id, date, start_time, name, type_key, distance_m, duration_s, calories, avg_hr, elevation_m, '
+                '(activity_id, date, start_time, name, type_key, distance_m, duration_s, '
+                'calories, avg_hr, elevation_m, aerobic_te, anaerobic_te, recovery_time_h, '
+                'zone1_s, zone2_s, zone3_s, zone4_s, zone5_s, '
+                'run_cadence, run_stride_cm, run_vert_osc_cm, run_gct_ms, '
                 'max_hr, min_hr, training_load, body_battery_diff, '
                 'moving_duration_s, elapsed_duration_s, avg_speed_mps, max_speed_mps, '
                 'training_effect_label, steps, bmr_calories, '
                 'moderate_intensity_min, vigorous_intensity_min, '
                 'avg_power_w, normalized_power_w, active_sets, total_exercise_reps) '
-                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '
+                '?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (act_id, d,
                  safe(act, 'startTimeLocal'), safe(act, 'activityName'),
                  type_key,
                  safe(act, 'distance'), safe(act, 'duration'),
-                 safe(act, 'calories'), safe(act, 'averageHR'),
-                 safe(act, 'elevationGain'),
+                 safe(act, 'calories'), safe(act, 'averageHR'), safe(act, 'elevationGain'),
+                 te_fields['aerobic_te'], te_fields['anaerobic_te'], te_fields['recovery_time_h'],
+                 zone1_s, zone2_s, zone3_s, zone4_s, zone5_s,
+                 run_fields['run_cadence'], run_fields['run_stride_cm'],
+                 run_fields['run_vert_osc_cm'], run_fields['run_gct_ms'],
                  summary_fields['max_hr'], summary_fields['min_hr'],
                  summary_fields['training_load'], summary_fields['body_battery_diff'],
                  summary_fields['moving_duration_s'], summary_fields['elapsed_duration_s'],

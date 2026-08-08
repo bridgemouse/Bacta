@@ -170,6 +170,12 @@ describe('mapOffProductToRow', () => {
     expect(mapOffProductToRow({ code: '123', nutriments: {} } as any)).toBeNull()
   })
 
+  it('returns null (does not throw) for a null/undefined record — a real OFF JSONL dump can contain a literal null line (#181)', async () => {
+    const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
+    expect(mapOffProductToRow(null as any)).toBeNull()
+    expect(mapOffProductToRow(undefined as any)).toBeNull()
+  })
+
   it('maps allergens_tags to the allergens field, stripping the language prefix, and leaves traces null when traces_tags is absent', async () => {
     const { mapOffProductToRow } = await import('../../server/lib/nutrition/foodImportMapping')
     const record = loadFixture('off-nutella.json')

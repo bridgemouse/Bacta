@@ -9,6 +9,12 @@ CREATE TABLE IF NOT EXISTS health_snapshots (
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(date, metric, source)
 );
+-- Covers GET /api/garmin/summary and /sources' correlated `WHERE date = (SELECT MAX(date)
+-- FROM health_snapshots WHERE metric = gs.metric)`, and /:metric's `WHERE metric = ? AND
+-- date BETWEEN ? AND ? ORDER BY date` (hit by every fetchTrend() call) — the implicit
+-- UNIQUE(date, metric, source) index leads with date, not metric, so none of these hottest
+-- query shapes could use it. Same fix pattern as idx_food_log_entries_logged_at (#147).
+CREATE INDEX IF NOT EXISTS idx_health_snapshots_metric_date ON health_snapshots(metric, date);
 
 -- Reference food/ingredient data (identity only). Bulk-imported from USDA FoodData Central
 -- (SR Legacy + Foundation Foods), plus user-saved custom/ad-hoc foods (source='custom').

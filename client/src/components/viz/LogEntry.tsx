@@ -245,16 +245,16 @@ const RUN_DYN_INFO = {
 
 function RunDynamicsGrid({ dyn, accent, activityId }: { dyn: RunDynamics; accent: string; activityId: number }) {
   const id = `rdyn-${activityId}`
-  const { isOpen: cadOpen, handleTap: cadTap } = useCardInfoOverlay(`${id}-cad`, RUN_DYN_INFO.cadence, accent)
-  const { isOpen: strOpen, handleTap: strTap } = useCardInfoOverlay(`${id}-str`, RUN_DYN_INFO.stride, accent)
-  const { isOpen: vocOpen, handleTap: vocTap } = useCardInfoOverlay(`${id}-voc`, RUN_DYN_INFO.vertOsc, accent)
-  const { isOpen: gctOpen, handleTap: gctTap } = useCardInfoOverlay(`${id}-gct`, RUN_DYN_INFO.gct, accent)
+  const { isOpen: cadOpen, handleTap: cadTap, handleKeyDown: cadKeyDown } = useCardInfoOverlay(`${id}-cad`, RUN_DYN_INFO.cadence, accent)
+  const { isOpen: strOpen, handleTap: strTap, handleKeyDown: strKeyDown } = useCardInfoOverlay(`${id}-str`, RUN_DYN_INFO.stride, accent)
+  const { isOpen: vocOpen, handleTap: vocTap, handleKeyDown: vocKeyDown } = useCardInfoOverlay(`${id}-voc`, RUN_DYN_INFO.vertOsc, accent)
+  const { isOpen: gctOpen, handleTap: gctTap, handleKeyDown: gctKeyDown } = useCardInfoOverlay(`${id}-gct`, RUN_DYN_INFO.gct, accent)
 
   const stats = [
-    { key: 'cad', label: 'CADENCE',  val: dyn.cadence,   unit: 'spm', ideal: '170–185', isOpen: cadOpen, onTap: cadTap },
-    { key: 'str', label: 'STRIDE',   val: dyn.strideCm,  unit: 'cm',  ideal: '100–130', isOpen: strOpen, onTap: strTap },
-    { key: 'voc', label: 'VERT OSC', val: dyn.vertOscCm, unit: 'cm',  ideal: '6–10',    isOpen: vocOpen, onTap: vocTap },
-    { key: 'gct', label: 'GCT',      val: dyn.gctMs,     unit: 'ms',  ideal: '<250',    isOpen: gctOpen, onTap: gctTap },
+    { key: 'cad', label: 'CADENCE',  val: dyn.cadence,   unit: 'spm', ideal: '170–185', isOpen: cadOpen, onTap: cadTap, onKeyDown: cadKeyDown },
+    { key: 'str', label: 'STRIDE',   val: dyn.strideCm,  unit: 'cm',  ideal: '100–130', isOpen: strOpen, onTap: strTap, onKeyDown: strKeyDown },
+    { key: 'voc', label: 'VERT OSC', val: dyn.vertOscCm, unit: 'cm',  ideal: '6–10',    isOpen: vocOpen, onTap: vocTap, onKeyDown: vocKeyDown },
+    { key: 'gct', label: 'GCT',      val: dyn.gctMs,     unit: 'ms',  ideal: '<250',    isOpen: gctOpen, onTap: gctTap, onKeyDown: gctKeyDown },
   ]
 
   const infoForKey = { cad: RUN_DYN_INFO.cadence, str: RUN_DYN_INFO.stride, voc: RUN_DYN_INFO.vertOsc, gct: RUN_DYN_INFO.gct }
@@ -262,7 +262,8 @@ function RunDynamicsGrid({ dyn, accent, activityId }: { dyn: RunDynamics; accent
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
       {stats.map(s => (
-        <div key={s.key} onClick={s.onTap} style={{ position: 'relative', overflow: 'hidden',
+        <div key={s.key} onClick={s.onTap} onKeyDown={s.onKeyDown} role="button" tabIndex={0}
+          aria-label={s.label} style={{ position: 'relative', overflow: 'hidden',
           background: hexA(accent, 0.05), border: `1px solid ${hexA(accent, 0.18)}`,
           borderRadius: 7, padding: '8px 10px', cursor: 'pointer' }}>
           <div style={{ fontFamily: FONT_MONO, fontSize: 7.5, letterSpacing: '0.1em',

@@ -11,9 +11,13 @@ interface SheetProps {
   maxHeight?: string
 }
 
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps) {
   const [render, setRender] = useState(open)
   const [shown, setShown] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -35,6 +39,28 @@ export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
+
+  // Focus management + background inertness (#187): moving focus into the sheet on
+  // open and restoring it to the trigger on close, plus marking the app root inert
+  // while a sheet covers it, keeps keyboard/screen-reader users from getting stuck
+  // navigating background content they can't see.
+  useEffect(() => {
+    const root = document.getElementById('root')
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement | null
+      root?.setAttribute('inert', '')
+    } else {
+      root?.removeAttribute('inert')
+      triggerRef.current?.focus()
+    }
+    return () => { root?.removeAttribute('inert') }
+  }, [open])
+
+  useEffect(() => {
+    if (render && open) {
+      contentRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
+    }
+  }, [render, open])
 
   if (!render) return null
 
@@ -66,6 +92,7 @@ export function Sheet({ open, onClose, children, maxHeight = '82%' }: SheetProps
       }}
     >
       <div
+        ref={contentRef}
         onClick={e => e.stopPropagation()}
         style={{
           maxHeight,

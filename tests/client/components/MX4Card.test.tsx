@@ -276,6 +276,25 @@ describe('MX4Briefing', () => {
   })
 })
 
+describe('MX4Briefing — no-live-data placeholder (#193)', () => {
+  it('shows a "not yet analyzed" placeholder instead of the fabricated-looking stub line when liveData is null', () => {
+    render(
+      <MX4Briefing accent="#2bc4e8" brief={BRIEFS.recovery} liveData={undefined} section="recovery" />
+    )
+    // The stub's fabricated body prose must not render as if it were a real analysis
+    expect(screen.queryByText(/HRV climbed to 61ms/)).not.toBeInTheDocument()
+    expect(screen.getByText(/hasn.t analyzed/i)).toBeInTheDocument()
+  })
+
+  it('does not show the stub\'s fabricated meta timestamp or footer chips when liveData is null', () => {
+    render(
+      <MX4Briefing accent="#fb923c" brief={BRIEFS.training} liveData={undefined} section="training" />
+    )
+    expect(screen.queryByText('BLOCK 4 / 8 · BUILD')).not.toBeInTheDocument()
+    expect(screen.queryByText('PRODUCTIVE')).not.toBeInTheDocument()
+  })
+})
+
 describe('MX4Briefing — handleRefresh error toast', () => {
   const liveBriefing = {
     tone: 'POSITIVE' as const,

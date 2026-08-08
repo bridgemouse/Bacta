@@ -1,4 +1,4 @@
-import { ProviderTokens, basicAuth } from '../shared/types'
+import { ProviderTokens, basicAuth, validateTokenFields } from '../shared/types'
 
 const BASE_ACCESSLINK = 'https://www.polaraccesslink.com'
 
@@ -26,7 +26,8 @@ export async function exchangeCode(
     body: body.toString(),
   })
   if (!res.ok) throw new Error(`Polar token exchange failed: ${res.status}`)
-  const d = await res.json() as { access_token: string; token_type: string; x_user_id: number }
+  const d = validateTokenFields<{ access_token: string; token_type: string; x_user_id: number }>(
+    await res.json(), ['access_token', 'x_user_id'], 'Polar exchangeCode')
 
   // Register user — 409 = already registered = OK
   const regRes = await fetch(`${BASE_ACCESSLINK}/v3/users`, {

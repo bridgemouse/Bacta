@@ -80,4 +80,23 @@ describe('stravaService', () => {
     const { fetchActivities } = await import('../../server/lib/integrations/strava/stravaService')
     await expect(fetchActivities('bad-token', 0)).rejects.toThrow('401')
   })
+
+  it('exchangeCode rejects a malformed token response missing refresh_token (#197)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'acc', expires_at: 9999999999 }), // refresh_token missing
+    } as Response)
+    const { exchangeCode } = await import('../../server/lib/integrations/strava/stravaService')
+    await expect(exchangeCode('cid', 'csec', 'code123', 'http://redirect')).rejects.toThrow(/refresh_token/)
+  })
+
+  it('refreshTokens rejects a malformed token response missing access_token (#197)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ refresh_token: 'ref', expires_at: 9999999999 }), // access_token missing
+    } as Response)
+    const { refreshTokens } = await import('../../server/lib/integrations/strava/stravaService')
+    const expired = { access_token: 'old', refresh_token: 'old-ref', expires_at: 100 }
+    await expect(refreshTokens('cid', 'csec', expired)).rejects.toThrow(/access_token/)
+  })
 })

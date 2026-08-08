@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { NutritionOverview } from '../../../../client/src/pages/nutrition/NutritionOverview'
 import { todayLocal } from '../../../../client/src/lib/nutritionDate'
@@ -240,6 +240,14 @@ describe('NutritionOverview — EditEntrySheet', () => {
     render(<NutritionOverview />)
     await waitFor(() => screen.getByText('Oatmeal'))
     await user.click(screen.getByText('Oatmeal'))
+    expect(await screen.findByText('SAVE CHANGES')).toBeInTheDocument()
+  })
+
+  it('is keyboard-operable — reachable via getByRole and opens with Enter (#190)', async () => {
+    render(<NutritionOverview />)
+    await waitFor(() => screen.getByText('Oatmeal'))
+    const row = screen.getByRole('button', { name: /edit oatmeal/i })
+    fireEvent.keyDown(row, { key: 'Enter' })
     expect(await screen.findByText('SAVE CHANGES')).toBeInTheDocument()
   })
 })

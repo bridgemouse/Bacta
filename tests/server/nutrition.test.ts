@@ -1104,4 +1104,30 @@ describe('Nutrition API', () => {
       expect(res.body.food.variants[0].sodium_mg).toBe(Math.round((450 + 110) / 2))
     })
   })
+
+  describe('error logging (#185)', () => {
+    it('POST /api/nutrition/foods logs a failure to app_logs (source nutrition) instead of only console.error', async () => {
+      const { default: db } = await import('../../server/db/client')
+      const spy = vi.spyOn(db, 'transaction').mockImplementation(() => {
+        throw new Error('SQLITE_BUSY: database is locked')
+      })
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Test Food', variant: { serving_qty: 100, serving_unit: 'g', calories: 100 },
+      })
+      expect(res.status).toBe(400)
+
+      spy.mockRestore()
+
+      const rows = db.prepare(
+        "SELECT source, level, message FROM app_logs WHERE source = 'nutrition' ORDER BY id DESC LIMIT 5"
+      ).all() as { source: string; level: string; message: string }[]
+      expect(rows.some(r =>
+        r.level === 'error' &&
+        r.message.includes('custom food save failed') &&
+        r.message.includes('SQLITE_BUSY')
+      )).toBe(true)
+    })
+  })
 })

@@ -107,4 +107,9 @@ describe('ProviderCard', () => {
     )
     expect(screen.getByText(/LAST SYNC/)).toBeInTheDocument()
   })
+
+  it('credential inputs use font-size 16 to prevent iOS zoom-on-focus (#178)', () => {
+    render(<ProviderCard {...defaultProps} />)
+    expect(screen.getByPlaceholderText('Client ID')).toHaveStyle({ fontSize: '16px' })
+  })
 })

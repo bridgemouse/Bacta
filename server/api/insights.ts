@@ -57,6 +57,22 @@ const STUB_BRIEFINGS: Record<string, object> = {
   },
 }
 
+// MX-4's own generated JSON is trusted at write time but not re-validated at read time —
+// a shape drift (model output change, partial write) would otherwise pass a valid-JSON,
+// wrong-shaped object straight through to the client (#198). Only the fields the client
+// actually reads (MX4Briefing) are required; extras are ignored.
+function isValidBriefingShape(content: unknown): content is {
+  tone: string; headline: string; body: string; recommendation: string; flags: unknown[]
+} {
+  if (typeof content !== 'object' || content === null) return false
+  const c = content as Record<string, unknown>
+  return typeof c.tone === 'string'
+    && typeof c.headline === 'string'
+    && typeof c.body === 'string'
+    && typeof c.recommendation === 'string'
+    && Array.isArray(c.flags)
+}
+
 insightsRouter.get('/:section', (req, res) => {
   const { section } = req.params
 
@@ -72,8 +88,10 @@ insightsRouter.get('/:section', (req, res) => {
   if (row) {
     try {
       const content = JSON.parse(row.content_json)
-      res.json({ ...content, generated_at: row.generated_at, model: row.model })
-      return
+      if (isValidBriefingShape(content)) {
+        res.json({ ...content, generated_at: row.generated_at, model: row.model })
+        return
+      }
     } catch {
       // fall through to stub
     }

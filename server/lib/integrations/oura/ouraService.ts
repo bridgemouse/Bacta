@@ -1,4 +1,4 @@
-import { ProviderTokens, tokensExpired, basicAuth } from '../shared/types'
+import { ProviderTokens, tokensExpired, basicAuth, validateTokenFields } from '../shared/types'
 
 const TOKEN_URL = 'https://api.ouraring.com/oauth/token'
 const API_BASE  = 'https://api.ouraring.com'
@@ -24,7 +24,8 @@ export async function exchangeCode(
     body:    body.toString(),
   })
   if (!res.ok) throw new Error(`Oura token exchange failed: ${res.status}`)
-  const d = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
+  const d = validateTokenFields<{ access_token: string; refresh_token: string; expires_in: number }>(
+    await res.json(), ['access_token', 'refresh_token', 'expires_in'], 'Oura exchangeCode')
   return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Math.floor(Date.now() / 1000) + d.expires_in }
 }
 
@@ -39,7 +40,8 @@ export async function refreshTokens(
     body:    body.toString(),
   })
   if (!res.ok) throw new Error(`Oura token refresh failed: ${res.status}`)
-  const d = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
+  const d = validateTokenFields<{ access_token: string; refresh_token: string; expires_in: number }>(
+    await res.json(), ['access_token', 'refresh_token', 'expires_in'], 'Oura refreshTokens')
   return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Math.floor(Date.now() / 1000) + d.expires_in }
 }
 

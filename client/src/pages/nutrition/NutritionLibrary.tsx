@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Rail } from '../../components/viz/Rail'
 import { SECTION_ACCENTS, COLORS, FONT_MONO, FONT_UI } from '../../theme'
-import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, addFoodVariant, type Food, type FoodVariant, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
+import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, addFoodVariant, deleteFoodVariant, type Food, type FoodVariant, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
 import { hexA } from '../../lib/hexA'
 import { useToast } from '../../lib/ToastContext'
 import { MacroGridInputs, MACRO_KEYS } from './MacroGridInputs'
@@ -338,6 +338,7 @@ export function NutritionLibrary() {
   const [loading, setLoading] = useState(true)
   const [editingRecipe, setEditingRecipe] = useState<RecipeDetail | null>(null)
   const [addingVariantTo, setAddingVariantTo] = useState<number | null>(null)
+  const [expandedVariantsOf, setExpandedVariantsOf] = useState<number | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -355,6 +356,14 @@ export function NutritionLibrary() {
       reload()
     } catch (err) {
       showToast(errorMessage(err, 'Could not delete food.'), 'error')
+    }
+  }
+  async function handleDeleteVariant(id: number) {
+    try {
+      await deleteFoodVariant(id)
+      reload()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not delete serving.'), 'error')
     }
   }
   async function handleDeleteRecipe(id: number) {
@@ -414,7 +423,13 @@ export function NutritionLibrary() {
                     <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text }}>{f.name}</div>
                     <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
                       per {dv?.label ?? '—'} · {dv?.calories ?? '—'} kcal · P {dv?.protein_g ?? '—'} · C {dv?.carbs_g ?? '—'} · F {dv?.fat_g ?? '—'}
-                      {f.variants.length > 1 ? ` · ${f.variants.length} servings` : ''}
+                      {f.variants.length > 1 && (
+                        <> · <button aria-label={`Show all servings for ${f.name}`}
+                          onClick={() => setExpandedVariantsOf(id => id === f.id ? null : f.id)}
+                          style={{ background: 'none', border: 'none', padding: 0, color: COLORS.textMuted, cursor: 'pointer', fontFamily: FONT_MONO, fontSize: 8.5, textDecoration: 'underline' }}>
+                          {f.variants.length} servings
+                        </button></>
+                      )}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -427,6 +442,19 @@ export function NutritionLibrary() {
                     setAddingVariantTo(null)
                     reload()
                   }} />
+                )}
+                {expandedVariantsOf === f.id && (
+                  <div style={{ marginTop: 4, paddingLeft: 10 }}>
+                    {f.variants.map(v => (
+                      <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 8px', borderLeft: `2px solid ${COLORS.line}` }}>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary }}>
+                          {v.label}{v.is_default ? ' (default)' : ''} · {v.calories ?? '—'} kcal
+                        </span>
+                        <button aria-label={`Delete serving ${v.label} of ${f.name}`} onClick={() => handleDeleteVariant(v.id)}
+                          style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 11 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )

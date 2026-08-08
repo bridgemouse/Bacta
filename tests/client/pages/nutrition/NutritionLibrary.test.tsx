@@ -23,6 +23,10 @@ const mockDeleteFoodVariant = deleteFoodVariant as ReturnType<typeof vi.fn>
 const oats = { id: 1, source: 'custom', name: 'Test Oats', brand: null, variants: [
   { id: 100, food_id: 1, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, source: 'custom', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
 ] }
+const multiOats = { id: 1, source: 'custom', name: 'Test Oats', brand: null, variants: [
+  { id: 100, food_id: 1, label: '100 g', serving_qty: 100, serving_unit: 'g', is_default: 1, source: 'custom', calories: 389, protein_g: 16.9, carbs_g: 66.3, fat_g: 6.9, fiber_g: 10.6 },
+  { id: 101, food_id: 1, label: '1 cup', serving_qty: 1, serving_unit: 'cup', is_default: 0, source: 'custom', calories: 300, protein_g: 12, carbs_g: 50, fat_g: 5, fiber_g: 8 },
+] }
 const smoothie = { id: 2, name: 'Protein Smoothie', servings: 2, food_id: 9, ingredient_count: 2, per_serving_calories: 113, per_serving_protein_g: 25, per_serving_carbs_g: 15, per_serving_fat_g: 0.5, per_serving_fiber_g: 1.5 }
 
 beforeEach(() => {
@@ -69,6 +73,47 @@ describe('NutritionLibrary — list', () => {
     mockFetchRecipes.mockResolvedValue([])
     render(<NutritionLibrary />)
     expect(await screen.findByText('NO SAVED FOODS YET')).toBeInTheDocument()
+  })
+})
+
+describe('NutritionLibrary — delete a food variant (#195)', () => {
+  it('expanding a multi-serving food shows each variant with a delete action, calling deleteFoodVariant and reloading', async () => {
+    mockSearchFoods.mockResolvedValue([multiOats])
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+
+    await user.click(screen.getByLabelText('Show all servings for Test Oats'))
+    expect(await screen.findByLabelText('Delete serving 1 cup of Test Oats')).toBeInTheDocument()
+
+    mockDeleteFoodVariant.mockResolvedValue(undefined)
+    mockSearchFoods.mockResolvedValue([oats]) // reload reflects the variant now gone
+    await user.click(screen.getByLabelText('Delete serving 1 cup of Test Oats'))
+
+    await waitFor(() => expect(mockDeleteFoodVariant).toHaveBeenCalledWith(101))
+    await waitFor(() => expect(screen.queryByLabelText('Delete serving 1 cup of Test Oats')).not.toBeInTheDocument())
+  })
+
+  it('does not remove the variant row when the server rejects the delete (last-variant or in-use guard)', async () => {
+    mockSearchFoods.mockResolvedValue([multiOats])
+    mockDeleteFoodVariant.mockRejectedValue(new Error('Cannot delete — this variant has been logged or used in a recipe'))
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+
+    await user.click(screen.getByLabelText('Show all servings for Test Oats'))
+    await user.click(await screen.findByLabelText('Delete serving 1 cup of Test Oats'))
+
+    await waitFor(() => expect(mockDeleteFoodVariant).toHaveBeenCalledWith(101))
+    // rejected — mockSearchFoods was never told to drop the variant, so the row must still be there
+    expect(screen.getByLabelText('Delete serving 1 cup of Test Oats')).toBeInTheDocument()
+  })
+
+  it('does not show a per-variant delete action for a food with only one serving', async () => {
+    mockSearchFoods.mockResolvedValue([oats])
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    expect(screen.queryByLabelText(/Delete serving/)).not.toBeInTheDocument()
   })
 })
 

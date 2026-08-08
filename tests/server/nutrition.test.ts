@@ -63,6 +63,27 @@ describe('Nutrition API', () => {
       expect(res.body.foods[0].variants[0]).toMatchObject({ label: '1 slice', calories: 80 })
     })
 
+    it('GET /foods?q= makes a bounded number of DB queries, not one pair per matching food (#200)', async () => {
+      const { app } = await import('../../server/index')
+      const { default: db } = await import('../../server/db/client')
+
+      for (let i = 0; i < 25; i++) {
+        await seedFoodWithVariant({ name: `NPlusOne Food ${i}` })
+      }
+
+      const prepareSpy = vi.spyOn(db, 'prepare')
+      const res = await request(app).get('/api/nutrition/foods?q=NPlusOne')
+      expect(res.status).toBe(200)
+      expect(res.body.foods).toHaveLength(25)
+
+      // A per-food N+1 pattern would call db.prepare() roughly 2x per food (one for
+      // the food row, one for its variants) — 50+ calls for 25 foods. A batched fetch
+      // makes a small constant number of queries regardless of result count.
+      expect(prepareSpy.mock.calls.length).toBeLessThan(10)
+
+      prepareSpy.mockRestore()
+    })
+
     it('POST /foods/:id/variants adds a non-default variant to an existing food', async () => {
       const { app } = await import('../../server/index')
       const created = await request(app).post('/api/nutrition/foods').send({
@@ -1081,6 +1102,32 @@ describe('Nutrition API', () => {
       })
       expect(res.status).toBe(201)
       expect(res.body.food.variants[0].sodium_mg).toBe(Math.round((450 + 110) / 2))
+    })
+  })
+
+  describe('error logging (#185)', () => {
+    it('POST /api/nutrition/foods logs a failure to app_logs (source nutrition) instead of only console.error', async () => {
+      const { default: db } = await import('../../server/db/client')
+      const spy = vi.spyOn(db, 'transaction').mockImplementation(() => {
+        throw new Error('SQLITE_BUSY: database is locked')
+      })
+
+      const { app } = await import('../../server/index')
+      const res = await request(app).post('/api/nutrition/foods').send({
+        name: 'Test Food', variant: { serving_qty: 100, serving_unit: 'g', calories: 100 },
+      })
+      expect(res.status).toBe(400)
+
+      spy.mockRestore()
+
+      const rows = db.prepare(
+        "SELECT source, level, message FROM app_logs WHERE source = 'nutrition' ORDER BY id DESC LIMIT 5"
+      ).all() as { source: string; level: string; message: string }[]
+      expect(rows.some(r =>
+        r.level === 'error' &&
+        r.message.includes('custom food save failed') &&
+        r.message.includes('SQLITE_BUSY')
+      )).toBe(true)
     })
   })
 })

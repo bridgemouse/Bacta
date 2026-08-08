@@ -6,7 +6,7 @@ export type MacroKey = typeof MACRO_KEYS[number]
 const inputStyle = {
   width: '100%', boxSizing: 'border-box' as const, background: COLORS.base,
   border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '9px 11px',
-  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 12,
+  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 16,
 }
 
 interface MacroGridInputsProps {

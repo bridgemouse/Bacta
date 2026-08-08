@@ -237,6 +237,14 @@ describe('NutritionLibrary — new recipe', () => {
     expect(screen.getByLabelText('Recipe name')).toBeInTheDocument()
   })
 
+  it('the "Add from saved foods" search field is reachable via getByLabelText, not placeholder alone (#191)', async () => {
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    expect(screen.getByLabelText('Add from saved foods')).toBeInTheDocument()
+  })
+
   it('adding an ingredient from saved foods prefills quantity, unit, and calories', async () => {
     const user = userEvent.setup()
     render(<NutritionLibrary />)
@@ -435,6 +443,18 @@ describe('NutritionLibrary — new recipe', () => {
     await waitFor(() => expect(mockCreateRecipe).toHaveBeenCalledWith(expect.objectContaining({
       ingredients: [expect.objectContaining({ name: 'Honey', calories: 64, carbs_g: 17, protein_g: undefined })],
     })))
+  })
+
+  it('recipe name and ad-hoc ingredient fields use font-size 16 to prevent iOS zoom-on-focus (#178)', async () => {
+    const user = userEvent.setup()
+    render(<NutritionLibrary />)
+    await screen.findByText('Test Oats')
+    await user.click(screen.getByText('+ NEW RECIPE'))
+    expect(screen.getByLabelText('Recipe name')).toHaveStyle({ fontSize: '16px' })
+
+    await user.click(screen.getByText('+ AD-HOC INGREDIENT'))
+    expect(screen.getByLabelText('Ingredient 0 name')).toHaveStyle({ fontSize: '16px' })
+    expect(screen.getByLabelText('Ingredient 0 unit')).toHaveStyle({ fontSize: '16px' })
   })
 })
 

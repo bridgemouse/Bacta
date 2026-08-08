@@ -120,3 +120,34 @@ describe('useChat — toolCalls', () => {
     expect(result.current.toolCalls).toEqual([])
   })
 })
+
+describe('useChat — unrecognized SSE payload shape (#199)', () => {
+  it('logs a payload matching none of the known shapes instead of silently dropping it', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    // A `tool-error` style AI SDK event — valid JSON, but not the string / {tool} / {error} shape
+    const events = [
+      'data: {"type":"tool-error","toolCallId":"abc","errorText":"boom"}\n\n',
+      'data: [DONE]\n\n',
+    ]
+
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/mx4/chat/chat-')) {
+        return Promise.resolve({ ok: true, json: async () => [] } as unknown as Response)
+      }
+      return Promise.resolve(makeSseResponse(events))
+    }))
+
+    const { result } = renderHook(() => useChat())
+
+    await act(async () => {
+      await result.current.submit('test message')
+    })
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('useChat'),
+      expect.objectContaining({ type: 'tool-error' })
+    )
+
+    consoleErrorSpy.mockRestore()
+  })
+})

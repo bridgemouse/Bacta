@@ -104,15 +104,5 @@ export const TRAINING = {
   ] as Activity[],
 }
 
-// ── Home tile data (for System Card grid) ─────────────────────────────────────
-export const HOME_TILES = [
-  { key: 'recovery',  value: '74',    unit: 'battery', sub: 'HRV ↑ 61ms',           viz: 'spark',  spark: [50,54,49,57,55,60,66,74], status: 'Good' },
-  { key: 'training',  value: '342',   unit: 'load',    sub: 'Moderate · wk 4 / 8',   viz: 'spark',  spark: [280,300,260,320,340,310,330,342], status: 'On track' },
-  { key: 'sleep',     value: '8.1',   unit: 'h',       sub: 'Score 82',              viz: 'ring',   ring: 0.82, status: 'Solid' },
-  { key: 'nutrition', value: '2,340', unit: 'kcal',    sub: 'Protein 142 / 160g',    viz: 'ring',   ring: 0.94, status: 'On target' },
-  { key: 'bloodwork', value: 'Clear', unit: '',        sub: 'No flags · 0 panels',   viz: 'shield', status: 'Nominal' },
-  { key: 'dailylog',  value: '4',     unit: '/ 5',     sub: 'Logged today',          viz: 'dots',   dots: 4, status: 'Logged' },
-] as const
-
 export const fmtDur = (mins: number) =>
   `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`

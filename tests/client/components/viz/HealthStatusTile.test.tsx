@@ -47,6 +47,21 @@ describe('HealthStatusTile', () => {
     expect(dots.length).toBeGreaterThan(0)
   })
 
+  it('the status dot has an accessible name reflecting the in-range/flagged state (#189)', () => {
+    const { rerender, container } = wrap(
+      <HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />
+    )
+    expect(screen.getByLabelText('In range')).toBeInTheDocument()
+
+    rerender(
+      <InfoCardProvider>
+        <HealthStatusTile label="SpO₂" value={93} unit="%" accent="#64b5f6" inRange={false} sub="LOW" />
+      </InfoCardProvider>
+    )
+    expect(screen.getByLabelText('Elevated')).toBeInTheDocument()
+    expect(container.querySelectorAll('[aria-label]').length).toBeGreaterThan(0)
+  })
+
   it('sub text is muted regardless of inRange', () => {
     wrap(<HealthStatusTile label="SpO₂" value={97} unit="%" accent="#64b5f6" inRange sub="NORMAL" />)
     expect(screen.getByText('NORMAL')).toHaveStyle({ color: '#56657a' })

@@ -35,4 +35,10 @@ describe('MacroGridInputs', () => {
   it('exports MACRO_KEYS in the canonical order used by the API payload', () => {
     expect(MACRO_KEYS).toEqual(['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'])
   })
+
+  it('defaults to font-size 16 to prevent iOS zoom-on-focus (#178)', () => {
+    render(<MacroGridInputs values={emptyValues} onChange={() => {}} />)
+    const inputs = screen.getAllByPlaceholderText('—')
+    expect(inputs[0]).toHaveStyle({ fontSize: '16px' })
+  })
 })

@@ -78,4 +78,13 @@ describe('ouraService', () => {
     expect(result.readiness[0].resting_heart_rate).toBe(54)
     expect(result.activity[0].steps).toBe(8500)
   })
+
+  it('exchangeCode rejects a malformed token response missing access_token (#197)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ refresh_token: 'ref', expires_in: 3600 }), // access_token missing
+    } as Response)
+    const { exchangeCode } = await import('../../server/lib/integrations/oura/ouraService')
+    await expect(exchangeCode('cid', 'csec', 'code123', 'http://redirect')).rejects.toThrow(/access_token/)
+  })
 })

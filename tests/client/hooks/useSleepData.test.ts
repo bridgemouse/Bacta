@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.mock('../../../client/src/lib/garminApi', () => ({
@@ -108,5 +108,32 @@ describe('useSleepData — cumulative sleep debt', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(result.current.data.sleepDebt).toBe(360)
+  })
+})
+
+describe('useSleepData — hypnogram fetch concurrency (#202)', () => {
+  it('fires the hypnogram fetch concurrently with the other 9 calls, not sequenced after their Promise.all resolves', async () => {
+    let resolveSummary: (v: unknown) => void = () => {}
+    mockFetchSummary.mockReturnValue(new Promise(resolve => { resolveSummary = resolve }))
+    mockFetchTrend.mockResolvedValue([])
+    mockFetchSources.mockResolvedValue({})
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useSleepData())
+
+    // Let pending microtasks run — enough for an immediately-fired concurrent call
+    // to register, but fetchSummary (part of the other 9) is still unresolved.
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/garmin/sleep-hypno')
+
+    await act(async () => {
+      resolveSummary({})
+      await Promise.resolve()
+    })
   })
 })

@@ -8,14 +8,18 @@ function Bomb(): never {
 
 describe('ErrorBoundary', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+  let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     // React logs the caught error to console.error — expected noise for this test, silence it.
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
     consoleErrorSpy.mockRestore()
+    vi.unstubAllGlobals()
   })
 
   it('renders a fallback UI instead of unmounting when a child throws during render', () => {
@@ -34,5 +38,17 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     )
     expect(screen.getByText('All good')).toBeInTheDocument()
+  })
+
+  it('POSTs the error to /api/logs so it is queryable later, not just console.error (#183)', () => {
+    render(
+      <ErrorBoundary>
+        <Bomb />
+      </ErrorBoundary>
+    )
+    expect(fetchMock).toHaveBeenCalledWith('/api/logs', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('boom'),
+    }))
   })
 })

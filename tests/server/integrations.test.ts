@@ -163,6 +163,28 @@ describe('Integrations API', () => {
     expect(res.body.error).toMatch(/not connected/)
   })
 
+  it('POST /api/integrations/strava/sync rejects a malformed stored token blob rather than passing it through (#197)', async () => {
+    const { default: db } = await import('../../server/db/client')
+    const { encrypt } = await import('../../server/lib/integrations/shared/encryption')
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('strava_enabled', 'true')").run()
+    // Malformed: refresh_token missing entirely — a partially-written or pre-migration blob
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('strava_tokens', ?)")
+      .run(encrypt(JSON.stringify({ access_token: 'acc', expires_at: 9999999999 })))
+
+    const { app } = await import('../../server/index')
+    const res = await request(app)
+      .post('/api/integrations/strava/sync')
+      .set('Authorization', 'Bearer test-internal-token')
+
+    // getTokens() must reject the malformed blob and report "not connected" — not pass
+    // { access_token, refresh_token: undefined, expires_at } through into stravaRefresh,
+    // which would fail deep inside the provider service with a confusing error instead.
+    expect(res.status).toBe(500)
+    expect(res.body.error).toMatch(/Strava not connected/)
+
+    db.prepare("DELETE FROM app_settings WHERE key IN ('strava_enabled', 'strava_tokens')").run()
+  })
+
   describe('polar', () => {
     it('GET /api/integrations/polar/authorize returns 400 without client_id', async () => {
       const { default: db } = await import('../../server/db/client')

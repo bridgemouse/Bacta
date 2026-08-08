@@ -1,4 +1,4 @@
-import { ProviderTokens, tokensExpired } from '../shared/types'
+import { ProviderTokens, tokensExpired, validateTokenFields } from '../shared/types'
 
 const TOKEN_URL = 'https://api.prod.whoop.com/oauth/oauth2/token'
 const API_BASE  = 'https://api.prod.whoop.com'
@@ -26,7 +26,8 @@ export async function exchangeCode(
     body:    body.toString(),
   })
   if (!res.ok) throw new Error(`Whoop token exchange failed: ${res.status}`)
-  const d = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
+  const d = validateTokenFields<{ access_token: string; refresh_token: string; expires_in: number }>(
+    await res.json(), ['access_token', 'refresh_token', 'expires_in'], 'Whoop exchangeCode')
   return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Math.floor(Date.now() / 1000) + d.expires_in }
 }
 
@@ -43,7 +44,8 @@ export async function refreshTokens(
     body:    body.toString(),
   })
   if (!res.ok) throw new Error(`Whoop token refresh failed: ${res.status}`)
-  const d = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
+  const d = validateTokenFields<{ access_token: string; refresh_token: string; expires_in: number }>(
+    await res.json(), ['access_token', 'refresh_token', 'expires_in'], 'Whoop refreshTokens')
   return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Math.floor(Date.now() / 1000) + d.expires_in }
 }
 

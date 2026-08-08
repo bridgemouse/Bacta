@@ -95,4 +95,13 @@ describe('withingsService', () => {
     expect(groups).toHaveLength(1)
     expect(groups[0].measures).toHaveLength(2)
   })
+
+  it('exchangeCode rejects a malformed token response missing refresh_token, even with status 0 (#197)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: 0, body: { access_token: 'acc', expires_in: 10800 } }), // refresh_token missing
+    } as Response)
+    const { exchangeCode } = await import('../../server/lib/integrations/withings/withingsService')
+    await expect(exchangeCode('wid', 'wsec', 'code123', 'http://redirect')).rejects.toThrow(/refresh_token/)
+  })
 })

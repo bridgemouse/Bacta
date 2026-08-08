@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Rail } from '../../components/viz/Rail'
 import { SECTION_ACCENTS, COLORS, FONT_MONO, FONT_UI } from '../../theme'
-import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, addFoodVariant, type Food, type FoodVariant, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
+import { searchFoods, deleteFood, fetchRecipes, deleteRecipe, createFood, createRecipe, fetchRecipe, updateRecipe, addFoodVariant, deleteFoodVariant, type Food, type FoodVariant, type Recipe, type RecipeDetail } from '../../lib/nutritionApi'
 import { hexA } from '../../lib/hexA'
 import { useToast } from '../../lib/ToastContext'
 import { MacroGridInputs, MACRO_KEYS } from './MacroGridInputs'
@@ -24,7 +24,7 @@ const A = SECTION_ACCENTS.nutrition
 const inputStyle = {
   width: '100%', boxSizing: 'border-box' as const, background: COLORS.base,
   border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: '9px 11px',
-  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 12,
+  color: COLORS.text, fontFamily: FONT_MONO, fontSize: 16,
 }
 
 const accentButton = {
@@ -277,7 +277,7 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: isAdHoc ? 4 : 0 }}>
               {isAdHoc ? (
                 <input aria-label={`Ingredient ${i} name`} value={ing.name} onChange={e => updateIngredient(i, { name: e.target.value })}
-                  placeholder="Name" style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
+                  placeholder="Name" style={{ ...inputStyle, flex: 1 }} />
               ) : (
                 <span style={{ flex: 1, fontFamily: FONT_UI, fontSize: 12, color: COLORS.text }}>{ing.name}</span>
               )}
@@ -288,7 +288,7 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
                 }} style={{ ...inputStyle, width: 60 }} />
               {isAdHoc ? (
                 <input aria-label={`Ingredient ${i} unit`} value={ing.unit} onChange={e => updateIngredient(i, { unit: e.target.value })}
-                  placeholder="g" style={{ ...inputStyle, width: 30, fontSize: 9, padding: '5px 4px' }} />
+                  placeholder="g" style={{ ...inputStyle, width: 58, padding: '5px 4px' }} />
               ) : (
                 <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textMuted, width: 30 }}>{ing.unit}</span>
               )}
@@ -302,14 +302,14 @@ function NewRecipeForm({ foods, editing, onDone, onBack }: { foods: Food[]; edit
                 values={Object.fromEntries(MACRO_KEYS.map(key => [key, ing[key] == null ? '' : String(ing[key])])) as Record<typeof MACRO_KEYS[number], string>}
                 onChange={(key, value) => updateIngredient(i, { [key]: value === '' ? null : Number(value) })}
                 ariaLabel={key => `Ingredient ${i} ${key}`}
-                gap={4} marginBottom={0} inputPadding="5px 2px" inputFontSize={9}
+                gap={4} marginBottom={0} inputPadding="5px 2px"
               />
             )}
           </div>
         )
       })}
 
-      <input placeholder="Add from saved foods…" value={query} onChange={e => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} />
+      <input aria-label="Add from saved foods" placeholder="Add from saved foods…" value={query} onChange={e => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 6 }} />
       {matches.map(f => (
         <button key={f.id} onClick={() => addFromFood(f)} style={{
           display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none',
@@ -338,6 +338,7 @@ export function NutritionLibrary() {
   const [loading, setLoading] = useState(true)
   const [editingRecipe, setEditingRecipe] = useState<RecipeDetail | null>(null)
   const [addingVariantTo, setAddingVariantTo] = useState<number | null>(null)
+  const [expandedVariantsOf, setExpandedVariantsOf] = useState<number | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -355,6 +356,14 @@ export function NutritionLibrary() {
       reload()
     } catch (err) {
       showToast(errorMessage(err, 'Could not delete food.'), 'error')
+    }
+  }
+  async function handleDeleteVariant(id: number) {
+    try {
+      await deleteFoodVariant(id)
+      reload()
+    } catch (err) {
+      showToast(errorMessage(err, 'Could not delete serving.'), 'error')
     }
   }
   async function handleDeleteRecipe(id: number) {
@@ -414,7 +423,13 @@ export function NutritionLibrary() {
                     <div style={{ fontFamily: FONT_UI, fontSize: 13, color: COLORS.text }}>{f.name}</div>
                     <div style={{ fontFamily: FONT_MONO, fontSize: 8.5, color: COLORS.textMuted }}>
                       per {dv?.label ?? '—'} · {dv?.calories ?? '—'} kcal · P {dv?.protein_g ?? '—'} · C {dv?.carbs_g ?? '—'} · F {dv?.fat_g ?? '—'}
-                      {f.variants.length > 1 ? ` · ${f.variants.length} servings` : ''}
+                      {f.variants.length > 1 && (
+                        <> · <button aria-label={`Show all servings for ${f.name}`}
+                          onClick={() => setExpandedVariantsOf(id => id === f.id ? null : f.id)}
+                          style={{ background: 'none', border: 'none', padding: 0, color: COLORS.textMuted, cursor: 'pointer', fontFamily: FONT_MONO, fontSize: 8.5, textDecoration: 'underline' }}>
+                          {f.variants.length} servings
+                        </button></>
+                      )}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -427,6 +442,19 @@ export function NutritionLibrary() {
                     setAddingVariantTo(null)
                     reload()
                   }} />
+                )}
+                {expandedVariantsOf === f.id && (
+                  <div style={{ marginTop: 4, paddingLeft: 10 }}>
+                    {f.variants.map(v => (
+                      <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 8px', borderLeft: `2px solid ${COLORS.line}` }}>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: COLORS.textSecondary }}>
+                          {v.label}{v.is_default ? ' (default)' : ''} · {v.calories ?? '—'} kcal
+                        </span>
+                        <button aria-label={`Delete serving ${v.label} of ${f.name}`} onClick={() => handleDeleteVariant(v.id)}
+                          style={{ background: 'none', border: 'none', color: COLORS.red, cursor: 'pointer', fontSize: 11 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )

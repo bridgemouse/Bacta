@@ -44,7 +44,7 @@ export function HealthStatusTile({
     >
       <Bracket color={accent} size={9} sw={1.2} op={0.3} inset={5} />
       {inRange !== undefined && (
-        <span style={{ position: 'absolute', top: 10, right: 11 }}>
+        <span aria-label={inRange ? 'In range' : 'Elevated'} style={{ position: 'absolute', top: 10, right: 11 }}>
           <StatusCore accent={statusColor} size={6} />
         </span>
       )}

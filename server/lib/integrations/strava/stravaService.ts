@@ -1,4 +1,4 @@
-import { ProviderTokens, tokensExpired } from '../shared/types'
+import { ProviderTokens, tokensExpired, validateTokenFields } from '../shared/types'
 
 const TOKEN_URL = 'https://www.strava.com/oauth/token'
 const API_BASE  = 'https://www.strava.com/api/v3'
@@ -24,7 +24,8 @@ export async function exchangeCode(
     body:    JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, grant_type: 'authorization_code', redirect_uri: redirectUri }),
   })
   if (!res.ok) throw new Error(`Strava token exchange failed: ${res.status}`)
-  const d = await res.json() as { access_token: string; refresh_token: string; expires_at: number }
+  const d = validateTokenFields<{ access_token: string; refresh_token: string; expires_at: number }>(
+    await res.json(), ['access_token', 'refresh_token', 'expires_at'], 'Strava exchangeCode')
   return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: d.expires_at }
 }
 
@@ -38,7 +39,8 @@ export async function refreshTokens(
     body:    JSON.stringify({ client_id: clientId, client_secret: clientSecret, refresh_token: tokens.refresh_token, grant_type: 'refresh_token' }),
   })
   if (!res.ok) throw new Error(`Strava token refresh failed: ${res.status}`)
-  const d = await res.json() as { access_token: string; refresh_token: string; expires_at: number }
+  const d = validateTokenFields<{ access_token: string; refresh_token: string; expires_at: number }>(
+    await res.json(), ['access_token', 'refresh_token', 'expires_at'], 'Strava refreshTokens')
   return { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: d.expires_at }
 }
 

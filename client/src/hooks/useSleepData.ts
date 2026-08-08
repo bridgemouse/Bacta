@@ -40,6 +40,21 @@ const INITIAL: SleepData = {
 const CACHE_KEY = 'sleep'
 type SleepCache = { data: SleepData; sources: Record<string, string> }
 
+type HypnoData = { hypno: number[]; startLocal: number | null; endLocal: number | null }
+
+async function fetchHypno(): Promise<HypnoData> {
+  try {
+    const res = await fetch('/api/garmin/sleep-hypno')
+    if (res.ok) {
+      const json = await res.json() as HypnoData
+      if (json.hypno && json.hypno.length === 24) return json
+    }
+  } catch {
+    // use stub on error
+  }
+  return { hypno: [], startLocal: null, endLocal: null }
+}
+
 export function useSleepData(): { data: SleepData; loading: boolean; sources: Record<string, string> } {
   const cached = getCachedData<SleepCache>(CACHE_KEY)
   const [data, setData] = useState<SleepData>(cached?.data ?? INITIAL)
@@ -67,6 +82,7 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
           spo2Trend,
           sleepSTrend,
           sourcesData,
+          hypnoData,
         ] = await Promise.all([
             fetchSummary(),
             fetchTrend('sleep_score'),
@@ -77,22 +93,10 @@ export function useSleepData(): { data: SleepData; loading: boolean; sources: Re
             fetchTrend('sleep_spo2'),
             fetchTrend('sleep_s'),
             fetchSources(),
+            fetchHypno(),
           ])
         if (cancelled) return
         setSources(sourcesData)
-
-        let hypnoData = { hypno: [] as number[], startLocal: null as number | null, endLocal: null as number | null }
-        try {
-          const hypnoRes = await fetch('/api/garmin/sleep-hypno')
-          if (hypnoRes.ok) {
-            const json = await hypnoRes.json() as { hypno: number[]; startLocal: number | null; endLocal: number | null }
-            if (json.hypno && json.hypno.length === 24) {
-              hypnoData = json
-            }
-          }
-        } catch {
-          // use stub on error
-        }
 
         const deepS  = summary.sleep_deep_s  ?? 0
         const lightS = summary.sleep_light_s ?? 0

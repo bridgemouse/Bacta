@@ -110,6 +110,8 @@ export function useChat(section?: string) {
                 }
                 return next
               })
+            } else {
+              console.error('[useChat] unrecognized SSE payload shape:', parsed)
             }
           } catch {}
         }

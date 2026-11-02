@@ -16,7 +16,7 @@ python3 scripts/garmin_auth.py
 
 # Verify database exists (populated by poller or ingest script)
 ls -lh data/bacta.db
-# Query row counts via the bacta-sqlite MCP: ask Claude to SELECT COUNT(*) FROM garmin_snapshots
+# Query row counts via the bacta-sqlite MCP: ask Claude to SELECT COUNT(*) FROM health_snapshots
 
 # Start dev servers (two terminals)
 npm run dev:server   # Express on :3001
@@ -74,12 +74,12 @@ Only when the WHY is genuinely non-obvious. Never explain what the code does —
 
 ### Commit strategy
 
-Direct to `main`. No feature branches unless the work is explicitly multi-session. Commits go in after each logical unit of work, not batched at the end. Squashing or amending published commits is not done.
+Work on a `feature/<name>` or `agent/issue-<n>-<slug>` branch and merge to `main` via PR — CI (tests + type checks) must pass, and PRs require review before merge (branch protection, set 2026-06-17; the repo owner can push directly, `enforce_admins: false`). Do not commit directly to `main`. Commits go in after each logical unit of work, not batched at the end. Squashing or amending published commits is not done on a branch once pushed; PRs squash-merge to `main` as a single commit.
 
 ### DB write patterns
 
-- `INSERT OR IGNORE` for `garmin_snapshots` — metrics are immutable once stored; ignore re-inserts
-- `INSERT OR REPLACE` for `garmin_activities` — re-syncs should overwrite stale activity data
+- `INSERT OR REPLACE` for `health_snapshots` — allows a same-day metric to be corrected on re-poll (e.g. if the source revises a computed value), rather than silently keeping the first value ever written
+- `INSERT OR REPLACE` for `health_activities` — re-syncs should overwrite stale activity data
 - Never use raw string interpolation in SQL — use parameterized queries
 
 ### Express route ordering
@@ -105,7 +105,7 @@ Do not create new components if an existing one can be extended. Do not create n
 
 ## Adding a New Section
 
-When a new data source becomes available (MacroFactor, Blood Work, Daily Log):
+When a new data source becomes available (e.g. Blood Work, Daily Log — Nutrition already shipped as a custom-built tracker, see `docs/NUTRITION_PLAN.md`):
 
 1. **Design first.** Use Claude Design with `design_bacta-handoff-package/` as the visual baseline reference (open `Bacta - Prototype v3.html`). Get a new handoff package before writing code.
 
@@ -153,7 +153,7 @@ sudo chown wheat:wheat client/src/components/viz/{ComponentName}.tsx
 
 ## Adding a New Garmin Metric
 
-1. **Find the field:** Query `source_json` from `garmin_snapshots` for a related metric to see the raw API response structure. Use the `bacta-sqlite` MCP — ask Claude: *"Show me the source_json for metric 'hrv', one row."*
+1. **Find the field:** Query `source_json` from `health_snapshots` for a related metric to see the raw API response structure. Use the `bacta-sqlite` MCP — ask Claude: *"Show me the source_json for metric 'hrv', one row."*
 
 2. **Add to poller:** In `scripts/garmin_poller.py`, extract the field in the relevant daily sync section. Follow the existing pattern — see how `recovery_time_h` or `fitness_age_achievable` are extracted.
 
@@ -199,16 +199,13 @@ python3 scripts/garmin_ingest.py --days 30
 
 **`mx4spin` is a global keyframe.** Do not define it in a component's inline style or try to import it. Reference by name: `animation: 'mx4spin 14s linear infinite'`. It's in `client/index.css`.
 
-**sections.py has stale metric names.** As of Jun 2026, `mx4/sections.py` references metric names that don't match the database: `hrv_5min_high` (doesn't exist), `recovery_time_hours` (stored as `recovery_time_h`), `stress_score` (stored as `stress_avg`), `body_battery` (split into `body_battery_charged/drained/wake/current`). These need to be updated before the orchestrator is run for the first time.
-
-**insights.ts / orchestrator format mismatch.** `server/api/insights.ts` reads `{section}.json` files from `insights/`. The orchestrator writes `{section}.html` files. The frontend currently uses stub text from `stubData.ts` and does not consume the insights API. The format mismatch must be resolved when implementing the orchestrator's first run.
-
 ---
 
 ## Running MX-4 Manually
 
 MX-4's intelligence is the **live TypeScript pipeline** (`server/lib/ai/orchestrator.ts`).
-The Python `mx4/orchestrator.py` / `check_signal.py` path is **deprecated — do not run it.**
+The earlier Python `mx4/orchestrator.py` / `mx4/sections.py` / `mx4/check_signal.py` path
+has been **fully removed** — those files no longer exist in `mx4/`.
 
 **Prerequisites:**
 - `ai_api_key` set in Settings (Google / `gemini-2.5-flash` is the v1.0 pin).

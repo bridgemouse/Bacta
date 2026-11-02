@@ -132,9 +132,11 @@ CREATE TABLE health_activity_legs (
 CREATE INDEX idx_health_activity_legs_activity ON health_activity_legs(activity_id);
 ```
 
-### `foods`, `food_log_entries`, `nutrition_targets`
+### `foods`, `food_variants`, `food_log_entries`, `nutrition_targets`
 
 Nutrition is a custom-built tracker, not a third-party integration — the abandoned `macrofactor_snapshots` EAV placeholder was dropped (confirmed empty, zero references anywhere in the codebase) since its shape can't represent multiple foods logged per meal per day. See `docs/NUTRITION_PLAN.md` §3 for the full schema, design notes, and rationale. These are normal (non-EAV) tables — query columns directly rather than filtering by a `metric` column.
+
+**`foods` is identity-only** — name, brand, source (`usda` | `openfoodfacts` | `custom`). All servable-unit data (quantity, unit, macros) lives on `food_variants`: one row per servable unit of a food (e.g. "100 g", "1 tbsp", "1 cup"), each with its own precomputed macro columns (`calories`, `protein_g`, `carbs_g`, `fat_g`, plus a fuller micronutrient set). Every food has at least one variant with `is_default=1`, enforced at the application layer since SQLite can't express "at least one child row" as a constraint. `food_log_entries.variant_id` and `recipe_ingredients.variant_id` reference `food_variants(id)` (nullable, for fully ad-hoc entries); `food_log_entries`' own nutrient columns are a denormalized snapshot at log time so editing a `foods`/`food_variants` row later never silently changes what a past day's log says was eaten. Live in production since PR #169 (2026-07-28): 8,157 foods / 22,972 variants as of the last audit (2026-07-29), 94.5% of foods have 1–4 variants.
 
 ### `manual_inputs`
 
@@ -193,69 +195,69 @@ The tradeoff: EAV cannot represent entities with multiple rows per day (activiti
 
 ## Metric Inventory
 
-As of 2026-06-11 (live recon from database). All metrics are in `health_snapshots`.
+As of 2026-08-12 (live recon from database). All metrics are in `health_snapshots`.
 
 | Metric | Count | Date Range | Unit | Notes |
 |---|---|---|---|---|
-| `steps` | 377 | 2025-05-31 → 2026-06-11 | steps | Full history |
-| `steps_goal` | 377 | 2025-05-31 → 2026-06-11 | steps | Daily goal |
-| `floors_up` | 377 | 2025-05-31 → 2026-06-11 | floors | |
-| `distance_m` | 377 | 2025-05-31 → 2026-06-11 | m | Total daily distance |
-| `calories_total` | 377 | 2025-05-31 → 2026-06-11 | kcal | |
-| `calories_active` | 377 | 2025-05-31 → 2026-06-11 | kcal | |
-| `fitness_age` | 377 | 2025-05-31 → 2026-06-11 | years | Garmin-computed fitness age |
-| `fitness_age_achievable` | 0 | — | years | Best attainable fitness age; newly added Jun 11, 2026 |
+| `steps` | 439 | 2025-05-31 → 2026-08-12 | steps | Full history |
+| `steps_goal` | 439 | 2025-05-31 → 2026-08-12 | steps | Daily goal |
+| `floors_up` | 439 | 2025-05-31 → 2026-08-12 | floors | |
+| `distance_m` | 439 | 2025-05-31 → 2026-08-12 | m | Total daily distance |
+| `calories_total` | 439 | 2025-05-31 → 2026-08-12 | kcal | |
+| `calories_active` | 439 | 2025-05-31 → 2026-08-12 | kcal | |
+| `fitness_age` | 439 | 2025-05-31 → 2026-08-12 | years | Garmin-computed fitness age |
+| `fitness_age_achievable` | 63 | 2026-06-11 → 2026-08-12 | years | Best attainable fitness age; added Jun 11, 2026 — no longer sparse |
 | `act_duration_s` | 205 | 2025-10-30 → 2026-06-01 | s | Legacy EAV activity duration |
 | `act_distance_m` | 205 | 2025-10-30 → 2026-06-01 | m | Legacy EAV |
 | `act_calories` | 205 | 2025-10-30 → 2026-06-01 | kcal | Legacy EAV |
 | `act_avg_hr` | 199 | 2025-10-30 → 2026-06-01 | bpm | Legacy EAV |
-| `stress_max` | 63 | 2026-04-10 → 2026-06-11 | 0–100 | |
-| `stress_avg` | 63 | 2026-04-10 → 2026-06-11 | 0–100 | |
-| `resting_hr` | 63 | 2026-04-10 → 2026-06-11 | bpm | |
-| `resp_max` | 63 | 2026-04-10 → 2026-06-11 | br/min | |
-| `resp_avg` | 63 | 2026-04-10 → 2026-06-11 | br/min | |
-| `floors_goal` | 63 | 2026-04-10 → 2026-06-11 | floors | |
-| `floors_down` | 63 | 2026-04-10 → 2026-06-11 | floors | |
-| `body_battery_drained` | 63 | 2026-04-10 → 2026-06-11 | units | How much drained in the day |
-| `body_battery_charged` | 63 | 2026-04-10 → 2026-06-11 | units | How much charged in the day |
-| `sleep_score` | 61 | 2026-04-12 → 2026-06-11 | 0–100 | |
-| `sleep_resp` | 61 | 2026-04-12 → 2026-06-11 | br/min | |
-| `sleep_rem_s` | 61 | 2026-04-12 → 2026-06-11 | s | |
-| `sleep_light_s` | 61 | 2026-04-12 → 2026-06-11 | s | |
-| `sleep_deep_s` | 61 | 2026-04-12 → 2026-06-11 | s | |
-| `sleep_awake_s` | 61 | 2026-04-12 → 2026-06-11 | s | |
-| `hrv_week_avg` | 59 | 2026-04-14 → 2026-06-11 | ms | Rolling weekly HRV average |
-| `hrv` | 59 | 2026-04-14 → 2026-06-11 | ms | Last night's HRV |
-| `training_status_n` | 41 | 2026-05-02 → 2026-06-11 | int | Garmin status encoded as number |
-| `training_load_min` | 41 | 2026-05-02 → 2026-06-11 | — | Lower bound of optimal load range |
-| `training_load_max` | 41 | 2026-05-02 → 2026-06-11 | — | Upper bound of optimal load range |
-| `training_load` | 41 | 2026-05-02 → 2026-06-11 | — | Acute training load |
-| `sleep_stress` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Overnight stress level |
-| `sleep_hr` | 41 | 2026-05-02 → 2026-06-11 | bpm | Average overnight heart rate |
-| `recovery_score` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Garmin Training Readiness |
-| `recovery_time_h` | 6 | 2026-06-11 → | **min** | Recovery time — **stored in MINUTES despite the name/legacy unit**; divide by 60 for hours. See `docs/MX4_REFERENCE.md`. |
-| `intensity_vig_min` | 41 | 2026-05-02 → 2026-06-11 | min | Vigorous intensity minutes |
-| `intensity_mod_min` | 41 | 2026-05-02 → 2026-06-11 | min | Moderate intensity minutes |
-| `hrv_baseline_low` | 41 | 2026-05-02 → 2026-06-11 | ms | Personal HRV baseline lower bound |
-| `hrv_baseline_high` | 41 | 2026-05-02 → 2026-06-11 | ms | Personal HRV baseline upper bound |
-| `body_battery_wake` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Battery level on waking |
-| `body_battery_current` | 41 | 2026-05-02 → 2026-06-11 | 0–100 | Current battery level |
-| `hrzone_5_min` | 32 | 2026-05-04 → 2026-06-11 | min | |
-| `hrzone_4_min` | 32 | 2026-05-04 → 2026-06-11 | min | |
-| `hrzone_3_min` | 32 | 2026-05-04 → 2026-06-11 | min | |
-| `hrzone_2_min` | 32 | 2026-05-04 → 2026-06-11 | min | |
-| `hrzone_1_min` | 32 | 2026-05-04 → 2026-06-11 | min | |
-| `vo2max` | 11 | 2026-04-10 → 2026-06-06 | mL/kg/min | **Sparse** — see below |
-| `spo2_avg` | 11 | 2026-06-01 → 2026-06-11 | % | **Sparse** — see below |
-| `sleep_spo2` | 10 | 2026-06-02 → 2026-06-11 | % | **Sparse** — see below |
+| `resting_hr` | 127 | 2024-01-11 → 2026-08-12 | bpm | |
+| `resp_avg` | 126 | 2024-01-11 → 2026-08-12 | br/min | |
+| `stress_max` | 125 | 2026-04-10 → 2026-08-12 | 0–100 | |
+| `stress_avg` | 125 | 2026-04-10 → 2026-08-12 | 0–100 | |
+| `resp_max` | 125 | 2026-04-10 → 2026-08-12 | br/min | |
+| `floors_goal` | 125 | 2026-04-10 → 2026-08-12 | floors | |
+| `floors_down` | 125 | 2026-04-10 → 2026-08-12 | floors | |
+| `body_battery_drained` | 125 | 2026-04-10 → 2026-08-12 | units | How much drained in the day |
+| `body_battery_charged` | 125 | 2026-04-10 → 2026-08-12 | units | How much charged in the day |
+| `sleep_score` | 122 | 2024-01-11 → 2026-08-12 | 0–100 | |
+| `sleep_rem_s` | 122 | 2024-01-11 → 2026-08-12 | s | |
+| `sleep_light_s` | 122 | 2024-01-11 → 2026-08-12 | s | |
+| `sleep_deep_s` | 122 | 2024-01-11 → 2026-08-12 | s | |
+| `hrv` | 121 | 2024-01-12 → 2026-08-12 | ms | Last night's HRV |
+| `sleep_awake_s` | 121 | 2026-04-12 → 2026-08-12 | s | |
+| `sleep_resp` | 121 | 2026-04-12 → 2026-08-12 | br/min | |
+| `hrv_week_avg` | 120 | 2026-04-14 → 2026-08-12 | ms | Rolling weekly HRV average |
+| `body_battery_current` | 103 | 2026-05-02 → 2026-08-12 | 0–100 | Current battery level |
+| `intensity_mod_min` | 103 | 2026-05-02 → 2026-08-12 | min | Moderate intensity minutes |
+| `intensity_vig_min` | 103 | 2026-05-02 → 2026-08-12 | min | Vigorous intensity minutes |
+| `recovery_score` | 103 | 2026-05-02 → 2026-08-12 | 0–100 | Garmin Training Readiness |
+| `training_load` | 103 | 2026-05-02 → 2026-08-12 | — | Acute training load |
+| `training_load_max` | 103 | 2026-05-02 → 2026-08-12 | — | Upper bound of optimal load range |
+| `training_load_min` | 103 | 2026-05-02 → 2026-08-12 | — | Lower bound of optimal load range |
+| `training_status_n` | 103 | 2026-05-02 → 2026-08-12 | int | Garmin status encoded as number |
+| `hrv_baseline_high` | 102 | 2026-05-02 → 2026-08-12 | ms | Personal HRV baseline upper bound |
+| `hrv_baseline_low` | 102 | 2026-05-02 → 2026-08-12 | ms | Personal HRV baseline lower bound |
+| `body_battery_wake` | 101 | 2026-05-02 → 2026-08-12 | 0–100 | Battery level on waking |
+| `sleep_hr` | 101 | 2026-05-02 → 2026-08-12 | bpm | Average overnight heart rate |
+| `sleep_stress` | 101 | 2026-05-02 → 2026-08-12 | 0–100 | Overnight stress level |
+| `hrzone_1_min` … `hrzone_5_min` | 92 | 2026-05-04 → 2026-08-12 | min | |
+| `spo2_avg` | 74 | 2024-01-12 → 2026-08-12 | % | No longer sparse — was 11 rows as of Jun 2026 |
+| `sleep_spo2` | 70 | 2026-06-02 → 2026-08-12 | % | No longer sparse — was 10 rows as of Jun 2026 |
+| `recovery_time_h` | 63 | 2026-06-11 → 2026-08-12 | **min** | Recovery time — **stored in MINUTES despite the name/legacy unit**; divide by 60 for hours. Populated reliably since Jun 11 — the "needs post-poller verification" caveat from that date is resolved. See `docs/MX4_REFERENCE.md`. |
+| `sleep_s` | 62 | 2024-01-11 → 2026-08-12 | s | Not directly displayed — UI computes duration from stage sums |
+| `vo2max` | 22 | 2026-04-10 → 2026-08-10 | mL/kg/min | **Sparse** — see below |
+| `weight_kg` | 2 | 2024-01-10, 2026-08-07 | kg | Sparse — infrequent weigh-ins |
+| `endurance_score` | 0 | — | — | Never collected — Garmin API field exists but this device/plan level may not provide it |
 
 **Sparse metrics:**
-- `vo2max` (11 rows): Garmin only updates VO2max when a GPS running activity with sufficient exertion is recorded. Not a daily metric.
-- `spo2_avg` (11 rows): Requires the device to have pulse oximetry enabled all-day. Data availability depends on device settings and battery tolerance.
-- `sleep_spo2` (10 rows): Sleep-specific SpO2 readings. Same device requirement as `spo2_avg`.
-- `endurance_score`: Zero rows — never collected. The Garmin API field exists but this device/plan level may not provide it.
+- `vo2max` (22 rows): Garmin only updates VO2max when a GPS running activity with sufficient exertion is recorded. Not a daily metric.
+- `weight_kg` (2 rows): Depends on manual weigh-ins.
+- `endurance_score` (0 rows): The Garmin API field exists but this device/plan level may not provide it.
 
 **Legacy EAV activity metrics** (`act_duration_s`, `act_distance_m`, `act_calories`, `act_avg_hr`): Collected before the `health_activities` table existed. Now superseded. The poller no longer writes to these; they remain in the DB for historical continuity only.
+
+**Orphaned single-row metrics found during the 2026-08-12 refresh:** `deep_sleep_s`, `light_sleep_s`, `rem_sleep_s`, `respiration`, `sleep_duration_s`, `spo2` each have exactly 1 row, all dated 2024-01-11/12. These look like stray writes under pre-#104 metric naming (before the multi-device metric-vocabulary fix standardized all providers onto the Garmin-derived names) rather than a currently-active write path — not yet root-caused; flagging here rather than in the main table so a future pass can confirm and clean them up.
 
 ---
 
@@ -284,7 +286,7 @@ These were renamed from `max`/`min` in a database migration (Jun 11, 2026). Any 
 
 ---
 
-## Stub vs. Live Boundary (as of Jun 2026)
+## Stub vs. Live Boundary (as of 2026-08-12)
 
 | Data type | Source |
 |---|---|
@@ -293,29 +295,30 @@ These were renamed from `max`/`min` in a database migration (Jun 11, 2026). Any 
 | Activity legs | Live — `health_activity_legs` via `/api/garmin/activities/:id/legs` |
 | MX-4 briefing text | **Live** — `mx4_briefings` table via `/api/insights/:section` → `useBriefing`. `stubData.ts` `BRIEFS` is a fallback only (used until a section has generated). |
 | MX-4 tone/headline/summary/body | **Live** — `mx4_briefings.content_json` |
-| Nutrition data | Backend live (`foods`/`food_log_entries`/`nutrition_targets`), no frontend yet (section in STANDBY) |
+| Nutrition data | **Live** — backend (`foods`/`food_variants`/`food_log_entries`/`nutrition_targets`) and full frontend (Overview, Library, Log/Edit Entry sheets) both shipped; see PRs #136, #138, #169 |
 | Blood work | Empty — `blood_work` has no rows (section in STANDBY) |
 | Manual inputs | Empty — `manual_inputs` has no rows (Daily Log in STANDBY) |
 
-MX-4 briefings are **live**: the TypeScript orchestrator (`server/lib/ai/orchestrator.ts`) writes `{tone, headline, summary, body, recommendation, flags}` to the `mx4_briefings` table, which the section pages render. The legacy `insights/*.html` path is dead. Only the three data-blocked sections (Nutrition, Blood Work, Daily Log) remain placeholders.
+MX-4 briefings are **live**: the TypeScript orchestrator (`server/lib/ai/orchestrator.ts`) writes `{tone, headline, summary, body, recommendation, flags}` to the `mx4_briefings` table, which the section pages render. The legacy `insights/*.html` path is dead. Only the two data-blocked sections (Blood Work, Daily Log) remain placeholders.
 
 ---
 
 ## Obsidian Vault
 
-**Mount:** NFS read-only from LXC 106 (192.168.1.202) → `/mnt/vault` on LXC 109  
-**MX-4 path:** `VAULT_WIKI_ROOT=/mnt/vault/wiki`  
-**Access:** `mx4/vault_query_server.py` — local MCP server exposing `search_wiki`, `read_wiki_page`, `get_wiki_index` tools  
+**Server:** `llm-wiki-mcp` — a standalone MCP server (Python, separate repo) running on LXC 106 at `192.168.1.202:8765`, serving the user's Obsidian vault over HTTP/SSE  
+**Client:** `server/lib/ai/vaultClient.ts` — `@modelcontextprotocol/sdk` client singleton, connects via `vault_url` setting (e.g. `http://192.168.1.202:8765`) when `vault_enabled=true`  
+**Tools:** `search_wiki`, `read_wiki_page`, `list_wiki_pages`, `get_wiki_index` — exposed as Vercel AI SDK tools, merged into the orchestrator/chat tool set conditionally  
 **Purpose:** MX-4 reads the user's vault for personal context during briefing generation: training goals, running plans, timeline, race goals, health history notes  
 
-The vault is read-only. The MCP server does not write to it.
+**Not an NFS mount.** This replaced an earlier NFS-mount design (`/mnt/vault`, a local `readVault` filesystem tool) — see `docs/VAULT_INTEGRATION.md` for the current, authoritative implementation and `docs/VAULT_SETUP.md` for the superseded NFS approach (kept for reference only). The vault is read-only from Bacta's side; the MCP server does not accept writes.
 
 ---
 
 ## Future Data Sources
 
+Nutrition shipped as a custom-built tracker (not MacroFactor or any third-party integration) — see `docs/NUTRITION_PLAN.md`. It is no longer a "future" source.
+
 | Source | Section | Blocker |
 |---|---|---|
-| MacroFactor | Nutrition | No account — must create MacroFactor account and implement API/export integration |
 | Lab results | Blood Work | Waiting on actual lab results; `blood_work` table is ready |
 | Daily Log | Daily Log | No data source defined — manual input UI (`/api/manual`) exists but the form has not been built |

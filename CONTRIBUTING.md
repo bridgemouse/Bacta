@@ -1,6 +1,6 @@
 # Contributing to Bacta
 
-Contributions are welcome, especially around additional fitness device integrations and the three pending sections (Nutrition, Blood Work, Daily Log).
+Contributions are welcome, especially around additional fitness device integrations and the two pending sections (Blood Work, Daily Log). Nutrition has shipped as a full custom-built tracker — polish and follow-on contributions there are still welcome, check open issues first.
 
 ## Before You Start
 
@@ -17,7 +17,7 @@ Open an issue first to discuss what you want to build. This avoids duplicate eff
 **Code conventions:**
 - No comments unless the WHY is genuinely non-obvious
 - No light wrappers, helpers, or abstractions beyond what the task requires
-- `INSERT OR IGNORE` for idempotent DB writes
+- `INSERT OR REPLACE` for idempotent `health_snapshots`/`health_activities` writes
 - Validate only at system boundaries (user input, external APIs)
 
 ## Process
@@ -29,9 +29,9 @@ Open an issue first to discuss what you want to build. This avoids duplicate eff
 
 ## What's in Scope
 
-- New fitness data integrations (Polar, Wahoo, Oura, Apple Health, etc.)
+- New fitness data integrations (Wahoo, Apple Health, Google Health Connect, etc. — Garmin, Strava, Hevy, Oura, Whoop, Polar, and Withings are already integrated)
 - Blood Work and Daily Log sections (coordinate on data model first)
-- Nutrition is a major in-progress feature with a custom data model — check open issues before contributing here
+- Nutrition polish and follow-on work — the core tracker (custom food/variant model, USDA import, logging UI) has shipped; check open issues before contributing here
 - Performance, accessibility, or reliability improvements
 - Bug fixes
 

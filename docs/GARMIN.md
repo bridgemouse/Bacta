@@ -293,7 +293,10 @@ calories
 
 ---
 
-## Current DB Metrics (`garmin_snapshots`)
+## Current DB Metrics (`health_snapshots`)
+
+> Table renamed from `garmin_snapshots` to `health_snapshots` in the multi-device migration
+> (2026-06-23) to hold all providers, not just Garmin — see `docs/DATA.md`.
 
 ### Collected and working
 ```

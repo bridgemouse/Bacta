@@ -167,7 +167,7 @@ All component styles use React inline style objects. This is a hard constraint f
 
 **`MetricTile.tsx`** — `SystemCard` for the Home grid and `MetricTile` for individual metrics.
 
-**`SectionShell.tsx`** — Calibrating skeleton for Nutrition, BloodWork, DailyLog. Renders shimmer skeletons + STANDBY TransmissionPanel.
+**`SectionShell.tsx`** — Calibrating skeleton for the two remaining unbuilt sections, BloodWork and DailyLog (Nutrition shipped — see `client/src/pages/nutrition/`). Renders shimmer skeletons + STANDBY TransmissionPanel.
 
 ### Primitives
 
@@ -207,7 +207,7 @@ All component styles use React inline style objects. This is a hard constraint f
 
 **`LoadBand.tsx`** — Horizontal load band with optimal zone tinted and glowing marker at current value. Low / Optimal / High labels.
 
-**`LogEntry.tsx`** — Activity log line. Expandable to show training effect, HR zones per activity. Phase C expansion (HR zones per activity) currently behind `hasContent = false`.
+**`LogEntry.tsx`** — Activity log line. Expandable to show Training Effect bars, HR zone distribution, Running Dynamics grid, and multi-sport per-leg breakdown. Phase C shipped — `hasContent` is computed dynamically from whichever fields the activity actually has, not gated behind a static flag.
 
 **`Rail.tsx`** — Section divider rail with accent label (left), gradient line, and right-side meta text.
 
@@ -235,9 +235,9 @@ The MX-4 aperture has six moods. Each is a distinct SVG expression of one hexago
 
 | Mood | Visual | When Used | Character Context |
 |---|---|---|---|
-| `transmit` | Full concentric rings + bright core | Home (MX-4 speaking to Ethan), Training | Active transmission — MX-4 is actively briefing, sending information outward |
+| `transmit` | Full concentric rings + bright core | Home (MX-4 speaking to the user), Training | Active transmission — MX-4 is actively briefing, sending information outward |
 | `idle` | Calm single ring + side ticks | TopBar status indicator | At rest but present — monitoring, not transmitting |
-| `listen` | Open "eye" (wide lens + pupil) | Ask MX-4 button, AskSheet | Receiving — waiting for Ethan's input, attention fully inward |
+| `listen` | Open "eye" (wide lens + pupil) | Ask MX-4 button, AskSheet | Receiving — waiting for the user's input, attention fully inward |
 | `think` | Scan dashes + swept arc | SectionShell (calibrating) | Processing — data intake in progress, analysis underway |
 | `alert` | Narrowed slit core | Sleep briefing (caution flag) | Elevated attention — something in the data warrants focus |
 | `pleased` | Upward squint arc | Recovery briefing (positive) | The closest MX-4 gets to satisfaction — a quiet acknowledgment that the data is good |
@@ -246,13 +246,13 @@ The MX-4 aperture has six moods. Each is a distinct SVG expression of one hexago
 
 **Home uses `transmit`** — Home is the briefing, the synthesis, the active delivery of information. MX-4 is speaking.
 
-**Recovery uses `pleased`** — Recovery data, when good, is the most directly satisfying outcome for MX-4's purpose. A rested, recovered Ethan is the system working correctly.
+**Recovery uses `pleased`** — Recovery data, when good, is the most directly satisfying outcome for MX-4's purpose. A rested, recovered user is the system working correctly.
 
 **Sleep uses `alert`** — Sleep data is where MX-4 most often has something to flag. Even when sleep score is high, there's usually an architecture note worth making. Alert is appropriate default attentiveness.
 
 **Training uses `transmit`** — Training briefings are performance readouts. MX-4 is delivering the load and status data. Transmit.
 
-**AskSheet uses `listen`** — Ethan is about to speak. MX-4's aperture opens to receive.
+**AskSheet uses `listen`** — the user is about to speak. MX-4's aperture opens to receive.
 
 **SectionShell uses `think`** — Calibrating sections have no data yet. MX-4 is in data intake mode.
 

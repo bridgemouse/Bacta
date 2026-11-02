@@ -17,14 +17,19 @@
 | `docs/ROADMAP.md` | You need to understand what's built, what's pending, and what's blocked |
 | `docs/MX4_REFERENCE.md` | You need the authoritative MX-4 tool catalog, data dictionary, or custom-calc formulas (injected into his context) |
 | `docs/MX4_LLM_WIKI_PRINCIPLES.md` | You're changing how MX-4 curates his own wiki |
+| `docs/MX4_DROID_VOICE.md` | You're tuning MX-4's speech patterns or diagnosing voice/tone drift |
 | `docs/SECURITY.md` | You're touching auth, secrets, the threat model, or the security runbook |
 | `docs/OPERATIONS.md` | You need backups/restore, rollback, observability, or the DR runbook |
+| `docs/NUTRITION_PLAN.md` | You're touching the Nutrition schema, food/variant model, or import pipeline |
+| `docs/NUTRITION_DESIGN_BRIEF.md` | You're touching Nutrition UI and need the design rationale behind it |
+| `docs/VAULT_INTEGRATION.md` | You need the current LLM-Wiki MCP client implementation (authoritative — this is what's built) |
+| `docs/VAULT_SETUP.md` | **Historical/superseded** — the old NFS-mount vault design, replaced by `VAULT_INTEGRATION.md`'s remote MCP server. Kept for reference only. |
 
 ---
 
 ## What This Is
 
-Bacta is a private health dashboard iOS PWA for one user: **Ethan**. It pulls biometrics nightly from Garmin Connect. An AI companion named **MX-4** (Star Wars-inspired droid, bacta-cyan identity `#2bc4e8`) narrates the data. The aesthetic is a dark sci-fi instrument console — not a health app, not a wellness product.
+Bacta is a private health dashboard iOS PWA for a single self-hosting user. It pulls biometrics nightly from Garmin Connect (plus 6 other wearable/fitness providers). An AI companion named **MX-4** (Star Wars-inspired droid, bacta-cyan identity `#2bc4e8`) narrates the data. The aesthetic is a dark sci-fi instrument console — not a health app, not a wellness product.
 
 Saved to iPhone home screen, runs on local WiFi only (`bacta.local`). Runs on **LXC 109** (Debian 13) in a home Proxmox cluster. **No Docker.** Deploy path: `/opt/bacta`.
 
@@ -141,11 +146,13 @@ Full component tree: `docs/ARCHITECTURE.md`
 Full completion status: `docs/ROADMAP.md`
 
 ### What's Next (in priority order)
-1. **Post-sweep infrastructure runbook** — execute `docs/SECURITY.md` §4 (PHI git-history scrub + force-push, firewall/Tailscale, LUKS, systemd hardening, NFS/vault-MCP lockdown, runner hardening, TLS) and `docs/OPERATIONS.md` §1 (install `bacta-backup.timer` + off-box encrypted copy). These need manual host intervention.
+1. **Post-sweep infrastructure runbook** — execute `docs/SECURITY.md` §4 (PHI git-history scrub + force-push, firewall/Tailscale, LUKS, systemd hardening, vault-MCP lockdown, TLS — runner hardening no longer applies, the self-hosted runner is decommissioned) and `docs/OPERATIONS.md` §1 (install `bacta-backup.timer` + off-box encrypted copy). These need manual host intervention.
 2. **Set the app PIN** in Settings → SECURITY (the app warns and stays open until set).
-3. **LogEntry Phase C** — expand panel content (training effect, HR zones per activity) currently behind `hasContent = false` flag in `LogEntry.tsx`
+3. **Tag a release** — Nutrition and multi-device wearables have both shipped since `v1.0.0`; nothing has been tagged since. See `docs/ROADMAP.md` Immediate Priorities.
 
-**Deferred:** MacroFactor/Nutrition (no account), Blood Work (waiting on lab results), Daily Log (no data source defined)
+The open-issue backlog is tracked entirely in GitHub Issues (see `docs/ROADMAP.md`'s header) — check there for current work, not this list.
+
+**Deferred:** Blood Work (waiting on lab results), Daily Log (no data source defined)
 
 **Resolved in the v1.0 sweep:** the MX-4 TypeScript orchestrator is live (the Python path is deprecated); `mx4/HEARTBEAT.md` exists; the `insights` `.html`/`.json` mismatch is resolved (reads the `mx4_briefings` table); `recovery_time_h` unit fixed; app auth, read-only `queryDb`, helmet/CSP, backups, and the `research` tool shipped. Full record: `docs/ROADMAP.md` and `docs/release-test/findings-2026-06-17.md`.
 
@@ -166,7 +173,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 
 **MX-4 Sigil moods:** `transmit` (Home, Training), `pleased` (Recovery), `alert` (Sleep), `listen` (Ask sheet), `idle` (nav/status), `think` (processing)
 
-**Character preservation:** The character in `mx4/mx4_personal_identity_record.md` and `docs/MX4.md` is the product's identity layer. Future sessions that need to adjust his behavior should do so through the `mx4/HEARTBEAT.md` standing orders file (exists and is live; gitignored PHI, template at `mx4/HEARTBEAT.md.example`). If MX-4 ever sounds like a medical droid, references Kamino, uses "I have always wanted to have human feelings," or refers to Ethan as "the patient," AZI-3 contamination has occurred — re-read the identity record. Do not compromise between the two identities.
+**Character preservation:** The character in `mx4/mx4_personal_identity_record.md` and `docs/MX4.md` is the product's identity layer. Future sessions that need to adjust his behavior should do so through the `mx4/HEARTBEAT.md` standing orders file (exists and is live; gitignored PHI, template at `mx4/HEARTBEAT.md.example`). If MX-4 ever sounds like a medical droid, references Kamino, uses "I have always wanted to have human feelings," or refers to the user as "the patient," AZI-3 contamination has occurred — re-read the identity record. Do not compromise between the two identities.
 
 ---
 
@@ -178,7 +185,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - **Ingest:** `scripts/garmin_ingest.py` — historical import (365 days, ~35 min runtime)
 - **Garmin tokens:** `~/.garminconnect` on LXC 109
 - **~30 Garmin metrics:** HRV, body battery, resting HR, sleep stages/score/SpO2, stress, VO2max, training load/status, intensity minutes, activities, steps, weight, respiration
-- **Vault:** ObsidianVault NFS-mounted read-only at `/mnt/vault` from LXC 106 (192.168.1.202)
+- **Vault:** remote `llm-wiki-mcp` server on LXC 106 (`192.168.1.202:8765`), connected over SSE via `server/lib/ai/vaultClient.ts` — **not** an NFS mount (see `docs/VAULT_INTEGRATION.md`; `docs/VAULT_SETUP.md` describes the superseded NFS design, kept for reference only)
 - **Insights dir:** `/opt/bacta/insights/` — HTML briefings written by MX-4
 
 **Stub data** (frontend still uses this until sections are wired): `client/src/lib/stubData.ts`
@@ -238,7 +245,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 - Do not commit directly to `main`
 
 ### GitHub Repo Governance (set Jun 17, 2026)
-- **Branch protection on `main`:** force pushes blocked, deletions blocked, contributors must open a PR with CI passing and owner approval. Ethan (owner) can push directly — `enforce_admins: false`.
+- **Branch protection on `main`:** force pushes blocked, deletions blocked, contributors must open a PR with CI passing and owner approval. The repo owner can push directly — `enforce_admins: false`.
 - **CODEOWNERS:** `@bridgemouse` is auto-added as required reviewer on all PRs (`.github/CODEOWNERS`)
 - **License:** MIT (`LICENSE`)
 - **Contributing guide:** `CONTRIBUTING.md` — documents hard UI rules (inline styles, dark only, theme colors), code conventions, what's in/out of scope
@@ -249,7 +256,7 @@ His signature color is `#2bc4e8` (bacta cyan). When in a section, MX-4's sigil s
 ### Repo Scope & Framing
 - Bacta is open to contributions — especially additional fitness device integrations (Polar, Wahoo, Oura, Apple Health, etc.)
 - **Nutrition** is a major custom-built feature (not a third-party integration like MacroFactor); flag this clearly when discussing the roadmap
-- **Vault integration** is via a custom LLM-Wiki MCP that exposes an Obsidian vault to Bacta — a separate repo, coming soon. It is NOT an NFS mount from Bacta's perspective.
+- **Vault integration** is via a custom LLM-Wiki MCP (`llm-wiki-mcp`, separate repo) that exposes an Obsidian vault to Bacta over SSE — live since Jun 16, 2026 (MX-4 Phase 4). It is NOT an NFS mount from Bacta's perspective.
 - **Docker support** is on the roadmap — do not describe Bacta as "no Docker" to contributors
 
 ---

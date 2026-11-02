@@ -2,8 +2,9 @@
 
 Runbook for keeping Bacta alive: backups, restore, rollback, observability. Bacta
 runs on **LXC 109** (Debian, no Docker) at `/opt/bacta`, served by the
-`bacta-api` systemd service on `:3001`. Deploys land via the self-hosted GitHub
-Actions runner on push to `main`.
+`bacta-api` systemd service on `:3001`. CI (GitHub Actions, cloud runners) runs
+tests and type checks only — there is no deploy workflow. Deploys are manual,
+operator-run on LXC 109 (§6).
 
 ---
 
@@ -37,7 +38,7 @@ rclone copy /opt/bacta/backups <remote>:bacta-backups --include 'bacta-*.db.gz' 
 ```bash
 sudo systemctl stop bacta-api
 gunzip -c /opt/bacta/backups/bacta-<STAMP>.db.gz > /opt/bacta/data/bacta.db
-node -e "const D=require('better-sqlite3');const d=new D('/opt/bacta/data/bacta.db',{readonly:true});console.log(d.pragma('integrity_check',{simple:true}));console.log('snapshots',d.prepare('SELECT COUNT(*) c FROM garmin_snapshots').get().c)"
+node -e "const D=require('better-sqlite3');const d=new D('/opt/bacta/data/bacta.db',{readonly:true});console.log(d.pragma('integrity_check',{simple:true}));console.log('snapshots',d.prepare('SELECT COUNT(*) c FROM health_snapshots').get().c)"
 sudo systemctl start bacta-api
 ```
 Expect `ok` and a sane row count before starting the service.
@@ -74,8 +75,20 @@ specific local hour, or set the host timezone.
 
 ## 6. Deploy & rollback
 
-**Deploy:** push to `main` → the self-hosted runner runs `git reset --hard origin/main`,
-`npm ci`, `npm run build`, `sudo systemctl restart bacta-api`, then a health check.
+**Deploy is manual — no deploy workflow exists.** CI (GitHub Actions, cloud runners) only
+runs tests and type checks on push/PR; nothing restarts the running service. After merging
+to `main`, the operator runs, on LXC 109:
+```bash
+cd /opt/bacta
+git pull origin main
+npm ci
+npm run build            # TypeScript compile + Vite client bundle
+sudo systemctl restart bacta-api
+curl -sf http://localhost:3001/api/health
+```
+If the merge touched `client/src`, `npm run build:client` (a subset of `npm run build`)
+is what actually ships the change — merging to `main` alone does not update what the
+phone loads, since the client is a static build served from `dist/client`.
 
 **Rollback (RUNBOOK):**
 ```bash

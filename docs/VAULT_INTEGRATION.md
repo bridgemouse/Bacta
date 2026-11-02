@@ -1,5 +1,11 @@
 # LLM-Wiki Vault Integration — Bacta Implementation Spec
 
+> **Status: implemented and live** (MX-4 Phase 4, 2026-06-16). This doc was originally
+> written as a forward-looking spec ("What Bacta needs to implement") — every item in
+> §"What Bacta needs to implement" below has shipped as described and is the current,
+> authoritative description of the vault integration. Cross-referenced from `CLAUDE.md`,
+> `docs/DATA.md`, and `docs/PLUGINS.md`.
+
 ## What was built
 
 `llm-wiki-mcp` is a standalone MCP server (Python) that serves any directory of `.md` files as four MCP tools over HTTP/SSE. It lives at `github.com/bridgemouse/llm-wiki-mcp` and is running on LXC 106 (`192.168.1.202:8765`) pointed at the ObsidianVault wiki.

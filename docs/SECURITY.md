@@ -15,7 +15,7 @@ and what remains a host/network runbook for the operator to execute.
 
 - **Primary asset:** `data/bacta.db` — 13+ months of PHI — and the plaintext AI/research API keys in `app_settings`.
 - **In scope (app):** anyone on the LAN reaching `bacta.local`; a prompt-injection payload arriving via MX-4's wiki, the external vault, or research results; malformed/hostile API input; the LLM emitting destructive SQL.
-- **Out of scope for the app, in scope for the runbook:** network reachability off-LAN, disk theft (encryption at rest), OS/host compromise, the NFS vault transport, the CI runner.
+- **Out of scope for the app, in scope for the runbook:** network reachability off-LAN, disk theft (encryption at rest), OS/host compromise, the vault MCP transport.
 
 ## 2. Implemented (app-level, shipped in v1.0)
 
@@ -78,11 +78,11 @@ Add: `NoNewPrivileges=true`, `ProtectSystem=strict`, `ProtectHome=read-only`, `P
 ### 4.6 OS patching
 Enable `unattended-upgrades`; keep installed services minimal.
 
-### 4.7 NFS + vault-MCP lockdown
-Restrict the LXC 106 NFS export to LXC 109's IP, read-only. The vault MCP SSE (`192.168.1.202:8765`) is currently open on the LAN — add an IP allowlist or auth so only Bacta can query the second brain.
+### 4.7 Vault-MCP lockdown
+The vault transport is a remote `llm-wiki-mcp` MCP server on LXC 106 over SSE (`192.168.1.202:8765`, see `docs/VAULT_INTEGRATION.md`) — **not** NFS; the earlier NFS-mount design was superseded (`docs/VAULT_SETUP.md`, kept for reference only) and there is no NFS export to lock down. The SSE endpoint is currently open on the LAN — add an IP allowlist or auth so only Bacta can query the second brain.
 
-### 4.8 Self-hosted runner hardening
-The Actions runner on LXC 109 has repo + deploy access. Confirm it does not auto-build untrusted/fork PRs, its token is least-scope, and Actions secrets are never echoed to logs.
+### 4.8 Self-hosted runner hardening — resolved, moot
+The self-hosted Actions runner on LXC 109 was decommissioned 2026-06-17; CI now runs on GitHub-hosted cloud runners only, with no deploy workflow (see `docs/ARCHITECTURE.md` Infrastructure). There is no runner on LXC 109 to harden.
 
 ## 5. Dependency posture
 

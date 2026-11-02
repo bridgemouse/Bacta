@@ -1,5 +1,11 @@
 # Vault Setup — Obsidian NFS Mount for MX-4
 
+> **Superseded — historical reference only.** This NFS-mount design was replaced by a
+> remote `llm-wiki-mcp` MCP server (SSE, port 8765) — see `docs/VAULT_INTEGRATION.md` for
+> the current, authoritative implementation. The `readVault` filesystem tool this doc
+> describes was removed from `server/lib/ai/tools.ts`; `/mnt/vault` is not mounted or used
+> by the running app. Kept for reference in case the NFS approach is ever revisited.
+
 MX-4 reads the user's Obsidian vault via the vault MCP tools. The vault lives on LXC 106 and is served over NFS to LXC 109 where Bacta runs. The mount point is already configured in LXC 109's fstab — this guide covers the LXC 106 side.
 
 **Current status:** Mount is configured but not active. `HEARTBEAT.md` standing orders disable vault reads until this is set up.

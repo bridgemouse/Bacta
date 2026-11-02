@@ -2,27 +2,18 @@
 
 ## MCP Servers (Active)
 
-Configured in `mx4/mcp-config.json` (for the MX-4 orchestrator) and `.claude/settings.local.json` (for Claude Code sessions).
+**MX-4's own tool access is not via Claude Code MCP config at all.** The orchestrator/chat
+tool set (`queryDb`, `research`, wiki tools, vault tools) is Vercel AI SDK `tool()` objects
+defined directly in `server/lib/ai/{tools,research,vaultClient}.ts` — see
+`docs/MX4_REFERENCE.md`. The two local Python MCP servers this section used to describe
+(`mx4/vault_query_server.py`, `mx4/db_query_server.py`) no longer exist; MX-4's vault access
+is now a remote `llm-wiki-mcp` server on LXC 106, connected directly from
+`vaultClient.ts` — see `docs/VAULT_INTEGRATION.md`. `.claude/settings.local.json` still
+allowlists `mcp__vault-query__*` tool names from that earlier design; they are not backed by
+a configured MCP server in this repo and are not usable in a Claude Code session as-is.
 
-### vault-query
-
-**Purpose:** Read-only access to the user's Obsidian Vault wiki pages.  
-**Implementation:** `mx4/vault_query_server.py` — local copy of the vault-query MCP server.  
-**Environment:** `VAULT_WIKI_ROOT=/mnt/vault/wiki`  
-**Tools:** `search_wiki`, `read_wiki_page`, `get_wiki_index`  
-**Used by:** MX-4 orchestrator for personal context during briefing generation. Also available in Claude Code sessions (allowlisted in `.claude/settings.local.json`).
-
-### bacta-db
-
-**Purpose:** Read-only SQLite access to `garmin_snapshots` and `manual_inputs`.  
-**Implementation:** `mx4/db_query_server.py` — local read-only SQLite MCP server. Write access is blocked at the server level.  
-**Environment:** `DB_PATH=/opt/bacta/data/bacta.db`  
-**Tools:**
-- `list_metrics()` — returns all distinct metric names in `garmin_snapshots`
-- `query_metric(metric, start_date, end_date)` — parameterized query for metric history
-- `query_manual_inputs(start_date, end_date)` — query manual daily inputs
-
-**Used by:** MX-4 orchestrator for deeper history beyond the pre-fetched 30-day window (e.g., 90 days of VO2max for trend projection).
+The MCP servers below are for **Claude Code development sessions only**, configured in
+`.claude/settings.local.json`.
 
 ### bacta-sqlite
 

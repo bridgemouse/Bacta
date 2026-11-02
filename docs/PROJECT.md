@@ -60,17 +60,17 @@ His signature color is `#2bc4e8` — bacta cyan. The name of the app and the col
 
 Bacta is organized as channels, not tabs. This is not semantics — it changes how you think about the UI. A tab is a navigation element. A channel is a data stream with its own identity. Each channel has its own accent color, its own sigil, its own MX-4 mood.
 
-| Channel | Accent | Status (Jun 2026) |
+| Channel | Accent | Status (as of 2026-08) |
 |---|---|---|
 | Home | `#2bc4e8` (MX-4 cyan) | Complete — cross-section synthesis |
 | Recovery | `#64b5f6` (sky blue) | Complete — HRV, body battery, vitals |
 | Training | `#fb923c` (ember) | Complete — status, zones, activity log |
 | Sleep | `#a78bfa` (violet) | Complete — depth field, stage architecture |
-| Nutrition | `#3ecf8e` (clinical green) | Calibrating — no data source |
+| Nutrition | `#3ecf8e` (clinical green) | Complete — custom-built food/variant tracker, live since Jul 2026 |
 | Blood Work | `#ef6f6c` (coral) | Calibrating — waiting on lab results |
 | Daily Log | `#f5cf5e` (gold) | Calibrating — no data source defined |
 
-The three unbuilt sections display a `SectionShell` placeholder — a shimmer skeleton with MX-4 in STANDBY mode. They are still tappable and navigable. The Overview/Trends toggle is hidden for these sections.
+The two remaining unbuilt sections display a `SectionShell` placeholder — a shimmer skeleton with MX-4 in STANDBY mode. They are still tappable and navigable. The Overview/Trends toggle is hidden for these sections.
 
 ---
 
@@ -98,7 +98,7 @@ When implementing new sections, start from the Claude Design workflow: design th
 **Access:** `bacta.local` on local WiFi only — saved to iPhone home screen as PWA  
 **API:** Express on port 3001, serving both the API and built React static files  
 **Repo:** `github.com/bridgemouse/bacta`  
-**CI:** GitHub Actions with self-hosted runner on LXC 109  
-**Deploy trigger:** Push to `main` → runner pulls, builds, restarts `bacta-api` systemd service  
+**CI:** GitHub Actions, cloud runners — tests and type checks only, no deploy workflow  
+**Deploy:** Manual, operator-run on LXC 109 (`git pull`, `npm run build`, `systemctl restart bacta-api`) — see `docs/OPERATIONS.md` §6  
 
-Vault: Obsidian Vault NFS-mounted read-only at `/mnt/vault` from LXC 106 (192.168.1.202). MX-4's orchestrator reads it for personal context during briefing generation.
+Vault: `llm-wiki-mcp`, a remote MCP server on LXC 106 (`192.168.1.202:8765`), connected over SSE — not an NFS mount. MX-4's orchestrator reads it for personal context during briefing generation. See `docs/VAULT_INTEGRATION.md`.

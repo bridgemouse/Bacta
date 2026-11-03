@@ -2,6 +2,7 @@ package io.github.bridgemouse.bacta
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -49,9 +50,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun HelloScreen() {
     val context = LocalContext.current
+    val permissionRequired = localNetworkPermissionRequired(Build.VERSION.SDK_INT)
     var granted by remember {
         mutableStateOf(
-            context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED,
+            !permissionRequired ||
+                context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED,
         )
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }

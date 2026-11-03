@@ -19,6 +19,26 @@ android {
         versionName = (project.findProperty("bacta.versionName") as String?) ?: "0.0.1"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("BACTA_KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("BACTA_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("BACTA_KEY_ALIAS")
+                keyPassword = System.getenv("BACTA_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (System.getenv("BACTA_KEYSTORE_PATH") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

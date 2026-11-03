@@ -1,0 +1,59 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'android-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v4
+
+      - name: Install SDK platform and build-tools
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Compute version from tag
+        id: ver
+        run: |
+          read -r NAME CODE < <(bash scripts/android-version.sh "$GITHUB_REF_NAME")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Decode signing key
+        run: echo "${{ secrets.BACTA_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/bacta-release.jks"
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          BACTA_KEYSTORE_PATH: ${{ runner.temp }}/bacta-release.jks
+          BACTA_KEYSTORE_PASSWORD: ${{ secrets.BACTA_KEYSTORE_PASSWORD }}
+          BACTA_KEY_ALIAS: ${{ secrets.BACTA_KEY_ALIAS }}
+          BACTA_KEY_PASSWORD: ${{ secrets.BACTA_KEY_PASSWORD }}
+        run: ./gradlew --console=plain testDebugUnitTest assembleRelease -Pbacta.versionName=${{ steps.ver.outputs.name }} -Pbacta.versionCode=${{ steps.ver.outputs.code }}
+
+      - name: Verify the APK is signed
+        run: $ANDROID_HOME/build-tools/37.0.0/apksigner verify --print-certs android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "bacta-android-${{ steps.ver.outputs.name }}.apk"
+          gh release create "$GITHUB_REF_NAME" "bacta-android-${{ steps.ver.outputs.name }}.apk" \
+            --title "Bacta Android ${{ steps.ver.outputs.name }}" \
+            --notes "Signed release build. Install over an existing release build; a debug-signed install must be uninstalled first (different signing key)." \
+            --prerelease

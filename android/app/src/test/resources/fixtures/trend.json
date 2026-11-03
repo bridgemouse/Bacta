@@ -1,0 +1,6 @@
+{
+  "rows": [
+    { "date": "2026-10-30", "metric": "hrv", "value": 58, "unit": "ms" },
+    { "date": "2026-10-31", "metric": "hrv", "value": 61.5, "unit": "ms" }
+  ]
+}

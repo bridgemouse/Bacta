@@ -74,7 +74,7 @@ The app is a client: it never talks to Garmin or runs MX-4. Those remain server 
 
 - **Inner loop (no GitHub):** edit in the worktree on LXC 109 → `scripts/android-build.sh` rsyncs `android/` to the VM (one-way, `--delete`, excluding build outputs) → builds over SSH in the background with plain, filtered Gradle output → install via `adb` → logs and screenshots pulled back. The VM copy is never edited.
 - **Outer loop:** commit → PR → CI → merge → tag → release → Obtainium.
-- **Visual checks:** Playwright captures reference screenshots of the live PWA (phone-width and Fold-width). Screenshot tests (Roborazzi or Paparazzi — not yet validated here) render Compose screens for comparison; the real phone covers behavior.
+- **Visual checks:** Playwright captures reference screenshots of the live PWA (phone-width and Fold-width). `android preview render` (Google's Android CLI, on the dev VM) renders Compose `@Preview` functions to PNG with no device or IDE and can export the component tree as JSON; those images are compared to the reference screenshots. The real phone covers behavior.
 - **Environment gotchas to handle in setup:** `ANDROID_HOME` set where non-interactive SSH reads it; long builds use `nohup` so a dropped connection doesn't kill them.
 
 ## 7. Server changes (LXC 109, TDD)
@@ -83,6 +83,7 @@ The app is a client: it never talks to Garmin or runs MX-4. Those remain server 
 - **After the Health Connect exploration, not before:** `POST /api/health-connect/ingest`, authenticated like other routes: idempotent upserts keyed on Health Connect record ids; accepts steps and daily nutrition totals; writes `health_snapshots` rows with `source = 'healthconnect'`. Its exact shape depends on what the exploration finds. Meal-level nutrition is out of scope for v1.
 - Staging: Milestone 1 is read-mostly (the only writes are the same chat messages the PWA already writes), so the app points at LXC 109 directly. Once the ingest endpoint exists, development points at a **staging server on the dev VM** running against a copy of the database so test writes never reach production.
 - Auth: the server issues an httpOnly session cookie from the PIN; the app keeps it in a persistent cookie jar. No server auth change for v1.
+- Android 17 (target API 37) blocks LAN connections unless the manifest declares `ACCESS_LOCAL_NETWORK` and the user grants it at runtime (part of the *Nearby devices* group). The app requests it and shows a clear message if denied. Whether traffic over Tailscale's address range counts as "local network" is unverified; check when Tailscale is added.
 - Transport: the server is plain HTTP on the LAN, so the app needs a network-security config allowing cleartext **to the Bacta host only**. Tailscale (already on the security runbook) would later make sync work off-LAN.
 
 ## 8. Design source
@@ -129,7 +130,8 @@ Each phase gets its own implementation plan; this spec covers architecture only.
 
 - **Google developer-verification rollout** for sideloaded apps (global in 2027, per secondary sources): `adb` installs remain exempt; plan on `adb`/APK now and re-check official docs before cutting release builds.
 - Lost signing key forces uninstall/reinstall; mitigated by two backups.
-- Fold inner-screen layout is untested.
+- Fold inner-screen layout is untested. At target API 37 the app cannot opt out of large-screen resizing, so content width is capped rather than assuming a phone-sized window.
+- Build pins (AGP 9.5.0, Kotlin 2.4.21, Compose BOM 2026.09.00, Gradle 9.8.2) were verified to build together on the dev VM on 2026-11-02, using Google's `android create` template with the block form `compileSdk { version = release(37) { minorApiLevel = 0 } }`; plain `compileSdk = 37` fails against the installed `android-37.0` platform.
 - After cutover the phone is the only UI. If it is lost or broken there is no browser fallback until the static serving is re-enabled; keep that a one-line, documented rollback and keep the client code buildable.
 - MX-4 is offline until credits are renewed; the app will show stale briefings and failing chat until then. The app should show a clear "MX-4 offline" state instead of an error.
 - The dev VM is manually managed; builds stall if it is down.

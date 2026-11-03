@@ -12,7 +12,10 @@
 
 ## Global Constraints
 
-- Android: `minSdk 34`, `compileSdk 37`, `targetSdk 37`; SDK on the VM is platform `android-37.0`, build-tools `37.0.0`.
+- Android: `minSdk 34`, `compileSdk 37`, `targetSdk 37`; SDK on the VM is platform `android-37.0`, build-tools `37.0.0`. **`compileSdk` must use the block form** `compileSdk { version = release(37) { minorApiLevel = 0 } }` — plain `compileSdk = 37` fails on this SDK (verified 2026-11-02).
+- Targeting API 37 blocks LAN access unless the manifest declares `ACCESS_LOCAL_NETWORK` and the user grants it at runtime (Android 17). Every screen that talks to the server must handle the denied state with a clear message.
+- Apps targeting 37 cannot opt out of large-screen resizing (sw ≥ 600dp): cap content width in Compose (`widthIn(max = …)`) instead of assuming a phone-sized window.
+- Official Google Android skills (`agp-9-upgrade`, `adaptive`, `testing-setup`, `edge-to-edge`, `navigation-3`, `android-cli`) are installed in `~/.claude/skills`, pinned to `android/skills` commit `6daa53e`. The Android CLI (`android`, v1.1) is on the dev VM; pass `--no-metrics` to avoid usage reporting.
 - `applicationId` / `namespace`: `io.github.bridgemouse.bacta` (**permanent once installed — owner confirms in Task 7 Step 1**).
 - Build versions are pinned to the values read from Google Maven / Gradle on 2026-11-02 (above). AGP 9 has built-in Kotlin: **never apply `org.jetbrains.kotlin.android`**; the Compose plugin `org.jetbrains.kotlin.plugin.compose` is still applied.
 - Dark UI only. Colors are the `client/src/theme.ts` values (e.g. base `#0f1117`, MX-4 cyan `#2bc4e8`).
@@ -34,7 +37,8 @@ Failure modes the spec implies that are most likely to bite, each pinned by a te
 3. **`rsync --delete` aimed at the wrong place destroys files.** (Task 6 tests: empty/traversal project names, root-ish remote base, and a missing source dir all abort before any command is built.)
 4. **Cleartext must not leak to other hosts.** (Task 7 test parses `network_security_config.xml`: base config forbids cleartext, exactly two allowed domains.)
 5. **`versionCode` collisions.** The spec's `major*10000 + minor*100 + patch` collides if minor or patch reaches 100 (`1.0.100` == `1.1.0`). (Task 10 tests reject minor/patch above 99 and check `0.10.0` sorts above `0.9.9`.)
-6. **Dev VM off or unreachable must fail fast with a clear message, not hang.** (Task 6 Step 9, manual check against a dead address.)
+6. **Dev VM off or unreachable must fail fast with a clear message, not hang.** (Task 6 Step 6, manual check against a dead address.)
+7. **LAN access denied by Android 17.** If the user declines the local-network permission, the app must say so plainly instead of showing a generic network error. (Task 7 `ManifestTest` pins the permission declaration; Task 8 Step 5 checks the denied state on the phone.)
 
 ## File Structure
 
@@ -721,37 +725,43 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ### Task 7: Hello World Android app (builds on the VM)
 
 **Files (all new under `android/`):**
-- `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`
+- `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`
 - `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar`, `gradle/wrapper/gradle-wrapper.properties` (generated)
 - `app/build.gradle.kts`
 - `app/src/main/AndroidManifest.xml`
 - `app/src/main/res/xml/network_security_config.xml`
-- `app/src/main/java/io/github/bridgemouse/bacta/{BactaColors.kt,ServerVersion.kt,MainActivity.kt}`
-- `app/src/test/java/io/github/bridgemouse/bacta/{BactaColorsTest.kt,NetworkSecurityConfigTest.kt}`
+- `app/src/main/kotlin/io/github/bridgemouse/bacta/{BactaColors.kt,ServerVersion.kt,MainActivity.kt}`
+- `app/src/test/kotlin/io/github/bridgemouse/bacta/{BactaColorsTest.kt,NetworkSecurityConfigTest.kt,ManifestTest.kt}`
 
 **Interfaces:**
 - Consumes: `GET /api/version` (Task 2), `scripts/android-build.sh` (Task 6).
 - Produces: `BactaColors` (ARGB `Long` constants), `fetchServerVersion(baseUrl: String): Result<ServerVersion>`, a debug APK at `app/build/outputs/apk/debug/app-debug.apk` on the VM.
 
+**Verified before writing this task (2026-11-02, on the dev VM):** Google's own `android create` template builds with these exact pins — AGP 9.5.0, Kotlin 2.4.21, Compose BOM 2026.09.00, Gradle 9.8.2 — in about 1m 22s, **but only with the block form `compileSdk { version = release(37) { minorApiLevel = 0 } }`**. Plain `compileSdk = 37` fails with `Failed to find target with hash string 'android-37'` because the installed platform is `android-37.0`.
+
+**Android 17 rule that shapes this task:** apps targeting API 37 are blocked from reaching LAN addresses (including `bacta.home` / `192.168.1.119`) unless the manifest declares `ACCESS_LOCAL_NETWORK` **and** the user grants it at runtime. The app must request it and show a clear message if it is denied, not a generic "no server" error. (Source: `kb://android/privacy-and-security/local-network-permission`.)
+
 - [ ] **Step 1: Owner confirms the application id**
 
 Ask the owner to confirm `io.github.bridgemouse.bacta` before any install (it cannot change later without uninstalling). If they want another id, substitute it everywhere in this task and in Task 8.
 
-- [ ] **Step 2: Generate the Gradle wrapper on the VM**
+- [ ] **Step 2: Generate the Gradle wrapper on the VM (with a verified checksum)**
 
 ```bash
-ssh wheat@bacta-android 'mkdir -p ~/tools && cd ~/tools && curl -sfLO https://services.gradle.org/distributions/gradle-9.8.2-bin.zip && unzip -q -o gradle-9.8.2-bin.zip && rm -rf /tmp/wrapgen && mkdir /tmp/wrapgen && cd /tmp/wrapgen && ~/tools/gradle-9.8.2/bin/gradle wrapper --gradle-version 9.8.2 --distribution-type bin 2>&1 | tail -3'
+SUM=$(curl -sL -m 20 https://services.gradle.org/distributions/gradle-9.8.2-bin.zip.sha256 | tr -d '[:space:]')
+[[ "$SUM" =~ ^[0-9a-f]{64}$ ]] || { echo "not a sha256: '$SUM'"; exit 1; }
+ssh wheat@bacta-android "mkdir -p ~/tools && cd ~/tools && curl -sfLO https://services.gradle.org/distributions/gradle-9.8.2-bin.zip && unzip -q -o gradle-9.8.2-bin.zip && rm -rf /tmp/wrapgen && mkdir /tmp/wrapgen && cd /tmp/wrapgen && ~/tools/gradle-9.8.2/bin/gradle wrapper --gradle-version 9.8.2 --distribution-type bin --gradle-distribution-sha256-sum $SUM 2>&1 | tail -3"
 mkdir -p android/gradle/wrapper
 scp wheat@bacta-android:/tmp/wrapgen/gradlew wheat@bacta-android:/tmp/wrapgen/gradlew.bat android/
 scp wheat@bacta-android:/tmp/wrapgen/gradle/wrapper/gradle-wrapper.jar wheat@bacta-android:/tmp/wrapgen/gradle/wrapper/gradle-wrapper.properties android/gradle/wrapper/
 chmod +x android/gradlew
-grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+grep -E 'distribution(Url|Sha256Sum)' android/gradle/wrapper/gradle-wrapper.properties
 ```
-Expected: `distributionUrl=https\://services.gradle.org/distributions/gradle-9.8.2-bin.zip`.
+Expected: `distributionUrl=https\://services.gradle.org/distributions/gradle-9.8.2-bin.zip` and a `distributionSha256Sum=` equal to `$SUM` (the checksum protects every later wrapper download).
 
 - [ ] **Step 3: Write the failing tests first**
 
-Create `android/app/src/test/java/io/github/bridgemouse/bacta/BactaColorsTest.kt`:
+Create `android/app/src/test/kotlin/io/github/bridgemouse/bacta/BactaColorsTest.kt`:
 
 ```kotlin
 package io.github.bridgemouse.bacta
@@ -788,7 +798,7 @@ class BactaColorsTest {
 }
 ```
 
-Create `android/app/src/test/java/io/github/bridgemouse/bacta/NetworkSecurityConfigTest.kt`:
+Create `android/app/src/test/kotlin/io/github/bridgemouse/bacta/NetworkSecurityConfigTest.kt`:
 
 ```kotlin
 package io.github.bridgemouse.bacta
@@ -820,7 +830,60 @@ class NetworkSecurityConfigTest {
 }
 ```
 
+Create `android/app/src/test/kotlin/io/github/bridgemouse/bacta/ManifestTest.kt`:
+
+```kotlin
+package io.github.bridgemouse.bacta
+
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class ManifestTest {
+    private val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        .parse(File("src/main/AndroidManifest.xml"))
+
+    @Test
+    fun declaresOnlyTheNetworkPermissionsItNeeds() {
+        val nodes = doc.getElementsByTagName("uses-permission")
+        val names = (0 until nodes.length).map { nodes.item(it).attributes.getNamedItem("android:name").nodeValue }.toSet()
+        assertEquals(setOf("android.permission.INTERNET", "android.permission.ACCESS_LOCAL_NETWORK"), names)
+    }
+
+    @Test
+    fun backupIsOffAndCleartextIsNotEnabledGlobally() {
+        val app = doc.getElementsByTagName("application").item(0)
+        assertEquals("false", app.attributes.getNamedItem("android:allowBackup").nodeValue)
+        assertNull(app.attributes.getNamedItem("android:usesCleartextTraffic"))
+    }
+}
+```
+
 - [ ] **Step 4: Gradle build files**
+
+`android/gradle/libs.versions.toml`:
+
+```toml
+[versions]
+androidGradlePlugin = "9.5.0"
+kotlin = "2.4.21"
+androidxComposeBom = "2026.09.00"
+androidxActivity = "1.13.0"
+junit = "4.13.2"
+
+[libraries]
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+```
 
 `android/settings.gradle.kts`:
 
@@ -855,8 +918,8 @@ include(":app")
 
 ```kotlin
 plugins {
-    id("com.android.application") version "9.5.0" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.4.21" apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.compose.compiler) apply false
 }
 ```
 
@@ -865,19 +928,27 @@ plugins {
 ```properties
 org.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8
 org.gradle.caching=true
+org.gradle.configuration-cache=true
+android.useAndroidX=true
+kotlin.code.style=official
+android.nonTransitiveRClass=true
 ```
 
-`android/app/build.gradle.kts`:
+`android/app/build.gradle.kts` (no `org.jetbrains.kotlin.android` plugin — AGP 9 has built-in Kotlin):
 
 ```kotlin
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
     namespace = "io.github.bridgemouse.bacta"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 0
+        }
+    }
 
     defaultConfig {
         applicationId = "io.github.bridgemouse.bacta"
@@ -898,13 +969,17 @@ android {
     }
 }
 
-dependencies {
-    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
-    implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.foundation:foundation")
+kotlin {
+    jvmToolchain(17)
+}
 
-    testImplementation("junit:junit:4.13.2")
+dependencies {
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.foundation)
+
+    testImplementation(libs.junit)
 }
 ```
 
@@ -913,19 +988,19 @@ dependencies {
 ```bash
 bash scripts/android-build.sh build testDebugUnitTest
 ```
-Expected: FAIL — `Unresolved reference: BactaColors` (and the missing `network_security_config.xml`). The first run also downloads dependencies and takes several minutes. If the failure is instead a **configuration** error, apply the matching fix and re-run:
+Expected: FAIL — `Unresolved reference: BactaColors` and missing `network_security_config.xml` / manifest (the first run also downloads dependencies and takes a few minutes). If the failure is instead a **configuration** error, apply the matching fix and re-run:
 
 | Error contains | Fix |
 |---|---|
-| `Failed to find target with hash string 'android-37'` | replace `compileSdk = 37` with `compileSdk { version = release(37) }` |
-| `android.useAndroidX` / "AndroidX dependencies" | add `android.useAndroidX=true` to `gradle.properties` |
-| `Minimum supported Gradle version is X` | set the wrapper to X (`gradle-wrapper.properties`) — Step 2 with `--gradle-version X` |
-| `kotlin` plugin version / Compose compiler mismatch | align `org.jetbrains.kotlin.plugin.compose` to the Kotlin version named in the error |
+| `Minimum supported Gradle version is X` | regenerate the wrapper for X (Step 2 with `--gradle-version X` and X's official `.sha256`) |
+| `Failed to find target with hash string 'android-37…'` | the VM platform dir name must match: `ls /opt/android-sdk/platforms`; keep `minorApiLevel = 0` for `android-37.0` |
+| Kotlin / Compose compiler mismatch | align `kotlin` in `libs.versions.toml` to the version named in the error |
 | `Unresolved reference: kotlinx` | add `implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:<latest from Maven Central>")` |
+| `Unresolved reference: ACCESS_LOCAL_NETWORK` | `compileSdk` is below 37; re-check the `compileSdk` block |
 
 - [ ] **Step 6: Implement the sources**
 
-`android/app/src/main/java/io/github/bridgemouse/bacta/BactaColors.kt`:
+`android/app/src/main/kotlin/io/github/bridgemouse/bacta/BactaColors.kt`:
 
 ```kotlin
 package io.github.bridgemouse.bacta
@@ -975,6 +1050,7 @@ object BactaColors {
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:allowBackup="false"
@@ -994,7 +1070,7 @@ object BactaColors {
 </manifest>
 ```
 
-`android/app/src/main/java/io/github/bridgemouse/bacta/ServerVersion.kt`:
+`android/app/src/main/kotlin/io/github/bridgemouse/bacta/ServerVersion.kt`:
 
 ```kotlin
 package io.github.bridgemouse.bacta
@@ -1022,19 +1098,25 @@ suspend fun fetchServerVersion(baseUrl: String): Result<ServerVersion> = withCon
 }
 ```
 
-`android/app/src/main/java/io/github/bridgemouse/bacta/MainActivity.kt`:
+`android/app/src/main/kotlin/io/github/bridgemouse/bacta/MainActivity.kt` (requests the Android 17 local-network permission; content width is capped so the Fold's inner screen does not stretch it):
 
 ```kotlin
 package io.github.bridgemouse.bacta
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -1045,6 +1127,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1060,9 +1143,24 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun HelloScreen() {
+    val context = LocalContext.current
+    var granted by remember {
+        mutableStateOf(
+            context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     var status by remember { mutableStateOf("contacting server…") }
 
     LaunchedEffect(Unit) {
+        if (!granted) launcher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+    }
+
+    LaunchedEffect(granted) {
+        if (!granted) {
+            status = "Local network access is needed to reach the Bacta server.\nAllow \"Nearby devices\" for Bacta in system settings."
+            return@LaunchedEffect
+        }
         status = "no server reachable"
         for (url in BASE_URLS) {
             val result = fetchServerVersion(url)
@@ -1075,17 +1173,19 @@ private fun HelloScreen() {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(BactaColors.Base))
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color(BactaColors.Base)),
+        contentAlignment = Alignment.Center,
     ) {
-        Text("BACTA·OS", color = Color(BactaColors.Mx4), fontFamily = FontFamily.Monospace, fontSize = 28.sp)
-        Text("android ${BuildConfig.VERSION_NAME}", color = Color(BactaColors.TextMuted), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-        Text(status, color = Color(BactaColors.TextSecondary), fontFamily = FontFamily.Monospace, fontSize = 14.sp, modifier = Modifier.padding(top = 24.dp))
+        Column(
+            modifier = Modifier.widthIn(max = 480.dp).padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("BACTA·OS", color = Color(BactaColors.Mx4), fontFamily = FontFamily.Monospace, fontSize = 28.sp)
+            Text("android ${BuildConfig.VERSION_NAME}", color = Color(BactaColors.TextMuted), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            Text(status, color = Color(BactaColors.TextSecondary), fontFamily = FontFamily.Monospace, fontSize = 14.sp, modifier = Modifier.padding(top = 24.dp))
+        }
     }
 }
 ```
@@ -1095,18 +1195,18 @@ private fun HelloScreen() {
 ```bash
 bash scripts/android-build.sh build testDebugUnitTest assembleDebug
 ```
-Expected: `BUILD SUCCESSFUL`; 4 unit tests pass (2 colors, 2 network-security-config). Then:
+Expected: `BUILD SUCCESSFUL`; 6 unit tests pass (2 colors, 2 network-security-config, 2 manifest). Then:
 
 ```bash
 ssh wheat@bacta-android 'ls -la work/bacta-android/app/build/outputs/apk/debug/app-debug.apk'
 ```
-Expected: the APK exists (a few MB).
+Expected: the APK exists (about 30 MB for a Compose app).
 
 - [ ] **Step 8: Commit**
 
 ```bash
 git add android
-git commit -m "feat(android): Hello World Compose app, design-token colors, cleartext limited to Bacta hosts
+git commit -m "feat(android): Hello World Compose app, design-token colors, local-network permission, cleartext limited to Bacta hosts
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
@@ -1137,22 +1237,28 @@ bash scripts/android-build.sh install <phone-ip>:<connect-port>
 bash scripts/android-build.sh adb -s <phone-ip>:<connect-port> shell am start -n io.github.bridgemouse.bacta/.MainActivity
 bash scripts/android-build.sh screenshot <phone-ip>:<connect-port>
 ```
-Expected: `Success` from the install; open `/tmp/bacta-android/screen.png` with the Read tool.
+Expected: `Success` from the install. On first launch Android shows a **Nearby devices** permission prompt (this is Android 17's local-network permission) — the owner taps **Allow**. Then take the screenshot again and open `/tmp/bacta-android/screen.png` with the Read tool.
 
 - [ ] **Step 4: Check the screen**
 
 The screenshot must show `BACTA·OS` in cyan on a near-black background, `android 0.0.1`, and `server 1.1.0 · min app 0.1.0` with `via http://bacta.home` (or `via http://192.168.1.119:3001`). That one screen proves the whole pipeline: toolchain → VM build → `adb` → phone → cleartext network config → live `/api/version`.
 
-- [ ] **Step 5: Failure triage**
+- [ ] **Step 5: Check the denied state (Review Focus #7)**
+
+Have the owner revoke the permission (Settings → Apps → Bacta → Permissions → Nearby devices → Don't allow), force-stop and reopen the app, and take a screenshot. Expected: the message `Local network access is needed to reach the Bacta server.` with the instruction to allow "Nearby devices" — not `no server reachable`. Then re-grant the permission.
+
+- [ ] **Step 6: Failure triage**
 
 | Symptom | Likely cause / action |
 |---|---|
+| Message about local network access | the permission is denied or revoked: Settings → Apps → Bacta → Permissions → Nearby devices → Allow |
+| `no server reachable` + `EPERM` / `Operation not permitted` | same cause on a device that reports it as a socket error — grant Nearby devices |
 | `no server reachable` + `UnknownHostException` | the phone's DNS does not resolve `bacta.home`; the IP fallback should still work — if both fail, check the phone is on the home Wi-Fi |
 | `…Cleartext HTTP traffic … not permitted` | the host is not in `network_security_config.xml`; check the exact host string |
 | Server shows `unknown` | `/api/version` could not read `package.json`; check the service's working directory |
 | App not listed after install | `adb shell pm list packages \| grep bacta` and re-run Step 3 |
 
-- [ ] **Step 6: Record it**
+- [ ] **Step 7: Record it**
 
 Add a line to the memory file `project_nov1_status_debrief.md` that the first on-device install succeeded and with which phone address style worked.
 
@@ -1511,11 +1617,11 @@ Expected: the run completes `success`; the release lists `bacta-android-0.0.1.ap
 | D: Android CI + signing key | Tasks 9, 10 |
 | §5: `.gitignore` entries, Android CI not a required check | Tasks 4, 9 |
 | §4: versionCode formula | Task 10 (with the collision guard the spec missed) |
-| §7: cleartext limited to the Bacta host | Task 7 |
+| §7: cleartext limited to the Bacta host; Android 17 local-network permission | Task 7 (tests + permission flow), Task 8 (on-device) |
 | MX-4 revival | deliberately excluded (owner decision) |
 
 **Placeholder scan:** the only angle-bracket placeholders left are runtime values the executor must substitute (`<N>` PR number, `<phone-ip>`, ports, pairing code) and the PR bodies marked `<template headings…>`, which must be filled in from `.github/pull_request_template.md` exactly as in Task 0 Step 2.
 
 **Type / name consistency:** `BactaColors` constants are `Long` and compared with `L` literals in tests; `Color(BactaColors.X)` accepts `Long`. `fetchServerVersion` / `ServerVersion` names match between `ServerVersion.kt` and `MainActivity.kt`. Gradle properties `bacta.versionName` / `bacta.versionCode` are read in Task 7 and passed in Task 10. Script commands (`sync|build|apk|install|adb|screenshot`) match between Task 6 and its callers in Tasks 7–8. `MainActivity` reads the version from the generated `BuildConfig.VERSION_NAME` (enabled by `buildConfig = true` in Task 7 Step 4).
 
-**Review Focus coverage:** items 1–6 each map to a test or explicit check (Tasks 2, 3, 6, 7, 10, and Task 6 Step 6).
+**Review Focus coverage:** items 1–7 each map to a test or explicit check (Tasks 2, 3, 6, 7, 8, 10, and Task 6 Step 6).

@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Docs are the source of truth, the web code is only a hint.** Read the official Android docs before every task (see "Source of truth" below). Do not translate the React code; build each screen the Android-native way the docs recommend and judge success by the rendered result.
+
 **Goal:** A real Bacta Android app on the owner's Fold that does what the PWA's core does today for PIN login, Home and Recovery (Overview + Trends), looking like the existing design, built the way Google recommends and from reusable card templates. Sleep, Training, MX-4 chat and Settings are Phase E2.
 
 **Architecture:** Google's layered architecture in one Gradle module: a UI layer (Compose screens, one `@HiltViewModel` per screen exposing a `StateFlow<UiState>`, plain state holders inside reusable components), a data layer (repositories over Retrofit/OkHttp and DataStore), and a small `domain` package for business rules extracted from the PWA's page code. Screens are lists of UI models rendered by a small set of reusable card templates, so adding a metric means adding a model, not a composable.
@@ -38,6 +40,35 @@ Sources: `kb://android/topic/architecture/recommendations`, `…/designsystems/c
 | Emoji icons, Nutrition tile, two "calibrating" placeholder tiles on Home | Vector icons; only built sections appear; the "N ONLINE" counter is computed. |
 | 11 sequential-feeling per-metric calls on Recovery | Fetched concurrently (`coroutineScope` + `async`) inside the repository. A batch endpoint is a possible later server change, out of scope. |
 
+## Source of truth (applies to every task, read this first)
+
+**Authority order:** 1) Google's Android documentation and each library's own official docs; 2) the end visual (the design handoff prototype and the live PWA's look); 3) the existing web code, as a *hint* about what the result should show and do, never about how to build it.
+
+**Docs index (live site, from `https://developer.android.com/develop`).** A `kb://android/<path>` page is the same page as `https://developer.android.com/<path>`; the live site wins if they differ.
+
+| Need | Start at |
+|---|---|
+| UI, Jetpack Compose | `developer.android.com/develop/ui`, `developer.android.com/compose` |
+| App architecture (layers, UDF, ViewModel, DI) | `developer.android.com/topic/architecture/intro` |
+| Data and files (DataStore, storage) | `developer.android.com/guide/topics/data` |
+| Networking | `developer.android.com/develop/connectivity` |
+| Navigation | `developer.android.com/guide/navigation` (Navigation 3) |
+| Security, privacy, Keystore, permissions | `developer.android.com/security`, `…/privacy`, `…/guide/topics/permissions/overview` |
+| Accessibility | `developer.android.com/guide/topics/ui/accessibility` |
+| Adaptive apps and large screens (the Fold) | `developer.android.com/develop/adaptive-apps` |
+| Build (Gradle, AGP) | `developer.android.com/build` |
+| Testing | `developer.android.com/training/testing` |
+| Performance (R8, profiles) | `developer.android.com/topic/performance/overview` |
+| Health & Fitness, Health Connect (later phases) | `developer.android.com/health-and-fitness` |
+| Samples and API reference | `developer.android.com/samples`, `developer.android.com/reference` |
+
+- **Read the docs at every turn.** Before each task, and again whenever a choice comes up: the live pages in the Chromium browser (Playwright) or `WebFetch`; `ssh wheat@bacta-android 'android docs search "<topic>"'` then `android docs fetch kb://…`; each library's own site (Retrofit, OkHttp, kotlinx.serialization, Hilt/Dagger, Turbine); and the installed skills (`navigation-3`, `adaptive`, `edge-to-edge`, `testing-setup`, `agp-9-upgrade`, `android-cli`). When the docs are silent, take the simplest standard Compose solution and say so.
+- **Do not copy blindly.** Do not mirror React files, hooks or component trees, and do not translate functions line by line. If you catch yourself porting a function, stop and read how the platform does it. Keep the web's *behavior and look* only where it still makes sense once you see the whole app.
+- **Observe the large picture.** If a detail in this plan conflicts with the docs, or stops making sense once you see how the pieces fit, do not follow it: record a `Ruling:` in the ledger with the doc reference and proceed.
+- **Visual parity is judged on the rendered result** (preview renders and the Fold next to the handoff prototype and the live PWA), not on how similar the code is.
+- **Every PR description has two short sections:** "Docs consulted" (page titles or URLs) and "Where this deliberately differs from the web client, and why".
+- Accessibility and platform behavior are part of "the Android way": semantics and content descriptions on custom drawings, 48 dp minimum touch targets, predictive back, system font scale and the system "remove animations" setting.
+
 ## Global Constraints
 
 - Android: `minSdk 34`, `compileSdk { version = release(37) { minorApiLevel = 0 } }`, `targetSdk 37`, application id `io.github.bridgemouse.bacta`; never apply `org.jetbrains.kotlin.android` (AGP 9 built-in Kotlin); Compose plugin `org.jetbrains.kotlin.plugin.compose` stays.
@@ -49,6 +80,7 @@ Sources: `kb://android/topic/architecture/recommendations`, `…/designsystems/c
 - Branches `feature/android-<topic>` in `worktrees/<name>`; PR each; squash-merge; never commit to `main`; never switch branches in `/opt/bacta`. `git branch -D` is denied for Claude, and Claude cannot push tags (the owner tags releases).
 - Commit messages end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`; PR bodies follow `.github/pull_request_template.md` and end with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 - **Device rule:** before anything that foregrounds an app on the Fold, tell the owner what is about to happen and wait for "go". Prefer `uiautomator`/`pm` over asking the owner to tap.
+- **Follow "Source of truth" above for every task.** Each task starts with a docs step; each PR lists the docs consulted and where it deliberately differs from the web client.
 - Build/test on the dev VM: `bash scripts/android-build.sh build testDebugUnitTest assembleDebug`; render previews with `android preview render <module> --fqn <fn> --output <dir>`; `ANDROID_HOME` and JDK 17 are set on the VM.
 
 ## Review Focus
@@ -103,6 +135,7 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 
 **Interfaces:** Produces the version catalog entries and plugins (`ksp`, `hilt`, `kotlin-serialization`) every later task uses; `BactaApp`; `MainActivity` as the single `@AndroidEntryPoint` activity that calls `setContent { }` with a placeholder; and the two pure domain enums everything else shares: `enum class Section(val key: String, val label: String) { Home("home", "Home"), Recovery("recovery", "Recovery"), Training("training", "Training"), Sleep("sleep", "Sleep") }` (`key` is the API section id) and `enum class Tone { Positive, Caution, Flag }`.
 
+- [ ] **Step 0: Docs first.** Read the Hilt setup page (`developer.android.com/training/dependency-injection/hilt-android`), the `agp-9-upgrade` skill (KSP/Hilt version floors, built-in Kotlin), Navigation 3 basics (`developer.android.com/guide/navigation/navigation-3/basics`), and the R8 / app-optimization pages under `developer.android.com/topic/performance`. Check each third-party library's current setup page (Retrofit, kotlinx.serialization) in the browser and use those, not the scratch project, as the reference. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Write the failing tests.** Extend `ManifestTest` with `applicationClassIsBactaApp` (manifest `android:name` is `.BactaApp`); keep the existing permission and cleartext assertions unchanged. `SectionTest`: `keysAreTheApiSectionIds` (`home`, `recovery`, `training`, `sleep`) and `labelsMatchTheWebTheme` (`Home`, `Recovery`, `Training`, `Sleep`).
 - [ ] **Step 2:** Run `bash scripts/android-build.sh build testDebugUnitTest` → FAIL on the new test.
 - [ ] **Step 3:** Add the Tech Stack versions to the version catalog (no inline versions in build files); apply plugins `com.google.devtools.ksp`, `com.google.dagger.hilt.android`, `org.jetbrains.kotlin.plugin.serialization`; add dependencies (Hilt + `ksp` compiler, `hilt-navigation-compose`, Retrofit + converter + OkHttp + serialization, DataStore, lifecycle-viewmodel-compose, lifecycle-runtime-compose, navigation3 ui/runtime, lifecycle-viewmodel-navigation3, test libraries). Create `BactaApp`; set it in the manifest. Enable R8 for `release` (`isMinifyEnabled = true`, `isShrinkResources = true`) with the keep rules the libraries' docs require, in `proguard-rules.pro`.
@@ -116,9 +149,10 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 **Files:** Create `ui/designsystem/{BactaTheme,Tokens,Type,Shapes,Texture}.kt`, `res/font/*` (+ `OFL` license files); Test `ui/designsystem/TokensTest.kt`. Modify/retire `BactaColors.kt` (tokens move into `Tokens.kt`; `BactaColorsTest` is replaced by `TokensTest` with the same assertions).
 
 **Interfaces:**
-- Produces: `BactaTheme(content)` (dark Material 3 scheme + `LocalBactaTokens`); `object BactaTokens { val surface…, fun accent(section: Section): Color, fun tone(tone: Tone): Color }` (consuming `Section` and `Tone` from Task 1); `enum class CardSize(val height: Dp)`; `Modifier.bactaTexture(accent: Color)` (scanlines + grid, ported from `client/src/lib/bactaTexture.ts`); `FontFamily` objects `HankenGrotesk`, `JetBrainsMono`.
+- Produces: `BactaTheme(content)` (dark Material 3 scheme + `LocalBactaTokens`); `object BactaTokens { val surface…, fun accent(section: Section): Color, fun tone(tone: Tone): Color }` (consuming `Section` and `Tone` from Task 1); `enum class CardSize(val height: Dp)`; `Modifier.bactaTexture(accent: Color)` (the scanline + grid look; `client/src/lib/bactaTexture.ts` shows the intended result, the implementation follows Compose's drawing docs); `FontFamily` objects `HankenGrotesk`, `JetBrainsMono`.
 - Consumed by: Tasks 5–9.
 
+- [ ] **Step 0: Docs first.** Read `developer.android.com/develop/ui/compose/designsystems/custom` and `…/anatomy`, `…/compositionlocal`, `…/text/fonts`, then search the Compose docs for custom drawing (`drawBehind`, `drawWithCache`) and accessibility semantics. Decide the theme structure from those pages, not from how `client/src/theme.ts` is organized. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests.** `TokensTest`: every color and accent equals the Global Constraints values (as the old `BactaColorsTest` asserted); `CardSize` heights are 220/170/140/110/88/52; `accent(Section.Recovery)` is `#64b5f6`; `tone(Tone.Flag)` is `#f87171`, `Caution` `#fbbf24`, `Positive` `#4ade80`.
 - [ ] **Step 2:** Run the unit tests → FAIL (unresolved references).
 - [ ] **Step 3:** Implement tokens, theme, typography and shapes; obtain the two font families from the official `google/fonts` repository into `res/font` with the weights the web uses, and confirm each family's SIL OFL license file is present before committing; port the texture.
@@ -137,6 +171,7 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 - `ServerConfig` holds candidate base URLs (`http://bacta.home`, `http://192.168.1.119:3001`) and the chosen one; `BaseUrlInterceptor` rewrites scheme/host/port per request.
 - `UnauthorizedInterceptor` turns HTTP 401 on non-auth endpoints into a `SessionExpiredException` and emits on `SessionEvents.expired: SharedFlow<Unit>` (state, not a UI event: the ViewModels observe it through the repository).
 
+- [ ] **Step 0: Docs first.** Read the data-layer pages under `developer.android.com/topic/architecture`, DataStore (`developer.android.com/topic/libraries/architecture/datastore`), the Keystore page (`developer.android.com/privacy-and-security/keystore`), network security config (`…/privacy-and-security/security-config`), and the Retrofit, OkHttp (cookies, interceptors, MockWebServer) and kotlinx.serialization docs on their own sites. Check whether Google's current guidance still recommends DataStore plus Keystore for a session token, and follow what the docs say. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests** (MockWebServer + an in-memory `FakeSessionStore`):
   - `loginStoresCookieAndLaterRequestsSendIt` — response `Set-Cookie: bacta_session=abc; HttpOnly` is saved and the next request carries `Cookie: bacta_session=abc`.
   - `baseUrlInterceptorRewritesHostAndPort` — a request built against a placeholder host reaches the MockWebServer.
@@ -159,8 +194,9 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 - `data class Briefing(tone: Tone, headline: String, summary: String?, body: String, recommendation: String, flags: List<String>, generatedAt: Instant, model: String?)`; `interface BriefingRepository { suspend fun briefing(section: Section): Result<Briefing?> }` where `null` means "server sent its stub (no `generated_at`)".
 - `interface AuthRepository { suspend fun status(): Result<AuthStatus>; suspend fun login(pin: String): LoginResult; suspend fun logout() }` with `AuthStatus(configured, authed)` and `sealed interface LoginResult { Success, WrongPin, Failure }`.
 - `interface ServerRepository { suspend fun compatibility(appVersion: String): Compatibility }` with `Ok / AppTooOld(minApp) / Unreachable`.
-- `domain`: `ReadinessRules.scoreLabel(score: Double?): String?` (Optimal ≥ 80, Ready ≥ 67, then the lower bands exactly as `useRecoveryData.ts` lines ~150–160); `batteryBand(now: Double?)` (HIGH ≥ 75, MODERATE ≥ 50, LOW ≥ 25, else CRITICAL; tone green/amber/red as `RecoveryPage.tsx` 156–163); `recoveryTimeBand(hours: Double?)` (READY NOW 0, FRESH ≤ 24, RECOVERING ≤ 48, else HEAVY LOAD; position = hours / 72 clamped); `HrvTrend.direction(series: List<Double>)` (linear-regression slope, ported from `useRecoveryData.ts`); `TrainingStatus.label(n: Double?)` (table from `garminApi.ts` `TRAINING_STATUS`); `Freshness.of(generatedAt: Instant, now: Instant)` → `Fresh / Stale` (stale after 36 h).
+- `domain`: `ReadinessRules.scoreLabel(score: Double?): String?` (starting values taken from the web so behavior matches: Optimal ≥ 80, Ready ≥ 67, then the lower bands in `useRecoveryData.ts` lines ~150–160; sanity-check each against what the metric means); `batteryBand(now: Double?)` (HIGH ≥ 75, MODERATE ≥ 50, LOW ≥ 25, else CRITICAL; tone green/amber/red as `RecoveryPage.tsx` 156–163); `recoveryTimeBand(hours: Double?)` (READY NOW 0, FRESH ≤ 24, RECOVERING ≤ 48, else HEAVY LOAD; position = hours / 72 clamped); `HrvTrend.direction(series: List<Double>)` (the web classifies by a least-squares slope; confirm that is a sound measure for seven points before reusing it, and record a ruling if not); `TrainingStatus.label(n: Double?)` (starting table from `garminApi.ts` `TRAINING_STATUS`; verify against `docs/GARMIN.md`); `Freshness.of(generatedAt: Instant, now: Instant)` → `Fresh / Stale` (stale after 36 h).
 
+- [ ] **Step 0: Docs first.** Read the data-layer and domain-layer pages under `developer.android.com/topic/architecture`, the coroutines best-practices page, and the testing fundamentals pages "Use test doubles in Android" and "Test StateFlows". Decide what belongs in the `domain` package from the domain-layer page's own criteria, not just because the web had logic in a page. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests:**
   - `trendsFetchesConcurrentlyAndIsolatesFailures` (fake API: one metric throws, others return; result map has one failure and the rest values).
   - `trendRangeUsesDeviceLocalDate` (`today` = 2026-11-03 local; range is 2026-10-27..2026-11-03; a UTC-vs-local midnight case).
@@ -180,9 +216,10 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 - `BactaCard(size: CardSize, accent: Color, modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit)` — surface, border, texture, optional accent frame; the base of every template.
 - `MetricCardModel(label: String, value: String?, unit: String?, sub: String?, tone: Tone?, trend: List<Double>?)` → `MetricCard`; `TrendCardModel(label, value, unit, series: List<Double>, kind: TrendKind { Line, Bars }, delta: Delta?, lowerIsBetter: Boolean)` → `TrendCard`; `HeadlineModel` → `HeadlineCard`; `StatusTileModel(label, value, unit, statusLabel, tone)` → `StatusTile`; `GaugeModel(value: Double?, max: Double, label, sub)` → `GaugeCard`; `BriefingModel(state: BriefingState { Loading, Live(briefing, freshness), NoBriefing, Offline, Error }, …)` → `BriefingCard`; `SectionRail(label, right: String?, accent)`; `StateMessage(kind: Loading/Empty/Error, message, onRetry)`.
 - `value == null` renders `—` in every template. Formatting helpers live in `ModelsTest`-covered pure functions (`formatValue`, `deltaDirection`).
-- `MX4Sigil(mood: SigilMood, size: Dp)` ports the web sigil moods used in M1 (`transmit`, `idle`, `think`, `pleased`) with Compose `Canvas` + `rememberInfiniteTransition`; the animation respects the system "remove animations" setting.
+- `MX4Sigil(mood: SigilMood, size: Dp)` reproduces the look of the web sigil moods used in M1 (`transmit`, `idle`, `think`, `pleased`) with Compose `Canvas` and the animation APIs, per the Compose graphics and animation docs, not by translating the SVG/CSS; the animation respects the system "remove animations" setting.
 - `Catalog.kt`: a `@Preview` per template per state (loaded, null value, long text, each tone).
 
+- [ ] **Step 0: Docs first.** Read `developer.android.com/topic/architecture/ui-layer/stateholders`, the Compose state-hoisting page, then search the Compose docs for accessibility, Canvas drawing, animation, previews and touch-target size, plus the `adaptive` skill. Templates must meet the accessibility guidance (semantics for gauges and charts, 48 dp targets, font scaling) even though the web does not. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests** (`ModelsTest`): `formatValueRendersDashForNull`, `formatValueRoundsLikeTheWeb` (e.g. 74.0 → `74`, 7.46 → `7.5` where the web uses one decimal), `deltaDirectionRespectsLowerIsBetter`, `briefingStateFromFreshnessAndNullability`.
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implement helpers and composables. **Step 4:** Unit tests PASS.
 - [ ] **Step 5: Visual check.** Render the catalog previews to PNG on the VM; also screenshot the design handoff prototype `design_bacta-handoff-package/Bacta - Prototype v3.html` with Playwright (stub data, no auth, no PHI; keep PNGs out of git); view each pair and fix visible differences (spacing, type, colors, animation). Record the checked templates in the PR description.
@@ -198,8 +235,9 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 - `sealed interface Destination : NavKey { Login, Home, Recovery }` (Navigation 3 `NavKey`s; back stack from `rememberNavBackStack`).
 - `fun resolveStart(permission: PermissionState, compat: Compatibility, auth: Result<AuthStatus>): StartDestination` with `StartDestination { NeedsLocalNetwork, AppTooOld(minApp), ServerUnreachable, Login, Home }`.
 - `class SectionTabState { var tab: Tab { Overview, Trends }; fun reset() }` — a plain state holder (not a ViewModel), reset when the section changes.
-- `BactaScaffold(section: Section, tabs: Boolean, content)` — top status bar (`BACTA·OS` + idle sigil, or back + section label), bottom dock (Ask MX-4 button disabled with "Phase E2" no-op, Overview/Trends toggle, nav button), `ModalBottomSheet` nav sheet listing built sections only; back gesture uses Navigation 3's back stack.
+- `BactaScaffold(section: Section, tabs: Boolean, content)` — top status bar (`BACTA·OS` + idle sigil, or back + section label), bottom dock (Ask MX-4 button disabled with "Phase E2" no-op, Overview/Trends toggle, nav button), `ModalBottomSheet` nav sheet listing built sections only (per the Material 3 docs); back gesture uses Navigation 3's back stack.
 
+- [ ] **Step 0: Docs first.** Read Navigation 3 (`…/navigation-3/basics`, `naventrydecorators`, the `conditional.md` and `modular-hilt.md` recipes in the `navigation-3` skill), the `edge-to-edge` and `adaptive` skills, the Material 3 `ModalBottomSheet` docs, the predictive-back pages, and the window-insets pages. Build navigation and back behavior the platform way; the web's router and sheet are only a visual reference. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests:** `resolveStart` table — permission missing → `NeedsLocalNetwork` before anything else; compat `AppTooOld` → `AppTooOld`; unreachable → `ServerUnreachable`; configured+not authed → `Login`; configured+authed → `Home`; **not configured → `Home`** (open box, as the web); auth status failure → `ServerUnreachable`, never `Home`. `SectionTabState` resets on section change. A 401 emission (Task 3 `SessionEvents`) routes to `Login` exactly once.
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implement; the login gate follows the Navigation 3 conditional-navigation recipe (`~/.claude/skills/navigation-3/references/android/guide/navigation/navigation-3/recipes/conditional.md`) and ViewModel wiring follows `recipes/modular-hilt.md`; confirm `hiltViewModel()` with Navigation 3's entry decorators compiles at the pinned versions before building on it. Move the Hello World permission logic into `PermissionGate` (`localNetworkPermissionRequired` stays and keeps its test). **Step 4:** PASS; render previews of the scaffold and the three gate screens.
 - [ ] **Step 5:** Commit.
@@ -212,6 +250,7 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 
 **Interfaces:** `LoginUiState(pin: String, busy: Boolean, error: LoginError?, done: Boolean)`; `LoginViewModel(auth: AuthRepository)` exposing `state: StateFlow<LoginUiState>`, `onPinChanged(String)`, `onSubmit()`; `LoginError { WrongPin, Connection }`.
 
+- [ ] **Step 0: Docs first.** Read the Compose text-input pages (keyboard options, password fields, autofill) and the UI-layer state-holder page. Decide input handling from the docs (numeric keyboard, masking, autofill, IME action) and keep only the web's copy and look. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests** (fake `AuthRepository`, Turbine): `pinKeepsOnlyDigitsAndCapsAtTwelve`; `submitIsIgnoredBelowFourDigits`; `wrongPinSetsErrorAndClearsPin`; `successSetsDone`; `networkFailureSetsConnectionErrorAndKeepsPin`; `typingClearsTheError`.
 - [ ] **Step 2–4:** FAIL → implement (numeric keyboard, password masking, the web's copy: "Locked — enter PIN", `Unlock`) → PASS; render `LoginScreen` previews for idle, error, busy.
 - [ ] **Step 5:** Commit; open the PR for `feature/android-shell-login` (Tasks 6 + 7); CI green; merge.
@@ -224,8 +263,9 @@ Tasks 2 and 3 are independent of each other; every other task consumes earlier o
 
 **Interfaces:** `HomeUiState { Loading, Content(briefing: BriefingModel, tiles: List<MetricCardModel>, trends: List<TrendCardModel>), Error(retry) }`; `HomeViewModel(metrics: MetricsRepository, briefings: BriefingRepository)` with `state: StateFlow<HomeUiState>` and `refresh()`. Mapping pure functions: `toTiles(summary, trends)`, `toTrendRows(trends)`.
 
-Screen content (port of `HomePage.tsx`, minus the artifacts in the audit): Overview = MX-4 briefing card, rail `SYSTEMS` with `n ONLINE` computed, 2-column grid of `MetricCard`s: Recovery (body battery now, sub from HRV vs week average), Training (load, status label from `TrainingStatus`), Sleep (duration, score ring). Trends = briefing + rail `WEEK IN REVIEW` + `TrendCard` rows (Recovery, HRV, Sleep, Training Load as bars, Intensity as bars). Pull-to-refresh via Material 3 `PullToRefreshBox`.
+Screen content (the web's `HomePage.tsx` shows *what* Home presents, not how to build it; the artifacts in the audit are left out): Overview = MX-4 briefing card, rail `SYSTEMS` with `n ONLINE` computed, 2-column grid of `MetricCard`s: Recovery (body battery now, sub from HRV vs week average), Training (load, status label from `TrainingStatus`), Sleep (duration, score ring). Trends = briefing + rail `WEEK IN REVIEW` + `TrendCard` rows (Recovery, HRV, Sleep, Training Load as bars, Intensity as bars). Pull-to-refresh via Material 3 `PullToRefreshBox`.
 
+- [ ] **Step 0: Docs first.** Read `developer.android.com/topic/architecture/ui-layer` (UI state production), the lifecycle-aware collection page, the Material 3 pull-to-refresh page, and `developer.android.com/agents/skills/jetpack-compose/jetpack-compose-performance/references/effects-and-threading`. Structure `HomeViewModel` and its state the way the UI-layer docs recommend, regardless of how `useHomeData` is organized. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests:** `loadingThenContent`; `allMetricsMissingShowsDashesNotFakeNumbers` (summary all `null` → every tile value `null`, no `74`/`82`/`342` anywhere); `oneTrendFailingLeavesTheOthers`; `noBriefingAndOfflineAreDistinctStates`; `staleBriefingCarriesItsAge`; `tilesIncludeOnlyBuiltSections` (no Nutrition, no placeholders); `sparklineIsRealTrendOrAbsent`; `refreshReloadsAndKeepsOldContentWhileLoading`; `summaryFailureYieldsErrorWithRetry`.
 - [ ] **Step 2–4:** FAIL → implement → PASS; render Overview and Trends previews for loaded, partial and error states.
 - [ ] **Step 5:** Commit.
@@ -238,8 +278,9 @@ Screen content (port of `HomePage.tsx`, minus the artifacts in the audit): Overv
 
 **Interfaces:** `RecoveryUiState { Loading, Content(briefing, readiness: GaugeModel, battery/recovery bars, headlines: List<HeadlineModel>, vitals: List<StatusTileModel>, trends: List<TrendCardModel>), Error(retry) }`.
 
-Screen content (port of `RecoveryPage.tsx` structure): Overview = briefing, rail `READINESS` (recovery-score gauge with `ReadinessRules.scoreLabel`, body-battery now/wake bar with `batteryBand`, recovery-time bar with `recoveryTimeBand`, HRV headline with `HrvTrend` direction and baseline range, Resting HR and Stress compact headlines), rail `OVERNIGHT VITALS` (Sleep Stress, Respiration, SpO₂, Sleep HR `StatusTile`s). Trends = eight rail+`TrendCard` sections (Recovery Score bars, HRV, Body Battery bars, Resting HR, Stress, Sleep Stress, Recov. Time, Respiration; `lowerIsBetter` as in the web). Source badges for non-Garmin data are out of scope (providers are disabled).
+Screen content (the web's `RecoveryPage.tsx` shows *what* Recovery presents and in what order, not how to build it): Overview = briefing, rail `READINESS` (recovery-score gauge with `ReadinessRules.scoreLabel`, body-battery now/wake bar with `batteryBand`, recovery-time bar with `recoveryTimeBand`, HRV headline with `HrvTrend` direction and baseline range, Resting HR and Stress compact headlines), rail `OVERNIGHT VITALS` (Sleep Stress, Respiration, SpO₂, Sleep HR `StatusTile`s). Trends = eight rail+`TrendCard` sections (Recovery Score bars, HRV, Body Battery bars, Resting HR, Stress, Sleep Stress, Recov. Time, Respiration; `lowerIsBetter` as in the web). Source badges for non-Garmin data are out of scope (providers are disabled).
 
+- [ ] **Step 0: Docs first.** Re-read the UI-layer and Compose performance pages from Task 8 and search the Compose docs for lazy lists and accessible custom charts. Reuse Task 8's patterns; do not mirror `RecoveryPage.tsx`'s structure. Record the pages read for the PR description's "Docs consulted".
 - [ ] **Step 1: Failing tests:** mapping per band (reusing Task 4 rules, not re-implementing them), `nullMetricsRenderDashesAndNoToneColor`, `hrvDirectionAppearsOnlyWithEnoughData`, `elevenTrendCallsRunConcurrentlyAndOneFailureIsIsolated`, `trendsTabHasEightSectionsInWebOrder`, `refreshKeepsContent`.
 - [ ] **Step 2–4:** FAIL → implement → PASS; render previews.
 - [ ] **Step 5:** Commit; open the PR for `feature/android-home-recovery` (Tasks 8 + 9); CI green; merge.
@@ -248,6 +289,7 @@ Screen content (port of `RecoveryPage.tsx` structure): Overview = briefing, rail
 
 ### Task 10: On the Fold (owner + phone)
 
+- [ ] **Step 0: Docs first.** Re-read the R8 and app-optimization pages and the Firebase tester pages used earlier; if the release build misbehaves, consult the failing library's own docs for its R8 rules before changing anything. Record the pages in the PR description.
 - [ ] **Step 1:** Owner pushes tag `android-v0.1.0`; CI builds the **R8-minified** signed release and uploads to Firebase; the owner updates via App Tester.
 - [ ] **Step 2: Announce first, then wait for "go"** before anything foregrounds the app. Verify: PIN login works and a wrong PIN shows the error; Home and Recovery show **live** data (compare numbers against the PWA open in Chrome on the same Fold); MX-4 shows its real offline/stale state; clearing the app's data (`adb shell pm clear`, which I run) returns to the PIN screen (the 401 path itself is covered by Task 3/6 tests); airplane mode shows the unreachable message; revoking Nearby devices shows the permission message.
 - [ ] **Step 3:** If the R8 build crashes or loses data (serialization/Hilt keep rules), fix the rules test-first and ship `android-v0.1.1`.

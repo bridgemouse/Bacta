@@ -207,6 +207,7 @@ All routes are defined in `server/api/` and mounted in `server/index.ts`, behind
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/health` | Health check — returns `{ status: 'ok', timestamp }` (exempt from auth) |
+| `GET` | `/api/version` | Server version + minimum supported Android app version. **No auth** — the app calls it before login |
 | `POST` | `/api/auth/login` | Exchange PIN for a session cookie (rate-limited) |
 | `GET` | `/api/garmin/summary` | Latest available value per metric (uses per-metric MAX(date)) |
 | `GET` | `/api/garmin/sources` | `{metric: source}` map — for multi-device source badges |

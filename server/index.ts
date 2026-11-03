@@ -5,6 +5,7 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import { migrate } from './db/migrate'
 import healthRouter from './api/health'
+import versionRouter from './api/version'
 import garminRouter from './api/garmin'
 import manualRouter from './api/manual'
 import insightsRouter from './api/insights'
@@ -102,6 +103,7 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
 }
 
 app.use('/api/health', healthRouter)
+app.use('/api/version', versionRouter)
 app.use('/api/auth/login', loginLimiter)
 app.use('/api/auth/set-pin', loginLimiter)
 app.use('/api/auth', authRouter)

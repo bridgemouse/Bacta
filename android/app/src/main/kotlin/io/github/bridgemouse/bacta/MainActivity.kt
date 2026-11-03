@@ -27,12 +27,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dagger.hilt.android.AndroidEntryPoint
+import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
+import io.github.bridgemouse.bacta.ui.designsystem.BactaTheme
+import io.github.bridgemouse.bacta.ui.designsystem.JetBrainsMono
 
 private val BASE_URLS = listOf("http://bacta.home", "http://192.168.1.119:3001")
 
@@ -45,7 +46,7 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(transparent),
             navigationBarStyle = SystemBarStyle.dark(transparent),
         )
-        setContent { HelloScreen() }
+        setContent { BactaTheme { HelloScreen() } }
     }
 }
 
@@ -84,7 +85,7 @@ private fun HelloScreen() {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color(BactaColors.Base)).safeDrawingPadding(),
+        modifier = Modifier.fillMaxSize().background(BactaPalette.Base).safeDrawingPadding(),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -92,9 +93,9 @@ private fun HelloScreen() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("BACTA·OS", color = Color(BactaColors.Mx4), fontFamily = FontFamily.Monospace, fontSize = 28.sp)
-            Text("android ${BuildConfig.VERSION_NAME}", color = Color(BactaColors.TextMuted), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-            Text(status, color = Color(BactaColors.TextSecondary), fontFamily = FontFamily.Monospace, fontSize = 14.sp, modifier = Modifier.padding(top = 24.dp))
+            Text("BACTA·OS", color = BactaPalette.Mx4, fontFamily = JetBrainsMono, fontSize = 28.sp)
+            Text("android ${BuildConfig.VERSION_NAME}", color = BactaPalette.TextMuted, fontFamily = JetBrainsMono, fontSize = 12.sp)
+            Text(status, color = BactaPalette.TextSecondary, fontFamily = JetBrainsMono, fontSize = 14.sp, modifier = Modifier.padding(top = 24.dp))
         }
     }
 }

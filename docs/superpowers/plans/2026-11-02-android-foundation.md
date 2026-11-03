@@ -19,6 +19,7 @@
 - `applicationId` / `namespace`: `io.github.bridgemouse.bacta` (**permanent once installed — owner confirms in Task 7 Step 1**).
 - Build versions are pinned to the values read from Google Maven / Gradle on 2026-11-02 (above). AGP 9 has built-in Kotlin: **never apply `org.jetbrains.kotlin.android`**; the Compose plugin `org.jetbrains.kotlin.plugin.compose` is still applied.
 - Dark UI only. Colors are the `client/src/theme.ts` values (e.g. base `#0f1117`, MX-4 cyan `#2bc4e8`).
+- Edge-to-edge is enforced at target 37. Call `enableEdgeToEdge()` with an explicit `SystemBarStyle.dark(...)` for both bars: the default style follows the *system* light/dark setting, so on a phone in light mode it would draw dark status-bar icons on Bacta's near-black background. Apply insets with `safeDrawingPadding()` (or `Scaffold` padding) so nothing sits under the bars or the keyboard. (Source: `kb://android/develop/ui/compose/system/setup-e2e`; `edge-to-edge` skill.)
 - The VM holds no git credentials, no secrets, no production database. LXC 109 is the only machine that commits and pushes.
 - Never check out a branch in `/opt/bacta` (production runs `tsx watch` from it). All work happens in `worktrees/<name>`.
 - Work on feature branches, merge via PR with CI green; squash-merge. Do not commit to `main`.
@@ -1107,8 +1108,10 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -1116,6 +1119,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -1137,6 +1141,11 @@ private val BASE_URLS = listOf("http://bacta.home", "http://192.168.1.119:3001")
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val transparent = android.graphics.Color.TRANSPARENT
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(transparent),
+            navigationBarStyle = SystemBarStyle.dark(transparent),
+        )
         setContent { HelloScreen() }
     }
 }
@@ -1174,7 +1183,7 @@ private fun HelloScreen() {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color(BactaColors.Base)),
+        modifier = Modifier.fillMaxSize().background(Color(BactaColors.Base)).safeDrawingPadding(),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -1254,7 +1263,7 @@ Have the owner revoke the permission (Settings → Apps → Bacta → Permission
 | Message about local network access | the permission is denied or revoked: Settings → Apps → Bacta → Permissions → Nearby devices → Allow |
 | `no server reachable` + `EPERM` / `Operation not permitted` | same cause on a device that reports it as a socket error — grant Nearby devices |
 | `no server reachable` + `UnknownHostException` | the phone's DNS does not resolve `bacta.home`; the IP fallback should still work — if both fail, check the phone is on the home Wi-Fi |
-| `…Cleartext HTTP traffic … not permitted` | the host is not in `network_security_config.xml`; check the exact host string |
+| `…Cleartext HTTP traffic … not permitted` | the host is not in `network_security_config.xml`; check the exact host string. Google's network-security-config page documents `<domain>` for hostnames and does not say whether an IP literal matches; if only the `192.168.1.119` attempt fails this way, drop it and rely on `bacta.home` (give the server a DHCP reservation and local DNS entry) |
 | Server shows `unknown` | `/api/version` could not read `package.json`; check the service's working directory |
 | App not listed after install | `adb shell pm list packages \| grep bacta` and re-run Step 3 |
 

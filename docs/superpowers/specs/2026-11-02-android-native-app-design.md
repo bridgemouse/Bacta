@@ -128,7 +128,7 @@ Each phase gets its own implementation plan; this spec covers architecture only.
 
 ## 12. Risks
 
-- **Google developer-verification rollout** for sideloaded apps (global in 2027, per secondary sources): `adb` installs remain exempt; plan on `adb`/APK now and re-check official docs before cutting release builds.
+- **Google developer-verification rollout** for sideloaded apps (official docs, `kb://android/developer-verification/guides/{index,faq}`, read 2026-11-02): enforcement starts Sep 30 2026 in Brazil, Indonesia, Singapore and Thailand and goes global in 2027. `adb` installs are explicitly exempt, with no waiting period. Installs and *updates* by any other route (including Obtainium) of an unregistered app need the user's "advanced flow" (24-hour wait). The clean fix is a free **limited distribution** registration (no ID check, up to 20 devices) for the package name, signed with the release key; register it before the 2027 global rollout. Until then `adb` and APK installs are unaffected for a US device.
 - Lost signing key forces uninstall/reinstall; mitigated by two backups.
 - Fold inner-screen layout is untested. At target API 37 the app cannot opt out of large-screen resizing, so content width is capped rather than assuming a phone-sized window.
 - Build pins (AGP 9.5.0, Kotlin 2.4.21, Compose BOM 2026.09.00, Gradle 9.8.2) were verified to build together on the dev VM on 2026-11-02, using Google's `android create` template with the block form `compileSdk { version = release(37) { minorApiLevel = 0 } }`; plain `compileSdk = 37` fails against the installed `android-37.0` platform.

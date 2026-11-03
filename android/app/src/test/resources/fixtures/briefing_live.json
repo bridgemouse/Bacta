@@ -1,0 +1,11 @@
+{
+  "tone": "POSITIVE",
+  "headline": "Synthetic headline.",
+  "summary": "One synthetic summary line.",
+  "body": "Synthetic body text.",
+  "recommendation": "Synthetic directive.",
+  "flags": ["first flag"],
+  "generated_at": "2026-11-03T11:00:00Z",
+  "model": "synthetic-model",
+  "extra_field": true
+}

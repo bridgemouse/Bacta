@@ -1,0 +1,19 @@
+{
+  "hrv": 61,
+  "resting_hr": 52,
+  "stress_avg": 27,
+  "stress_max": 78,
+  "resp_avg": 14.5,
+  "spo2_avg": 96,
+  "recovery_score": 83,
+  "recovery_time_h": 12,
+  "body_battery_wake": 88,
+  "body_battery_current": 64,
+  "hrv_baseline_low": 52,
+  "hrv_baseline_high": 70,
+  "sleep_score": 81,
+  "training_load": 410,
+  "training_status_n": 4,
+  "training_status_n_date": "2026-11-02",
+  "some_future_metric": 1.5
+}

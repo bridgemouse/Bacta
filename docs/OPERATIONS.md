@@ -127,4 +127,4 @@ Plan: `docs/superpowers/plans/2026-11-03-firebase-app-distribution.md`.
 
 **Troubleshooting.** If an upload fails citing a disabled API, enable "Firebase App Distribution API" from the link in the error.
 
-**First install on the Fold.** _Record here what Android asked (unknown-sources, Play Protect), which Firebase's tester page does not say._
+**First install on the Fold (owner's report, 2026-11-03, Galaxy Z Fold 8 Ultra, Android 17).** Firebase's tester page does not say what Android asks; in practice: (1) opening the invitation from Chrome made Android ask to allow installs from Chrome; (2) Android testers need Firebase's **App Tester** app, which was installed first from its own APK; (3) after that, permission to download the build was granted; (4) Google Play Protect ran a scan, then the build downloaded and installed. Bacta then launched and showed `BACTA·OS`. Expect this sequence again only on a new device or after clearing those permissions; later builds arrive as "new build" emails.

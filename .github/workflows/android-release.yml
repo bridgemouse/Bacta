@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v6
         with:
@@ -57,3 +59,25 @@ jobs:
             --title "Bacta Android ${{ steps.ver.outputs.name }}" \
             --notes "Signed release build. Install over an existing release build; a debug-signed install must be uninstalled first (different signing key)." \
             --prerelease
+
+      - name: Check Firebase configuration
+        id: firebase
+        run: echo "enabled=${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        if: steps.firebase.outputs.enabled == 'true'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Distribute to Firebase
+        if: steps.firebase.outputs.enabled == 'true'
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: |
+          bash scripts/android-release-notes.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.txt"
+          bash scripts/firebase-distribute.sh "bacta-android-${{ steps.ver.outputs.name }}.apk" "$RUNNER_TEMP/notes.txt"
+
+      - name: Note skipped Firebase distribution
+        if: steps.firebase.outputs.enabled != 'true'
+        run: echo "Firebase distribution skipped (secrets not configured)"

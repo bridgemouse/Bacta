@@ -13,7 +13,7 @@ The owner has never built an app, so the build should be understandable and exte
 **Cutover:** the web front end on LXC 109 keeps running until the Android app is stood up with Settings included. Once the owner is satisfied with Milestone 1 (no fixed trial period), the web front end is retired and Android becomes the only UI. The app is expanded from there, and Health Connect is explored on the real phone only after the cutover.
 
 **Success for v1.0.0 of the app:**
-1. Installs on the owner's phone by APK and updates through GitHub Releases without Claude's help.
+1. Installs on the owner's phone and updates through Firebase App Distribution (signed APKs built by CI and archived on GitHub Releases) without Claude's help.
 2. Shows Home, Recovery, Sleep, Training and a read-only Nutrition view against the live Bacta server, matching the Claude Design visual system.
 3. Shows MX-4 briefings and supports MX-4 chat.
 4. Reads MacroFactor nutrition and phone step data from Health Connect and uploads it to the server, including after the app has been closed for a day.
@@ -38,9 +38,9 @@ The owner has never built an app, so the build should be understandable and exte
 
 ```
 GitHub (public repo: source of truth, CI, Releases, signing secrets)
-   ▲ push/PR/tags                          │ APK via Releases
+   ▲ push/PR/tags                          │ APK via Releases + Firebase
 LXC 109 (always on) ───────────────────────┼───────► Phone (Fold)
- ├ /opt/bacta: PRODUCTION checkout, stays on main       ▲ Obtainium updates
+ ├ /opt/bacta: PRODUCTION checkout, stays on main       ▲ Firebase install
  ├ worktrees/android-*: Android work                    │ app ⇄ server over LAN
  ├ Express API + SQLite, Garmin poller, MX-4, vault link
  ├ NEW: /api/version, /api/health-connect/ingest
@@ -57,7 +57,7 @@ The app is a client: it never talks to Garmin or runs MX-4. Those remain server 
 - **Server + web:** unchanged `v1.x.y` tags. Baseline tag **`v1.1.0`** on current `main` before Android work starts (**pending owner approval**). `client/src/version.ts` is changed to read `package.json` so it cannot drift.
 - **Android app:** `android-v0.x.y` tags, starting `0.1.0`; becomes `1.0.0` when it replaces the PWA for daily use. `versionName` comes from the tag in CI; `versionCode = major×10000 + minor×100 + patch`, computed, never hand-edited.
 - **Compatibility:** new `GET /api/version` returns `{ server, minApp }`. The app checks on launch and shows "update the app" or "update the server".
-- **Open check:** Obtainium must ignore server releases that have no APK. Its release-filter options are unverified; if they don't suffice, a small self-updater inside the app (checks the server, downloads APK) replaces it.
+- **Release channel:** Firebase App Distribution (no-cost on Spark; plan: `docs/superpowers/plans/2026-11-03-firebase-app-distribution.md`). CI uploads each tag's signed APK after the GitHub Release; the owner gets an invitation email once and a "new build" email per release. GitHub Releases stays the permanent archive (Firebase keeps builds 150 days). Email-only: no Firebase SDK in the app and no in-app updater for now.
 
 ## 5. Git workflow
 
@@ -73,7 +73,7 @@ The app is a client: it never talks to Garmin or runs MX-4. Those remain server 
 ## 6. Development loop
 
 - **Inner loop (no GitHub):** edit in the worktree on LXC 109 → `scripts/android-build.sh` rsyncs `android/` to the VM (one-way, `--delete`, excluding build outputs) → builds over SSH in the background with plain, filtered Gradle output → install via `adb` → logs and screenshots pulled back. The VM copy is never edited.
-- **Outer loop:** commit → PR → CI → merge → tag → release → Obtainium.
+- **Outer loop:** commit → PR → CI → merge → tag → release → Firebase email → install.
 - **Visual checks:** Playwright captures reference screenshots of the live PWA (phone-width and Fold-width). `android preview render` (Google's Android CLI, on the dev VM) renders Compose `@Preview` functions to PNG with no device or IDE and can export the component tree as JSON; those images are compared to the reference screenshots. The real phone covers behavior.
 - **Environment gotchas to handle in setup:** `ANDROID_HOME` set where non-interactive SSH reads it; long builds use `nohup` so a dropped connection doesn't kill them.
 
@@ -128,7 +128,7 @@ Each phase gets its own implementation plan; this spec covers architecture only.
 
 ## 12. Risks
 
-- **Google developer-verification rollout** for sideloaded apps (official docs, `kb://android/developer-verification/guides/{index,faq}`, read 2026-11-02): enforcement starts Sep 30 2026 in Brazil, Indonesia, Singapore and Thailand and goes global in 2027. `adb` installs are explicitly exempt, with no waiting period. Installs and *updates* by any other route (including Obtainium) of an unregistered app need the user's "advanced flow" (24-hour wait). The clean fix is a free **limited distribution** registration (no ID check, up to 20 devices) for the package name, signed with the release key; register it before the 2027 global rollout. Until then `adb` and APK installs are unaffected for a US device.
+- **Google developer-verification rollout** for sideloaded apps (official docs, `kb://android/developer-verification/guides/{index,faq}`, read 2026-11-02): enforcement starts Sep 30 2026 in Brazil, Indonesia, Singapore and Thailand and goes global in 2027. `adb` installs are explicitly exempt, with no waiting period. Installs and *updates* by any other route of an unregistered app (assume this includes Firebase App Distribution installs; Google's pages do not say) need the user's "advanced flow" (24-hour wait). The clean fix is a free **limited distribution** registration (no ID check, up to 20 devices) for the package name, signed with the release key; register it before the 2027 global rollout. Until then `adb` and APK installs are unaffected for a US device.
 - Lost signing key forces uninstall/reinstall; mitigated by two backups.
 - Fold inner-screen layout is untested. At target API 37 the app cannot opt out of large-screen resizing, so content width is capped rather than assuming a phone-sized window.
 - Build pins (AGP 9.5.0, Kotlin 2.4.21, Compose BOM 2026.09.00, Gradle 9.8.2) were verified to build together on the dev VM on 2026-11-02, using Google's `android create` template with the block form `compileSdk { version = release(37) { minorApiLevel = 0 } }`; plain `compileSdk = 37` fails against the installed `android-37.0` platform.

@@ -112,3 +112,19 @@ pre-deploy backup (§1) before retrying. Take a backup before any risky deploy.
 
 `package.json` version + `CHANGELOG.md`; surfaced in the Settings footer (`BACTA·OS vX.Y.Z`).
 Tag releases (`git tag v1.0.0`) on merge to `main`.
+
+## 9. Android release channel (Firebase App Distribution)
+
+Plan: `docs/superpowers/plans/2026-11-03-firebase-app-distribution.md`.
+
+**Flow.** The owner pushes a tag `android-vX.Y.Z`. `.github/workflows/android-release.yml` builds and signs the APK, publishes the GitHub Release (the permanent archive), then uploads the same APK to Firebase App Distribution with release notes generated from the git history of `android/`. The owner gets an invitation email on the first release and a "new build" email afterwards. If the Firebase secrets are absent the Firebase steps are skipped and the release still succeeds.
+
+**One-time setup (owner).** Firebase project `Bacta` (Spark plan), Android app `io.github.bridgemouse.bacta`, tester group alias `owner`, a service account with the **Firebase App Distribution Admin** role and a JSON key. Then `bash scripts/firebase-secrets.sh ~/secrets/firebase-sa.json <APP_ID>` validates both and sets the `FIREBASE_SERVICE_ACCOUNT` and `FIREBASE_APP_ID` GitHub secrets. The key grants administrator access to App Distribution: never paste it anywhere; a key can always be re-created.
+
+**Limits and expiry** (Firebase docs, 2026-11): builds stay in the console 150 days; invitations must be accepted within 30 days; 500 testers per project, 200 per group; 1,000 releases per app. Installed apps keep running after a build expires. Always upload with a higher `versionCode` (the tag script guarantees it); Firebase's docs do not say whether a duplicate version is accepted.
+
+**Key rotation.** Create a new key for the same service account, run `scripts/firebase-secrets.sh` again, then delete the old key in the Cloud console.
+
+**Troubleshooting.** If an upload fails citing a disabled API, enable "Firebase App Distribution API" from the link in the error.
+
+**First install on the Fold.** _Record here what Android asked (unknown-sources, Play Protect), which Firebase's tester page does not say._

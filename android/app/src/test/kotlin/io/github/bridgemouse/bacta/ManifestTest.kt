@@ -23,4 +23,10 @@ class ManifestTest {
         assertEquals("false", app.attributes.getNamedItem("android:allowBackup").nodeValue)
         assertNull(app.attributes.getNamedItem("android:usesCleartextTraffic"))
     }
+
+    @Test
+    fun applicationClassIsBactaApp() {
+        val app = doc.getElementsByTagName("application").item(0)
+        assertEquals(".BactaApp", app.attributes.getNamedItem("android:name").nodeValue)
+    }
 }

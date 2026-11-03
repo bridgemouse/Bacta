@@ -81,3 +81,48 @@ describe('android-build.sh', () => {
     expect(r.status).not.toBe(0)
   })
 })
+
+describe('android-build.sh screenshot', () => {
+  const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  let bin: string
+  let out: string
+
+  beforeAll(() => {
+    bin = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-ssh-'))
+    out = fs.mkdtempSync(path.join(os.tmpdir(), 'android-out-'))
+    // A multi-display phone (e.g. a foldable) prints a text warning to stdout before the PNG bytes.
+    fs.writeFileSync(
+      path.join(bin, 'ssh'),
+      "#!/usr/bin/env bash\nprintf '[Warning] Multiple displays were found\\n'\nprintf '\\x89PNG\\r\\n\\x1a\\nIMAGEDATA'\n",
+      { mode: 0o755 },
+    )
+  })
+  afterAll(() => {
+    fs.rmSync(bin, { recursive: true, force: true })
+    fs.rmSync(out, { recursive: true, force: true })
+  })
+
+  it('strips text printed before the PNG data so the saved file is a valid PNG', () => {
+    const r = run(['screenshot', '192.168.1.50:37123'], {
+      PATH: `${bin}:${process.env.PATH}`,
+      ANDROID_OUT_DIR: out,
+    })
+    expect(r.status).toBe(0)
+    const saved = fs.readFileSync(path.join(out, 'screen.png'))
+    expect(saved.subarray(0, 8).equals(PNG_SIGNATURE)).toBe(true)
+    expect(saved.toString('latin1')).toContain('IMAGEDATA')
+  })
+
+  it('selects a specific display when ANDROID_DISPLAY is set', () => {
+    const r = run(['--dry-run', 'screenshot', '192.168.1.50:37123'], { ANDROID_DISPLAY: '4630946722019192211' })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toContain('screencap -p -d 4630946722019192211')
+  })
+
+  it('refuses a non-numeric display id', () => {
+    const r = run(['--dry-run', 'screenshot', '192.168.1.50:37123'], { ANDROID_DISPLAY: '1; rm -rf ~' })
+    expect(r.status).not.toBe(0)
+    expect(r.stdout).toBe('')
+    expect(r.stderr).toContain('android-build:')
+  })
+})

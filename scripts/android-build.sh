@@ -5,6 +5,8 @@ set -euo pipefail
 VM="${ANDROID_VM:-wheat@bacta-android}"
 REMOTE_BASE="${ANDROID_REMOTE_BASE:-/home/wheat/work}"
 PROJECT="${ANDROID_PROJECT-bacta-android}"
+OUT_DIR="${ANDROID_OUT_DIR:-/tmp/bacta-android}"
+DISPLAY_ID="${ANDROID_DISPLAY:-}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8 -o ServerAliveInterval=30)
 DRY_RUN=0
 
@@ -21,6 +23,9 @@ shift
 # '..' component: in a glob, '*' matches '..', so '/home/../etc/x' would otherwise pass.
 [[ "$REMOTE_BASE" =~ ^/home/[A-Za-z0-9._-]+/[A-Za-z0-9._/-]+$ && "$REMOTE_BASE/" != */../* ]] \
   || die "ANDROID_REMOTE_BASE must be a plain directory under a user's home (e.g. /home/wheat/work), got '$REMOTE_BASE'"
+
+[[ -z "$DISPLAY_ID" || "$DISPLAY_ID" =~ ^[0-9]+$ ]] \
+  || die "ANDROID_DISPLAY must be a numeric display id (see: adb shell dumpsys SurfaceFlinger --display-id), got '$DISPLAY_ID'"
 
 SRC="${ANDROID_SRC:-$(git rev-parse --show-toplevel)/android}"
 [[ -d "$SRC" ]] || die "source directory not found: $SRC"
@@ -42,8 +47,8 @@ case "$CMD" in
     do_sync
     run ssh "${SSH_OPTS[@]}" "$VM" "cd '$REMOTE_DIR' && ./gradlew --console=plain ${*:-assembleDebug}" ;;
   apk)
-    mkdir -p /tmp/bacta-android
-    run scp "${SSH_OPTS[@]}" "$VM:$APK_REMOTE" /tmp/bacta-android/ ;;
+    mkdir -p "$OUT_DIR"
+    run scp "${SSH_OPTS[@]}" "$VM:$APK_REMOTE" "$OUT_DIR/" ;;
   install)
     [[ -n "${1:-}" ]] || die "install needs the phone address, e.g. 192.168.1.50:37123"
     run ssh "${SSH_OPTS[@]}" "$VM" "adb -s $1 install -r '$APK_REMOTE'" ;;
@@ -51,9 +56,19 @@ case "$CMD" in
     run ssh "${SSH_OPTS[@]}" "$VM" adb "$@" ;;
   screenshot)
     [[ -n "${1:-}" ]] || die "screenshot needs the phone address, e.g. 192.168.1.50:37123"
-    mkdir -p /tmp/bacta-android
-    if (( DRY_RUN )); then echo "ssh $VM adb -s $1 exec-out screencap -p > /tmp/bacta-android/screen.png"
-    else ssh "${SSH_OPTS[@]}" "$VM" "adb -s $1 exec-out screencap -p" > /tmp/bacta-android/screen.png; fi ;;
+    mkdir -p "$OUT_DIR"
+    cap="adb -s $1 exec-out screencap -p${DISPLAY_ID:+ -d $DISPLAY_ID}"
+    if (( DRY_RUN )); then echo "ssh $VM $cap > $OUT_DIR/screen.png"
+    else
+      # A multi-display device (e.g. a foldable) prints a text warning before the PNG bytes; drop it.
+      ssh "${SSH_OPTS[@]}" "$VM" "$cap" | python3 -c '
+import sys
+d = sys.stdin.buffer.read()
+i = d.find(b"\x89PNG\r\n\x1a\n")
+if i < 0:
+    sys.exit("android-build: no PNG data in screencap output")
+sys.stdout.buffer.write(d[i:])' > "$OUT_DIR/screen.png"
+    fi ;;
   *)
     usage ;;
 esac

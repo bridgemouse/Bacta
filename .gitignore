@@ -27,3 +27,17 @@ __pycache__/
 !client/public/*.png
 .worktrees/
 design_handoff_nutrition_v4/
+
+# Android
+android/.gradle/
+android/**/build/
+android/local.properties
+android/.idea/
+android/captures/
+*.jks
+*.keystore
+*.apk
+!android/app/src/**/*.png
+
+# Local Claude Code settings (machine-specific)
+.claude/settings.local.json

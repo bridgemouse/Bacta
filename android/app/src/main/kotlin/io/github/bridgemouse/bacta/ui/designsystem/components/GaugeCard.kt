@@ -62,7 +62,7 @@ fun GaugeCard(
                 Text(model.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
                 model.rightLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = toneColor) }
             }
-            ArcGauge(progress, toneColor, Modifier.fillMaxWidth().height(165.dp), strokeWidth = 16.dp, sweep = 200f) {
+            ArcGauge(progress, toneColor, Modifier.fillMaxWidth().height(148.dp), strokeWidth = 16.dp, sweep = 200f) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(model.valueText ?: "—", style = MaterialTheme.typography.displayLarge, color = BactaPalette.Text)
                     model.stateText?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = toneColor) }

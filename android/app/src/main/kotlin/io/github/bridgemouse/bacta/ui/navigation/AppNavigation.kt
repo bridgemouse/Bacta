@@ -27,6 +27,7 @@ import io.github.bridgemouse.bacta.ui.gates.AppTooOldScreen
 import io.github.bridgemouse.bacta.ui.gates.LocalNetworkRequiredScreen
 import io.github.bridgemouse.bacta.ui.gates.ServerUnreachableScreen
 import io.github.bridgemouse.bacta.ui.gates.rememberLocalNetworkPermission
+import io.github.bridgemouse.bacta.ui.login.LoginRoute
 import io.github.bridgemouse.bacta.ui.shell.BactaScaffold
 import io.github.bridgemouse.bacta.ui.shell.rememberSectionTabState
 
@@ -62,9 +63,7 @@ private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
             rememberViewModelStoreNavEntryDecorator(),
         ),
         entryProvider = entryProvider {
-            entry<Destination.Login> {
-                StateMessage(StateKind.Empty, "Sign-in screen arrives in the next change.")
-            }
+            entry<Destination.Login> { LoginRoute(onLoggedIn) }
             entry<Destination.Home> {
                 SectionFrame(Section.Home, tabs = false, backStack = backStack)
             }

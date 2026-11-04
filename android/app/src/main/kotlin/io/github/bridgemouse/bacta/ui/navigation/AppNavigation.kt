@@ -27,8 +27,11 @@ import io.github.bridgemouse.bacta.ui.gates.AppTooOldScreen
 import io.github.bridgemouse.bacta.ui.gates.LocalNetworkRequiredScreen
 import io.github.bridgemouse.bacta.ui.gates.ServerUnreachableScreen
 import io.github.bridgemouse.bacta.ui.gates.rememberLocalNetworkPermission
+import io.github.bridgemouse.bacta.ui.home.HomeRoute
 import io.github.bridgemouse.bacta.ui.login.LoginRoute
+import io.github.bridgemouse.bacta.ui.recovery.RecoveryRoute
 import io.github.bridgemouse.bacta.ui.shell.BactaScaffold
+import io.github.bridgemouse.bacta.ui.shell.Tab
 import io.github.bridgemouse.bacta.ui.shell.rememberSectionTabState
 
 /** Decides between the gate screens and the app itself. */
@@ -65,25 +68,33 @@ private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
         entryProvider = entryProvider {
             entry<Destination.Login> { LoginRoute(onLoggedIn) }
             entry<Destination.Home> {
-                SectionFrame(Section.Home, tabs = false, backStack = backStack)
+                SectionFrame(Section.Home, tabs = true, backStack = backStack) { tab ->
+                    HomeRoute(tab, onOpenSection = backStack::openSection)
+                }
             }
             entry<Destination.Recovery> {
-                SectionFrame(Section.Recovery, tabs = true, backStack = backStack)
+                SectionFrame(Section.Recovery, tabs = true, backStack = backStack) { tab -> RecoveryRoute(tab) }
             }
         },
     )
 }
 
 @Composable
-private fun SectionFrame(section: Section, tabs: Boolean, backStack: NavBackStack<Destination>) {
+private fun SectionFrame(
+    section: Section,
+    tabs: Boolean,
+    backStack: NavBackStack<Destination>,
+    content: @Composable (Tab) -> Unit,
+) {
+    val tabState = rememberSectionTabState(section)
     BactaScaffold(
         section = section,
         tabs = tabs,
-        tabState = rememberSectionTabState(section),
+        tabState = tabState,
         onBack = { backStack.removeLastOrNull() },
         onOpenSection = backStack::openSection,
     ) {
-        StateMessage(StateKind.Empty, "${section.label} content arrives in a later change.")
+        content(tabState.tab)
     }
 }
 

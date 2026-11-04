@@ -39,6 +39,7 @@ class DefaultMetricsRepository @Inject constructor(private val api: BactaApi) : 
 
 private fun SummaryDto.toDomain() = Summary(
     hrv = hrv,
+    hrvWeekAvg = hrvWeekAvg,
     restingHr = restingHr,
     stressAvg = stressAvg,
     stressMax = stressMax,
@@ -53,7 +54,12 @@ private fun SummaryDto.toDomain() = Summary(
     sleepHr = sleepHr,
     sleepStress = sleepStress,
     sleepScore = sleepScore,
+    sleepSeconds = sleepS ?: stageTotal(),
     trainingLoad = trainingLoad,
     trainingStatusN = trainingStatusN,
     trainingStatusDate = trainingStatusDate,
 )
+
+/** The total is sparse on the server; the stage sum is only trusted when every stage is present. */
+private fun SummaryDto.stageTotal(): Double? =
+    if (sleepDeepS != null && sleepLightS != null && sleepRemS != null) sleepDeepS + sleepLightS + sleepRemS else null

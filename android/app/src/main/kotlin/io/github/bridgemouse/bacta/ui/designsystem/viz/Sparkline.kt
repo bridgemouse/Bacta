@@ -1,6 +1,7 @@
 package io.github.bridgemouse.bacta.ui.designsystem.viz
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -87,6 +88,9 @@ fun Sparkline(
 }
 
 /** Day bars with labels; the last bar is highlighted. */
+/** Share of the available height a bar takes; a floor keeps tiny values visible. */
+internal fun barFraction(value: Double, max: Double): Float = (value / max).toFloat().coerceIn(0.08f, 1f)
+
 @Composable
 fun BarsChart(
     series: List<Double>,
@@ -108,15 +112,17 @@ fun BarsChart(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
             ) {
-                Spacer(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight((v / hi).toFloat().coerceIn(0.08f, 1f))
-                        .background(
-                            if (last) accent else accent.copy(alpha = 0.22f),
-                            RoundedCornerShape(3.dp),
-                        ),
-                )
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                    Spacer(
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(barFraction(v, hi))
+                            .background(
+                                if (last) accent else accent.copy(alpha = 0.22f),
+                                RoundedCornerShape(3.dp),
+                            ),
+                    )
+                }
                 if (labels.getOrNull(i) != null) {
                     Spacer(Modifier.height(4.dp))
                     Text(

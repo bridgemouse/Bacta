@@ -16,8 +16,9 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.StatusTileModel
-import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCardModel
-import io.github.bridgemouse.bacta.ui.designsystem.components.TrendKind
+import io.github.bridgemouse.bacta.ui.designsystem.components.TrendSectionModel
+import io.github.bridgemouse.bacta.ui.metrics.TrendSpec
+import io.github.bridgemouse.bacta.ui.metrics.buildTrendSections
 import io.github.bridgemouse.bacta.ui.designsystem.components.delta
 import io.github.bridgemouse.bacta.ui.designsystem.components.deltaDirection
 import io.github.bridgemouse.bacta.ui.format.Formatters
@@ -176,67 +177,16 @@ private fun vitals(s: Summary, trends: Trends, f: Formatters): List<StatusTileMo
     }
 }
 
-private class TrendSpec(
-    val rail: UiText,
-    val label: UiText,
-    val metric: Metric,
-    val value: (Summary, Formatters) -> String?,
-    val unit: UiText? = null,
-    val kind: TrendKind = TrendKind.Line,
-    val decimals: Int = 0,
-    val lowerIsBetter: Boolean? = null,
-    val caption: UiText,
-)
-
 private val TrendSpecs = listOf(
-    TrendSpec(UiText.of(R.string.rail_recovery_score), UiText.of(R.string.recovery_score), Metric.RecoveryScore, { s, f -> s.recoveryScore?.let { f.number(it, 0) } }, kind = TrendKind.Bars,
-        caption = UiText.of(R.string.cap_recovery_score)),
-    TrendSpec(UiText.of(R.string.rail_hrv), UiText.of(R.string.label_hrv), Metric.Hrv, { s, f -> s.hrv?.let { f.number(it, 0) } }, unit = UiText.of(R.string.unit_ms),
-        caption = UiText.of(R.string.cap_hrv)),
-    TrendSpec(UiText.of(R.string.rail_body_battery), UiText.of(R.string.metric_body_battery), Metric.BodyBatteryWake, { s, f -> s.bodyBatteryWake?.let { f.number(it, 0) } }, kind = TrendKind.Bars,
-        caption = UiText.of(R.string.cap_body_battery)),
-    TrendSpec(UiText.of(R.string.rail_resting_hr), UiText.of(R.string.metric_resting_hr), Metric.RestingHr, { s, f -> s.restingHr?.let { f.number(it, 0) } }, unit = UiText.of(R.string.unit_bpm), decimals = 1, lowerIsBetter = true,
-        caption = UiText.of(R.string.cap_resting_hr)),
-    TrendSpec(UiText.of(R.string.rail_overnight_stress), UiText.of(R.string.metric_stress), Metric.StressAvg, { s, f -> s.stressAvg?.let { f.number(it, 0) } }, unit = UiText.of(R.string.unit_avg), decimals = 1, lowerIsBetter = true,
-        caption = UiText.of(R.string.cap_overnight_stress)),
-    TrendSpec(UiText.of(R.string.rail_sleep_stress), UiText.of(R.string.metric_sleep_stress), Metric.SleepStress, { s, f -> s.sleepStress?.let { f.number(it, 0) } }, unit = UiText.of(R.string.unit_avg), decimals = 1, lowerIsBetter = true,
-        caption = UiText.of(R.string.cap_sleep_stress)),
-    TrendSpec(UiText.of(R.string.rail_recovery_time), UiText.of(R.string.recovery_time_title), Metric.RecoveryTime, { s, f -> s.recoveryTimeHours?.let { f.number(it, 1) } }, unit = UiText.of(R.string.unit_hours), decimals = 1, lowerIsBetter = true,
-        caption = UiText.of(R.string.cap_recovery_time)),
-    TrendSpec(UiText.of(R.string.rail_respiration), UiText.of(R.string.metric_respiration), Metric.RespAvg, { s, f -> s.respAvg?.let { f.number(it, 1) } }, unit = UiText.of(R.string.unit_brpm), decimals = 1, lowerIsBetter = true,
-        caption = UiText.of(R.string.cap_respiration)),
+    TrendSpec(UiText.of(R.string.rail_recovery_score), Metric.RecoveryScore, UiText.of(R.string.cap_recovery_score)),
+    TrendSpec(UiText.of(R.string.rail_hrv), Metric.Hrv, UiText.of(R.string.cap_hrv)),
+    TrendSpec(UiText.of(R.string.rail_body_battery), Metric.BodyBatteryWake, UiText.of(R.string.cap_body_battery)),
+    TrendSpec(UiText.of(R.string.rail_resting_hr), Metric.RestingHr, UiText.of(R.string.cap_resting_hr)),
+    TrendSpec(UiText.of(R.string.rail_overnight_stress), Metric.StressAvg, UiText.of(R.string.cap_overnight_stress)),
+    TrendSpec(UiText.of(R.string.rail_sleep_stress), Metric.SleepStress, UiText.of(R.string.cap_sleep_stress)),
+    TrendSpec(UiText.of(R.string.rail_recovery_time), Metric.RecoveryTime, UiText.of(R.string.cap_recovery_time)),
+    TrendSpec(UiText.of(R.string.rail_respiration), Metric.RespAvg, UiText.of(R.string.cap_respiration)),
 )
 
-private fun trendSections(s: Summary, trends: Trends, f: Formatters): List<TrendSectionModel> = TrendSpecs.mapNotNull { spec ->
-    val series = trends.all(spec.metric)
-    if (series.isEmpty()) return@mapNotNull null
-    val isHrv = spec.metric == Metric.Hrv
-    val average = if (isHrv) s.hrvWeekAvg ?: mean(series) else mean(series)
-    val value = spec.value(s, f)
-    val numericValue = when (spec.metric) {
-        Metric.RecoveryTime -> s.recoveryTimeHours
-        Metric.RestingHr -> s.restingHr
-        Metric.StressAvg -> s.stressAvg
-        Metric.SleepStress -> s.sleepStress
-        Metric.RespAvg -> s.respAvg
-        else -> null
-    }
-    val delta = when {
-        isHrv -> s.hrv?.let { v -> average?.let { a -> f.delta(v - a, 0)?.let { DeltaModel(it, deltaDirection(v - a, false)) } } }
-        spec.lowerIsBetter != null -> deltaVsAverage(numericValue, series, spec.decimals, spec.lowerIsBetter, f)
-        else -> null
-    }
-    TrendSectionModel(
-        spec.rail,
-        TrendCardModel(
-            label = spec.label,
-            value = value,
-            unit = spec.unit,
-            series = series,
-            kind = spec.kind,
-            delta = delta,
-            average = average,
-            caption = spec.caption,
-        ),
-    )
-}
+private fun trendSections(s: Summary, trends: Trends, f: Formatters): List<TrendSectionModel> =
+    buildTrendSections(TrendSpecs, s, { trends.all(it) }, f)

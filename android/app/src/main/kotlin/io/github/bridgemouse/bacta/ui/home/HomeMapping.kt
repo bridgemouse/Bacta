@@ -14,6 +14,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.TrendKind
 import io.github.bridgemouse.bacta.ui.designsystem.components.delta
 import io.github.bridgemouse.bacta.ui.designsystem.components.deltaDirection
 import io.github.bridgemouse.bacta.ui.format.Formatters
+import io.github.bridgemouse.bacta.ui.metrics.MetricCatalog
 
 private typealias Trends = Map<Metric, Result<List<Double>>>
 
@@ -83,10 +84,10 @@ fun toTrendRows(summary: Summary, trends: Trends, fmt: Formatters): List<TrendCa
 
     return listOf(
         TrendCardModel(UiText.of(R.string.label_recovery), summary.recoveryScore?.let { fmt.number(it, 0) }, series = series(Metric.RecoveryScore), delta = dayDelta(series(Metric.RecoveryScore), fmt)),
-        TrendCardModel(UiText.of(R.string.label_hrv), summary.hrv?.let { fmt.number(it, 0) }, unit = UiText.of(R.string.unit_ms), series = series(Metric.Hrv), delta = hrvDelta, average = summary.hrvWeekAvg),
+        TrendCardModel(UiText.of(R.string.label_hrv), summary.hrv?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.Hrv).unit, series = series(Metric.Hrv), delta = hrvDelta, average = summary.hrvWeekAvg),
         TrendCardModel(UiText.of(R.string.label_sleep), summary.sleepScore?.let { fmt.number(it, 0) }, series = series(Metric.SleepScore), delta = dayDelta(series(Metric.SleepScore), fmt)),
         TrendCardModel(UiText.of(R.string.label_training_load), summary.trainingLoad?.let { fmt.number(it, 0) }, series = series(Metric.TrainingLoad), kind = TrendKind.Bars, delta = dayDelta(series(Metric.TrainingLoad), fmt, neutral = true)),
-        TrendCardModel(UiText.of(R.string.label_intensity), intensity.lastOrNull()?.let { fmt.number(it, 0) }, unit = UiText.of(R.string.unit_min), series = intensity, kind = TrendKind.Bars),
+        TrendCardModel(UiText.of(R.string.label_intensity), intensity.lastOrNull()?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.IntensityMod).unit, series = intensity, kind = TrendKind.Bars),
     )
 }
 

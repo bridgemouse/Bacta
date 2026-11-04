@@ -28,6 +28,20 @@ class MetricsRepositoryTest {
     }
 
     @Test
+    fun sleepDurationPrefersTheTotalThenFallsBackToTheStageSum() = runTest {
+        api.summaryHandler = { SummaryDto(sleepS = 27000.0, sleepDeepS = 1.0, sleepLightS = 1.0, sleepRemS = 1.0) }
+        assertEquals(27000.0, repo.summary().getOrThrow().sleepSeconds)
+        api.summaryHandler = { SummaryDto(sleepDeepS = 5000.0, sleepLightS = 15000.0, sleepRemS = 6000.0) }
+        assertEquals(26000.0, repo.summary().getOrThrow().sleepSeconds)
+    }
+
+    @Test
+    fun sleepDurationIsNullWhenAStageIsMissing() = runTest {
+        api.summaryHandler = { SummaryDto(sleepDeepS = 5000.0, sleepLightS = 15000.0) }
+        assertNull(repo.summary().getOrThrow().sleepSeconds)
+    }
+
+    @Test
     fun summaryFailureIsAResult() = runTest {
         api.summaryHandler = { throw IOException("down") }
         assertTrue(repo.summary().isFailure)

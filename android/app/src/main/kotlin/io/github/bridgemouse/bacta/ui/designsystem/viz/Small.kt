@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.designsystem.viz
 
+import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.ui.asString
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
@@ -27,7 +29,7 @@ fun StatusDot(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun Chip(text: String, color: Color, modifier: Modifier = Modifier) {
+fun Chip(text: UiText, color: Color, modifier: Modifier = Modifier) {
     Row(
         modifier
             .background(color.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
@@ -37,7 +39,7 @@ fun Chip(text: String, color: Color, modifier: Modifier = Modifier) {
     ) {
         StatusDot(color, Modifier.size(6.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text, style = MaterialTheme.typography.labelSmall, color = color)
+        Text(text.asString(), style = MaterialTheme.typography.labelSmall, color = color)
     }
 }
 
@@ -48,5 +50,5 @@ fun DeltaText(delta: DeltaModel, modifier: Modifier = Modifier) {
         DeltaDirection.Bad -> BactaPalette.Flag
         DeltaDirection.Flat -> MaterialTheme.colorScheme.textSecondary
     }
-    Text(delta.text, modifier, style = MaterialTheme.typography.labelMedium, color = color)
+    Text(delta.text.asString(), modifier, style = MaterialTheme.typography.labelMedium, color = color)
 }

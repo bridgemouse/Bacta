@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.gates
 
+import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.R
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -51,11 +53,11 @@ fun rememberLocalNetworkPermission(): LocalNetworkPermission {
 fun LocalNetworkRequiredScreen(onRequest: () -> Unit) {
     val context = LocalContext.current
     GateScreen(
-        title = "LOCAL NETWORK ACCESS",
-        message = "Bacta needs access to devices on your home network to reach its server. If the system prompt no longer appears, allow it for Bacta in system settings.",
+        title = UiText.of(R.string.gate_local_network_title),
+        message = UiText.of(R.string.gate_local_network_body),
     ) {
-        GateButton("ALLOW", onRequest)
-        GateButton("OPEN SETTINGS") {
+        GateButton(UiText.of(R.string.action_allow), onRequest)
+        GateButton(UiText.of(R.string.action_open_settings)) {
             context.startActivity(
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
             )

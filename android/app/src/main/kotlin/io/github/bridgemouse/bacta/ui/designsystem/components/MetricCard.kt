@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta.ui.designsystem.components
 
+import io.github.bridgemouse.bacta.ui.format.LocalFormatters
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.ui.asString
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,7 +39,8 @@ fun MetricCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val spoken = listOfNotNull(model.label, model.value ?: "no data", model.unit, model.sub).joinToString(", ")
+    val noData = stringResource(R.string.cd_no_data)
+    val spoken = listOfNotNull(model.label.asString(), model.value?.asString() ?: noData, model.unit?.asString(), model.sub?.asString()).joinToString(", ")
     BactaCard(
         accent = accent,
         modifier = modifier.semantics(mergeDescendants = true) { contentDescription = spoken },
@@ -47,7 +52,7 @@ fun MetricCard(
                 Image(it, contentDescription = null, Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
             }
-            Text(model.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = accent)
+            Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = accent)
             Spacer(Modifier.weight(1f))
             model.index?.let {
                 Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
@@ -59,7 +64,7 @@ fun MetricCard(
                 Row(verticalAlignment = Alignment.Bottom) {
                     val valueStyle = MaterialTheme.typography.displaySmall
                     Text(
-                        model.value ?: "—",
+                        model.value?.asString() ?: stringResource(R.string.value_missing),
                         style = valueStyle,
                         color = BactaPalette.Text,
                         maxLines = 1,
@@ -68,7 +73,7 @@ fun MetricCard(
                     model.unit?.let {
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            it,
+                            it.asString(),
                             Modifier.padding(bottom = 3.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.textSecondary,
@@ -76,7 +81,7 @@ fun MetricCard(
                     }
                 }
                 model.sub?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.textSecondary)
+                    Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.textSecondary)
                 }
             }
             model.ring?.let { progress ->
@@ -87,7 +92,7 @@ fun MetricCard(
         }
         model.trend?.takeIf { it.size >= 2 }?.let {
             Spacer(Modifier.height(8.dp))
-            Sparkline(it, accent, describeSeries(model.label, it, "7 days"), Modifier.fillMaxWidth().height(36.dp))
+            Sparkline(it, accent, describeSeries(LocalFormatters.current, model.label, it, defaultPeriod).asString(), Modifier.fillMaxWidth().height(36.dp))
         }
     }
 }

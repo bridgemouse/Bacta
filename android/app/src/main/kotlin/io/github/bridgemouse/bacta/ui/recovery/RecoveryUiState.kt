@@ -1,5 +1,6 @@
 package io.github.bridgemouse.bacta.ui.recovery
 
+import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineModel
@@ -9,7 +10,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.StatusTileModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCardModel
 
 /** A rail heading over one trend card. */
-data class TrendSectionModel(val rail: String, val card: TrendCardModel)
+data class TrendSectionModel(val rail: UiText, val card: TrendCardModel)
 
 /** Everything the Recovery tabs show. Optional cards are null when the data behind them does not exist. */
 data class RecoveryContent(

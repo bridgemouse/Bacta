@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.navigation
 
+import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,7 +45,7 @@ fun AppRoot(viewModel: StartViewModel = hiltViewModel()) {
 
     Box(Modifier.fillMaxSize().background(BactaPalette.Base)) {
         when (val start = state.start) {
-            null -> StateMessage(StateKind.Loading, "Connecting to Bacta…")
+            null -> StateMessage(StateKind.Loading, UiText.of(R.string.connecting))
             StartDestination.NeedsLocalNetwork -> LocalNetworkRequiredScreen(permission.request)
             is StartDestination.AppTooOld -> AppTooOldScreen(start.minApp)
             StartDestination.ServerUnreachable -> ServerUnreachableScreen { viewModel.resolve(permission.state, BuildConfig.VERSION_NAME) }

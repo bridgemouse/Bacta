@@ -2,6 +2,8 @@ package io.github.bridgemouse.bacta.ui.home
 
 import io.github.bridgemouse.bacta.data.repository.Metric
 import io.github.bridgemouse.bacta.data.repository.Summary
+import io.github.bridgemouse.bacta.s
+import io.github.bridgemouse.bacta.testFormatters
 import io.github.bridgemouse.bacta.ui.designsystem.components.DeltaDirection
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendKind
 import java.io.IOException
@@ -9,6 +11,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.Test
+
+private fun toTiles(s: Summary, t: Map<Metric, Result<List<Double>>>) = io.github.bridgemouse.bacta.ui.home.toTiles(s, t, testFormatters)
+private fun toTrendRows(s: Summary, t: Map<Metric, Result<List<Double>>>) = io.github.bridgemouse.bacta.ui.home.toTrendRows(s, t, testFormatters)
 
 class HomeMappingTest {
     private val failed: Map<Metric, Result<List<Double>>> = Metric.entries.associateWith { Result.failure(IOException("x")) }
@@ -19,14 +24,14 @@ class HomeMappingTest {
     fun allMetricsMissingShowsDashesNotFakeNumbers() {
         val tiles = toTiles(Summary(), failed)
         assertTrue(tiles.all { it.value == null && it.trend == null && it.ring == null })
-        val text = tiles.joinToString { "${it.value}${it.sub}${it.unit}" }
+        val text = tiles.joinToString { "${it.value.s()}${it.sub.s()}${it.unit.s()}" }
         listOf("74", "82", "342").forEach { assertTrue(it !in text, "found $it") }
         assertTrue(toTrendRows(Summary(), failed).all { it.value == null && it.series.isEmpty() && it.delta == null })
     }
 
     @Test
     fun tilesAreRecoveryTrainingSleepOnly() {
-        assertEquals(listOf("Recovery", "Training", "Sleep"), toTiles(Summary(), failed).map { it.label })
+        assertEquals(listOf("Recovery", "Training", "Sleep"), toTiles(Summary(), failed).map { it.label.s() })
     }
 
     @Test
@@ -36,19 +41,19 @@ class HomeMappingTest {
             trainingLoad = 410.4, trainingStatusN = 4.0, sleepSeconds = 27120.0, sleepScore = 81.0,
         )
         val (recovery, training, sleep) = toTiles(s, failed)
-        assertEquals("64", recovery.value)
-        assertEquals("battery", recovery.unit)
-        assertEquals("HRV ↑ 61 ms", recovery.sub)
-        assertEquals("410", training.value)
-        assertEquals("Maintaining", training.sub)
-        assertEquals("7h 32m", sleep.value)
+        assertEquals("64", recovery.value.s())
+        assertEquals("battery", recovery.unit.s())
+        assertEquals("HRV ↑ 61 ms", recovery.sub.s())
+        assertEquals("410", training.value.s())
+        assertEquals("Maintaining", training.sub.s())
+        assertEquals("7h 32m", sleep.value.s())
         assertEquals(0.81f, sleep.ring)
-        assertEquals("Score 81", sleep.sub)
+        assertEquals("Score 81", sleep.sub.s())
     }
 
     @Test
     fun hrvSubHandlesBelowAverageNoAverageAndNoValue() {
-        fun sub(hrv: Double?, avg: Double?) = toTiles(Summary(hrv = hrv, hrvWeekAvg = avg), failed).first().sub
+        fun sub(hrv: Double?, avg: Double?) = toTiles(Summary(hrv = hrv, hrvWeekAvg = avg), failed).first().sub.s()
         assertEquals("HRV ↓ 61 ms", sub(61.0, 65.0))
         assertEquals("HRV 61 ms", sub(61.0, null))
         assertNull(sub(null, 65.0))
@@ -62,13 +67,6 @@ class HomeMappingTest {
         assertNull(tiles[2].trend)
     }
 
-    @Test
-    fun durationFormatting() {
-        assertEquals("7h", formatDuration(25200.0))
-        assertEquals("45m", formatDuration(2700.0))
-        assertNull(formatDuration(null))
-        assertNull(formatDuration(0.0))
-    }
 
     @Test
     fun trendRowsCarryRealSeriesAndDeltas() {
@@ -84,12 +82,12 @@ class HomeMappingTest {
                 Metric.IntensityVig to listOf(5.0, 5.0),
             ),
         )
-        assertEquals(listOf("Recovery", "HRV", "Sleep", "Training Load", "Intensity"), rows.map { it.label })
+        assertEquals(listOf("Recovery", "HRV", "Sleep", "Training Load", "Intensity"), rows.map { it.label.s() })
         assertEquals("75", rows[0].value)
-        assertEquals("▲ 3", rows[0].delta?.text)
+        assertEquals("▲ 3", rows[0].delta?.text.s())
         assertEquals(DeltaDirection.Good, rows[0].delta?.direction)
-        assertEquals("▲ 3", rows[1].delta?.text)
-        assertEquals("▼ 2", rows[2].delta?.text)
+        assertEquals("▲ 3", rows[1].delta?.text.s())
+        assertEquals("▼ 2", rows[2].delta?.text.s())
         assertEquals(DeltaDirection.Bad, rows[2].delta?.direction)
         assertEquals(TrendKind.Bars, rows[3].kind)
         assertEquals(TrendKind.Bars, rows[4].kind)

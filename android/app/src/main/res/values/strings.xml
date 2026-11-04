@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bacta</string>
+
+    <!-- Shared -->
+    <string name="value_missing">—</string>
+    <string name="cd_no_data">no data</string>
+    <string name="action_retry">RETRY</string>
+    <string name="action_refresh">REFRESH ›</string>
+    <string name="action_back">Back</string>
+    <string name="action_allow">ALLOW</string>
+    <string name="action_open_settings">OPEN SETTINGS</string>
+    <string name="action_unlock">UNLOCK</string>
+    <string name="action_verifying">VERIFYING</string>
+    <string name="delta_up">▲ %1$s</string>
+    <string name="delta_down">▼ %1$s</string>
+    <string name="delta_flat">→ %1$s</string>
+    <string name="delta_with_unit">%1$s %2$s</string>
+    <string name="datetime_join">%1$s · %2$s</string>
+    <string name="duration_hm">%1$dh %2$dm</string>
+    <string name="duration_h">%1$dh</string>
+    <string name="duration_m">%1$dm</string>
+    <string name="age_hours">%1$dh ago</string>
+    <string name="age_days">%1$dd ago</string>
+    <string name="cd_series">%1$s, %2$s: from %3$s to %4$s, high %5$s, low %6$s</string>
+    <string name="cd_series_empty">%1$s: no data</string>
+    <string name="join_dot">%1$s · %2$s</string>
+
+    <!-- Units -->
+    <string name="unit_ms">ms</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_avg">avg</string>
+    <string name="unit_brpm">br/m</string>
+    <string name="unit_percent">%</string>
+    <string name="unit_hours">h</string>
+    <string name="unit_battery">battery</string>
+    <string name="unit_load">load</string>
+    <string name="unit_km">km</string>
+    <string name="unit_mi">mi</string>
+
+    <!-- Sections and shell -->
+    <string name="section_home">Home</string>
+    <string name="section_recovery">Recovery</string>
+    <string name="section_training">Training</string>
+    <string name="section_sleep">Sleep</string>
+    <string name="brand">BACTA·OS</string>
+    <string name="nav_all_systems">ALL SYSTEMS</string>
+    <string name="cd_all_systems">All systems</string>
+    <string name="cd_ask_mx4">Ask MX-4, not available yet</string>
+    <string name="tab_overview">OVERVIEW</string>
+    <string name="tab_trends">TRENDS</string>
+    <string name="connecting">Connecting to Bacta…</string>
+
+    <!-- Gates -->
+    <string name="gate_local_network_title">LOCAL NETWORK ACCESS</string>
+    <string name="gate_local_network_body">Bacta needs access to devices on your home network to reach its server. If the system prompt no longer appears, allow it for Bacta in system settings.</string>
+    <string name="gate_update_title">UPDATE REQUIRED</string>
+    <string name="gate_update_body">This version of Bacta is too old for the server, which needs %1$s or newer. Open the Firebase App Tester app and install the latest update.</string>
+    <string name="gate_unreachable_title">SERVER UNREACHABLE</string>
+    <string name="gate_unreachable_body">Bacta could not reach the server. Check that you are on the home network, then try again.</string>
+
+    <!-- Login -->
+    <string name="login_title">Locked — enter PIN</string>
+    <string name="login_pin_label">PIN</string>
+    <string name="login_error_wrong">Incorrect PIN</string>
+    <string name="login_error_connection">Can\'t reach the server. Try again.</string>
+
+    <!-- MX-4 briefing -->
+    <string name="tone_positive">POSITIVE</string>
+    <string name="tone_caution">CAUTION</string>
+    <string name="tone_flag">FLAG</string>
+    <string name="briefing_stale">STALE</string>
+    <string name="briefing_offline">OFFLINE</string>
+    <string name="briefing_title">MX-4 // %1$s</string>
+    <string name="briefing_loading">Contacting MX-4…</string>
+    <string name="briefing_none">No briefing yet. MX-4 writes one after the next successful run.</string>
+    <string name="briefing_error">Couldn\'t load the briefing.</string>
+    <string name="briefing_offline_last">MX-4 is offline. Showing the last briefing.</string>
+    <string name="briefing_offline_none">MX-4 is offline and has no briefing to show.</string>
+    <string name="briefing_directive">DIRECTIVE ·</string>
+
+    <!-- Trend cards -->
+    <string name="trend_no_data">No trend data</string>
+    <string name="trend_none_yet">No trend data yet.</string>
+
+    <!-- Home -->
+    <string name="home_loading">Loading your data…</string>
+    <string name="home_error">Couldn\'t load your data. Check the connection and try again.</string>
+    <string name="rail_systems">SYSTEMS</string>
+    <string name="rail_systems_online">%1$d ONLINE</string>
+    <string name="rail_week">WEEK IN REVIEW</string>
+    <string name="rail_week_channels">%1$d CHANNELS</string>
+    <string name="label_recovery">Recovery</string>
+    <string name="label_training">Training</string>
+    <string name="label_sleep">Sleep</string>
+    <string name="label_hrv">HRV</string>
+    <string name="label_intensity">Intensity</string>
+    <string name="label_training_load">Training Load</string>
+    <string name="unit_min">min</string>
+    <string name="sleep_score_sub">Score %1$s</string>
+    <string name="hrv_sub_up">HRV ↑ %1$s ms</string>
+    <string name="hrv_sub_down">HRV ↓ %1$s ms</string>
+    <string name="hrv_sub_plain">HRV %1$s ms</string>
+
+    <!-- Recovery -->
+    <string name="recovery_loading">Loading recovery data…</string>
+    <string name="recovery_error">Couldn\'t load recovery data. Check the connection and try again.</string>
+    <string name="rail_readiness">READINESS</string>
+    <string name="rail_overnight_vitals">OVERNIGHT VITALS</string>
+    <string name="recovery_score">Recovery score</string>
+    <string name="of_hundred">/ 100</string>
+    <string name="chip_in_range">IN RANGE</string>
+    <string name="chip_out_of_range">OUT OF RANGE</string>
+    <string name="chip_improving">↑ IMPROVING</string>
+    <string name="chip_stable">→ STABLE</string>
+    <string name="chip_declining">↓ DECLINING</string>
+    <string name="hrv_baseline">baseline %1$s–%2$s ms</string>
+    <string name="hrv_avg7">7d avg %1$s ms</string>
+    <string name="hrv_title">HRV · last night</string>
+    <string name="hrv_vs_week">vs %1$s ms week avg</string>
+    <string name="battery_used">-%1$s used</string>
+    <string name="battery_title">Body battery · today</string>
+    <string name="battery_wake">WAKE %1$s%%</string>
+    <string name="recovery_time_title">Recovery time</string>
+    <string name="meter_zero_h">0h</string>
+    <string name="meter_max_72h">72h</string>
+    <string name="recovery_ready_zone">ready zone 0–24h</string>
+    <string name="metric_resting_hr">Resting HR</string>
+    <string name="metric_stress">Stress</string>
+    <string name="metric_sleep_stress">Sleep stress</string>
+    <string name="metric_respiration">Respiration</string>
+    <string name="metric_spo2">SpO₂</string>
+    <string name="metric_sleep_hr">Sleep HR</string>
+    <string name="metric_body_battery">Body battery</string>
+    <string name="rail_recovery_score">RECOVERY SCORE</string>
+    <string name="rail_hrv">HRV</string>
+    <string name="rail_body_battery">BODY BATTERY</string>
+    <string name="rail_resting_hr">RESTING HR</string>
+    <string name="rail_overnight_stress">OVERNIGHT STRESS</string>
+    <string name="rail_sleep_stress">SLEEP STRESS</string>
+    <string name="rail_recovery_time">RECOVERY TIME</string>
+    <string name="rail_respiration">RESPIRATION</string>
+    <string name="cap_recovery_score">80+ optimal · 67–79 ready · below 67 low</string>
+    <string name="cap_hrv">higher vs your baseline = better recovered · trend direction shows adaptation</string>
+    <string name="cap_body_battery">wake-up value: how fully recharged sleep restored your energy reserve</string>
+    <string name="cap_resting_hr">lower = better · measured during deepest sleep · downward trend = improving fitness</string>
+    <string name="cap_overnight_stress">below 26 = rest zone · consistently low = strongest recovery signal</string>
+    <string name="cap_sleep_stress">HRV-derived during sleep only · below 26 = rest zone · best overnight recovery signal</string>
+    <string name="cap_recovery_time">hours until fully recovered · 0 = ready now · drops as you rest</string>
+    <string name="cap_respiration">12–20 br/m normal · a rise of 1–2 above baseline often signals illness early</string>
+</resources>

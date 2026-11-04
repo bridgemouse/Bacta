@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta.ui.shell
 
+import io.github.bridgemouse.bacta.ui.title
+import io.github.bridgemouse.bacta.ui.asString
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -86,7 +90,7 @@ private fun TopBar(section: Section, onBack: () -> Unit) {
     ) {
         if (section == Section.Home) {
             Text(
-                "BACTA·OS",
+                stringResource(R.string.brand),
                 style = MaterialTheme.typography.titleMedium,
                 color = BactaPalette.Mx4,
                 modifier = Modifier.padding(start = 8.dp).semantics { heading() },
@@ -97,7 +101,7 @@ private fun TopBar(section: Section, onBack: () -> Unit) {
             BackChevron(onBack)
             MX4Sigil(if (section == Section.Recovery) SigilMood.Pleased else SigilMood.Transmit, 22.dp)
             Text(
-                section.label.uppercase(),
+                section.title().asString().uppercase(),
                 style = MaterialTheme.typography.titleMedium,
                 color = BactaPalette.accent(section),
                 modifier = Modifier.padding(start = 10.dp).semantics { heading() },
@@ -108,12 +112,13 @@ private fun TopBar(section: Section, onBack: () -> Unit) {
 
 @Composable
 private fun BackChevron(onBack: () -> Unit) {
+    val backLabel = stringResource(R.string.action_back)
     Box(
         Modifier
             .size(48.dp)
             .clip(CircleShape)
             .clickable(onClick = onBack)
-            .semantics { role = Role.Button; contentDescription = "Back" },
+            .semantics { role = Role.Button; contentDescription = backLabel },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(20.dp)) {
@@ -153,7 +158,7 @@ private fun TabToggle(tabState: SectionTabState) {
                     inactiveContentColor = BactaPalette.TextSecondary,
                     inactiveBorderColor = BactaPalette.Line,
                 ),
-                label = { Text(tab.name.uppercase(), style = MaterialTheme.typography.labelMedium) },
+                label = { Text(stringResource(if (tab == Tab.Overview) R.string.tab_overview else R.string.tab_trends), style = MaterialTheme.typography.labelMedium) },
             )
         }
     }
@@ -161,13 +166,14 @@ private fun TabToggle(tabState: SectionTabState) {
 
 @Composable
 private fun NavButton(onClick: () -> Unit) {
+    val navLabel = stringResource(R.string.cd_all_systems)
     Box(
         Modifier
             .size(48.dp)
             .clip(CircleShape)
             .border(1.dp, BactaPalette.Mx4, CircleShape)
             .clickable(onClick = onClick)
-            .semantics { role = Role.Button; contentDescription = "All systems" },
+            .semantics { role = Role.Button; contentDescription = navLabel },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(18.dp)) {

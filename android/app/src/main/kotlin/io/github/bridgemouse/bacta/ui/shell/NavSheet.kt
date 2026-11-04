@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta.ui.shell
 
+import io.github.bridgemouse.bacta.ui.title
+import io.github.bridgemouse.bacta.ui.asString
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +40,7 @@ fun NavSheet(current: Section, onSelect: (Section) -> Unit, onDismiss: () -> Uni
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = BactaPalette.Surface) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(
-                "ALL SYSTEMS",
+                stringResource(R.string.nav_all_systems),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.textSecondary,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() },
@@ -53,7 +57,7 @@ fun NavSheet(current: Section, onSelect: (Section) -> Unit, onDismiss: () -> Uni
                     Box(Modifier.size(10.dp).background(BactaPalette.accent(section), CircleShape))
                     Spacer(Modifier.width(16.dp))
                     Text(
-                        section.label,
+                        section.title().asString(),
                         style = MaterialTheme.typography.titleMedium,
                         color = if (section == current) BactaPalette.accent(section) else BactaPalette.Text,
                     )

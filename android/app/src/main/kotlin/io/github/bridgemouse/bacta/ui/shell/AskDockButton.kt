@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.shell
 
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -22,6 +24,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.viz.SigilMood
 /** Present but inert until MX-4 chat ships (Phase E2); announced as disabled instead of silently doing nothing. */
 @Composable
 fun AskDockButton(modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.cd_ask_mx4)
     Box(
         modifier
             .size(48.dp)
@@ -31,7 +34,7 @@ fun AskDockButton(modifier: Modifier = Modifier) {
             .semantics {
                 role = Role.Button
                 disabled()
-                contentDescription = "Ask MX-4, not available yet"
+                contentDescription = description
             },
         contentAlignment = Alignment.Center,
     ) {

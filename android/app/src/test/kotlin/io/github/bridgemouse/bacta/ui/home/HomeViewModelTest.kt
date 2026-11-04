@@ -6,6 +6,8 @@ import io.github.bridgemouse.bacta.data.repository.Metric
 import io.github.bridgemouse.bacta.data.repository.MetricsRepository
 import io.github.bridgemouse.bacta.data.repository.Summary
 import io.github.bridgemouse.bacta.domain.Section
+import io.github.bridgemouse.bacta.s
+import io.github.bridgemouse.bacta.testFormatters
 import io.github.bridgemouse.bacta.domain.Tone
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingState
 import java.io.IOException
@@ -56,7 +58,7 @@ class HomeViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = HomeViewModel(metrics, briefings, clock)
+    private fun vm() = HomeViewModel(metrics, briefings, clock, testFormatters)
     private fun briefing(age: Duration) = Briefing(Tone.Positive, "H", "S", "B", "R", emptyList(), now.minus(age), null)
 
     @Test
@@ -67,7 +69,7 @@ class HomeViewModelTest {
         assertEquals(HomeUiState.Loading, vm.state.value)
         gate.complete(Result.success(Summary(bodyBatteryCurrent = 64.0)))
         val content = assertIs<HomeUiState.Content>(vm.state.value)
-        assertEquals("64", content.tiles.first().value)
+        assertEquals("64", content.tiles.first().value.s())
         assertEquals(Section.Home, briefings.asked)
         assertTrue(Metric.Hrv in metrics.requested)
     }
@@ -92,7 +94,7 @@ class HomeViewModelTest {
     fun staleBriefingCarriesItsAge() = runTest {
         briefings.handler = { Result.success(briefing(Duration.ofHours(40))) }
         val state = assertIs<HomeUiState.Content>(vm().state.value).briefing.state
-        assertEquals("40h ago", assertIs<BriefingState.Stale>(state).age)
+        assertEquals("40h ago", assertIs<BriefingState.Stale>(state).age.s())
     }
 
     @Test
@@ -119,7 +121,7 @@ class HomeViewModelTest {
         gate.complete(Result.success(Summary(bodyBatteryCurrent = 80.0)))
         val after = assertIs<HomeUiState.Content>(vm.state.value)
         assertFalse(after.refreshing)
-        assertEquals("80", after.tiles.first().value)
+        assertEquals("80", after.tiles.first().value.s())
     }
 
     @Test

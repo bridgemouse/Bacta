@@ -54,7 +54,7 @@ fun MetricCard(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     val valueStyle = MaterialTheme.typography.displaySmall

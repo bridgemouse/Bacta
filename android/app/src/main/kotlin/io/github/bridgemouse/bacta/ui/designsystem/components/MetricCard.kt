@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,7 +57,14 @@ fun MetricCard(
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(model.value ?: "—", style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
+                    val valueStyle = MaterialTheme.typography.displaySmall
+                    Text(
+                        model.value ?: "—",
+                        style = valueStyle,
+                        color = BactaPalette.Text,
+                        maxLines = 1,
+                        autoSize = TextAutoSize.StepBased(minFontSize = 18.sp, maxFontSize = valueStyle.fontSize),
+                    )
                     model.unit?.let {
                         Spacer(Modifier.width(4.dp))
                         Text(

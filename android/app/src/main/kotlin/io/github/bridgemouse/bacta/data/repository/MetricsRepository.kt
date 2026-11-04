@@ -23,7 +23,7 @@ class DefaultMetricsRepository @Inject constructor(private val api: BactaApi) : 
     override suspend fun summary(): Result<Summary> = resultOf { api.summary().toDomain() }
 
     override suspend fun trends(metrics: Set<Metric>, days: Int, today: LocalDate): Map<Metric, Result<List<Double>>> {
-        val from = today.minusDays(days.toLong()).toString()
+        val from = today.minusDays(days - 1L).toString()
         val to = today.toString()
         return coroutineScope {
             metrics.map { metric ->

@@ -66,11 +66,11 @@ class MetricsRepositoryTest {
     }
 
     @Test
-    fun trendRangeUsesTheDeviceLocalDate() = runTest {
+    fun trendRangeCoversExactlyTheRequestedDaysInclusive() = runTest {
         var range: Pair<String, String>? = null
         api.trendHandler = { _, from, to -> range = from to to; rows() }
         repo.trends(setOf(Metric.Hrv), days = 7, today = LocalDate.of(2026, 11, 3))
-        assertEquals("2026-10-27" to "2026-11-03", range)
+        assertEquals("2026-10-28" to "2026-11-03", range)
     }
 
     @Test
@@ -78,7 +78,7 @@ class MetricsRepositoryTest {
         var range: Pair<String, String>? = null
         api.trendHandler = { _, from, to -> range = from to to; rows() }
         repo.trends(setOf(Metric.Hrv), days = 7, today = LocalDate.of(2027, 1, 2))
-        assertEquals("2026-12-26" to "2027-01-02", range)
+        assertEquals("2026-12-27" to "2027-01-02", range)
     }
 
     @Test

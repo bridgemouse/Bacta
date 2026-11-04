@@ -7,6 +7,7 @@
     <application
         android:name=".BactaApp"
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
         android:label="Bacta"
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@android:style/Theme.Material.NoActionBar">

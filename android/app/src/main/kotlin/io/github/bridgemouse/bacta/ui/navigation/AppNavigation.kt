@@ -29,6 +29,7 @@ import io.github.bridgemouse.bacta.ui.gates.ServerUnreachableScreen
 import io.github.bridgemouse.bacta.ui.gates.rememberLocalNetworkPermission
 import io.github.bridgemouse.bacta.ui.home.HomeRoute
 import io.github.bridgemouse.bacta.ui.login.LoginRoute
+import io.github.bridgemouse.bacta.ui.recovery.RecoveryRoute
 import io.github.bridgemouse.bacta.ui.shell.BactaScaffold
 import io.github.bridgemouse.bacta.ui.shell.Tab
 import io.github.bridgemouse.bacta.ui.shell.rememberSectionTabState
@@ -72,9 +73,7 @@ private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
                 }
             }
             entry<Destination.Recovery> {
-                SectionFrame(Section.Recovery, tabs = true, backStack = backStack) {
-                    StateMessage(StateKind.Empty, "Recovery content arrives in a later change.")
-                }
+                SectionFrame(Section.Recovery, tabs = true, backStack = backStack) { tab -> RecoveryRoute(tab) }
             }
         },
     )

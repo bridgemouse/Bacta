@@ -81,4 +81,29 @@ class RulesTest {
         assertNull(TrainingStatus.label(10.0))
         assertNull(TrainingStatus.label(null))
     }
+
+    @Test
+    fun stressLabelBoundaries() {
+        assertEquals("LOW", ReadinessRules.stressLabel(25.0))
+        assertEquals("MODERATE", ReadinessRules.stressLabel(26.0))
+        assertEquals("MODERATE", ReadinessRules.stressLabel(50.0))
+        assertEquals("HIGH", ReadinessRules.stressLabel(51.0))
+        assertEquals("HIGH", ReadinessRules.stressLabel(75.0))
+        assertEquals("VERY HIGH", ReadinessRules.stressLabel(76.0))
+        assertNull(ReadinessRules.stressLabel(null))
+    }
+
+    @Test
+    fun overnightVitalBands() {
+        assertEquals(Band("LOW · rest zone", Tone.Positive), ReadinessRules.sleepStressBand(25.0))
+        assertEquals(Band("LOW–MODERATE", Tone.Caution), ReadinessRules.sleepStressBand(26.0))
+        assertEquals(Band("ELEVATED", Tone.Caution), ReadinessRules.sleepStressBand(51.0))
+        assertEquals(Band("12–20 normal", Tone.Positive), ReadinessRules.respirationBand(12.0))
+        assertEquals(Band("12–20 normal", Tone.Positive), ReadinessRules.respirationBand(20.0))
+        assertEquals(Band("outside 12–20", Tone.Caution), ReadinessRules.respirationBand(20.5))
+        assertEquals(Band("excellent", Tone.Positive), ReadinessRules.spo2Band(97.0))
+        assertEquals(Band("normal", Tone.Positive), ReadinessRules.spo2Band(95.0))
+        assertEquals(Band("below normal", Tone.Caution), ReadinessRules.spo2Band(94.0))
+        assertNull(ReadinessRules.spo2Band(null))
+    }
 }

@@ -100,10 +100,10 @@ fun BriefingCard(
 @Composable
 private fun BriefingBody(content: BriefingContent) {
     val accent = BactaPalette.Mx4
-    Text(content.headline, style = MaterialTheme.typography.labelMedium, color = accent)
+    Text(inlineMarkdown(content.headline), style = MaterialTheme.typography.labelMedium, color = accent)
     content.summary?.let {
         Spacer(Modifier.height(6.dp))
-        Text(it, style = MaterialTheme.typography.bodyLarge, color = BactaPalette.Text)
+        Text(inlineMarkdown(it), style = MaterialTheme.typography.bodyLarge, color = BactaPalette.Text)
     }
     content.directive?.let {
         Spacer(Modifier.height(10.dp))
@@ -112,7 +112,7 @@ private fun BriefingBody(content: BriefingContent) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text("DIRECTIVE ·", style = MaterialTheme.typography.labelSmall, color = accent)
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Text)
+            Text(inlineMarkdown(it), style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Text)
         }
     }
 }

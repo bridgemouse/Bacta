@@ -57,7 +57,7 @@ fun GaugeCard(
                 }
             }
         }
-        GaugeLayout.Hero -> BactaCard(accent, semanticsModifier, size = CardSize.Hero) {
+        GaugeLayout.Hero -> BactaCard(accent, semanticsModifier) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(model.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
                 model.rightLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = toneColor) }

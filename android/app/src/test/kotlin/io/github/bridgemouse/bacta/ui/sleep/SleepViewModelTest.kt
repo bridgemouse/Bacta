@@ -37,7 +37,7 @@ import org.junit.Before
 import org.junit.Test
 
 private class FakeMetrics : MetricsRepository {
-    var summaryHandler: suspend () -> Result<Summary> = { Result.success(Summary(sleepScore = 95.0, sleepSeconds = 27480.0)) }
+    var summaryHandler: suspend () -> Result<Summary> = { Result.success(Summary(sleepScore = 88.0, sleepSeconds = 27000.0)) }
     var pointHandler: (Metric) -> Result<List<TrendPoint>> = { Result.success(listOf(TrendPoint(LocalDate.of(2026, 11, 3), 1.0), TrendPoint(LocalDate.of(2026, 11, 4), 2.0))) }
     var requested: Set<Metric> = emptySet()
     var days: Int? = null
@@ -130,7 +130,7 @@ class SleepViewModelTest {
         metrics.summaryHandler = { Result.failure(IOException("down")) }
         val vm = vm()
         assertEquals(SleepUiState.Error, vm.state.value)
-        metrics.summaryHandler = { Result.success(Summary(sleepScore = 95.0)) }
+        metrics.summaryHandler = { Result.success(Summary(sleepScore = 88.0)) }
         vm.refresh()
         assertIs<SleepUiState.Content>(vm.state.value)
     }

@@ -27,8 +27,8 @@ class SleepMappingTest {
     private fun ok(vararg p: Pair<Metric, List<TrendPoint>>): Points = failed + p.associate { (m, s) -> m to Result.success(s) }
 
     private val night = Summary(
-        sleepSeconds = 27480.0, sleepDeepSeconds = 5220.0, sleepLightSeconds = 16560.0, sleepRemSeconds = 5700.0, sleepAwakeSeconds = 360.0,
-        sleepScore = 95.0, sleepHr = 47.0, sleepResp = 13.0, sleepStress = 9.0, sleepSpo2 = 98.0,
+        sleepSeconds = 27000.0, sleepDeepSeconds = 4800.0, sleepLightSeconds = 16800.0, sleepRemSeconds = 5400.0, sleepAwakeSeconds = 480.0,
+        sleepScore = 92.0, sleepHr = 52.0, sleepResp = 14.0, sleepStress = 14.0, sleepSpo2 = 97.0,
     )
 
     private fun map(s: Summary, p: Points, h: NightHypnogram? = null, t: Targets = Targets.Default) =
@@ -49,9 +49,9 @@ class SleepMappingTest {
     @Test
     fun theHeroShowsAsleepInBedAndAGarminBand() {
         val c = map(night, failed)
-        assertEquals("7h 38m", c.asleep.s())
-        assertEquals("7h 44m in bed", c.inBed.s())
-        assertEquals("95", c.score.valueText)
+        assertEquals("7h 30m", c.asleep.s())
+        assertEquals("7h 38m in bed", c.inBed.s())
+        assertEquals("92", c.score.valueText)
         assertEquals("EXCELLENT", c.score.stateText.s())
     }
 
@@ -60,7 +60,7 @@ class SleepMappingTest {
         val c = map(night, failed)
         assertEquals(listOf(SleepStage.Deep, SleepStage.Light, SleepStage.Rem, SleepStage.Awake), c.stages.map { it.stage })
         assertEquals(100, c.stages.filter { it.stage != SleepStage.Awake }.sumOf { it.percent })
-        assertEquals(listOf("1h 27m", "4h 36m", "1h 35m", "6m"), c.stages.map { it.minutes.s() })
+        assertEquals(listOf("1h 20m", "4h 40m", "1h 30m", "8m"), c.stages.map { it.minutes.s() })
     }
 
     @Test
@@ -71,9 +71,9 @@ class SleepMappingTest {
     @Test
     fun efficiencyAndArchitectureUseTheDomainRules() {
         val c = map(night, failed)
-        assertEquals("99", c.efficiency.value.s())
+        assertEquals("98", c.efficiency.value.s())
         val arch = assertNotNull(c.architecture)
-        assertEquals("96", arch.gauge.valueText)
+        assertEquals("92", arch.gauge.valueText)
         assertEquals(3, arch.parts.size)
     }
 

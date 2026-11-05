@@ -53,8 +53,8 @@ class DtoDecodingTest {
     @Test
     fun summaryCarriesSleepAndTrainingFields() {
         val dto = BactaJson.decodeFromString<SummaryDto>(fixture("summary.json"))
-        assertEquals(5220.0, dto.sleepDeepS)
-        assertEquals(360.0, dto.sleepAwakeS)
+        assertEquals(4800.0, dto.sleepDeepS)
+        assertEquals(480.0, dto.sleepAwakeS)
         assertEquals(96.0, dto.sleepSpo2)
         assertEquals(13.5, dto.sleepResp)
         assertEquals(10000.0, dto.stepsGoal)

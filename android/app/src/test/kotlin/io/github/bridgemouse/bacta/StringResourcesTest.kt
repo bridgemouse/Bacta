@@ -40,4 +40,12 @@ class StringResourcesTest {
         val suspicious = all.filter { (_, text) -> !positional.containsMatchIn(text) && Regex("""%[sdf]|%%""").containsMatchIn(text) }
         assertTrue(suspicious.isEmpty(), "Unformatted strings with format specifiers: $suspicious")
     }
+
+    @Test
+    fun everyResourceNameIsUnique() {
+        val names = entries("string", "src/main/res/values/strings.xml").map { it.first } +
+            entries("plurals", "src/main/res/values/plurals.xml").map { it.first }.distinct()
+        val duplicates = names.groupingBy { it }.eachCount().filter { it.value > 1 }.keys
+        assertTrue(duplicates.isEmpty(), "Duplicate resource names: $duplicates")
+    }
 }

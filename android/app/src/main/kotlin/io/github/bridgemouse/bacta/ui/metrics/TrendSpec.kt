@@ -26,6 +26,7 @@ fun buildTrendSections(
     series: (Metric) -> List<Double>,
     fmt: Formatters,
     days: Int = 7,
+    labels: (Metric) -> List<String> = { emptyList() },
 ): List<TrendSectionModel> = specs.mapNotNull { spec ->
     val points = series(spec.metric)
     if (points.isEmpty()) return@mapNotNull null
@@ -43,6 +44,7 @@ fun buildTrendSections(
             value = value?.let { fmt.number(it, catalog.decimals) },
             unit = catalog.unit,
             series = points,
+            dayLabels = labels(spec.metric).takeIf { it.size == points.size }.orEmpty(),
             kind = catalog.chart,
             delta = delta,
             average = average,

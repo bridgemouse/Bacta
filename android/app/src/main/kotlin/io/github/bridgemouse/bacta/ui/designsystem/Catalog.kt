@@ -111,7 +111,7 @@ fun CatalogRecovery() = CatalogPage {
         GaugeModel(t("Body battery · today"), 74.0, 100.0, "74", caption = t("WAKE 92%"), stateText = t("MODERATE"), tone = Tone.Caution, rightLabel = t("-18 used")),
         a, layout = GaugeLayout.Hero,
     )
-    MeterCard(MeterModel(t("Recovery time"), "0.3", t("h"), t("FRESH"), Tone.Positive, 0.02f, t("0h"), t("72h"), t("ready zone 0–24h")), a)
+    MeterCard(MeterModel(t("Recovery time"), t("0.3"), t("h"), t("FRESH"), Tone.Positive, 0.02f, t("0h"), t("72h"), t("ready zone 0–24h")), a)
     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         MetricCard(MetricCardModel(t("Resting HR"), t("52"), t("bpm"), t("▲ 0.5 bpm"), trend = listOf(50.0, 51.0, 50.0, 52.0, 51.0, 52.0)), a, Modifier.weight(1f))
         MetricCard(MetricCardModel(t("Stress"), t("27"), t("avg"), t("▲ 1.6 · MODERATE"), trend = listOf(24.0, 26.0, 25.0, 28.0, 27.0, 27.0)), a, Modifier.weight(1f))

@@ -37,6 +37,16 @@ object SleepRules {
 
     fun scoreBand(score: Double?): Band? = scoreBands.select(score)?.value
 
+    private val architectureBands = BandTable(
+        listOf(
+            BandRow(80.0, Band("OPTIMAL", Tone.Positive)),
+            BandRow(60.0, Band("FAIR", Tone.Caution)),
+            BandRow(NEG, Band("NEEDS WORK", Tone.Flag)),
+        ),
+    )
+
+    fun architectureBand(score: Double?): Band? = architectureBands.select(score)?.value
+
     /** Cumulative shortfall against [targetMinutes]: a well-rested night counts as zero and never offsets another night's debt. */
     fun debtMinutes(nights: List<Int>, targetMinutes: Int): Int = nights.sumOf { max(0, targetMinutes - it) }
 

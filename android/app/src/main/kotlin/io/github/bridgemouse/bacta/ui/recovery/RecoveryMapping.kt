@@ -113,7 +113,7 @@ private fun recoveryMeter(hours: Double?, f: Formatters): MeterModel? {
     val band = ReadinessRules.recoveryTimeBand(hours)
     return MeterModel(
         label = UiText.of(R.string.recovery_time_title),
-        value = f.number(hours, 1),
+        value = UiText.Literal(f.number(hours, 1)),
         unit = UiText.of(R.string.unit_hours),
         stateText = band?.text(),
         tone = band?.tone,

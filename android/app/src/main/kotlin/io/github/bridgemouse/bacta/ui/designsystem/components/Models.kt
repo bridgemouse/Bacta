@@ -90,7 +90,7 @@ data class GaugeModel(
 @Immutable
 data class MeterModel(
     val label: UiText,
-    val value: String?,
+    val value: UiText?,
     val unit: UiText? = null,
     val stateText: UiText? = null,
     val tone: Tone? = null,
@@ -119,3 +119,7 @@ sealed interface BriefingState {
 
 @Immutable
 data class BriefingModel(val title: UiText, val state: BriefingState)
+
+/** The night's resampled stages and the clock labels under the chart; a missing night has no model at all. */
+@Immutable
+data class HypnogramModel(val levels: List<io.github.bridgemouse.bacta.domain.SleepStage?>, val axisLabels: List<String>)

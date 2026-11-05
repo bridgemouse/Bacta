@@ -58,7 +58,7 @@ class RecoveryMappingTest {
         assertEquals("WAKE 92%", battery.caption.s())
         assertEquals("-18 used", battery.rightLabel.s())
         val meter = assertNotNull(c.recoveryTime)
-        assertEquals("0.3", meter.value)
+        assertEquals("0.3", meter.value.s())
         assertEquals("FRESH", meter.stateText.s())
         assertNull(meter.tone)
         assertEquals(0.3 / 72.0, meter.position!!.toDouble(), 1e-6)

@@ -12,5 +12,7 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun auth(impl: DefaultAuthRepository): AuthRepository
     @Binds @Singleton abstract fun metrics(impl: DefaultMetricsRepository): MetricsRepository
     @Binds @Singleton abstract fun briefing(impl: DefaultBriefingRepository): BriefingRepository
+    @Binds @Singleton abstract fun sleep(impl: DefaultSleepRepository): SleepRepository
+    @Binds @Singleton abstract fun activity(impl: DefaultActivityRepository): ActivityRepository
     @Binds @Singleton abstract fun server(impl: DefaultServerRepository): ServerRepository
 }

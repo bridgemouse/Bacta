@@ -28,6 +28,7 @@ interface Formatters {
     fun distance(meters: Double): FormattedMeasure
     fun duration(seconds: Double): UiText?
     fun dateTime(at: Instant, zone: ZoneId): UiText
+    fun timeOfDay(at: Instant, zone: ZoneId): String
     fun shortDate(d: LocalDate): String
     fun weekdayInitial(d: LocalDate): String
 }
@@ -64,9 +65,14 @@ class LocaleFormatters(
     override fun dateTime(at: Instant, zone: ZoneId): UiText {
         val local = at.atZone(zone)
         val date = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(locale).format(local)
-        val time = (if (is24Hour) DateTimeFormatter.ofPattern("HH:mm", locale) else DateTimeFormatter.ofPattern("h:mm a", locale)).format(local)
+        val time = clock().format(local)
         return UiText.of(R.string.datetime_join, date, time)
     }
+
+    override fun timeOfDay(at: Instant, zone: ZoneId): String = clock().format(at.atZone(zone))
+
+    private fun clock(): DateTimeFormatter =
+        if (is24Hour) DateTimeFormatter.ofPattern("HH:mm", locale) else DateTimeFormatter.ofPattern("h:mm a", locale)
 
     override fun shortDate(d: LocalDate): String = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(locale).format(d)
 

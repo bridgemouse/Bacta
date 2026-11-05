@@ -48,4 +48,17 @@ class NavigationTest {
         stack.reconcileLogin(loginRequired = false)
         assertEquals(listOf<Destination>(Destination.Home, Destination.Recovery), stack)
     }
+
+    @Test
+    fun openingSleepKeepsHomeUnderneath() {
+        val stack = mutableListOf<Destination>(Destination.Home)
+        stack.openSection(Section.Sleep)
+        assertEquals(listOf<Destination>(Destination.Home, Destination.Sleep), stack)
+    }
+
+    @Test
+    fun sleepIsAListedSection() {
+        assertEquals(true, Section.Sleep in BuiltSections)
+        assertEquals(Section.Sleep, Destination.Sleep.section())
+    }
 }

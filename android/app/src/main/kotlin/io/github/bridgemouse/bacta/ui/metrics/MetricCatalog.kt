@@ -32,11 +32,20 @@ object MetricCatalog {
         MetricSpec(Metric.BodyBatteryWake, label(R.string.metric_body_battery), null, 0, lowerIsBetter = null, chart = TrendKind.Bars),
         MetricSpec(Metric.SleepHr, label(R.string.metric_sleep_hr), label(R.string.unit_bpm), 1, lowerIsBetter = true),
         MetricSpec(Metric.SleepStress, label(R.string.metric_sleep_stress), label(R.string.unit_avg), 0, lowerIsBetter = true, deltaDecimals = 1),
-        MetricSpec(Metric.SleepScore, label(R.string.label_sleep), null, 0, lowerIsBetter = null),
+        MetricSpec(Metric.SleepScore, label(R.string.sleep_score), null, 0, lowerIsBetter = null),
         MetricSpec(Metric.TrainingLoad, label(R.string.label_training_load), null, 0, lowerIsBetter = null, chart = TrendKind.Bars),
         MetricSpec(Metric.BodyBatteryCurrent, label(R.string.metric_body_battery), null, 0, lowerIsBetter = null),
         MetricSpec(Metric.IntensityMod, label(R.string.label_intensity), label(R.string.unit_min), 0, lowerIsBetter = null, chart = TrendKind.Bars),
         MetricSpec(Metric.IntensityVig, label(R.string.label_intensity), label(R.string.unit_min), 0, lowerIsBetter = null, chart = TrendKind.Bars),
+        MetricSpec(Metric.SleepSeconds, label(R.string.metric_sleep_duration), label(R.string.unit_min), 0, lowerIsBetter = false, chart = TrendKind.Bars),
+        MetricSpec(Metric.SleepDeep, label(R.string.metric_deep_sleep), label(R.string.unit_min), 0, lowerIsBetter = false, chart = TrendKind.Bars),
+        MetricSpec(Metric.SleepAwake, label(R.string.metric_sleep_awake), label(R.string.unit_min), 0, lowerIsBetter = true),
+        MetricSpec(Metric.SleepResp, label(R.string.metric_respiration), label(R.string.unit_brpm), 1, lowerIsBetter = true),
+        MetricSpec(Metric.SleepSpo2, label(R.string.metric_spo2), label(R.string.unit_percent), 0, lowerIsBetter = false),
+        MetricSpec(Metric.Vo2Max, label(R.string.metric_vo2max), label(R.string.unit_vo2), 0, lowerIsBetter = false),
+        MetricSpec(Metric.FitnessAge, label(R.string.metric_fitness_age), label(R.string.unit_years), 0, lowerIsBetter = true),
+        MetricSpec(Metric.Steps, label(R.string.metric_steps), label(R.string.unit_steps), 0, lowerIsBetter = null, chart = TrendKind.Bars),
+        MetricSpec(Metric.CaloriesTotal, label(R.string.metric_calories), label(R.string.unit_kcal), 0, lowerIsBetter = null, chart = TrendKind.Bars),
     ).associateBy { it.metric }
 
     fun spec(metric: Metric): MetricSpec = specs.getValue(metric)

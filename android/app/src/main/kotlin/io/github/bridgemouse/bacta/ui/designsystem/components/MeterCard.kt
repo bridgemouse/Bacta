@@ -36,7 +36,7 @@ fun MeterCard(model: MeterModel, accent: Color, modifier: Modifier = Modifier) {
     val toneColor = model.tone?.let(BactaPalette::tone) ?: accent
     val noData = stringResource(R.string.cd_no_data)
     val stateText = model.stateText?.asString()
-    val spoken = listOfNotNull(model.label.asString(), model.value ?: noData, model.unit?.asString()).joinToString(", ")
+    val spoken = listOfNotNull(model.label.asString(), model.value?.asString() ?: noData, model.unit?.asString()).joinToString(", ")
     BactaCard(
         accent = accent,
         modifier = modifier.semantics(mergeDescendants = true) {
@@ -47,7 +47,7 @@ fun MeterCard(model: MeterModel, accent: Color, modifier: Modifier = Modifier) {
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(model.label.asString().uppercase(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            Text(model.value ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
+            Text(model.value?.asString() ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
             model.unit?.let {
                 Spacer(Modifier.width(4.dp))
                 Text(it.asString(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)

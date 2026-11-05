@@ -67,4 +67,11 @@ class FormattersTest {
         assertEquals("Mi.", de.weekdayInitial(d))
         assertTrue("11" in us.shortDate(d))
     }
+
+    @Test
+    fun timeOfDayHonorsTheClockSettingAndTheGivenZone() {
+        assertTrue(us.timeOfDay(noon, ZoneId.of("UTC")).let { "2:00" in it && it.contains("PM", ignoreCase = true) })
+        assertEquals("14:00", de.timeOfDay(noon, ZoneId.of("UTC")))
+        assertEquals("09:00", de.timeOfDay(noon, ZoneId.of("America/New_York")))
+    }
 }

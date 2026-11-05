@@ -9,20 +9,23 @@ sealed interface Destination : NavKey {
     @Serializable data object Login : Destination
     @Serializable data object Home : Destination
     @Serializable data object Recovery : Destination
+    @Serializable data object Sleep : Destination
 }
 
 /** Sections that have a screen; the nav sheet lists only these. */
-val BuiltSections: List<Section> = listOf(Section.Home, Section.Recovery)
+val BuiltSections: List<Section> = listOf(Section.Home, Section.Recovery, Section.Sleep)
 
 fun Destination.section(): Section? = when (this) {
     Destination.Login -> null
     Destination.Home -> Section.Home
     Destination.Recovery -> Section.Recovery
+    Destination.Sleep -> Section.Sleep
 }
 
 private fun Section.destination(): Destination? = when (this) {
     Section.Home -> Destination.Home
     Section.Recovery -> Destination.Recovery
+    Section.Sleep -> Destination.Sleep
     else -> null
 }
 

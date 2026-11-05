@@ -19,6 +19,17 @@ object BactaPalette {
     val Caution = Color(0xFFFBBF24)
     val Flag = Color(0xFFF87171)
 
+    /** Stage colors are tints of the Sleep accent (deep is the strongest), with awake muted, so they follow the theme instead of repeating hex literals. */
+    fun stage(stage: io.github.bridgemouse.bacta.domain.SleepStage): Color {
+        val sleep = accent(Section.Sleep)
+        return when (stage) {
+            io.github.bridgemouse.bacta.domain.SleepStage.Deep -> sleep
+            io.github.bridgemouse.bacta.domain.SleepStage.Light -> sleep.copy(alpha = 0.6f)
+            io.github.bridgemouse.bacta.domain.SleepStage.Rem -> androidx.compose.ui.graphics.lerp(sleep, Color.White, 0.4f)
+            io.github.bridgemouse.bacta.domain.SleepStage.Awake -> TextMuted
+        }
+    }
+
     fun accent(section: Section): Color = when (section) {
         Section.Home -> Mx4
         Section.Recovery -> Color(0xFF64B5F6)

@@ -148,4 +148,55 @@
     <string name="cap_sleep_stress">HRV-derived during sleep only · below 26 = rest zone · best overnight recovery signal</string>
     <string name="cap_recovery_time">hours until fully recovered · 0 = ready now · drops as you rest</string>
     <string name="cap_respiration">12–20 br/m normal · a rise of 1–2 above baseline often signals illness early</string>
+
+    <!-- Sleep and training metrics -->
+    <string name="metric_sleep_duration">Duration</string>
+    <string name="metric_deep_sleep">Deep sleep</string>
+    <string name="metric_sleep_awake">Awake</string>
+    <string name="metric_vo2max">VO₂ max</string>
+    <string name="metric_fitness_age">Fitness age</string>
+    <string name="metric_steps">Steps</string>
+    <string name="metric_calories">Calories</string>
+    <string name="unit_vo2">mL/kg/min</string>
+    <string name="unit_years">yrs</string>
+    <string name="unit_kcal">kcal</string>
+    <string name="unit_steps">steps</string>
+
+    <!-- Sleep screen -->
+    <string name="sleep_loading">Loading sleep data…</string>
+    <string name="sleep_error">Couldn\'t load sleep data. Check the connection and try again.</string>
+    <string name="rail_last_night">LAST NIGHT</string>
+    <string name="rail_sleep_architecture">SLEEP ARCHITECTURE</string>
+    <string name="rail_architecture_score">ARCHITECTURE SCORE</string>
+    <string name="night_of">NIGHT OF %1$s</string>
+    <string name="night_stale">LAST RECORDED %1$s</string>
+    <string name="time_asleep">TIME ASLEEP</string>
+    <string name="in_bed">%1$s in bed</string>
+    <string name="sleep_score">Sleep score</string>
+    <string name="stage_deep">Deep</string>
+    <string name="stage_light">Light</string>
+    <string name="stage_rem">REM</string>
+    <string name="stage_awake">Awake</string>
+    <string name="metric_efficiency">Efficiency</string>
+    <string name="metric_sleep_debt">Sleep debt</string>
+    <string name="debt_restored">FULLY RESTORED</string>
+    <string name="debt_accumulating">ACCUMULATING OVER 7D</string>
+    <string name="architecture_title">Architecture score</string>
+    <string name="metric_heart_rate">Heart rate</string>
+    <string name="rail_duration">DURATION</string>
+    <string name="rail_sleep_score">SLEEP SCORE</string>
+    <string name="rail_sleep_hr">SLEEP HR</string>
+    <string name="cap_sleep_duration">time asleep each night · compare with your sleep target in Settings</string>
+    <string name="cap_sleep_score">Garmin\'s sleep score: 90+ excellent · 80–89 good · 60–79 fair · below 60 poor</string>
+    <string name="cap_sleep_hr">lower = better · average heart rate while asleep</string>
+    <string name="cap_sleep_resp">12–20 br/m normal · a rise of 1–2 above baseline often signals illness early</string>
+    <string name="cap_sleep_screen_stress">HRV-derived during sleep only · below 26 = rest zone</string>
+
+    <string name="hypnogram_title">Sleep architecture</string>
+    <string name="cd_hypnogram">Sleep stages across the night, from %1$s to %2$s</string>
+    <string name="cd_hypnogram_plain">Sleep stages across the night</string>
+    <string name="stage_percent">%1$d%%</string>
+    <string name="cd_stage_row">%1$s, %2$s, %3$d percent of the night</string>
+    <string name="cd_stage_row_plain">%1$s, %2$s</string>
+    <string name="cd_architecture_part">%1$s, %2$d percent of target</string>
 </resources>

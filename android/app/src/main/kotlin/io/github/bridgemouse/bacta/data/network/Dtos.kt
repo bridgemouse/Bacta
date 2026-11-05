@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 
 val BactaJson = Json { ignoreUnknownKeys = true }
 
@@ -45,6 +46,26 @@ data class SummaryDto(
     @SerialName("training_load") val trainingLoad: Double? = null,
     @SerialName("training_status_n") val trainingStatusN: Double? = null,
     @SerialName("training_status_n_date") val trainingStatusDate: String? = null,
+    @SerialName("sleep_awake_s") val sleepAwakeS: Double? = null,
+    @SerialName("sleep_spo2") val sleepSpo2: Double? = null,
+    @SerialName("sleep_resp") val sleepResp: Double? = null,
+    @SerialName("distance_m") val distanceM: Double? = null,
+    val steps: Double? = null,
+    @SerialName("steps_goal") val stepsGoal: Double? = null,
+    @SerialName("calories_total") val caloriesTotal: Double? = null,
+    @SerialName("calories_active") val caloriesActive: Double? = null,
+    @SerialName("floors_up") val floorsUp: Double? = null,
+    @SerialName("floors_goal") val floorsGoal: Double? = null,
+    val vo2max: Double? = null,
+    @SerialName("fitness_age") val fitnessAge: Double? = null,
+    @SerialName("fitness_age_achievable") val fitnessAgeAchievable: Double? = null,
+    @SerialName("training_load_min") val trainingLoadMin: Double? = null,
+    @SerialName("training_load_max") val trainingLoadMax: Double? = null,
+    @SerialName("hrzone_1_min") val hrzone1Min: Double? = null,
+    @SerialName("hrzone_2_min") val hrzone2Min: Double? = null,
+    @SerialName("hrzone_3_min") val hrzone3Min: Double? = null,
+    @SerialName("hrzone_4_min") val hrzone4Min: Double? = null,
+    @SerialName("hrzone_5_min") val hrzone5Min: Double? = null,
 )
 
 @Serializable
@@ -70,3 +91,41 @@ data class BriefingDto(
     @SerialName("generated_at") val generatedAt: String? = null,
     val model: String? = null,
 )
+
+/** Resampled hypnogram: 24 blocks of the server's stage level, plus Garmin's local-as-UTC start and end in milliseconds. */
+@Serializable
+data class HypnoDto(
+    val hypno: List<Int> = emptyList(),
+    val startLocal: Long? = null,
+    val endLocal: Long? = null,
+)
+
+/** `activity_id` is TEXT in the database, so it may arrive as a string or a number. */
+@Serializable
+data class ActivityDto(
+    @SerialName("activity_id") val activityId: JsonPrimitive,
+    val date: String,
+    @SerialName("start_time") val startTime: String,
+    val name: String? = null,
+    @SerialName("type_key") val typeKey: String,
+    @SerialName("distance_m") val distanceM: Double? = null,
+    @SerialName("duration_s") val durationS: Double? = null,
+    val calories: Double? = null,
+    @SerialName("avg_hr") val avgHr: Double? = null,
+)
+
+@Serializable
+data class ActivitiesDto(val activities: List<ActivityDto> = emptyList())
+
+@Serializable
+data class WeekDto(
+    val week: String,
+    val hours: Double? = null,
+    @SerialName("avg_hr") val avgHr: Double? = null,
+)
+
+@Serializable
+data class WeeksDto(val weeks: List<WeekDto> = emptyList())
+
+@Serializable
+data class IntensityDto(val moderate: Double = 0.0, val vigorous: Double = 0.0)

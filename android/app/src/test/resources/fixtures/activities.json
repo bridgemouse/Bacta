@@ -1,0 +1,35 @@
+{
+  "activities": [
+    {
+      "activity_id": "1001",
+      "date": "2026-11-03",
+      "start_time": "2026-11-03 07:15:00",
+      "name": "Synthetic Morning Run",
+      "type_key": "running",
+      "distance_m": 5200.5,
+      "duration_s": 1800.0,
+      "calories": 420,
+      "avg_hr": 151,
+      "elevation_m": 30.0,
+      "aerobic_te": 3.1,
+      "anaerobic_te": 0.4,
+      "recovery_time_h": 12.0,
+      "zone1_s": 60,
+      "zone2_s": 600,
+      "zone3_s": 900,
+      "zone4_s": 200,
+      "zone5_s": 40
+    },
+    {
+      "activity_id": "1002",
+      "date": "2026-11-02",
+      "start_time": "2026-11-02 18:00:00",
+      "name": "Synthetic Odd Activity",
+      "type_key": "padel_sport",
+      "distance_m": null,
+      "duration_s": null,
+      "calories": null,
+      "avg_hr": null
+    }
+  ]
+}

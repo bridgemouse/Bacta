@@ -32,7 +32,7 @@ object MetricCatalog {
         MetricSpec(Metric.BodyBatteryWake, label(R.string.metric_body_battery), null, 0, lowerIsBetter = null, chart = TrendKind.Bars),
         MetricSpec(Metric.SleepHr, label(R.string.metric_sleep_hr), label(R.string.unit_bpm), 1, lowerIsBetter = true),
         MetricSpec(Metric.SleepStress, label(R.string.metric_sleep_stress), label(R.string.unit_avg), 0, lowerIsBetter = true, deltaDecimals = 1),
-        MetricSpec(Metric.SleepScore, label(R.string.label_sleep), null, 0, lowerIsBetter = null),
+        MetricSpec(Metric.SleepScore, label(R.string.sleep_score), null, 0, lowerIsBetter = null),
         MetricSpec(Metric.TrainingLoad, label(R.string.label_training_load), null, 0, lowerIsBetter = null, chart = TrendKind.Bars),
         MetricSpec(Metric.BodyBatteryCurrent, label(R.string.metric_body_battery), null, 0, lowerIsBetter = null),
         MetricSpec(Metric.IntensityMod, label(R.string.label_intensity), label(R.string.unit_min), 0, lowerIsBetter = null, chart = TrendKind.Bars),

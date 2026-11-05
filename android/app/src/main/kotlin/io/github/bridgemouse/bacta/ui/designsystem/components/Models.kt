@@ -123,3 +123,7 @@ data class BriefingModel(val title: UiText, val state: BriefingState)
 /** The night's resampled stages and the clock labels under the chart; a missing night has no model at all. */
 @Immutable
 data class HypnogramModel(val levels: List<io.github.bridgemouse.bacta.domain.SleepStage?>, val axisLabels: List<String>)
+
+/** One row of the stage breakdown: how long and what share of the night. Awake carries no share. */
+@Immutable
+data class StageItem(val stage: io.github.bridgemouse.bacta.domain.SleepStage, val label: UiText, val minutes: UiText, val percent: Int)

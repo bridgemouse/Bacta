@@ -16,6 +16,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HypnogramModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
+import io.github.bridgemouse.bacta.ui.designsystem.components.StageItem
 import io.github.bridgemouse.bacta.ui.designsystem.components.StatusTileModel
 import io.github.bridgemouse.bacta.ui.format.Formatters
 import io.github.bridgemouse.bacta.ui.metrics.TrendSpec

@@ -1,20 +1,18 @@
 package io.github.bridgemouse.bacta.ui.sleep
 
-import io.github.bridgemouse.bacta.domain.SleepStage
 import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HypnogramModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
+import io.github.bridgemouse.bacta.ui.designsystem.components.StageItem
 import io.github.bridgemouse.bacta.ui.designsystem.components.StatusTileModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendSectionModel
 import java.time.LocalDate
 
 /** Which night the numbers belong to; [stale] when it is older than yesterday, so an unrecorded night is never passed off as last night. */
 data class NightLabel(val date: LocalDate, val stale: Boolean)
-
-data class StageItem(val stage: SleepStage, val label: UiText, val minutes: UiText, val percent: Int)
 
 data class ArchitecturePart(val label: UiText, val fraction: Float)
 

@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.home
 
+import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,8 +30,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     when (ui) {
-        HomeUiState.Loading -> StateMessage(StateKind.Loading, "Loading your data…", modifier)
-        HomeUiState.Error -> StateMessage(StateKind.Error, "Couldn't load your data. Check the connection and try again.", modifier, onRetry = onRefresh)
+        HomeUiState.Loading -> StateMessage(StateKind.Loading, UiText.of(R.string.home_loading), modifier)
+        HomeUiState.Error -> StateMessage(StateKind.Error, UiText.of(R.string.home_error), modifier, onRetry = onRefresh)
         is HomeUiState.Content -> HomeContent(ui, tab, onRefresh, onOpenSection, modifier)
     }
 }
@@ -47,7 +49,7 @@ private fun HomeContent(
         BriefingCard(ui.briefing, onRefresh = onRefresh)
         when (tab) {
             Tab.Overview -> {
-                SectionRail("SYSTEMS", accent, right = "${ui.tiles.count { it.value != null }} ONLINE")
+                SectionRail(UiText.of(R.string.rail_systems), accent, right = UiText.of(R.string.rail_systems_online, ui.tiles.count { it.value != null }))
                 ui.tiles.zip(HomeTileSections).chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         row.forEach { (tile, section) ->
@@ -63,7 +65,7 @@ private fun HomeContent(
                 }
             }
             Tab.Trends -> {
-                SectionRail("WEEK IN REVIEW", accent, right = "${ui.trends.count { it.series.isNotEmpty() }} CHANNELS")
+                SectionRail(UiText.of(R.string.rail_week), accent, right = UiText.of(R.string.rail_week_channels, ui.trends.count { it.series.isNotEmpty() }))
                 ui.trends.zip(HomeTrendSections).forEach { (row, section) ->
                     TrendCard(row, BactaPalette.accent(section))
                 }

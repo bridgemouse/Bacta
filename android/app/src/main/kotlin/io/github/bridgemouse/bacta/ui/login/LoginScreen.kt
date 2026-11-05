@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.login
 
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,7 +57,7 @@ fun LoginScreen(ui: LoginUiState, pin: TextFieldState, onSubmit: () -> Unit, mod
         ) {
             MX4Sigil(SigilMood.Idle, 56.dp)
             Text(
-                "Locked — enter PIN",
+                stringResource(R.string.login_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = BactaPalette.Mx4,
                 modifier = Modifier.semantics { heading() },
@@ -63,26 +65,26 @@ fun LoginScreen(ui: LoginUiState, pin: TextFieldState, onSubmit: () -> Unit, mod
             OutlinedSecureTextField(
                 state = pin,
                 modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
-                label = { Text("PIN") },
+                label = { Text(stringResource(R.string.login_pin_label)) },
                 enabled = !ui.busy,
                 isError = ui.error != null,
                 inputTransformation = InputTransformation.maxLength(LoginUiState.MAX_PIN_LENGTH).then(DigitsOnly),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Go),
                 onKeyboardAction = KeyboardActionHandler { onSubmit() },
                 supportingText = ui.error?.let { error ->
-                    { Text(error.message(), Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+                    { Text(stringResource(error.messageRes()), Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
                 },
             )
             Button(onClick = onSubmit, enabled = ui.canSubmit, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text(if (ui.busy) "VERIFYING" else "UNLOCK")
+                Text(stringResource(if (ui.busy) R.string.action_verifying else R.string.action_unlock))
             }
         }
     }
 }
 
-private fun LoginError.message() = when (this) {
-    LoginError.WrongPin -> "Incorrect PIN"
-    LoginError.Connection -> "Can't reach the server. Try again."
+private fun LoginError.messageRes() = when (this) {
+    LoginError.WrongPin -> R.string.login_error_wrong
+    LoginError.Connection -> R.string.login_error_connection
 }
 
 @Preview(widthDp = 411, heightDp = 700, showBackground = true, backgroundColor = 0xFF0F1117)

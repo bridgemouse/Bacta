@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.designsystem.components
 
+import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.ui.asString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -75,10 +77,10 @@ fun BactaCard(
 
 /** A section header: label, a hairline, and optional right-hand text. */
 @Composable
-fun SectionRail(label: String, accent: Color, modifier: Modifier = Modifier, right: String? = null) {
+fun SectionRail(label: UiText, accent: Color, modifier: Modifier = Modifier, right: UiText? = null) {
     Row(modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
-            label,
+            label.asString(),
             Modifier.semantics { heading() },
             style = MaterialTheme.typography.labelMedium,
             color = accent,
@@ -87,7 +89,7 @@ fun SectionRail(label: String, accent: Color, modifier: Modifier = Modifier, rig
         Spacer(Modifier.weight(1f).height(1.dp).background(BactaPalette.Line))
         if (right != null) {
             Spacer(Modifier.width(10.dp))
-            Text(right, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+            Text(right.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
         }
     }
 }

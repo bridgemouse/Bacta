@@ -1,5 +1,6 @@
 package io.github.bridgemouse.bacta.ui.shell
 
+import io.github.bridgemouse.bacta.ui.UiText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.bridgemouse.bacta.domain.Section
@@ -14,7 +15,7 @@ import io.github.bridgemouse.bacta.ui.gates.ServerUnreachableScreen
 @Composable
 private fun ScaffoldHome() = BactaTheme {
     BactaScaffold(Section.Home, tabs = false, tabState = SectionTabState(), onBack = {}, onOpenSection = {}) {
-        StateMessage(StateKind.Empty, "Home content")
+        StateMessage(StateKind.Empty, UiText.Literal("Home content"))
     }
 }
 
@@ -22,7 +23,7 @@ private fun ScaffoldHome() = BactaTheme {
 @Composable
 private fun ScaffoldRecovery() = BactaTheme {
     BactaScaffold(Section.Recovery, tabs = true, tabState = SectionTabState(Tab.Trends), onBack = {}, onOpenSection = {}) {
-        StateMessage(StateKind.Empty, "Recovery content")
+        StateMessage(StateKind.Empty, UiText.Literal("Recovery content"))
     }
 }
 

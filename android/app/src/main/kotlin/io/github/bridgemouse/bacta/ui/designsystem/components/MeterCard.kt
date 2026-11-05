@@ -1,5 +1,8 @@
 package io.github.bridgemouse.bacta.ui.designsystem.components
 
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.ui.asString
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -31,21 +34,23 @@ import io.github.bridgemouse.bacta.ui.designsystem.viz.Chip
 @Composable
 fun MeterCard(model: MeterModel, accent: Color, modifier: Modifier = Modifier) {
     val toneColor = model.tone?.let(BactaPalette::tone) ?: accent
-    val spoken = listOfNotNull(model.label, model.value ?: "no data", model.unit).joinToString(", ")
+    val noData = stringResource(R.string.cd_no_data)
+    val stateText = model.stateText?.asString()
+    val spoken = listOfNotNull(model.label.asString(), model.value ?: noData, model.unit?.asString()).joinToString(", ")
     BactaCard(
         accent = accent,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = spoken
-            model.stateText?.let { stateDescription = it }
+            stateText?.let { stateDescription = it }
         },
         size = CardSize.Tile,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(model.label.uppercase(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            Text(model.value ?: "—", style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
+            Text(model.label.asString().uppercase(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+            Text(model.value ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
             model.unit?.let {
                 Spacer(Modifier.width(4.dp))
-                Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)
+                Text(it.asString(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)
             }
             model.stateText?.let {
                 Spacer(Modifier.width(8.dp))
@@ -68,9 +73,9 @@ fun MeterCard(model: MeterModel, accent: Color, modifier: Modifier = Modifier) {
             },
         )
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(model.startLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            model.zoneLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = BactaPalette.Positive) }
-            Text(model.endLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+            model.startLabel?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary) }
+            model.zoneLabel?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = BactaPalette.Positive) }
+            model.endLabel?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary) }
         }
     }
 }

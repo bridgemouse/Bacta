@@ -6,6 +6,8 @@ import io.github.bridgemouse.bacta.data.repository.Metric
 import io.github.bridgemouse.bacta.data.repository.MetricsRepository
 import io.github.bridgemouse.bacta.data.repository.Summary
 import io.github.bridgemouse.bacta.domain.Section
+import io.github.bridgemouse.bacta.s
+import io.github.bridgemouse.bacta.testFormatters
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingState
 import java.io.IOException
 import java.time.Clock
@@ -54,7 +56,7 @@ class RecoveryViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = RecoveryViewModel(metrics, briefings, clock)
+    private fun vm() = RecoveryViewModel(metrics, briefings, clock, testFormatters)
 
     @Test
     fun loadsRecoveryBriefingAndOneTrendBatchForEveryMetricTheScreenUses() = runTest {
@@ -69,8 +71,8 @@ class RecoveryViewModelTest {
     fun oneTrendFailingLeavesTheOthers() = runTest {
         metrics.trendHandler = { if (it == Metric.Hrv) Result.failure(IOException("x")) else Result.success(listOf(1.0, 2.0, 3.0)) }
         val content = assertIs<RecoveryUiState.Content>(vm().state.value)
-        assertTrue(content.trends.none { it.rail == "HRV" })
-        assertTrue(content.trends.any { it.rail == "RESTING HR" })
+        assertTrue(content.trends.none { it.rail.s() == "HRV" })
+        assertTrue(content.trends.any { it.rail.s() == "RESTING HR" })
     }
 
     @Test

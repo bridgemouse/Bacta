@@ -1,18 +1,20 @@
 package io.github.bridgemouse.bacta.ui.home
 
+import io.github.bridgemouse.bacta.R
 import io.github.bridgemouse.bacta.data.repository.Metric
 import io.github.bridgemouse.bacta.data.repository.Summary
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.domain.TrainingStatus
+import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.DeltaDirection
 import io.github.bridgemouse.bacta.ui.designsystem.components.DeltaModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendKind
+import io.github.bridgemouse.bacta.ui.designsystem.components.delta
 import io.github.bridgemouse.bacta.ui.designsystem.components.deltaDirection
-import io.github.bridgemouse.bacta.ui.designsystem.components.formatDelta
-import io.github.bridgemouse.bacta.ui.designsystem.components.formatValue
-import kotlin.math.roundToInt
+import io.github.bridgemouse.bacta.ui.format.Formatters
+import io.github.bridgemouse.bacta.ui.metrics.MetricCatalog
 
 private typealias Trends = Map<Metric, Result<List<Double>>>
 
@@ -29,74 +31,63 @@ val HomeTrendSections: List<Section> =
 /** A sparkline needs at least two real points; anything less is shown as no chart, never invented. */
 private fun Trends.series(metric: Metric): List<Double>? = this[metric]?.getOrNull()?.takeIf { it.size >= 2 }
 
-fun toTiles(summary: Summary, trends: Trends): List<MetricCardModel> = listOf(
+fun toTiles(summary: Summary, trends: Trends, fmt: Formatters): List<MetricCardModel> = listOf(
     MetricCardModel(
-        label = "Recovery",
-        value = summary.bodyBatteryCurrent?.let { formatValue(it, 0) },
-        unit = "battery",
-        sub = hrvSub(summary.hrv, summary.hrvWeekAvg),
+        label = UiText.of(R.string.label_recovery),
+        value = summary.bodyBatteryCurrent?.let { UiText.Literal(fmt.number(it, 0)) },
+        unit = UiText.of(R.string.unit_battery),
+        sub = hrvSub(summary.hrv, summary.hrvWeekAvg, fmt),
         trend = trends.series(Metric.BodyBatteryCurrent),
         index = "01",
     ),
     MetricCardModel(
-        label = "Training",
-        value = summary.trainingLoad?.let { formatValue(it, 0) },
-        unit = "load",
-        sub = TrainingStatus.label(summary.trainingStatusN),
+        label = UiText.of(R.string.label_training),
+        value = summary.trainingLoad?.let { UiText.Literal(fmt.number(it, 0)) },
+        unit = UiText.of(R.string.unit_load),
+        sub = TrainingStatus.label(summary.trainingStatusN)?.let { UiText.Literal(it) },
         trend = trends.series(Metric.TrainingLoad),
         index = "02",
     ),
     MetricCardModel(
-        label = "Sleep",
-        value = formatDuration(summary.sleepSeconds),
-        sub = summary.sleepScore?.let { "Score ${formatValue(it, 0)}" },
+        label = UiText.of(R.string.label_sleep),
+        value = summary.sleepSeconds?.let(fmt::duration),
+        sub = summary.sleepScore?.let { UiText.of(R.string.sleep_score_sub, fmt.number(it, 0)) },
         ring = summary.sleepScore?.let { (it / 100).toFloat() },
         index = "03",
     ),
 )
 
-private fun hrvSub(hrv: Double?, weekAvg: Double?): String? = when {
+private fun hrvSub(hrv: Double?, weekAvg: Double?, fmt: Formatters): UiText? = when {
     hrv == null -> null
-    weekAvg == null -> "HRV ${formatValue(hrv, 0)} ms"
-    else -> "HRV ${if (hrv > weekAvg) "↑" else "↓"} ${formatValue(hrv, 0)} ms"
-}
-
-fun formatDuration(seconds: Double?): String? {
-    if (seconds == null || seconds <= 0) return null
-    val minutes = (seconds / 60).roundToInt()
-    val h = minutes / 60
-    val m = minutes % 60
-    return when {
-        h == 0 -> "${m}m"
-        m == 0 -> "${h}h"
-        else -> "${h}h ${m}m"
-    }
+    weekAvg == null -> UiText.of(R.string.hrv_sub_plain, fmt.number(hrv, 0))
+    hrv > weekAvg -> UiText.of(R.string.hrv_sub_up, fmt.number(hrv, 0))
+    else -> UiText.of(R.string.hrv_sub_down, fmt.number(hrv, 0))
 }
 
 /** Change from the previous day within the series actually drawn. Training measures are neutral: more load is not "good". */
-private fun dayDelta(series: List<Double>, neutral: Boolean = false): DeltaModel? {
+private fun dayDelta(series: List<Double>, fmt: Formatters, neutral: Boolean = false): DeltaModel? {
     if (series.size < 2) return null
     val delta = series.last() - series[series.size - 2]
-    val text = formatDelta(delta, 0) ?: return null
+    val text = fmt.delta(delta, 0) ?: return null
     return DeltaModel(text, if (neutral) DeltaDirection.Flat else deltaDirection(delta, lowerIsBetter = false))
 }
 
-fun toTrendRows(summary: Summary, trends: Trends): List<TrendCardModel> {
+fun toTrendRows(summary: Summary, trends: Trends, fmt: Formatters): List<TrendCardModel> {
     fun series(metric: Metric) = trends[metric]?.getOrNull().orEmpty()
 
     val hrvDelta = if (summary.hrv != null && summary.hrvWeekAvg != null) {
         val d = summary.hrv - summary.hrvWeekAvg
-        formatDelta(d, 0)?.let { DeltaModel(it, deltaDirection(d, lowerIsBetter = false)) }
+        fmt.delta(d, 0)?.let { DeltaModel(it, deltaDirection(d, lowerIsBetter = false)) }
     } else null
 
     val intensity = combinedIntensity(series(Metric.IntensityMod), series(Metric.IntensityVig))
 
     return listOf(
-        TrendCardModel("Recovery", summary.recoveryScore?.let { formatValue(it, 0) }, series = series(Metric.RecoveryScore), delta = dayDelta(series(Metric.RecoveryScore))),
-        TrendCardModel("HRV", summary.hrv?.let { formatValue(it, 0) }, unit = "ms", series = series(Metric.Hrv), delta = hrvDelta, average = summary.hrvWeekAvg),
-        TrendCardModel("Sleep", summary.sleepScore?.let { formatValue(it, 0) }, series = series(Metric.SleepScore), delta = dayDelta(series(Metric.SleepScore))),
-        TrendCardModel("Training Load", summary.trainingLoad?.let { formatValue(it, 0) }, series = series(Metric.TrainingLoad), kind = TrendKind.Bars, delta = dayDelta(series(Metric.TrainingLoad), neutral = true)),
-        TrendCardModel("Intensity", intensity.lastOrNull()?.let { formatValue(it, 0) }, unit = "min", series = intensity, kind = TrendKind.Bars),
+        TrendCardModel(UiText.of(R.string.label_recovery), summary.recoveryScore?.let { fmt.number(it, 0) }, series = series(Metric.RecoveryScore), delta = dayDelta(series(Metric.RecoveryScore), fmt)),
+        TrendCardModel(UiText.of(R.string.label_hrv), summary.hrv?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.Hrv).unit, series = series(Metric.Hrv), delta = hrvDelta, average = summary.hrvWeekAvg),
+        TrendCardModel(UiText.of(R.string.label_sleep), summary.sleepScore?.let { fmt.number(it, 0) }, series = series(Metric.SleepScore), delta = dayDelta(series(Metric.SleepScore), fmt)),
+        TrendCardModel(UiText.of(R.string.label_training_load), summary.trainingLoad?.let { fmt.number(it, 0) }, series = series(Metric.TrainingLoad), kind = TrendKind.Bars, delta = dayDelta(series(Metric.TrainingLoad), fmt, neutral = true)),
+        TrendCardModel(UiText.of(R.string.label_intensity), intensity.lastOrNull()?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.IntensityMod).unit, series = intensity, kind = TrendKind.Bars),
     )
 }
 

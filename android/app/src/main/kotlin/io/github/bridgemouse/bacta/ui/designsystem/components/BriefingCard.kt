@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta.ui.designsystem.components
 
+import io.github.bridgemouse.bacta.ui.UiText
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.ui.asString
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,10 +33,10 @@ import io.github.bridgemouse.bacta.ui.designsystem.viz.Chip
 import io.github.bridgemouse.bacta.ui.designsystem.viz.MX4Sigil
 import io.github.bridgemouse.bacta.ui.designsystem.viz.SigilMood
 
-private fun Tone.chipText() = when (this) {
-    Tone.Positive -> "POSITIVE"
-    Tone.Caution -> "CAUTION"
-    Tone.Flag -> "FLAG"
+private fun Tone.chipText(): UiText = when (this) {
+    Tone.Positive -> UiText.of(R.string.tone_positive)
+    Tone.Caution -> UiText.of(R.string.tone_caution)
+    Tone.Flag -> UiText.of(R.string.tone_flag)
 }
 
 /** MX-4's briefing. Every state is explicit: a server stub or a failed run is never shown as MX-4 speaking. */
@@ -54,32 +58,32 @@ fun BriefingCard(
             MX4Sigil(if (state is BriefingState.Loading) SigilMood.Think else SigilMood.Idle, 24.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("MX-4 // ${model.title.uppercase()}", style = MaterialTheme.typography.labelMedium, color = accent)
-                stamp?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = secondary) }
+                Text(stringResource(R.string.briefing_title, model.title.asString().uppercase()), style = MaterialTheme.typography.labelMedium, color = accent)
+                stamp?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = secondary) }
             }
             when {
                 live != null -> Chip(live.content.tone.chipText(), BactaPalette.tone(live.content.tone))
-                stale != null -> Chip("STALE", BactaPalette.Caution)
-                state is BriefingState.Offline -> Chip("OFFLINE", BactaPalette.Flag)
+                stale != null -> Chip(UiText.of(R.string.briefing_stale), BactaPalette.Caution)
+                state is BriefingState.Offline -> Chip(UiText.of(R.string.briefing_offline), BactaPalette.Flag)
             }
         }
         Spacer(Modifier.height(10.dp))
         when (state) {
             BriefingState.Loading -> {
-                Text("Contacting MX-4…", style = MaterialTheme.typography.bodyMedium, color = secondary)
+                Text(stringResource(R.string.briefing_loading), style = MaterialTheme.typography.bodyMedium, color = secondary)
                 Spacer(Modifier.height(8.dp))
                 Spacer(Modifier.fillMaxWidth().height(10.dp).background(BactaPalette.Line, RoundedCornerShape(5.dp)))
                 Spacer(Modifier.height(6.dp))
                 Spacer(Modifier.fillMaxWidth(0.7f).height(10.dp).background(BactaPalette.Line, RoundedCornerShape(5.dp)))
             }
             BriefingState.NoBriefing ->
-                Text("No briefing yet. MX-4 writes one after the next successful run.", style = MaterialTheme.typography.bodyMedium, color = secondary)
+                Text(stringResource(R.string.briefing_none), style = MaterialTheme.typography.bodyMedium, color = secondary)
             BriefingState.Error ->
-                Text("Couldn't load the briefing.", Modifier.semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Flag)
+                Text(stringResource(R.string.briefing_error), Modifier.semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Flag)
             else -> {
                 if (state is BriefingState.Offline) {
                     Text(
-                        if (content != null) "MX-4 is offline. Showing the last briefing." else "MX-4 is offline and has no briefing to show.",
+                        stringResource(if (content != null) R.string.briefing_offline_last else R.string.briefing_offline_none),
                         style = MaterialTheme.typography.bodyMedium,
                         color = BactaPalette.Flag,
                     )
@@ -91,7 +95,7 @@ fun BriefingCard(
         if (onRefresh != null) {
             Spacer(Modifier.height(4.dp))
             TextButton(onClick = onRefresh, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("REFRESH ›", style = MaterialTheme.typography.labelMedium, color = accent)
+                Text(stringResource(R.string.action_refresh), style = MaterialTheme.typography.labelMedium, color = accent)
             }
         }
     }
@@ -111,7 +115,7 @@ private fun BriefingBody(content: BriefingContent) {
             Modifier.fillMaxWidth().background(BactaPalette.Base.copy(alpha = 0.5f), RoundedCornerShape(8.dp)).padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("DIRECTIVE ·", style = MaterialTheme.typography.labelSmall, color = accent)
+            Text(stringResource(R.string.briefing_directive), style = MaterialTheme.typography.labelSmall, color = accent)
             Text(inlineMarkdown(it), style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Text)
         }
     }

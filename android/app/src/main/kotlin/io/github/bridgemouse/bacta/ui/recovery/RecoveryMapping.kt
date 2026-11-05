@@ -1,5 +1,6 @@
 package io.github.bridgemouse.bacta.ui.recovery
 
+import io.github.bridgemouse.bacta.R
 import io.github.bridgemouse.bacta.data.repository.Metric
 import io.github.bridgemouse.bacta.data.repository.Summary
 import io.github.bridgemouse.bacta.domain.Band
@@ -7,6 +8,7 @@ import io.github.bridgemouse.bacta.domain.HrvDirection
 import io.github.bridgemouse.bacta.domain.HrvTrend
 import io.github.bridgemouse.bacta.domain.ReadinessRules
 import io.github.bridgemouse.bacta.domain.Tone
+import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.ChipModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.DeltaModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeModel
@@ -14,11 +16,12 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.StatusTileModel
-import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCardModel
-import io.github.bridgemouse.bacta.ui.designsystem.components.TrendKind
+import io.github.bridgemouse.bacta.ui.designsystem.components.TrendSectionModel
+import io.github.bridgemouse.bacta.ui.metrics.TrendSpec
+import io.github.bridgemouse.bacta.ui.metrics.buildTrendSections
+import io.github.bridgemouse.bacta.ui.designsystem.components.delta
 import io.github.bridgemouse.bacta.ui.designsystem.components.deltaDirection
-import io.github.bridgemouse.bacta.ui.designsystem.components.formatDelta
-import io.github.bridgemouse.bacta.ui.designsystem.components.formatValue
+import io.github.bridgemouse.bacta.ui.format.Formatters
 
 private typealias Trends = Map<Metric, Result<List<Double>>>
 
@@ -29,54 +32,56 @@ val RecoveryMetrics: Set<Metric> = setOf(
 
 private fun Trends.all(metric: Metric): List<Double> = this[metric]?.getOrNull().orEmpty()
 private fun Trends.chart(metric: Metric): List<Double> = all(metric).takeIf { it.size >= 2 }.orEmpty()
-private fun fmt(v: Double?, decimals: Int = 0) = v?.let { formatValue(it, decimals) }
+private fun Band.text(): UiText = UiText.Literal(label)
 
-fun toRecoveryContent(s: Summary, trends: Trends): RecoveryContent = RecoveryContent(
+fun toRecoveryContent(s: Summary, trends: Trends, f: Formatters): RecoveryContent = RecoveryContent(
     readiness = GaugeModel(
-        label = "Recovery score",
+        label = UiText.of(R.string.recovery_score),
         value = s.recoveryScore,
         max = 100.0,
-        valueText = fmt(s.recoveryScore),
-        caption = "/ 100",
-        stateText = ReadinessRules.scoreLabel(s.recoveryScore)?.uppercase(),
+        valueText = s.recoveryScore?.let { f.number(it, 0) },
+        caption = UiText.of(R.string.of_hundred),
+        stateText = ReadinessRules.scoreLabel(s.recoveryScore)?.uppercase()?.let { UiText.Literal(it) },
     ),
-    hrv = hrvHeadline(s, trends.all(Metric.Hrv)),
-    battery = batteryGauge(s),
-    recoveryTime = recoveryMeter(s.recoveryTimeHours),
-    pair = listOf(restingHrCard(s, trends), stressCard(s, trends)),
-    vitals = vitals(s, trends),
-    trends = trendSections(s, trends),
+    hrv = hrvHeadline(s, trends.all(Metric.Hrv), f),
+    battery = batteryGauge(s, f),
+    recoveryTime = recoveryMeter(s.recoveryTimeHours, f),
+    pair = listOf(restingHrCard(s, trends, f), stressCard(s, trends, f)),
+    vitals = vitals(s, trends, f),
+    trends = trendSections(s, trends, f),
 )
 
-private fun hrvHeadline(s: Summary, series: List<Double>): HeadlineModel {
+private fun hrvHeadline(s: Summary, series: List<Double>, f: Formatters): HeadlineModel {
     val hrv = s.hrv
     val avg = s.hrvWeekAvg
     val low = s.hrvBaselineLow
     val high = s.hrvBaselineHigh
     val delta = if (hrv != null && avg != null) (hrv - avg).let { d ->
-        formatDelta(d, 0)?.let { DeltaModel("$it ms", deltaDirection(d, lowerIsBetter = false)) }
+        f.delta(d, 0)?.let { DeltaModel(UiText.of(R.string.delta_with_unit, it, UiText.of(R.string.unit_ms)), deltaDirection(d, lowerIsBetter = false)) }
     } else null
     val chips = buildList {
         if (hrv != null && low != null && high != null) {
-            add(if (hrv in low..high) ChipModel("IN RANGE", Tone.Positive) else ChipModel("OUT OF RANGE", Tone.Caution))
+            add(if (hrv in low..high) ChipModel(UiText.of(R.string.chip_in_range), Tone.Positive) else ChipModel(UiText.of(R.string.chip_out_of_range), Tone.Caution))
         }
         when (HrvTrend.direction(series)) {
-            HrvDirection.Rising -> add(ChipModel("↑ IMPROVING", Tone.Positive))
-            HrvDirection.Flat -> add(ChipModel("→ STABLE", Tone.Caution))
-            HrvDirection.Falling -> add(ChipModel("↓ DECLINING", Tone.Flag))
+            HrvDirection.Rising -> add(ChipModel(UiText.of(R.string.chip_improving), Tone.Positive))
+            HrvDirection.Flat -> add(ChipModel(UiText.of(R.string.chip_stable), Tone.Caution))
+            HrvDirection.Falling -> add(ChipModel(UiText.of(R.string.chip_declining), Tone.Flag))
             null -> Unit
         }
     }
-    val footnote = listOfNotNull(
-        if (low != null && high != null) "baseline ${formatValue(low, 0)}–${formatValue(high, 0)} ms" else null,
-        avg?.let { "7d avg ${formatValue(it, 0)} ms" },
-    ).joinToString(" · ").ifEmpty { null }
+    val baseline = if (low != null && high != null) UiText.of(R.string.hrv_baseline, f.number(low, 0), f.number(high, 0)) else null
+    val average = avg?.let { UiText.of(R.string.hrv_avg7, f.number(it, 0)) }
+    val footnote = when {
+        baseline != null && average != null -> UiText.of(R.string.join_dot, baseline, average)
+        else -> baseline ?: average
+    }
     return HeadlineModel(
-        label = "HRV · last night",
-        value = fmt(hrv),
-        unit = "ms",
+        label = UiText.of(R.string.hrv_title),
+        value = hrv?.let { f.number(it, 0) },
+        unit = UiText.of(R.string.unit_ms),
         delta = delta,
-        sub = avg?.let { "vs ${formatValue(it, 0)} ms week avg" },
+        sub = avg?.let { UiText.of(R.string.hrv_vs_week, f.number(it, 0)) },
         chips = chips,
         series = series,
         average = avg,
@@ -85,141 +90,103 @@ private fun hrvHeadline(s: Summary, series: List<Double>): HeadlineModel {
     )
 }
 
-private fun batteryGauge(s: Summary): GaugeModel? {
+private fun batteryGauge(s: Summary, f: Formatters): GaugeModel? {
     val now = s.bodyBatteryCurrent
     val wake = s.bodyBatteryWake
     if (now == null && wake == null) return null
     val band = ReadinessRules.batteryBand(now)
-    val used = if (now != null && wake != null && wake > now) "-${formatValue(wake - now, 0)} used" else null
+    val used = if (now != null && wake != null && wake > now) UiText.of(R.string.battery_used, f.number(wake - now, 0)) else null
     return GaugeModel(
-        label = "Body battery · today",
+        label = UiText.of(R.string.battery_title),
         value = now,
         max = 100.0,
-        valueText = fmt(now),
-        caption = wake?.let { "WAKE ${formatValue(it, 0)}%" },
-        stateText = band?.label,
+        valueText = now?.let { f.number(it, 0) },
+        caption = wake?.let { UiText.of(R.string.battery_wake, f.number(it, 0)) },
+        stateText = band?.text(),
         tone = band?.tone,
         rightLabel = used,
     )
 }
 
-private fun recoveryMeter(hours: Double?): MeterModel? {
+private fun recoveryMeter(hours: Double?, f: Formatters): MeterModel? {
     if (hours == null) return null
     val band = ReadinessRules.recoveryTimeBand(hours)
     return MeterModel(
-        label = "Recovery time",
-        value = formatValue(hours, 1),
-        unit = "h",
-        stateText = band?.label,
+        label = UiText.of(R.string.recovery_time_title),
+        value = f.number(hours, 1),
+        unit = UiText.of(R.string.unit_hours),
+        stateText = band?.text(),
         tone = band?.tone,
         position = ReadinessRules.recoveryTimePosition(hours),
-        startLabel = "0h",
-        endLabel = "72h",
-        zoneLabel = "ready zone 0–24h",
+        startLabel = UiText.of(R.string.meter_zero_h),
+        endLabel = UiText.of(R.string.meter_max_72h),
+        zoneLabel = UiText.of(R.string.recovery_ready_zone),
     )
 }
 
 private fun mean(series: List<Double>): Double? = series.takeIf { it.isNotEmpty() }?.average()
 
 /** Difference from the average of the drawn series, as text such as "▲ 0.5". */
-private fun deltaVsAverage(value: Double?, series: List<Double>, decimals: Int, lowerIsBetter: Boolean): DeltaModel? {
+private fun deltaVsAverage(value: Double?, series: List<Double>, decimals: Int, lowerIsBetter: Boolean, f: Formatters): DeltaModel? {
     val avg = mean(series) ?: return null
     if (value == null) return null
     val d = value - avg
-    return formatDelta(d, decimals)?.let { DeltaModel(it, deltaDirection(d, lowerIsBetter)) }
+    return f.delta(d, decimals)?.let { DeltaModel(it, deltaDirection(d, lowerIsBetter)) }
 }
 
-private fun restingHrCard(s: Summary, trends: Trends): MetricCardModel {
-    val delta = deltaVsAverage(s.restingHr, trends.all(Metric.RestingHr), 1, lowerIsBetter = true)
+private fun restingHrCard(s: Summary, trends: Trends, f: Formatters): MetricCardModel {
+    val delta = deltaVsAverage(s.restingHr, trends.all(Metric.RestingHr), 1, lowerIsBetter = true, f = f)
     return MetricCardModel(
-        label = "Resting HR",
-        value = fmt(s.restingHr),
-        unit = "bpm",
-        sub = delta?.let { "${it.text} bpm" },
+        label = UiText.of(R.string.metric_resting_hr),
+        value = s.restingHr?.let { UiText.Literal(f.number(it, 0)) },
+        unit = UiText.of(R.string.unit_bpm),
+        sub = delta?.let { UiText.of(R.string.delta_with_unit, it.text, UiText.of(R.string.unit_bpm)) },
         trend = trends.chart(Metric.RestingHr).ifEmpty { null },
     )
 }
 
-private fun stressCard(s: Summary, trends: Trends): MetricCardModel {
-    val delta = deltaVsAverage(s.stressAvg, trends.all(Metric.StressAvg), 1, lowerIsBetter = true)
-    val sub = listOfNotNull(delta?.text, ReadinessRules.stressLabel(s.stressAvg)).joinToString(" · ").ifEmpty { null }
+private fun stressCard(s: Summary, trends: Trends, f: Formatters): MetricCardModel {
+    val delta = deltaVsAverage(s.stressAvg, trends.all(Metric.StressAvg), 1, lowerIsBetter = true, f = f)
+    val label = ReadinessRules.stressLabel(s.stressAvg)?.let { UiText.Literal(it) }
+    val sub = when {
+        delta != null && label != null -> UiText.of(R.string.join_dot, delta.text, label)
+        else -> delta?.text ?: label
+    }
     return MetricCardModel(
-        label = "Stress",
-        value = fmt(s.stressAvg),
-        unit = "avg",
+        label = UiText.of(R.string.metric_stress),
+        value = s.stressAvg?.let { UiText.Literal(f.number(it, 0)) },
+        unit = UiText.of(R.string.unit_avg),
         sub = sub,
         trend = trends.chart(Metric.StressAvg).ifEmpty { null },
     )
 }
 
-private fun tile(label: String, value: String?, unit: String, band: Band?, series: List<Double>) =
-    StatusTileModel(label, value, unit, band?.label, band?.tone, series)
+private fun tile(label: UiText, value: String?, unit: UiText, band: Band?, series: List<Double>) =
+    StatusTileModel(label, value, unit, band?.text(), band?.tone, series)
 
-private fun vitals(s: Summary, trends: Trends): List<StatusTileModel> = buildList {
+private fun vitals(s: Summary, trends: Trends, f: Formatters): List<StatusTileModel> = buildList {
     if (s.sleepStress != null) {
-        add(tile("Sleep stress", fmt(s.sleepStress), "avg", ReadinessRules.sleepStressBand(s.sleepStress), trends.chart(Metric.SleepStress)))
+        add(tile(UiText.of(R.string.metric_sleep_stress), f.number(s.sleepStress, 0), UiText.of(R.string.unit_avg), ReadinessRules.sleepStressBand(s.sleepStress), trends.chart(Metric.SleepStress)))
     }
-    add(tile("Respiration", fmt(s.respAvg, 1), "br/m", ReadinessRules.respirationBand(s.respAvg), trends.chart(Metric.RespAvg)))
+    add(tile(UiText.of(R.string.metric_respiration), s.respAvg?.let { f.number(it, 1) }, UiText.of(R.string.unit_brpm), ReadinessRules.respirationBand(s.respAvg), trends.chart(Metric.RespAvg)))
     if (s.spo2Avg != null) {
-        add(tile("SpO₂", fmt(s.spo2Avg), "%", ReadinessRules.spo2Band(s.spo2Avg), trends.chart(Metric.Spo2Avg)))
+        add(tile(UiText.of(R.string.metric_spo2), f.number(s.spo2Avg, 0), UiText.of(R.string.unit_percent), ReadinessRules.spo2Band(s.spo2Avg), trends.chart(Metric.Spo2Avg)))
     }
     if (s.sleepHr != null) {
-        add(tile("Sleep HR", fmt(s.sleepHr, 1), "bpm", null, trends.chart(Metric.SleepHr)))
+        add(tile(UiText.of(R.string.metric_sleep_hr), f.number(s.sleepHr, 1), UiText.of(R.string.unit_bpm), null, trends.chart(Metric.SleepHr)))
     }
 }
-
-private class TrendSpec(
-    val rail: String,
-    val label: String,
-    val metric: Metric,
-    val value: (Summary) -> String?,
-    val unit: String? = null,
-    val kind: TrendKind = TrendKind.Line,
-    val decimals: Int = 0,
-    val lowerIsBetter: Boolean? = null,
-    val caption: String,
-)
 
 private val TrendSpecs = listOf(
-    TrendSpec("RECOVERY SCORE", "Recovery score", Metric.RecoveryScore, { fmt(it.recoveryScore) }, kind = TrendKind.Bars,
-        caption = "80+ optimal · 67–79 ready · below 67 low"),
-    TrendSpec("HRV", "HRV", Metric.Hrv, { fmt(it.hrv) }, unit = "ms",
-        caption = "higher vs your baseline = better recovered · trend direction shows adaptation"),
-    TrendSpec("BODY BATTERY", "Body battery", Metric.BodyBatteryWake, { fmt(it.bodyBatteryWake) }, kind = TrendKind.Bars,
-        caption = "wake-up value: how fully recharged sleep restored your energy reserve"),
-    TrendSpec("RESTING HR", "Resting HR", Metric.RestingHr, { fmt(it.restingHr) }, unit = "bpm", decimals = 1, lowerIsBetter = true,
-        caption = "lower = better · measured during deepest sleep · downward trend = improving fitness"),
-    TrendSpec("OVERNIGHT STRESS", "Stress", Metric.StressAvg, { fmt(it.stressAvg) }, unit = "avg", decimals = 1, lowerIsBetter = true,
-        caption = "below 26 = rest zone · consistently low = strongest recovery signal"),
-    TrendSpec("SLEEP STRESS", "Sleep stress", Metric.SleepStress, { fmt(it.sleepStress) }, unit = "avg", decimals = 1, lowerIsBetter = true,
-        caption = "HRV-derived during sleep only · below 26 = rest zone · best overnight recovery signal"),
-    TrendSpec("RECOVERY TIME", "Recovery time", Metric.RecoveryTime, { fmt(it.recoveryTimeHours, 1) }, unit = "h", decimals = 1, lowerIsBetter = true,
-        caption = "hours until fully recovered · 0 = ready now · drops as you rest"),
-    TrendSpec("RESPIRATION", "Respiration", Metric.RespAvg, { fmt(it.respAvg, 1) }, unit = "br/m", decimals = 1, lowerIsBetter = true,
-        caption = "12–20 br/m normal · a rise of 1–2 above baseline often signals illness early"),
+    TrendSpec(UiText.of(R.string.rail_recovery_score), Metric.RecoveryScore, UiText.of(R.string.cap_recovery_score)),
+    TrendSpec(UiText.of(R.string.rail_hrv), Metric.Hrv, UiText.of(R.string.cap_hrv)),
+    TrendSpec(UiText.of(R.string.rail_body_battery), Metric.BodyBatteryWake, UiText.of(R.string.cap_body_battery)),
+    TrendSpec(UiText.of(R.string.rail_resting_hr), Metric.RestingHr, UiText.of(R.string.cap_resting_hr)),
+    TrendSpec(UiText.of(R.string.rail_overnight_stress), Metric.StressAvg, UiText.of(R.string.cap_overnight_stress)),
+    TrendSpec(UiText.of(R.string.rail_sleep_stress), Metric.SleepStress, UiText.of(R.string.cap_sleep_stress)),
+    TrendSpec(UiText.of(R.string.rail_recovery_time), Metric.RecoveryTime, UiText.of(R.string.cap_recovery_time)),
+    TrendSpec(UiText.of(R.string.rail_respiration), Metric.RespAvg, UiText.of(R.string.cap_respiration)),
 )
 
-private fun trendSections(s: Summary, trends: Trends): List<TrendSectionModel> = TrendSpecs.mapNotNull { spec ->
-    val series = trends.all(spec.metric)
-    if (series.isEmpty()) return@mapNotNull null
-    val isHrv = spec.metric == Metric.Hrv
-    val average = if (isHrv) s.hrvWeekAvg ?: mean(series) else mean(series)
-    val delta = when {
-        isHrv -> s.hrv?.let { v -> average?.let { a -> formatDelta(v - a, 0)?.let { DeltaModel(it, deltaDirection(v - a, false)) } } }
-        spec.lowerIsBetter != null -> deltaVsAverage(spec.value(s)?.toDoubleOrNull(), series, spec.decimals, spec.lowerIsBetter)
-        else -> null
-    }
-    TrendSectionModel(
-        spec.rail,
-        TrendCardModel(
-            label = spec.label,
-            value = spec.value(s),
-            unit = spec.unit,
-            series = series,
-            kind = spec.kind,
-            delta = delta,
-            average = average,
-            caption = spec.caption,
-        ),
-    )
-}
+private fun trendSections(s: Summary, trends: Trends, f: Formatters): List<TrendSectionModel> =
+    buildTrendSections(TrendSpecs, s, { trends.all(it) }, f)

@@ -1,5 +1,7 @@
 package io.github.bridgemouse.bacta.ui.recovery
 
+import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,8 +29,8 @@ private val Accent = BactaPalette.accent(Section.Recovery)
 @Composable
 fun RecoveryScreen(ui: RecoveryUiState, tab: Tab, onRefresh: () -> Unit, modifier: Modifier = Modifier) {
     when (ui) {
-        RecoveryUiState.Loading -> StateMessage(StateKind.Loading, "Loading recovery data…", modifier)
-        RecoveryUiState.Error -> StateMessage(StateKind.Error, "Couldn't load recovery data. Check the connection and try again.", modifier, onRetry = onRefresh)
+        RecoveryUiState.Loading -> StateMessage(StateKind.Loading, UiText.of(R.string.recovery_loading), modifier)
+        RecoveryUiState.Error -> StateMessage(StateKind.Error, UiText.of(R.string.recovery_error), modifier, onRetry = onRefresh)
         is RecoveryUiState.Content -> RecoveryContentView(ui, tab, onRefresh, modifier)
     }
 }
@@ -40,7 +42,7 @@ private fun RecoveryContentView(ui: RecoveryUiState.Content, tab: Tab, onRefresh
         BriefingCard(ui.briefing, onRefresh = onRefresh)
         when (tab) {
             Tab.Overview -> {
-                SectionRail("READINESS", Accent)
+                SectionRail(UiText.of(R.string.rail_readiness), Accent)
                 GaugeCard(c.readiness, Accent)
                 HeadlineCard(c.hrv, Accent)
                 c.battery?.let { GaugeCard(it, Accent, layout = GaugeLayout.Hero) }
@@ -48,7 +50,7 @@ private fun RecoveryContentView(ui: RecoveryUiState.Content, tab: Tab, onRefresh
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     c.pair.forEach { MetricCard(it, Accent, Modifier.weight(1f)) }
                 }
-                SectionRail("OVERNIGHT VITALS", Accent)
+                SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent)
                 c.vitals.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         row.forEach { StatusTile(it, Accent, Modifier.weight(1f)) }
@@ -58,10 +60,10 @@ private fun RecoveryContentView(ui: RecoveryUiState.Content, tab: Tab, onRefresh
             }
             Tab.Trends -> {
                 if (c.trends.isEmpty()) {
-                    StateMessage(StateKind.Empty, "No trend data yet.")
+                    StateMessage(StateKind.Empty, UiText.of(R.string.trend_none_yet))
                 }
                 c.trends.forEach { section ->
-                    SectionRail(section.rail, Accent, right = section.card.period.uppercase())
+                    SectionRail(section.rail, Accent, right = section.card.period)
                     TrendCard(section.card, Accent)
                 }
             }

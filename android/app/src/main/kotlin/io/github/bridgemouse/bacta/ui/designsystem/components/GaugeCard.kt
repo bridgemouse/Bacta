@@ -1,5 +1,8 @@
 package io.github.bridgemouse.bacta.ui.designsystem.components
 
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.ui.asString
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,9 +40,12 @@ fun GaugeCard(
 ) {
     val toneColor = model.tone?.let(BactaPalette::tone) ?: accent
     val progress = model.value?.let { (it / model.max).toFloat() }
+    val noData = stringResource(R.string.cd_no_data)
+    val stateText = model.stateText?.asString()
+    val spoken = listOfNotNull(model.label.asString(), model.valueText ?: noData).joinToString(", ")
     val semanticsModifier = modifier.semantics(mergeDescendants = true) {
-        contentDescription = listOfNotNull(model.label, model.valueText ?: "no data").joinToString(", ")
-        model.stateText?.let { stateDescription = it }
+        contentDescription = spoken
+        stateText?.let { stateDescription = it }
         model.value?.let { progressBarRangeInfo = ProgressBarRangeInfo(it.toFloat(), 0f..model.max.toFloat()) }
     }
     when (layout) {
@@ -47,26 +53,26 @@ fun GaugeCard(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 ArcGauge(progress, toneColor, Modifier.size(112.dp), strokeWidth = 9.dp) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(model.valueText ?: "—", style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
-                        model.caption?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary) }
+                        Text(model.valueText ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
+                        model.caption?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary) }
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     model.stateText?.let { Chip(it, toneColor) }
-                    model.description?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.textSecondary) }
+                    model.description?.let { Text(it.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.textSecondary) }
                 }
             }
         }
         GaugeLayout.Hero -> BactaCard(accent, semanticsModifier) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(model.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-                model.rightLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = toneColor) }
+                Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+                model.rightLabel?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = toneColor) }
             }
             ArcGauge(progress, toneColor, Modifier.fillMaxWidth().height(148.dp), strokeWidth = 16.dp, sweep = 200f) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(model.valueText ?: "—", style = MaterialTheme.typography.displayLarge, color = BactaPalette.Text)
-                    model.stateText?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = toneColor) }
-                    model.caption?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary) }
+                    Text(model.valueText ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displayLarge, color = BactaPalette.Text)
+                    model.stateText?.let { Text(it.asString(), style = MaterialTheme.typography.labelMedium, color = toneColor) }
+                    model.caption?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary) }
                 }
             }
         }

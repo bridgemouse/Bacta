@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta.ui.recovery
 
+import io.github.bridgemouse.bacta.ui.format.LocaleFormatters
+import io.github.bridgemouse.bacta.ui.format.MeasurementSystem
+import io.github.bridgemouse.bacta.ui.UiText
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.bridgemouse.bacta.data.repository.Metric
@@ -11,6 +15,8 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingState
 import io.github.bridgemouse.bacta.ui.shell.Tab
 import java.io.IOException
+
+private val previewFormatters = LocaleFormatters(Locale.US, is24Hour = false) { MeasurementSystem.Imperial }
 
 private val synthetic = Summary(
     recoveryScore = 83.0, hrv = 62.0, hrvWeekAvg = 58.0, hrvBaselineLow = 48.0, hrvBaselineHigh = 72.0,
@@ -25,17 +31,17 @@ private val syntheticTrends: Map<Metric, Result<List<Double>>> = Metric.entries.
 }
 
 private val briefing = BriefingModel(
-    "Recovery",
+    UiText.Literal("Recovery"),
     BriefingState.Live(
         BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", null),
-        "NOV 3 · 09:00",
+        UiText.Literal("NOV 3 · 09:00"),
     ),
 )
 
 @Composable
 private fun Frame(summary: Summary, trends: Map<Metric, Result<List<Double>>>, tab: Tab) = BactaTheme {
     RecoveryScreen(
-        RecoveryUiState.Content(briefing, toRecoveryContent(summary, trends)),
+        RecoveryUiState.Content(briefing, toRecoveryContent(summary, trends, previewFormatters)),
         tab,
         onRefresh = {},
     )

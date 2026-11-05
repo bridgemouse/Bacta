@@ -8,6 +8,8 @@ import io.github.bridgemouse.bacta.data.repository.BriefingRepository
 import io.github.bridgemouse.bacta.data.repository.MetricsRepository
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.briefing.briefingState
+import io.github.bridgemouse.bacta.ui.format.Formatters
+import io.github.bridgemouse.bacta.ui.title
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
 import java.time.Clock
 import javax.inject.Inject
@@ -25,6 +27,7 @@ class RecoveryViewModel @Inject constructor(
     private val metrics: MetricsRepository,
     private val briefings: BriefingRepository,
     private val clock: Clock,
+    private val fmt: Formatters,
 ) : ViewModel() {
     private val _state = MutableStateFlow<RecoveryUiState>(RecoveryUiState.Loading)
     val state: StateFlow<RecoveryUiState> = _state.asStateFlow()
@@ -51,11 +54,11 @@ class RecoveryViewModel @Inject constructor(
                 _state.value = RecoveryUiState.Error
                 return@launch
             }
-            val briefingState = briefingState(briefing, lastBriefing, clock)
+            val briefingState = briefingState(briefing, lastBriefing, clock, fmt)
             briefing.getOrNull()?.let { lastBriefing = it }
             _state.value = RecoveryUiState.Content(
-                BriefingModel(Section.Recovery.label, briefingState),
-                toRecoveryContent(loaded, trends),
+                BriefingModel(Section.Recovery.title(), briefingState),
+                toRecoveryContent(loaded, trends, fmt),
             )
         }
     }

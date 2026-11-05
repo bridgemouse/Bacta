@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta.ui.home
 
+import io.github.bridgemouse.bacta.ui.format.LocaleFormatters
+import io.github.bridgemouse.bacta.ui.format.MeasurementSystem
+import io.github.bridgemouse.bacta.ui.UiText
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.bridgemouse.bacta.data.repository.Metric
@@ -11,6 +15,8 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingState
 import io.github.bridgemouse.bacta.ui.shell.Tab
 import java.io.IOException
+
+private val previewFormatters = LocaleFormatters(Locale.US, is24Hour = false) { MeasurementSystem.Imperial }
 
 private val synthetic = Summary(
     bodyBatteryCurrent = 64.0, hrv = 61.0, hrvWeekAvg = 58.0, recoveryScore = 83.0, sleepScore = 81.0,
@@ -28,15 +34,15 @@ private val syntheticTrends: Map<Metric, Result<List<Double>>> = mapOf(
 )
 
 private val briefing = BriefingModel(
-    "Home",
+    UiText.Literal("Home"),
     BriefingState.Live(
         BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", "Synthetic directive."),
-        "NOV 3 · 09:00",
+        UiText.Literal("NOV 3 · 09:00"),
     ),
 )
 
 private fun content(summary: Summary, trends: Map<Metric, Result<List<Double>>>, state: BriefingModel = briefing) =
-    HomeUiState.Content(state, toTiles(summary, trends), toTrendRows(summary, trends))
+    HomeUiState.Content(state, toTiles(summary, trends, previewFormatters), toTrendRows(summary, trends, previewFormatters))
 
 @Composable
 private fun Frame(ui: HomeUiState, tab: Tab) = BactaTheme { HomeScreen(ui, tab, onRefresh = {}, onOpenSection = {}) }
@@ -51,7 +57,7 @@ private fun HomeOverviewPartial() = Frame(
     content(
         Summary(sleepScore = 81.0, sleepSeconds = 27120.0),
         syntheticTrends.mapValues { Result.failure<List<Double>>(IOException("x")) },
-        BriefingModel("Home", BriefingState.Offline(null, null)),
+        BriefingModel(UiText.Literal("Home"), BriefingState.Offline(null, null)),
     ),
     Tab.Overview,
 )

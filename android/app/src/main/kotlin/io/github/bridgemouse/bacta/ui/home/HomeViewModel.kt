@@ -8,6 +8,8 @@ import io.github.bridgemouse.bacta.data.repository.BriefingRepository
 import io.github.bridgemouse.bacta.data.repository.MetricsRepository
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.briefing.briefingState
+import io.github.bridgemouse.bacta.ui.format.Formatters
+import io.github.bridgemouse.bacta.ui.title
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
 import java.time.Clock
 import javax.inject.Inject
@@ -25,6 +27,7 @@ class HomeViewModel @Inject constructor(
     private val metrics: MetricsRepository,
     private val briefings: BriefingRepository,
     private val clock: Clock,
+    private val fmt: Formatters,
 ) : ViewModel() {
     private val _state = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
@@ -51,12 +54,12 @@ class HomeViewModel @Inject constructor(
                 _state.value = HomeUiState.Error
                 return@launch
             }
-            val briefingState = briefingState(briefing, lastBriefing, clock)
+            val briefingState = briefingState(briefing, lastBriefing, clock, fmt)
             briefing.getOrNull()?.let { lastBriefing = it }
             _state.value = HomeUiState.Content(
-                briefing = BriefingModel(Section.Home.label, briefingState),
-                tiles = toTiles(loaded, trends),
-                trends = toTrendRows(loaded, trends),
+                briefing = BriefingModel(Section.Home.title(), briefingState),
+                tiles = toTiles(loaded, trends, fmt),
+                trends = toTrendRows(loaded, trends, fmt),
             )
         }
     }

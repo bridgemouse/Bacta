@@ -1,5 +1,8 @@
 package io.github.bridgemouse.bacta.ui.gates
 
+import io.github.bridgemouse.bacta.ui.asString
+import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -24,7 +27,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.textSecondary
 
 /** Full-screen notice shown before the app proper: a title, an explanation and the actions that can fix it. */
 @Composable
-fun GateScreen(title: String, message: String, actions: @Composable ColumnScope.() -> Unit = {}) {
+fun GateScreen(title: UiText, message: UiText, actions: @Composable ColumnScope.() -> Unit = {}) {
     Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
         Column(
             Modifier.widthIn(max = 480.dp).padding(24.dp),
@@ -32,31 +35,31 @@ fun GateScreen(title: String, message: String, actions: @Composable ColumnScope.
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                title,
+                title.asString(),
                 style = MaterialTheme.typography.titleLarge,
                 color = BactaPalette.Mx4,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.semantics { heading() },
             )
-            Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.textSecondary, textAlign = TextAlign.Center)
+            Text(message.asString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.textSecondary, textAlign = TextAlign.Center)
             actions()
         }
     }
 }
 
 @Composable
-fun GateButton(label: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) { Text(label) }
+fun GateButton(label: UiText, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) { Text(label.asString()) }
 }
 
 @Composable
 fun AppTooOldScreen(minApp: String) = GateScreen(
-    title = "UPDATE REQUIRED",
-    message = "This version of Bacta is too old for the server, which needs $minApp or newer. Open the Firebase App Tester app and install the latest update.",
+    title = UiText.of(R.string.gate_update_title),
+    message = UiText.of(R.string.gate_update_body, minApp),
 )
 
 @Composable
 fun ServerUnreachableScreen(onRetry: () -> Unit) = GateScreen(
-    title = "SERVER UNREACHABLE",
-    message = "Bacta could not reach the server. Check that you are on the home network, then try again.",
-) { GateButton("RETRY", onRetry) }
+    title = UiText.of(R.string.gate_unreachable_title),
+    message = UiText.of(R.string.gate_unreachable_body),
+) { GateButton(UiText.of(R.string.action_retry), onRetry) }

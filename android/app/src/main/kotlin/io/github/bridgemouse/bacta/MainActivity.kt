@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta
 
+import javax.inject.Inject
+import io.github.bridgemouse.bacta.ui.format.LocalFormatters
+import io.github.bridgemouse.bacta.ui.format.Formatters
+import androidx.compose.runtime.CompositionLocalProvider
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -11,6 +15,8 @@ import io.github.bridgemouse.bacta.ui.navigation.AppRoot
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var formatters: Formatters
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val transparent = android.graphics.Color.TRANSPARENT
@@ -18,6 +24,6 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(transparent),
             navigationBarStyle = SystemBarStyle.dark(transparent),
         )
-        setContent { BactaTheme { AppRoot() } }
+        setContent { CompositionLocalProvider(LocalFormatters provides formatters) { BactaTheme { AppRoot() } } }
     }
 }

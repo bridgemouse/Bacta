@@ -6,10 +6,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.StatusTileModel
-import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCardModel
-
-/** A rail heading over one trend card. */
-data class TrendSectionModel(val rail: String, val card: TrendCardModel)
+import io.github.bridgemouse.bacta.ui.designsystem.components.TrendSectionModel
 
 /** Everything the Recovery tabs show. Optional cards are null when the data behind them does not exist. */
 data class RecoveryContent(

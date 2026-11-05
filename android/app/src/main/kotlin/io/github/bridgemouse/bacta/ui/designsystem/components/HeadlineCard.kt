@@ -1,5 +1,9 @@
 package io.github.bridgemouse.bacta.ui.designsystem.components
 
+import io.github.bridgemouse.bacta.ui.format.LocalFormatters
+import androidx.compose.ui.res.stringResource
+import io.github.bridgemouse.bacta.ui.asString
+import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,35 +30,36 @@ import io.github.bridgemouse.bacta.ui.designsystem.viz.Sparkline
 /** A larger single-metric card: value, delta, status chips and a trend with an optional baseline band. */
 @Composable
 fun HeadlineCard(model: HeadlineModel, accent: Color, modifier: Modifier = Modifier) {
-    val spoken = listOfNotNull(model.label, model.value ?: "no data", model.unit, model.delta?.text, model.sub).joinToString(", ")
+    val noData = stringResource(R.string.cd_no_data)
+    val spoken = listOfNotNull(model.label.asString(), model.value ?: noData, model.unit?.asString(), model.delta?.text?.asString(), model.sub?.asString()).joinToString(", ")
     BactaCard(
         accent = accent,
         modifier = modifier.semantics(mergeDescendants = true) { contentDescription = spoken },
         size = CardSize.Chart,
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-            Text(model.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+            Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 model.chips.forEach { chip -> Chip(chip.text, chip.tone?.let(BactaPalette::tone) ?: accent) }
             }
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(model.value ?: "—", style = MaterialTheme.typography.displayMedium, color = BactaPalette.Text)
+            Text(model.value ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displayMedium, color = BactaPalette.Text)
             model.unit?.let {
                 Spacer(Modifier.width(4.dp))
-                Text(it, Modifier.padding(bottom = 4.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)
+                Text(it.asString(), Modifier.padding(bottom = 4.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)
             }
             model.delta?.let {
                 Spacer(Modifier.width(10.dp))
                 DeltaText(it, Modifier.padding(bottom = 4.dp))
             }
         }
-        model.sub?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.textSecondary) }
+        model.sub?.let { Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.textSecondary) }
         if (model.series.size >= 2) {
             Spacer(Modifier.height(10.dp))
             Sparkline(
-                model.series, accent, describeSeries(model.label, model.series, model.period),
+                model.series, accent, describeSeries(LocalFormatters.current, model.label, model.series, model.period).asString(),
                 Modifier.fillMaxWidth().height(64.dp),
                 average = model.average,
                 band = model.band,
@@ -62,7 +67,7 @@ fun HeadlineCard(model: HeadlineModel, accent: Color, modifier: Modifier = Modif
         }
         model.footnote?.let {
             Spacer(Modifier.height(6.dp))
-            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+            Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
         }
     }
 }

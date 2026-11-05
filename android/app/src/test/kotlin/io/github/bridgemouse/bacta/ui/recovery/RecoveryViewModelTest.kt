@@ -35,6 +35,8 @@ private class FakeMetrics : MetricsRepository {
     var requested: Set<Metric> = emptySet()
     var trendCalls = 0
     override suspend fun summary() = summaryHandler()
+    override suspend fun points(metrics: Set<Metric>, days: Int, today: LocalDate): Map<Metric, Result<List<io.github.bridgemouse.bacta.data.repository.TrendPoint>>> =
+        metrics.associateWith { Result.success(emptyList()) }
     override suspend fun trends(metrics: Set<Metric>, days: Int, today: LocalDate): Map<Metric, Result<List<Double>>> {
         requested = metrics; trendCalls++
         return metrics.associateWith(trendHandler)

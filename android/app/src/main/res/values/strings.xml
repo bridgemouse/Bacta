@@ -148,4 +148,17 @@
     <string name="cap_sleep_stress">HRV-derived during sleep only · below 26 = rest zone · best overnight recovery signal</string>
     <string name="cap_recovery_time">hours until fully recovered · 0 = ready now · drops as you rest</string>
     <string name="cap_respiration">12–20 br/m normal · a rise of 1–2 above baseline often signals illness early</string>
+
+    <!-- Sleep and training metrics -->
+    <string name="metric_sleep_duration">Duration</string>
+    <string name="metric_deep_sleep">Deep sleep</string>
+    <string name="metric_sleep_awake">Awake</string>
+    <string name="metric_vo2max">VO₂ max</string>
+    <string name="metric_fitness_age">Fitness age</string>
+    <string name="metric_steps">Steps</string>
+    <string name="metric_calories">Calories</string>
+    <string name="unit_vo2">mL/kg/min</string>
+    <string name="unit_years">yrs</string>
+    <string name="unit_kcal">kcal</string>
+    <string name="unit_steps">steps</string>
 </resources>

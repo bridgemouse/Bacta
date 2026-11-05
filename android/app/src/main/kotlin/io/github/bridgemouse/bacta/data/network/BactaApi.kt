@@ -23,6 +23,21 @@ interface BactaApi {
     @GET("api/garmin/summary")
     suspend fun summary(): SummaryDto
 
+    @GET("api/garmin/sleep-hypno")
+    suspend fun sleepHypno(): HypnoDto
+
+    @GET("api/garmin/activities")
+    suspend fun activities(@Query("days") days: Int): ActivitiesDto
+
+    @GET("api/garmin/weekly-volume")
+    suspend fun weeklyVolume(@Query("weeks") weeks: Int): WeeksDto
+
+    @GET("api/garmin/weekly-avg-hr")
+    suspend fun weeklyAvgHr(@Query("weeks") weeks: Int): WeeksDto
+
+    @GET("api/garmin/weekly-intensity")
+    suspend fun weeklyIntensity(): IntensityDto
+
     @GET("api/garmin/{metric}")
     suspend fun trend(
         @Path("metric") metric: String,

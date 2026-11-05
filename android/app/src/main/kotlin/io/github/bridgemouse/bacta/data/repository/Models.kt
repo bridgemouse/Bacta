@@ -18,6 +18,15 @@ enum class Metric(val key: String, val divisor: Double = 1.0) {
     SleepStress("sleep_stress"),
     SleepScore("sleep_score"),
     TrainingLoad("training_load"),
+    SleepSeconds("sleep_s", divisor = 60.0),
+    SleepDeep("sleep_deep_s", divisor = 60.0),
+    SleepAwake("sleep_awake_s", divisor = 60.0),
+    SleepResp("sleep_resp"),
+    SleepSpo2("sleep_spo2"),
+    Vo2Max("vo2max"),
+    FitnessAge("fitness_age"),
+    Steps("steps"),
+    CaloriesTotal("calories_total"),
     BodyBatteryCurrent("body_battery_current"),
     IntensityMod("intensity_mod_min"),
     IntensityVig("intensity_vig_min"),
@@ -44,7 +53,45 @@ data class Summary(
     val trainingLoad: Double? = null,
     val trainingStatusN: Double? = null,
     val trainingStatusDate: String? = null,
+    val sleepDeepSeconds: Double? = null,
+    val sleepLightSeconds: Double? = null,
+    val sleepRemSeconds: Double? = null,
+    val sleepAwakeSeconds: Double? = null,
+    val sleepSpo2: Double? = null,
+    val sleepResp: Double? = null,
+    val distanceMeters: Double? = null,
+    val steps: Double? = null,
+    val stepsGoal: Double? = null,
+    val caloriesTotal: Double? = null,
+    val caloriesActive: Double? = null,
+    val floorsUp: Double? = null,
+    val floorsGoal: Double? = null,
+    val vo2max: Double? = null,
+    val fitnessAge: Double? = null,
+    val fitnessAgeAchievable: Double? = null,
+    val trainingLoadMin: Double? = null,
+    val trainingLoadMax: Double? = null,
+    /** Today's minutes in heart-rate zones 1 to 5; a slot is null when the server has no value for it. */
+    val hrZoneMinutes: List<Double?> = List(5) { null },
 )
+
+data class TrendPoint(val date: java.time.LocalDate, val value: Double)
+
+/** `start` is Garmin's local wall-clock time, which carries no zone, so it is not an Instant. */
+data class Activity(
+    val id: String,
+    val typeKey: String,
+    val name: String?,
+    val start: java.time.LocalDateTime,
+    val durationSeconds: Double?,
+    val distanceMeters: Double?,
+    val avgHr: Int?,
+    val calories: Int?,
+)
+
+data class WeekValue(val week: String, val value: Double)
+
+data class WeeklyIntensity(val moderate: Double, val vigorous: Double)
 
 data class Briefing(
     val tone: Tone,
@@ -88,6 +135,15 @@ fun Summary.valueOf(metric: Metric): Double? = when (metric) {
     Metric.TrainingLoad -> trainingLoad
     Metric.BodyBatteryCurrent -> bodyBatteryCurrent
     Metric.IntensityMod, Metric.IntensityVig -> null
+    Metric.SleepSeconds -> sleepSeconds?.div(metric.divisor)
+    Metric.SleepDeep -> sleepDeepSeconds?.div(metric.divisor)
+    Metric.SleepAwake -> sleepAwakeSeconds?.div(metric.divisor)
+    Metric.SleepResp -> sleepResp
+    Metric.SleepSpo2 -> sleepSpo2
+    Metric.Vo2Max -> vo2max
+    Metric.FitnessAge -> fitnessAge
+    Metric.Steps -> steps
+    Metric.CaloriesTotal -> caloriesTotal
 }
 
 /** A server-provided reference average for a metric (the HRV week average), used as the chart's average line and the delta baseline. */

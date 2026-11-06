@@ -235,7 +235,30 @@ private fun activityRow(a: Activity, fmt: Formatters): ActivityRowModel {
             a.avgHr?.let { UiText.of(R.string.value_with_unit, fmt.number(it.toDouble(), 0), UiText.of(R.string.unit_bpm)) } ?: missing,
             a.calories?.let { UiText.of(R.string.value_with_unit, fmt.number(it.toDouble(), 0), UiText.of(R.string.unit_kcal)) } ?: missing,
         ),
+        detail = activityDetail(a, fmt),
     )
+}
+
+private const val TRAINING_EFFECT_MAX = 5.0
+
+private fun activityDetail(a: Activity, fmt: Formatters): ActivityDetailModel? {
+    fun effect(label: Int, te: Double?): EffectBar? {
+        val band = TrainingRules.trainingEffectBand(te) ?: return null
+        return EffectBar(UiText.of(label), UiText.Literal(fmt.number(te!!, 1)), (te / TRAINING_EFFECT_MAX).coerceIn(0.0, 1.0).toFloat(), UiText.Literal(band.label), band.tone)
+    }
+    val effects = listOfNotNull(effect(R.string.effect_aerobic, a.aerobicTe), effect(R.string.effect_anaerobic, a.anaerobicTe))
+    val percents = TrainingRules.zonePercents(a.zoneSeconds.map { it?.div(60.0) })
+    val zones = percents?.let { p ->
+        a.zoneSeconds.mapIndexed { i, secs ->
+            val minutes = ((secs ?: 0.0) / 60.0).roundToInt()
+            ZoneItem(i + 1, UiText.of(ZoneLabels[i]), minutes, fmt.duration(minutes * 60.0) ?: UiText.of(R.string.duration_m, 0), p[i])
+        }
+    }
+    val facts = listOfNotNull(
+        a.elevationM?.let { m -> fmt.elevation(m).let { UiText.of(R.string.fact_elevation) to UiText.of(R.string.value_with_unit, it.value, it.unit) } },
+        a.recoveryHours?.takeIf { it > 0 }?.let { h -> fmt.duration(h * 3600.0)?.let { UiText.of(R.string.fact_recovery) to it } },
+    )
+    return if (effects.isEmpty() && zones == null && facts.isEmpty()) null else ActivityDetailModel(effects, zones, facts)
 }
 
 /** A weekly series from the server; the axis shows week numbers because the rail and period already say these are weeks. */

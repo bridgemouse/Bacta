@@ -22,9 +22,17 @@ data class ZoneItem(val zone: Int, val label: UiText, val minutes: Int, val minu
 @Immutable
 data class ZonesModel(val items: List<ZoneItem>, val totalMinutes: Int)
 
+/** One Training Effect bar: [fraction] is the score out of Garmin's 5.0, [band] the Garmin wording for it. */
+@Immutable
+data class EffectBar(val label: UiText, val value: UiText, val fraction: Float, val band: UiText, val tone: io.github.bridgemouse.bacta.domain.Tone?)
+
+/** What an activity row reveals when opened; any part may be missing, and the whole thing is null when there is nothing to show. */
+@Immutable
+data class ActivityDetailModel(val effects: List<EffectBar>, val zones: List<ZoneItem>?, val facts: List<Pair<UiText, UiText>>)
+
 /** [stats] is always duration, distance, heart rate, calories in that order; a missing value is a dash. */
 @Immutable
-data class ActivityRowModel(val id: String, val title: UiText, val subtitle: UiText, val stats: List<UiText>)
+data class ActivityRowModel(val id: String, val title: UiText, val subtitle: UiText, val stats: List<UiText>, val detail: ActivityDetailModel? = null)
 
 /** Acute:chronic load on a track; [position], [optimalStart] and [optimalEnd] are 0 to 1 along it. */
 @Immutable

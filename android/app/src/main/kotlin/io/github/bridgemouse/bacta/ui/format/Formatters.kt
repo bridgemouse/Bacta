@@ -26,6 +26,7 @@ fun interface MeasurementSystemProvider {
 interface Formatters {
     fun number(v: Double, decimals: Int): String
     fun distance(meters: Double): FormattedMeasure
+    fun elevation(meters: Double): FormattedMeasure
     fun duration(seconds: Double): UiText?
     fun dateTime(at: Instant, zone: ZoneId): UiText
     fun timeOfDay(at: Instant, zone: ZoneId): String
@@ -47,6 +48,11 @@ class LocaleFormatters(
     override fun distance(meters: Double): FormattedMeasure = when (system.systemFor(locale)) {
         MeasurementSystem.Imperial -> FormattedMeasure(number(meters / METERS_PER_MILE, 1), UiText.of(R.string.unit_mi))
         MeasurementSystem.Metric -> FormattedMeasure(number(meters / 1000.0, 1), UiText.of(R.string.unit_km))
+    }
+
+    override fun elevation(meters: Double): FormattedMeasure = when (system.systemFor(locale)) {
+        MeasurementSystem.Imperial -> FormattedMeasure(number(meters * FEET_PER_METER, 0), UiText.of(R.string.unit_ft))
+        MeasurementSystem.Metric -> FormattedMeasure(number(meters, 0), UiText.of(R.string.unit_m))
     }
 
     override fun duration(seconds: Double): UiText? {
@@ -80,6 +86,7 @@ class LocaleFormatters(
 
     private companion object {
         const val METERS_PER_MILE = 1609.344
+        const val FEET_PER_METER = 3.28084
     }
 }
 

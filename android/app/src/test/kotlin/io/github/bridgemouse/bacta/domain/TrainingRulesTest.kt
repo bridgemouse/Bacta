@@ -84,4 +84,12 @@ class TrainingRulesTest {
         assertEquals(1f, moderate + vigorous, 0.0001f)
         assertEquals(0f to 0f, TrainingRules.intensityShares(50.0, 5.0, 0))
     }
+
+    @Test
+    fun trainingEffectBandsFollowGarmin() {
+        fun label(te: Double?) = TrainingRules.trainingEffectBand(te)?.label
+        assertEquals("No benefit", label(0.5)); assertEquals("Minor", label(1.0)); assertEquals("Maintaining", label(2.9))
+        assertEquals("Improving", label(3.1)); assertEquals("Highly improving", label(4.2)); assertEquals("Overreaching", label(5.0))
+        assertNull(label(null))
+    }
 }

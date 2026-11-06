@@ -114,6 +114,15 @@ data class ActivityDto(
     @SerialName("duration_s") val durationS: Double? = null,
     val calories: Double? = null,
     @SerialName("avg_hr") val avgHr: Double? = null,
+    @SerialName("elevation_m") val elevationM: Double? = null,
+    @SerialName("aerobic_te") val aerobicTe: Double? = null,
+    @SerialName("anaerobic_te") val anaerobicTe: Double? = null,
+    @SerialName("recovery_time_h") val recoveryTimeH: Double? = null,
+    @SerialName("zone1_s") val zone1S: Double? = null,
+    @SerialName("zone2_s") val zone2S: Double? = null,
+    @SerialName("zone3_s") val zone3S: Double? = null,
+    @SerialName("zone4_s") val zone4S: Double? = null,
+    @SerialName("zone5_s") val zone5S: Double? = null,
 )
 
 @Serializable

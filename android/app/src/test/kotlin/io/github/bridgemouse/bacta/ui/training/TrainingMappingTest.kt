@@ -262,4 +262,36 @@ class TrainingMappingTest {
         assertEquals("50%", steps.ringText.s())
         assertNull(map(day).daily.first { it.label.s() == "Distance" }.ringText)
     }
+
+    private fun activity(vararg extras: Pair<String, Any?>): Activity {
+        val e = extras.toMap()
+        return Activity(
+            "9", "running", "Synthetic Run", LocalDateTime.of(2026, 11, 3, 7, 15), 1800.0, 5000.0, 150, 400,
+            elevationM = e["elevation"] as Double?, aerobicTe = e["aerobic"] as Double?, anaerobicTe = e["anaerobic"] as Double?,
+            recoveryHours = e["recovery"] as Double?, zoneSeconds = (e["zones"] as List<Double?>?) ?: List(5) { null },
+        )
+    }
+
+    @Test
+    fun aFullActivityExpandsToEffectsZonesAndFacts() {
+        val detail = assertNotNull(map(day, activities = listOf(activity("elevation" to 30.0, "aerobic" to 3.1, "anaerobic" to 0.4, "recovery" to 12.0, "zones" to listOf(60.0, 600.0, 900.0, 200.0, 40.0)))).activities.single().detail)
+        assertEquals(listOf("Aerobic", "Anaerobic"), detail.effects.map { it.label.s() })
+        assertEquals(listOf("Improving", "No benefit"), detail.effects.map { it.band.s() })
+        assertEquals(0.62f, detail.effects[0].fraction, 0.001f)
+        assertEquals(100, assertNotNull(detail.zones).sumOf { it.percent })
+        assertEquals(mapOf("Elevation" to "98 ft", "Recovery" to "12h"), detail.facts.associate { it.first.s()!! to it.second.s()!! })
+    }
+
+    @Test
+    fun activityDetailOmitsWhatIsMissing() {
+        val detail = assertNotNull(map(day, activities = listOf(activity("aerobic" to 2.5))).activities.single().detail)
+        assertEquals(1, detail.effects.size)
+        assertNull(detail.zones)
+        assertTrue(detail.facts.isEmpty())
+    }
+
+    @Test
+    fun detailIsAbsentWhenThereIsNothingToShow() {
+        assertNull(map(day, activities = listOf(activity())).activities.single().detail)
+    }
 }

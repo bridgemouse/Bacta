@@ -62,4 +62,16 @@ class ActivityRepositoryTest {
         assertEquals(listOf(WeekValue("2026-44", 151.0)), repo.weeklyAvgHr(6).getOrThrow())
         assertEquals(WeeklyIntensity(95.0, 20.0), repo.weeklyIntensity().getOrThrow())
     }
+
+    @Test
+    fun activityCarriesElevationTrainingEffectRecoveryAndZoneSeconds() = runTest {
+        api.activitiesHandler = { BactaJson.decodeFromString<ActivitiesDto>(fixture("activities.json")) }
+        val (run, odd) = repo.activities(8).getOrThrow()
+        assertEquals(30.0, run.elevationM)
+        assertEquals(3.1, run.aerobicTe); assertEquals(0.4, run.anaerobicTe)
+        assertEquals(12.0, run.recoveryHours)
+        assertEquals(listOf(60.0, 600.0, 900.0, 200.0, 40.0), run.zoneSeconds)
+        assertNull(odd.elevationM); assertNull(odd.aerobicTe)
+        assertEquals(List(5) { null }, odd.zoneSeconds)
+    }
 }

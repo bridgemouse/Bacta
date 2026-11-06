@@ -19,6 +19,22 @@ object TrainingRules {
     /** Where a ratio sits along the track, 0 to 1, clamped so an extreme ratio stays on the card. */
     fun ratioTrackPosition(ratio: Double): Float = ((ratio - RATIO_TRACK_MIN) / (RATIO_TRACK_MAX - RATIO_TRACK_MIN)).coerceIn(0.0, 1.0).toFloat()
 
+    private const val NEG = Double.NEGATIVE_INFINITY
+
+    /** Garmin's Training Effect scale, 0.0 to 5.0 (Garmin owner's manuals, "About Training Effect"); newer manuals say "impacts" where older ones say "improves". */
+    private val effectBands = BandTable(
+        listOf(
+            BandRow(5.0, Band("Overreaching", Tone.Flag)),
+            BandRow(4.0, Band("Highly improving", Tone.Positive)),
+            BandRow(3.0, Band("Improving", Tone.Positive)),
+            BandRow(2.0, Band("Maintaining", Tone.Caution)),
+            BandRow(1.0, Band("Minor", Tone.Caution)),
+            BandRow(NEG, Band("No benefit", Tone.Caution)),
+        ),
+    )
+
+    fun trainingEffectBand(te: Double?): Band? = effectBands.select(te)?.value
+
     private val low = Band("Low", Tone.Caution)
     private val optimal = Band("Optimal", Tone.Positive)
     private val high = Band("High", Tone.Flag)

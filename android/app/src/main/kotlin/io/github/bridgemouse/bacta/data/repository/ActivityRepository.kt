@@ -41,5 +41,10 @@ private fun ActivityDto.toDomain(): Activity? {
         distanceMeters = distanceM,
         avgHr = avgHr?.toInt(),
         calories = calories?.toInt(),
+        elevationM = elevationM,
+        aerobicTe = aerobicTe,
+        anaerobicTe = anaerobicTe,
+        recoveryHours = recoveryTimeH,
+        zoneSeconds = listOf(zone1S, zone2S, zone3S, zone4S, zone5S),
     )
 }

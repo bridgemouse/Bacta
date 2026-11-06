@@ -21,10 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -32,23 +34,29 @@ import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import io.github.bridgemouse.bacta.ui.designsystem.CardSize
 import io.github.bridgemouse.bacta.ui.designsystem.textSecondary
 
-/** The accent top edge and corner brackets every Bacta card wears. Cached per size. */
-private fun Modifier.cardFrame(accent: Color): Modifier = drawWithCache {
+/** The accent top edge and corner brackets every Bacta card wears. The brackets follow the card's own corner radius (inset inward), so they curve with the card instead of meeting at a hard right angle. Cached per size. */
+private fun Modifier.cardFrame(accent: Color, shape: CornerBasedShape): Modifier = drawWithCache {
     val len = 10.dp.toPx()
     val inset = 6.dp.toPx()
     val stroke = 1.dp.toPx()
+    val radius = (shape.topStart.toPx(size, this) - inset).coerceAtLeast(2.dp.toPx())
     val bracket = accent.copy(alpha = 0.55f)
     val edge = Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0f)))
+    // Control-point offset that makes a cubic Bezier trace a circular quarter arc.
+    val k = 0.5523f
+    fun corner(x: Float, y: Float, dx: Float, dy: Float) = Path().apply {
+        moveTo(x + dx * len, y)
+        lineTo(x + dx * radius, y)
+        cubicTo(x + dx * radius * (1 - k), y, x, y + dy * radius * (1 - k), x, y + dy * radius)
+        lineTo(x, y + dy * len)
+    }
     onDrawBehind {
         drawRect(edge, size = Size(size.width, 2.dp.toPx()))
-        val corner = { x: Float, y: Float, dx: Float, dy: Float ->
-            drawLine(bracket, Offset(x, y), Offset(x + dx * len, y), stroke)
-            drawLine(bracket, Offset(x, y), Offset(x, y + dy * len), stroke)
-        }
-        corner(inset, inset, 1f, 1f)
-        corner(size.width - inset, inset, -1f, 1f)
-        corner(inset, size.height - inset, 1f, -1f)
-        corner(size.width - inset, size.height - inset, -1f, -1f)
+        val style = Stroke(stroke)
+        drawPath(corner(inset, inset, 1f, 1f), bracket, style = style)
+        drawPath(corner(size.width - inset, inset, -1f, 1f), bracket, style = style)
+        drawPath(corner(inset, size.height - inset, 1f, -1f), bracket, style = style)
+        drawPath(corner(size.width - inset, size.height - inset, -1f, -1f), bracket, style = style)
     }
 }
 
@@ -65,7 +73,7 @@ fun BactaCard(
     val shape = MaterialTheme.shapes.large
     val sized = modifier.fillMaxWidth().let { if (size != null) it.heightIn(min = size.height) else it }
     val body: @Composable () -> Unit = {
-        Column(Modifier.cardFrame(accent).padding(contentPadding), content = content)
+        Column(Modifier.cardFrame(accent, shape).padding(contentPadding), content = content)
     }
     val border = BorderStroke(1.dp, BactaPalette.Line)
     if (onClick != null) {

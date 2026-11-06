@@ -83,13 +83,16 @@ fun toTrendRows(summary: Summary, trends: Trends, fmt: Formatters): List<TrendCa
     val intensity = combinedIntensity(series(Metric.IntensityMod), series(Metric.IntensityVig))
 
     return listOf(
-        TrendCardModel(UiText.of(R.string.label_recovery), summary.recoveryScore?.let { fmt.number(it, 0) }, series = series(Metric.RecoveryScore), delta = dayDelta(series(Metric.RecoveryScore), fmt)),
-        TrendCardModel(UiText.of(R.string.label_hrv), summary.hrv?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.Hrv).unit, series = series(Metric.Hrv), delta = hrvDelta, average = summary.hrvWeekAvg),
-        TrendCardModel(UiText.of(R.string.label_sleep), summary.sleepScore?.let { fmt.number(it, 0) }, series = series(Metric.SleepScore), delta = dayDelta(series(Metric.SleepScore), fmt)),
-        TrendCardModel(UiText.of(R.string.label_training_load), summary.trainingLoad?.let { fmt.number(it, 0) }, series = series(Metric.TrainingLoad), kind = TrendKind.Bars, delta = dayDelta(series(Metric.TrainingLoad), fmt, neutral = true)),
-        TrendCardModel(UiText.of(R.string.label_intensity), intensity.lastOrNull()?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.IntensityMod).unit, series = intensity, kind = TrendKind.Bars),
+        TrendCardModel(UiText.of(R.string.label_recovery), summary.recoveryScore?.let { fmt.number(it, 0) }, series = series(Metric.RecoveryScore), delta = dayDelta(series(Metric.RecoveryScore), fmt), average = mean(series(Metric.RecoveryScore))),
+        TrendCardModel(UiText.of(R.string.label_hrv), summary.hrv?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.Hrv).unit, series = series(Metric.Hrv), delta = hrvDelta, average = summary.hrvWeekAvg ?: mean(series(Metric.Hrv))),
+        TrendCardModel(UiText.of(R.string.label_sleep), summary.sleepScore?.let { fmt.number(it, 0) }, series = series(Metric.SleepScore), delta = dayDelta(series(Metric.SleepScore), fmt), average = mean(series(Metric.SleepScore))),
+        TrendCardModel(UiText.of(R.string.label_training_load), summary.trainingLoad?.let { fmt.number(it, 0) }, series = series(Metric.TrainingLoad), kind = TrendKind.Bars, delta = dayDelta(series(Metric.TrainingLoad), fmt, neutral = true), average = mean(series(Metric.TrainingLoad))),
+        TrendCardModel(UiText.of(R.string.label_intensity), intensity.lastOrNull()?.let { fmt.number(it, 0) }, unit = MetricCatalog.spec(Metric.IntensityMod).unit, series = intensity, kind = TrendKind.Bars, average = mean(intensity)),
     )
 }
+
+/** The reference line for a chart: needs at least two points to mean anything. */
+private fun mean(series: List<Double>): Double? = series.takeIf { it.size >= 2 }?.average()
 
 /** Garmin counts vigorous minutes double. The two series are only combined when they have the same length, since dates are not carried. */
 private fun combinedIntensity(moderate: List<Double>, vigorous: List<Double>): List<Double> =

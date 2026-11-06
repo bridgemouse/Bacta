@@ -108,4 +108,11 @@ class SleepRulesTest {
         assertNull(Hypnogram.stage(4))
         assertNull(Hypnogram.stage(-1))
     }
+
+    @Test
+    fun targetMinutesAreTheTotalTimesEachShare() {
+        val t = SleepRules.architectureTargetMinutes(450)
+        assertEquals(90, t.deep); assertEquals(99, t.rem); assertEquals(23, t.awake)
+        assertEquals(0, SleepRules.architectureTargetMinutes(0).deep)
+    }
 }

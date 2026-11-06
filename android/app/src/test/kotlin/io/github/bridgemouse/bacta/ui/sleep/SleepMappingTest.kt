@@ -141,4 +141,15 @@ class SleepMappingTest {
         assertEquals(24, model.levels.size)
         assertEquals(5, model.axisLabels.size)
     }
+
+    @Test
+    fun architecturePartsCarryActualAndTargetMinutes() {
+        val parts = assertNotNull(map(night, failed).architecture).parts
+        assertEquals(listOf("1h 20m of 1h 30m", "1h 30m of 1h 39m", "8m max 23m"), parts.map { it.detail.s() })
+    }
+
+    @Test
+    fun zeroSleepOmitsTheArchitecture() {
+        assertNull(map(night.copy(sleepSeconds = 0.0), failed).architecture)
+    }
 }

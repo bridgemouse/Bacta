@@ -133,11 +133,21 @@ private fun debtMeter(nightMinutes: List<Int>, latestNight: Int?, targets: Targe
     )
 }
 
+private fun minutes(min: Int, fmt: Formatters): UiText = fmt.duration(min * 60.0) ?: UiText.of(R.string.duration_m, 0)
+
+/** One ring's caption: minutes actually slept in the stage against its target; awake is a ceiling, so its target reads "max". */
+private fun part(stage: SleepStage, @androidx.annotation.StringRes label: Int, score: Double, actualMin: Int, targetMin: Int, atMost: Boolean, fmt: Formatters): ArchitecturePart {
+    val actual = minutes(actualMin, fmt)
+    val target = if (atMost) UiText.of(R.string.arch_target_max, minutes(targetMin, fmt)) else UiText.of(R.string.arch_target, minutes(targetMin, fmt))
+    return ArchitecturePart(stage, UiText.of(label), score.toFloat(), actual, target, UiText.of(R.string.arch_actual_target, actual, target))
+}
+
 private fun architecture(s: Summary, asleepMin: Int?, awakeMin: Int?, fmt: Formatters): ArchitectureModel? {
     val deepMin = s.sleepDeepSeconds?.minutes() ?: return null
     val remMin = s.sleepRemSeconds?.minutes() ?: return null
     val result = SleepRules.architecture(deepMin, remMin, awakeMin ?: return null, asleepMin ?: return null) ?: return null
     val band = SleepRules.architectureBand(result.score.toDouble())
+    val target = SleepRules.architectureTargetMinutes(asleepMin)
     return ArchitectureModel(
         gauge = GaugeModel(
             label = UiText.of(R.string.architecture_title),
@@ -148,9 +158,9 @@ private fun architecture(s: Summary, asleepMin: Int?, awakeMin: Int?, fmt: Forma
             tone = band?.tone,
         ),
         parts = listOf(
-            ArchitecturePart(UiText.of(R.string.stage_deep), result.deepScore.toFloat()),
-            ArchitecturePart(UiText.of(R.string.stage_rem), result.remScore.toFloat()),
-            ArchitecturePart(UiText.of(R.string.stage_awake), result.awakeScore.toFloat()),
+            part(SleepStage.Deep, R.string.stage_deep, result.deepScore, deepMin, target.deep, atMost = false, fmt),
+            part(SleepStage.Rem, R.string.stage_rem, result.remScore, remMin, target.rem, atMost = false, fmt),
+            part(SleepStage.Awake, R.string.stage_awake, result.awakeScore, awakeMin, target.awake, atMost = true, fmt),
         ),
     )
 }

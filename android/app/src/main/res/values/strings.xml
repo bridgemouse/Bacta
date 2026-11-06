@@ -197,7 +197,6 @@
     <string name="stage_percent">%1$d%%</string>
     <string name="cd_stage_row">%1$s, %2$s, %3$d percent of the night</string>
     <string name="cd_stage_row_plain">%1$s, %2$s</string>
-    <string name="cd_architecture_part">%1$s, %2$d percent of target</string>
 
     <!-- Training -->
     <string name="training_loading">Loading training data…</string>
@@ -325,4 +324,8 @@
     <string name="recovery_desc_low">Recovery incomplete. Prioritize rest or light activity today.</string>
     <string name="value_percent">%1$s%%</string>
     <string name="efficiency_awake">%1$s awake in bed</string>
+    <string name="arch_actual_target">%1$s %2$s</string>
+    <string name="arch_target">of %1$s</string>
+    <string name="arch_target_max">max %1$s</string>
+    <string name="cd_architecture_arcs">%1$s, %2$s</string>
 </resources>

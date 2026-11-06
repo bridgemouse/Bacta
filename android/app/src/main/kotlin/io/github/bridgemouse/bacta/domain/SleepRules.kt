@@ -22,6 +22,9 @@ data class ArchitectureTargets(
 /** Each sub-score is 0 to 1: 1 means the night met or beat its target. */
 data class Architecture(val score: Int, val deepScore: Double, val remScore: Double, val awakeScore: Double)
 
+/** Minutes a night of a given length would hold at each stage's target share (awake is a ceiling, not a goal). */
+data class ArchitectureTargetMinutes(val deep: Int, val rem: Int, val awake: Int)
+
 object SleepRules {
     private const val NEG = Double.NEGATIVE_INFINITY
 
@@ -65,6 +68,11 @@ object SleepRules {
         val order = exact.indices.sortedByDescending { exact[it] - floors[it] }
         repeat(100 - floors.sum()) { floors[order[it]]++ }
         return floors
+    }
+
+    fun architectureTargetMinutes(totalMin: Int, targets: ArchitectureTargets = ArchitectureTargets()): ArchitectureTargetMinutes {
+        val total = max(0, totalMin)
+        return ArchitectureTargetMinutes((total * targets.deepShare).roundToInt(), (total * targets.remShare).roundToInt(), (total * targets.awakeShare).roundToInt())
     }
 
     fun architecture(deepMin: Int, remMin: Int, awakeMin: Int, totalMin: Int, targets: ArchitectureTargets = ArchitectureTargets()): Architecture? {

@@ -22,6 +22,7 @@ import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.asString
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
+import io.github.bridgemouse.bacta.ui.designsystem.components.ArchitectureCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.BactaCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.BarStatCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingCard
@@ -88,20 +89,7 @@ private fun Overview(c: SleepContent) {
     c.hypnogram?.let { HypnogramCard(it, Accent) }
     c.architecture?.let { arch ->
         SectionRail(UiText.of(R.string.rail_architecture_score), Accent)
-        GaugeCard(arch.gauge, Accent)
-        BactaCard(Accent) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                arch.parts.forEach { part ->
-                    val label = part.label.asString()
-                    val percent = (part.fraction * 100).toInt()
-                    val spoken = stringResource(R.string.cd_architecture_part, label, percent)
-                    Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = spoken }, verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, Modifier.size(width = 64.dp, height = 20.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-                        LinearProgressIndicator(progress = { part.fraction }, Modifier.weight(1f), color = Accent, trackColor = BactaPalette.Line, drawStopIndicator = {})
-                    }
-                }
-            }
-        }
+        ArchitectureCard(arch, Accent)
     }
     if (c.vitals.isNotEmpty()) {
         SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent)

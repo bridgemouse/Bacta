@@ -89,3 +89,39 @@ fun ArcGauge(
         Box(Modifier.align(Alignment.TopCenter).padding(top = strokeWidth / 2).requiredSize(diameter), contentAlignment = Alignment.Center, content = content)
     }
 }
+
+/** One ring of [ConcentricArcs]: how full it is and its colour. */
+data class ArcRing(val progress: Float, val color: Color)
+
+/**
+ * Several open arcs sharing one centre, the first ring outermost, each stepped inward by a stroke plus [gap]. Sized like [ArcGauge]:
+ * give it a width and `Modifier.aspectRatio(arcAspectRatio(sweep))`. [content] is centred on the common centre.
+ */
+@Composable
+fun ConcentricArcs(
+    rings: List<ArcRing>,
+    modifier: Modifier = Modifier,
+    strokeWidth: Dp = 12.dp,
+    gap: Dp = 6.dp,
+    sweep: Float = 200f,
+    content: @Composable BoxScope.() -> Unit = {},
+) {
+    BoxWithConstraints(modifier) {
+        val extent = arcExtentFraction(sweep)
+        val outer = min(maxWidth - strokeWidth, (maxHeight - strokeWidth) / extent)
+        Canvas(Modifier.matchParentSize()) {
+            val stroke = strokeWidth.toPx()
+            val step = stroke + gap.toPx()
+            val start = 90f + (360f - sweep) / 2f
+            rings.forEachIndexed { i, ring ->
+                val side = outer.toPx() - 2 * i * step
+                if (side <= 0f) return@forEachIndexed
+                val topLeft = Offset((size.width - side) / 2, stroke / 2 + i * step)
+                val arcSize = Size(side, side)
+                drawArc(BactaPalette.Line, start, sweep, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+                drawArc(ring.color, start, sweep * ring.progress.coerceIn(0f, 1f), false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            }
+        }
+        Box(Modifier.align(Alignment.TopCenter).padding(top = strokeWidth / 2).requiredSize(outer), contentAlignment = Alignment.Center, content = content)
+    }
+}

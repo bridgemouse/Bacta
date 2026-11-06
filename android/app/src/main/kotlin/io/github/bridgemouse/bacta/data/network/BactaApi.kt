@@ -4,6 +4,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -47,4 +48,23 @@ interface BactaApi {
 
     @GET("api/insights/{section}")
     suspend fun briefing(@Path("section") section: String): BriefingDto
+
+    @GET("api/settings")
+    suspend fun settings(): Map<String, String>
+
+    /** A [Response] so a 400 `{error}` can be read as the server's validation message instead of an exception. */
+    @PUT("api/settings/{key}")
+    suspend fun putSetting(@Path("key") key: String, @Body body: SettingValueRequest): Response<OkDto>
+
+    @POST("api/settings/test-connection")
+    suspend fun testConnection(): TestConnectionDto
+
+    @POST("api/auth/set-pin")
+    suspend fun setPin(@Body request: SetPinRequest): Response<OkDto>
+
+    @GET("api/logs")
+    suspend fun logs(@Query("source") source: String?, @Query("limit") limit: Int): LogsDto
+
+    @GET("api/logs/sources")
+    suspend fun logSources(): LogSourcesDto
 }

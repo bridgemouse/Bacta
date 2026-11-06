@@ -131,3 +131,22 @@ data class WeeksDto(val weeks: List<WeekDto> = emptyList())
 
 @Serializable
 data class IntensityDto(val moderate: Double = 0.0, val vigorous: Double = 0.0)
+
+@Serializable
+data class SettingValueRequest(val value: String)
+
+@Serializable
+data class SetPinRequest(val pin: String, val currentPin: String? = null)
+
+/** What the server's provider check answers; [error] is its own message when [ok] is false. */
+@Serializable
+data class TestConnectionDto(val ok: Boolean = false, val error: String? = null)
+
+@Serializable
+data class LogDto(val source: String, val level: String, val message: String, @SerialName("created_at") val createdAt: String)
+
+@Serializable
+data class LogsDto(val logs: List<LogDto> = emptyList())
+
+@Serializable
+data class LogSourcesDto(val sources: List<String> = emptyList())

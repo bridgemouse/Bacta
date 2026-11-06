@@ -3,6 +3,7 @@ package io.github.bridgemouse.bacta.data.network
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -123,5 +124,35 @@ class BactaApiTest {
     fun serverConfigRejectsAnEmptyCandidateList() {
         assertFailsWith<IllegalArgumentException> { ServerConfig(emptyList()) }
         assertEquals("http://bacta.home/".toHttpUrl(), ServerConfig.DEFAULT_CANDIDATES.first())
+    }
+
+    @Test
+    fun unauthorizedSettingsWriteRoutesThroughSessionEvents() = runTest {
+        server.enqueue(json(code = 401, body = """{"error":"unauthorized"}"""))
+        val expired = CompletableDeferred<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { events.expired.first(); expired.complete(Unit) }
+        assertFailsWith<SessionExpiredException> { api.putSetting("ai_provider", SettingValueRequest("google")) }
+        expired.await()
+    }
+
+    @Test
+    fun aWrongCurrentPinIsAResponseNotASessionExpiry() = runTest {
+        server.enqueue(json(code = 401, body = """{"ok":false,"error":"Current PIN incorrect"}"""))
+        val r = api.setPin(SetPinRequest(pin = "5678", currentPin = "0000"))
+        assertEquals(401, r.code())
+        assertEquals("""{"pin":"5678","currentPin":"0000"}""", server.takeRequest().body?.utf8())
+    }
+
+    @Test
+    fun settingsAreAFlatMapAndWritesCarryOnlyTheValue() = runTest {
+        server.enqueue(json(body = """{"ai_provider":"google","ai_api_key":"••••abcd"}"""))
+        server.enqueue(json(body = """{"ok":true}"""))
+        assertEquals("••••abcd", api.settings().getValue("ai_api_key"))
+        api.putSetting("mx4_nightly_time", SettingValueRequest("03:00"))
+        server.takeRequest()
+        val put = server.takeRequest()
+        assertEquals("PUT", put.method)
+        assertEquals("/api/settings/mx4_nightly_time", put.url.encodedPath)
+        assertEquals("""{"value":"03:00"}""", put.body?.utf8())
     }
 }

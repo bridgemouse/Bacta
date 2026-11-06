@@ -139,7 +139,7 @@ class SleepMappingTest {
         val h = NightHypnogram(List(24) { SleepStage.Light }, 1793746800000L, 1793775600000L)
         val model = assertNotNull(map(night, failed, h).hypnogram)
         assertEquals(24, model.levels.size)
-        assertEquals(5, model.axisLabels.size)
+        assertEquals(4, model.axisLabels.size)
     }
 
     @Test

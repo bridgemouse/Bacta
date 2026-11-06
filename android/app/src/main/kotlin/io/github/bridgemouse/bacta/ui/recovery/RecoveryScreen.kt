@@ -11,7 +11,9 @@ import androidx.compose.ui.unit.dp
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.CardRow
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.rowCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeLayout
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterCard
@@ -46,13 +48,13 @@ private fun RecoveryContentView(ui: RecoveryUiState.Content, tab: Tab, onRefresh
                 HeadlineCard(c.hrv, Accent)
                 c.battery?.let { GaugeCard(it, Accent, layout = GaugeLayout.Hero) }
                 c.recoveryTime?.let { MeterCard(it, Accent) }
-                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    c.pair.forEach { MetricCard(it, Accent, Modifier.weight(1f)) }
+                CardRow {
+                    c.pair.forEach { MetricCard(it, Accent, rowCard()) }
                 }
                 SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent, right = UiText.of(R.string.rail_health_status))
                 c.vitals.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                        row.forEach { StatusTile(it, Accent, Modifier.weight(1f)) }
+                    CardRow {
+                        row.forEach { StatusTile(it, Accent, rowCard()) }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }

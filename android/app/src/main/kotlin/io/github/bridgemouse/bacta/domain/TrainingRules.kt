@@ -55,6 +55,17 @@ object TrainingRules {
         return floors
     }
 
+    /**
+     * Shares of the weekly goal covered by moderate minutes and by (doubled) vigorous minutes, stacked in that order and together
+     * never past full. A goal of zero or less gives no shares rather than dividing by zero.
+     */
+    fun intensityShares(moderate: Double, vigorous: Double, goal: Int): Pair<Float, Float> {
+        if (goal <= 0) return 0f to 0f
+        val moderateShare = (moderate / goal).coerceIn(0.0, 1.0)
+        val vigorousShare = (2 * vigorous / goal).coerceIn(0.0, 1.0 - moderateShare)
+        return moderateShare.toFloat() to vigorousShare.toFloat()
+    }
+
     /** Garmin counts vigorous minutes twice toward the weekly intensity goal. */
     fun intensityPoints(moderate: Double, vigorous: Double): Double = moderate + 2 * vigorous
 }

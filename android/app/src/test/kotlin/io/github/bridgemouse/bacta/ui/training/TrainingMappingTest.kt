@@ -118,15 +118,16 @@ class TrainingMappingTest {
     }
 
     @Test
-    fun intensityMeterAgainstTheUsersWeeklyGoal() {
+    fun intensityCardSplitsModerateAndVigorousAgainstTheUsersGoal() {
         val m = assertNotNull(map(day, intensity = WeeklyIntensity(95.0, 20.0)).intensity)
         assertEquals("135", m.value.s())
-        assertEquals(0.9f, m.position)
-        assertEquals("goal 150 min", m.zoneLabel.s())
-        assertNull(m.stateText)
+        assertEquals("goal 150 min", m.goalLabel.s())
+        assertEquals(0.6333f, m.moderateFraction, 0.001f)
+        assertEquals(0.2667f, m.vigorousFraction, 0.001f)
+        assertEquals("Moderate 95 · Vigorous 20 (counts double)", m.legend.s())
+        assertEquals(false, m.met)
         val met = assertNotNull(map(day, intensity = WeeklyIntensity(95.0, 20.0), t = Targets.Default.copy(weeklyIntensityMinutes = 120)).intensity)
-        assertEquals("GOAL MET", met.stateText.s())
-        assertEquals(1f, met.position)
+        assertEquals(true, met.met)
     }
 
     @Test

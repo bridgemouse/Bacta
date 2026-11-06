@@ -69,4 +69,19 @@ class TrainingRulesTest {
         assertEquals(0.2f, TrainingRules.ratioTrackPosition(TrainingRules.OPTIMAL_LOW), 0.001f)
         assertEquals(0.6667f, TrainingRules.ratioTrackPosition(TrainingRules.OPTIMAL_HIGH), 0.001f)
     }
+
+    @Test
+    fun intensitySharesStackModerateThenDoubledVigorous() {
+        val (moderate, vigorous) = TrainingRules.intensityShares(95.0, 20.0, 150)
+        assertEquals(0.6333f, moderate, 0.001f)
+        assertEquals(0.2667f, vigorous, 0.001f)
+    }
+
+    @Test
+    fun intensitySharesNeverPassFullOrDivideByZero() {
+        assertEquals(1f to 0f, TrainingRules.intensityShares(200.0, 0.0, 150))
+        val (moderate, vigorous) = TrainingRules.intensityShares(100.0, 30.0, 150)
+        assertEquals(1f, moderate + vigorous, 0.0001f)
+        assertEquals(0f to 0f, TrainingRules.intensityShares(50.0, 5.0, 0))
+    }
 }

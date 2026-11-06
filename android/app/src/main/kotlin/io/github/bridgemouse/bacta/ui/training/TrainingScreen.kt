@@ -21,7 +21,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.CardRow
 import io.github.bridgemouse.bacta.ui.designsystem.components.rowCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.LoadRatioCard
-import io.github.bridgemouse.bacta.ui.designsystem.components.MeterCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.IntensityCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.RefreshableScroll
 import io.github.bridgemouse.bacta.ui.designsystem.components.SectionRail
@@ -74,7 +74,7 @@ private fun Overview(c: TrainingContent) {
     }
     c.intensity?.let {
         SectionRail(UiText.of(R.string.rail_intensity_week), Accent)
-        MeterCard(it, Accent)
+        IntensityCard(it, Accent)
     }
     c.zones?.let {
         SectionRail(UiText.of(R.string.rail_hr_zones), Accent, right = UiText.of(R.string.zones_today, it.totalMinutes))

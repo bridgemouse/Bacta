@@ -5,7 +5,6 @@ import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.ChipModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineModel
-import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendSectionModel
 
@@ -39,12 +38,23 @@ data class LoadRatioModel(
     val zoneLabel: UiText,
 )
 
+/** Weekly intensity: the doubled-vigorous total against the goal, as stacked shares of the goal. */
+@Immutable
+data class IntensityModel(
+    val value: UiText,
+    val goalLabel: UiText,
+    val moderateFraction: Float,
+    val vigorousFraction: Float,
+    val legend: UiText,
+    val met: Boolean,
+)
+
 /** Everything the Training tabs show. Optional cards are null (or empty) when the data behind them does not exist. */
 data class TrainingContent(
     val status: StatusModel?,
     val performance: PerformanceModel,
     val loadRatio: LoadRatioModel?,
-    val intensity: MeterModel?,
+    val intensity: IntensityModel?,
     val zones: ZonesModel?,
     val daily: List<MetricCardModel>,
     val activities: List<ActivityRowModel>,

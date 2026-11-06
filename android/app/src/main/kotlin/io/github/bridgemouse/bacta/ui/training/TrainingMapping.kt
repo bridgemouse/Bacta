@@ -15,7 +15,6 @@ import io.github.bridgemouse.bacta.domain.TrainingStatus
 import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.ChipModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineModel
-import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendKind
@@ -82,7 +81,7 @@ fun toTrainingContent(
         status = status(summary, fmt),
         performance = PerformanceModel(loadHeadline(summary, series(fast, Metric.TrainingLoad).map { it.value }, fmt), fitnessAgeCard(summary, fmt), vo2Card(summary, fmt)),
         loadRatio = loadRatio(summary, fmt),
-        intensity = intensity?.let { intensityMeter(it, targets, fmt) },
+        intensity = intensity?.let { intensityCard(it, targets, fmt) },
         zones = zones(summary),
         daily = dailyTiles(summary, targets, fmt),
         activities = activities.sortedByDescending { it.start }.map { activityRow(it, fmt) },
@@ -148,18 +147,17 @@ private fun vo2Card(s: Summary, fmt: Formatters): MetricCardModel = MetricCardMo
     unit = UiText.of(R.string.unit_vo2),
 )
 
-private fun intensityMeter(week: WeeklyIntensity, targets: Targets, fmt: Formatters): MeterModel {
+private fun intensityCard(week: WeeklyIntensity, targets: Targets, fmt: Formatters): IntensityModel {
     val points = TrainingRules.intensityPoints(week.moderate, week.vigorous)
     val goal = targets.weeklyIntensityMinutes
-    val met = points >= goal
-    return MeterModel(
-        label = UiText.of(R.string.label_intensity),
+    val (moderate, vigorous) = TrainingRules.intensityShares(week.moderate, week.vigorous, goal)
+    return IntensityModel(
         value = UiText.Literal(fmt.number(points, 0)),
-        unit = UiText.of(R.string.unit_min),
-        stateText = if (met) UiText.of(R.string.goal_met) else null,
-        tone = if (met) Tone.Positive else null,
-        position = (points / goal).coerceIn(0.0, 1.0).toFloat(),
-        zoneLabel = UiText.of(R.string.intensity_goal, fmt.number(goal.toDouble(), 0)),
+        goalLabel = UiText.of(R.string.intensity_goal, fmt.number(goal.toDouble(), 0)),
+        moderateFraction = moderate,
+        vigorousFraction = vigorous,
+        legend = UiText.of(R.string.intensity_legend, fmt.number(week.moderate, 0), fmt.number(week.vigorous, 0)),
+        met = points >= goal,
     )
 }
 

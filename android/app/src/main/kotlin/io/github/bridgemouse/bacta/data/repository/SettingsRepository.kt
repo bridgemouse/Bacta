@@ -28,7 +28,8 @@ sealed interface PinChangeResult {
     data object Failure : PinChangeResult
 }
 
-data class LogEntry(val source: String, val level: String, val message: String, val createdAt: String)
+/** [at] is when the server logged it; null when the server's timestamp could not be read. */
+data class LogEntry(val source: String, val level: String, val message: String, val at: java.time.Instant?)
 
 data class ConnectionTest(val ok: Boolean, val error: String?)
 
@@ -74,7 +75,7 @@ class DefaultSettingsRepository @Inject constructor(private val api: BactaApi) :
     }
 
     override suspend fun logs(source: String?, limit: Int): Result<List<LogEntry>> =
-        resultOf { api.logs(source?.takeIf { it.isNotEmpty() }, limit.coerceIn(1, MAX_LOG_LIMIT)).logs.map { LogEntry(it.source, it.level, it.message, it.createdAt) } }
+        resultOf { api.logs(source?.takeIf { it.isNotEmpty() }, limit.coerceIn(1, MAX_LOG_LIMIT)).logs.map { LogEntry(it.source, it.level, it.message, parseServerTime(it.createdAt)) } }
 
     override suspend fun logSources(): Result<List<String>> = resultOf { api.logSources().sources }
 
@@ -83,6 +84,10 @@ class DefaultSettingsRepository @Inject constructor(private val api: BactaApi) :
         const val MAX_LOG_LIMIT = 500
     }
 }
+
+/** SQLite's `datetime('now')` is UTC with no zone marker, so it is read as UTC and shown later in the device's zone. */
+private fun parseServerTime(text: String): java.time.Instant? =
+    runCatching { java.time.LocalDateTime.parse(text, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).toInstant(java.time.ZoneOffset.UTC) }.getOrNull()
 
 private fun Response<OkDto>.errorMessage(): String? =
     runCatching { BactaJson.decodeFromString<OkDto>(errorBody()?.string().orEmpty()).error }.getOrNull()

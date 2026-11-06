@@ -40,4 +40,11 @@ class TrendSpecTest {
         assertEquals("52", rhr.value)
         assertEquals("bpm", rhr.unit.s())
     }
+
+    @Test
+    fun aChangeThatRoundsToZeroIsFlatNotAnArrow() {
+        val section = buildTrendSections(specs.take(1), Summary(hrv = 62.0, hrvWeekAvg = 61.8), { week }, testFormatters).single()
+        assertEquals("→ 0", section.card.delta?.text.s())
+        assertEquals(io.github.bridgemouse.bacta.ui.designsystem.components.DeltaDirection.Flat, section.card.delta?.direction)
+    }
 }

@@ -25,6 +25,7 @@ class MetricCatalogTest {
         assertEquals(TrendKind.Bars, battery.chart)
         assertNull(battery.lowerIsBetter)
         assertEquals(1, MetricCatalog.spec(Metric.RespAvg).decimals)
+        assertEquals(1, MetricCatalog.spec(Metric.Vo2Max).decimals)
         assertEquals(false, MetricCatalog.spec(Metric.Hrv).lowerIsBetter)
     }
 

@@ -30,7 +30,9 @@ import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import io.github.bridgemouse.bacta.ui.designsystem.components.BactaCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.StateKind
 import io.github.bridgemouse.bacta.ui.designsystem.components.StateMessage
+import io.github.bridgemouse.bacta.ui.asString
 import io.github.bridgemouse.bacta.ui.designsystem.textSecondary
+import io.github.bridgemouse.bacta.ui.format.LocalFormatters
 
 private val Accent = BactaPalette.Mx4
 
@@ -73,7 +75,7 @@ private fun LogRow(entry: LogEntry) {
     BactaCard(Accent, Modifier.semantics(mergeDescendants = true) { contentDescription = spoken }) {
         Row {
             Text(entry.source, style = MaterialTheme.typography.labelSmall, color = Accent, modifier = Modifier.weight(1f))
-            Text(entry.createdAt, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+            entry.at?.let { Text(LocalFormatters.current.dateTime(it, java.time.ZoneId.systemDefault()).asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary) }
         }
         Text(entry.message, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = tone?.let { BactaPalette.tone(it) } ?: BactaPalette.Text)
     }

@@ -103,6 +103,7 @@ class SettingsRepositoryTest {
         val rows = repo.logs("garmin", 5000).getOrThrow()
         assertEquals("garmin" to 500, asked)
         assertEquals("synced", rows.single().message)
+        assertEquals(java.time.Instant.parse("2026-11-04T03:00:01Z"), rows.single().at)
         repo.logs(null, 0).getOrThrow()
         assertEquals(null to 1, asked)
     }
@@ -112,5 +113,13 @@ class SettingsRepositoryTest {
         api.logSourcesHandler = { LogSourcesDto(listOf("garmin", "mx4")) }
         assertEquals(listOf("garmin", "mx4"), repo.logSources().getOrThrow())
         assertIs<Result<List<String>>>(repo.logSources())
+    }
+
+    @Test
+    fun anUnreadableTimestampKeepsTheEntryWithoutATime() = runTest {
+        api.logsHandler = { _, _ -> LogsDto(listOf(LogDto("garmin", "info", "synced", "not a time"))) }
+        val row = repo.logs(null, 10).getOrThrow().single()
+        assertEquals("synced", row.message)
+        assertEquals(null, row.at)
     }
 }

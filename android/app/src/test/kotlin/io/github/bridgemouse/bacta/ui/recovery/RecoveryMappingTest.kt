@@ -124,4 +124,13 @@ class RecoveryMappingTest {
         assertEquals("▲ 2.0", delta?.text.s())
         assertEquals(io.github.bridgemouse.bacta.ui.designsystem.components.DeltaDirection.Bad, delta?.direction)
     }
+
+    @Test
+    fun theScoreGaugeExplainsItsBandInOneSentence() {
+        fun description(score: Double?) = toRecoveryContent(full.copy(recoveryScore = score), failed).readiness.description.s()
+        assertEquals(true, description(83.0)!!.startsWith("Systems restored"))
+        assertEquals(true, description(70.0)!!.contains("normal training session"))
+        assertEquals(true, description(40.0)!!.contains("rest"))
+        assertEquals(null, description(null))
+    }
 }

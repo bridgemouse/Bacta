@@ -12,6 +12,7 @@ import io.github.bridgemouse.bacta.domain.SleepStage
 import io.github.bridgemouse.bacta.domain.Targets
 import io.github.bridgemouse.bacta.domain.Tone
 import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.ui.designsystem.components.BarStatModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HypnogramModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
@@ -107,28 +108,38 @@ private fun stageItems(s: Summary, fmt: Formatters): List<StageItem> {
     }
 }
 
-private fun efficiencyCard(asleepMin: Int?, awakeMin: Int?, fmt: Formatters): MetricCardModel {
+private fun efficiencyCard(asleepMin: Int?, awakeMin: Int?, fmt: Formatters): BarStatModel {
     val percent = if (asleepMin != null && awakeMin != null) SleepRules.efficiencyPercent(asleepMin, awakeMin) else null
-    return MetricCardModel(
+    return BarStatModel(
         label = UiText.of(R.string.metric_efficiency),
-        value = percent?.let { UiText.Literal(fmt.number(it.toDouble(), 0)) },
-        unit = UiText.of(R.string.unit_percent),
+        value = percent?.let { UiText.of(R.string.value_percent, fmt.number(it.toDouble(), 0)) },
+        fraction = percent?.let { it / 100f },
+        caption = awakeMin?.takeIf { percent != null }?.let { m -> fmt.duration(m * 60.0)?.let { UiText.of(R.string.efficiency_awake, it) } },
     )
 }
 
 /** Debt over the last week of recorded nights against the user's own target; the bar shows how much of that week's target was met. */
-private fun debtMeter(nightMinutes: List<Int>, latestNight: Int?, targets: Targets, fmt: Formatters): MeterModel? {
+private fun debtMeter(nightMinutes: List<Int>, latestNight: Int?, targets: Targets, fmt: Formatters): BarStatModel? {
     val nights = nightMinutes.takeLast(7).ifEmpty { listOfNotNull(latestNight?.takeIf { it > 0 }) }
     if (nights.isEmpty()) return null
     val debt = SleepRules.debtMinutes(nights, targets.sleepMinutes)
     val restored = (1.0 - debt.toDouble() / (nights.size * targets.sleepMinutes)).coerceIn(0.0, 1.0).toFloat()
-    return MeterModel(
+    return BarStatModel(
         label = UiText.of(R.string.metric_sleep_debt),
         value = fmt.duration(debt * 60.0) ?: UiText.of(R.string.duration_m, 0),
-        stateText = UiText.of(if (debt == 0) R.string.debt_restored else R.string.debt_accumulating),
+        fraction = restored,
+        caption = UiText.of(if (debt == 0) R.string.debt_restored else R.string.debt_accumulating),
         tone = if (debt == 0) Tone.Positive else null,
-        position = restored,
     )
+}
+
+private fun minutes(min: Int, fmt: Formatters): UiText = fmt.duration(min * 60.0) ?: UiText.of(R.string.duration_m, 0)
+
+/** One ring's caption: minutes actually slept in the stage against its target; awake is a ceiling, so its target reads "max". */
+private fun part(stage: SleepStage, @androidx.annotation.StringRes label: Int, score: Double, actualMin: Int, targetMin: Int, atMost: Boolean, fmt: Formatters): ArchitecturePart {
+    val actual = minutes(actualMin, fmt)
+    val target = if (atMost) UiText.of(R.string.arch_target_max, minutes(targetMin, fmt)) else UiText.of(R.string.arch_target, minutes(targetMin, fmt))
+    return ArchitecturePart(stage, UiText.of(label), score.toFloat(), actual, target, UiText.of(R.string.arch_actual_target, actual, target))
 }
 
 private fun architecture(s: Summary, asleepMin: Int?, awakeMin: Int?, fmt: Formatters): ArchitectureModel? {
@@ -136,6 +147,7 @@ private fun architecture(s: Summary, asleepMin: Int?, awakeMin: Int?, fmt: Forma
     val remMin = s.sleepRemSeconds?.minutes() ?: return null
     val result = SleepRules.architecture(deepMin, remMin, awakeMin ?: return null, asleepMin ?: return null) ?: return null
     val band = SleepRules.architectureBand(result.score.toDouble())
+    val target = SleepRules.architectureTargetMinutes(asleepMin)
     return ArchitectureModel(
         gauge = GaugeModel(
             label = UiText.of(R.string.architecture_title),
@@ -146,9 +158,9 @@ private fun architecture(s: Summary, asleepMin: Int?, awakeMin: Int?, fmt: Forma
             tone = band?.tone,
         ),
         parts = listOf(
-            ArchitecturePart(UiText.of(R.string.stage_deep), result.deepScore.toFloat()),
-            ArchitecturePart(UiText.of(R.string.stage_rem), result.remScore.toFloat()),
-            ArchitecturePart(UiText.of(R.string.stage_awake), result.awakeScore.toFloat()),
+            part(SleepStage.Deep, R.string.stage_deep, result.deepScore, deepMin, target.deep, atMost = false, fmt),
+            part(SleepStage.Rem, R.string.stage_rem, result.remScore, remMin, target.rem, atMost = false, fmt),
+            part(SleepStage.Awake, R.string.stage_awake, result.awakeScore, awakeMin, target.awake, atMost = true, fmt),
         ),
     )
 }

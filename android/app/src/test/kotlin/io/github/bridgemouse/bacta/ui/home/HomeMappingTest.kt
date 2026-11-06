@@ -101,4 +101,21 @@ class HomeMappingTest {
         assertTrue(row.series.isEmpty())
         assertNull(row.value)
     }
+
+    @Test
+    fun everyHomeTrendRowCarriesTheSeriesMean() {
+        val week = listOf(2.0, 4.0, 6.0)
+        val rows = toTrendRows(
+            Summary(hrv = 61.0, hrvWeekAvg = 58.0),
+            ok(Metric.RecoveryScore to week, Metric.Hrv to week, Metric.SleepScore to week, Metric.TrainingLoad to week, Metric.IntensityMod to week, Metric.IntensityVig to week),
+        )
+        assertEquals(listOf(4.0, 58.0, 4.0, 4.0, 12.0), rows.map { it.average })
+    }
+
+    @Test
+    fun aSeriesTooShortToChartHasNoAverage() {
+        val rows = toTrendRows(Summary(), ok(Metric.RecoveryScore to listOf(5.0), Metric.SleepScore to emptyList()))
+        assertNull(rows[0].average)
+        assertNull(rows[2].average)
+    }
 }

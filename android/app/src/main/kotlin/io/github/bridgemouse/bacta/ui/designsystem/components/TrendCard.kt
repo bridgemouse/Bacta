@@ -57,6 +57,7 @@ fun TrendCard(model: TrendCardModel, accent: Color, modifier: Modifier = Modifie
                     model.kind == TrendKind.Bars -> BarsChart(
                         model.series, accent, model.dayLabels, description,
                         Modifier.weight(1f).height(72.dp),
+                        average = model.average,
                     )
                     else -> Sparkline(
                         model.series, accent, description,

@@ -33,7 +33,7 @@ private val syntheticTrends: Map<Metric, Result<List<Double>>> = Metric.entries.
 private val briefing = BriefingModel(
     UiText.Literal("Recovery"),
     BriefingState.Live(
-        BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", null),
+        BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", "Synthetic directive long enough to wrap onto a second and third line so the layout under the label can be checked."),
         UiText.Literal("NOV 3 · 09:00"),
     ),
 )
@@ -59,3 +59,8 @@ private fun RecoveryOverviewPartial() =
 @Preview(widthDp = 412, heightDp = 2600, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun RecoveryTrendsLoaded() = Frame(synthetic, syntheticTrends, Tab.Trends)
+
+// The same screen at 1.3x font scale: labels and chips must wrap whole, never mid-word.
+@Preview(widthDp = 412, heightDp = 2900, fontScale = 1.3f, showBackground = true, backgroundColor = 0xFF0F1117)
+@Composable
+private fun RecoveryOverviewLarge() = RecoveryOverviewLoaded()

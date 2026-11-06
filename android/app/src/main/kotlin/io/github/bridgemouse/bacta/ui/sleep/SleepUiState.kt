@@ -2,6 +2,7 @@ package io.github.bridgemouse.bacta.ui.sleep
 
 import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
+import io.github.bridgemouse.bacta.ui.designsystem.components.BarStatModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HypnogramModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
@@ -14,7 +15,8 @@ import java.time.LocalDate
 /** Which night the numbers belong to; [stale] when it is older than yesterday, so an unrecorded night is never passed off as last night. */
 data class NightLabel(val date: LocalDate, val stale: Boolean)
 
-data class ArchitecturePart(val label: UiText, val fraction: Float)
+/** [fraction] is the share of the stage target met (0 to 1); [detail] reads like "80m / 90m"; [stage] picks the colour. */
+data class ArchitecturePart(val stage: io.github.bridgemouse.bacta.domain.SleepStage, val label: UiText, val fraction: Float, val actual: UiText, val target: UiText, val detail: UiText)
 
 data class ArchitectureModel(val gauge: GaugeModel, val parts: List<ArchitecturePart>)
 
@@ -25,8 +27,8 @@ data class SleepContent(
     val inBed: UiText?,
     val score: GaugeModel,
     val stages: List<StageItem>,
-    val efficiency: MetricCardModel,
-    val debt: MeterModel?,
+    val efficiency: BarStatModel,
+    val debt: BarStatModel?,
     val hypnogram: HypnogramModel?,
     val architecture: ArchitectureModel?,
     val vitals: List<StatusTileModel>,

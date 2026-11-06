@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import io.github.bridgemouse.bacta.ui.asString
 import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.viz.DeltaText
 import io.github.bridgemouse.bacta.ui.designsystem.viz.Sparkline
 
 /** A larger single-metric card: value, delta, status chips and a trend with an optional baseline band. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun HeadlineCard(model: HeadlineModel, accent: Color, modifier: Modifier = Modifier) {
     val noData = stringResource(R.string.cd_no_data)
@@ -37,9 +39,11 @@ fun HeadlineCard(model: HeadlineModel, accent: Color, modifier: Modifier = Modif
         modifier = modifier.semantics(mergeDescendants = true) { contentDescription = spoken },
         size = CardSize.Chart,
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-            Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+        if (model.chips.isNotEmpty()) {
+            // Chips get their own line and wrap whole, so two of them never squeeze each other or the label.
+            Spacer(Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 model.chips.forEach { chip -> Chip(chip.text, chip.tone?.let(BactaPalette::tone) ?: accent) }
             }
         }

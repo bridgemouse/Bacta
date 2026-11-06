@@ -100,6 +100,16 @@ data class MeterModel(
     val zoneLabel: UiText? = null,
 )
 
+/** A compact stat with a progress bar under it (sleep efficiency, sleep debt): label, value, the bar's fill, and one line of context. */
+@Immutable
+data class BarStatModel(
+    val label: UiText,
+    val value: UiText?,
+    val fraction: Float?,
+    val caption: UiText? = null,
+    val tone: Tone? = null,
+)
+
 @Immutable
 data class BriefingContent(
     val tone: Tone,

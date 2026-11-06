@@ -42,6 +42,7 @@ fun toRecoveryContent(s: Summary, trends: Trends, f: Formatters): RecoveryConten
         valueText = s.recoveryScore?.let { f.number(it, 0) },
         caption = UiText.of(R.string.of_hundred),
         stateText = ReadinessRules.scoreLabel(s.recoveryScore)?.uppercase()?.let { UiText.Literal(it) },
+        description = scoreDescription(s.recoveryScore),
     ),
     hrv = hrvHeadline(s, trends.all(Metric.Hrv), f),
     battery = batteryGauge(s, f),
@@ -50,6 +51,13 @@ fun toRecoveryContent(s: Summary, trends: Trends, f: Formatters): RecoveryConten
     vitals = vitals(s, trends, f),
     trends = trendSections(s, trends, f),
 )
+
+private fun scoreDescription(score: Double?): UiText? = when (ReadinessRules.scoreLabel(score)) {
+    "Optimal" -> UiText.of(R.string.recovery_desc_optimal)
+    "Ready" -> UiText.of(R.string.recovery_desc_ready)
+    "Low" -> UiText.of(R.string.recovery_desc_low)
+    else -> null
+}
 
 private fun hrvHeadline(s: Summary, series: List<Double>, f: Formatters): HeadlineModel {
     val hrv = s.hrv

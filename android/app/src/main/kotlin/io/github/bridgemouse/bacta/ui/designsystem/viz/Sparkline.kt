@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -98,8 +99,10 @@ fun BarsChart(
     labels: List<String>,
     description: String,
     modifier: Modifier = Modifier,
+    average: Double? = null,
 ) {
     val hi = (series.maxOrNull() ?: 0.0).takeIf { it > 0.0 } ?: 1.0
+    val averageColor = BactaPalette.TextSecondary
     Row(
         modifier.semantics { contentDescription = description },
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -112,7 +115,21 @@ fun BarsChart(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
             ) {
-                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                Box(
+                    Modifier.weight(1f).fillMaxWidth().drawWithContent {
+                        drawContent()
+                        if (average != null) {
+                            // Every column draws its own slice, widened by the gap, so together they read as one dashed line across the chart.
+                            val y = size.height * (1f - barFraction(average, hi))
+                            val gap = 6.dp.toPx()
+                            drawLine(
+                                averageColor.copy(alpha = 0.7f), Offset(-gap / 2, y), Offset(size.width + gap / 2, y), 1.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())),
+                            )
+                        }
+                    },
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
                     Spacer(
                         Modifier
                             .fillMaxWidth()

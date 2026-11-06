@@ -71,7 +71,9 @@ class SleepMappingTest {
     @Test
     fun efficiencyAndArchitectureUseTheDomainRules() {
         val c = map(night, failed)
-        assertEquals("98", c.efficiency.value.s())
+        assertEquals("98%", c.efficiency.value.s())
+        assertEquals(0.98f, c.efficiency.fraction)
+        assertEquals("8m awake in bed", c.efficiency.caption.s())
         val arch = assertNotNull(c.architecture)
         assertEquals("92", arch.gauge.valueText)
         assertEquals(3, arch.parts.size)
@@ -127,7 +129,8 @@ class SleepMappingTest {
         val d420 = map(night, nights, t = Targets.Default.copy(sleepMinutes = 420)).debt!!
         assertEquals("1h 40m", d480.value.s())
         assertEquals("20m", d420.value.s())
-        assertTrue(d480.position!! < 1f)
+        assertTrue(d480.fraction!! < 1f)
+        assertEquals("ACCUMULATING OVER 7D", d480.caption.s())
     }
 
     @Test
@@ -137,5 +140,16 @@ class SleepMappingTest {
         val model = assertNotNull(map(night, failed, h).hypnogram)
         assertEquals(24, model.levels.size)
         assertEquals(5, model.axisLabels.size)
+    }
+
+    @Test
+    fun architecturePartsCarryActualAndTargetMinutes() {
+        val parts = assertNotNull(map(night, failed).architecture).parts
+        assertEquals(listOf("1h 20m of 1h 30m", "1h 30m of 1h 39m", "8m max 23m"), parts.map { it.detail.s() })
+    }
+
+    @Test
+    fun zeroSleepOmitsTheArchitecture() {
+        assertNull(map(night.copy(sleepSeconds = 0.0), failed).architecture)
     }
 }

@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import io.github.bridgemouse.bacta.domain.Tone
@@ -111,12 +113,18 @@ private fun BriefingBody(content: BriefingContent) {
     }
     content.directive?.let {
         Spacer(Modifier.height(10.dp))
-        Row(
+        // One text run, label inline: wrapped lines flow under the label instead of leaving an empty column beside it.
+        val labelStyle = MaterialTheme.typography.labelSmall.toSpanStyle().copy(color = accent)
+        val label = stringResource(R.string.briefing_directive)
+        Text(
+            buildAnnotatedString {
+                withStyle(labelStyle) { append(label) }
+                append("  ")
+                append(inlineMarkdown(it))
+            },
             Modifier.fillMaxWidth().background(BactaPalette.Base.copy(alpha = 0.5f), RoundedCornerShape(8.dp)).padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(stringResource(R.string.briefing_directive), style = MaterialTheme.typography.labelSmall, color = accent)
-            Text(inlineMarkdown(it), style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Text)
-        }
+            style = MaterialTheme.typography.bodyMedium,
+            color = BactaPalette.Text,
+        )
     }
 }

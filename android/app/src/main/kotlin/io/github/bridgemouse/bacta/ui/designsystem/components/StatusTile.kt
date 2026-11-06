@@ -43,7 +43,8 @@ fun StatusTile(model: StatusTileModel, accent: Color, modifier: Modifier = Modif
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(model.label.asString().uppercase(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            model.tone?.let { StatusDot(BactaPalette.tone(it)) }
+            // The dot is always there so tiles line up; it is coloured by the band's tone, and muted where no band exists (for example sleep heart rate, which has no published normal range).
+            StatusDot(model.tone?.let(BactaPalette::tone) ?: BactaPalette.TextMuted)
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(model.value ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)

@@ -105,7 +105,6 @@
     <!-- Recovery -->
     <string name="recovery_loading">Loading recovery data…</string>
     <string name="recovery_error">Couldn\'t load recovery data. Check the connection and try again.</string>
-    <string name="rail_readiness">READINESS</string>
     <string name="rail_overnight_vitals">OVERNIGHT VITALS</string>
     <string name="recovery_score">Recovery score</string>
     <string name="of_hundred">/ 100</string>
@@ -198,7 +197,6 @@
     <string name="stage_percent">%1$d%%</string>
     <string name="cd_stage_row">%1$s, %2$s, %3$d percent of the night</string>
     <string name="cd_stage_row_plain">%1$s, %2$s</string>
-    <string name="cd_architecture_part">%1$s, %2$d percent of target</string>
 
     <!-- Training -->
     <string name="training_loading">Loading training data…</string>
@@ -321,4 +319,16 @@
     <string name="cd_setting_toggle">%1$s, %2$s</string>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>
+    <string name="recovery_desc_optimal">Systems restored. Cleared for a high-intensity session today.</string>
+    <string name="recovery_desc_ready">Recovered enough for a normal training session today.</string>
+    <string name="recovery_desc_low">Recovery incomplete. Prioritize rest or light activity today.</string>
+    <string name="value_percent">%1$s%%</string>
+    <string name="efficiency_awake">%1$s awake in bed</string>
+    <string name="arch_actual_target">%1$s %2$s</string>
+    <string name="arch_target">of %1$s</string>
+    <string name="arch_target_max">max %1$s</string>
+    <string name="cd_architecture_arcs">%1$s, %2$s</string>
+    <string name="rail_health_status">HEALTH STATUS</string>
+    <string name="rail_while_asleep">WHILE ASLEEP</string>
+    <string name="rail_current">CURRENT</string>
 </resources>

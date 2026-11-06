@@ -203,7 +203,6 @@
     <string name="training_error">Couldn\'t load training data. Check the connection and try again.</string>
     <string name="as_of">as of %1$s</string>
     <string name="load_acute">Acute load</string>
-    <string name="load_ratio">Load ratio %1$s</string>
     <string name="load_optimal_range">optimal %1$s–%2$s</string>
     <string name="fitness_achievable">achievable %1$s</string>
     <string name="intensity_goal">goal %1$s min</string>
@@ -331,4 +330,20 @@
     <string name="rail_health_status">HEALTH STATUS</string>
     <string name="rail_while_asleep">WHILE ASLEEP</string>
     <string name="rail_current">CURRENT</string>
+    <string name="load_ratio_title">Load ratio · acute : chronic</string>
+    <string name="load_ratio_caption">%1$s acute · %2$s chronic</string>
+    <string name="load_ratio_zone">optimal %1$s–%2$s</string>
+    <string name="intensity_legend">Moderate %1$s · Vigorous %2$s (counts double)</string>
+    <string name="steps_to_go">%1$s TO GO</string>
+    <string name="efficiency_line">%1$s%% efficient · %2$s awake</string>
+    <string name="stage_chip">%1$s %2$s</string>
+    <string name="unit_ft">ft</string>
+    <string name="unit_m">m</string>
+    <string name="effect_aerobic">Aerobic</string>
+    <string name="effect_anaerobic">Anaerobic</string>
+    <string name="fact_elevation">Elevation</string>
+    <string name="fact_recovery">Recovery</string>
+    <string name="state_expanded">Expanded</string>
+    <string name="state_collapsed">Collapsed</string>
+    <string name="cd_activity_row_expandable">%1$s, %2$s, %3$s. Double tap for details</string>
 </resources>

@@ -104,7 +104,7 @@ class TrainingMappingTest {
         val load = map(day).performance.load
         assertEquals("300", load.value)
         assertEquals(listOf("Optimal"), load.chips.map { it.text.s() })
-        assertEquals("Load ratio 1.20", load.sub.s())
+        assertNull(load.sub)
         assertEquals("optimal 200–375", load.footnote.s())
         assertEquals(200.0..375.0, load.band)
     }
@@ -118,15 +118,16 @@ class TrainingMappingTest {
     }
 
     @Test
-    fun intensityMeterAgainstTheUsersWeeklyGoal() {
+    fun intensityCardSplitsModerateAndVigorousAgainstTheUsersGoal() {
         val m = assertNotNull(map(day, intensity = WeeklyIntensity(95.0, 20.0)).intensity)
         assertEquals("135", m.value.s())
-        assertEquals(0.9f, m.position)
-        assertEquals("goal 150 min", m.zoneLabel.s())
-        assertNull(m.stateText)
+        assertEquals("goal 150 min", m.goalLabel.s())
+        assertEquals(0.6333f, m.moderateFraction, 0.001f)
+        assertEquals(0.2667f, m.vigorousFraction, 0.001f)
+        assertEquals("Moderate 95 · Vigorous 20 (counts double)", m.legend.s())
+        assertEquals(false, m.met)
         val met = assertNotNull(map(day, intensity = WeeklyIntensity(95.0, 20.0), t = Targets.Default.copy(weeklyIntensityMinutes = 120)).intensity)
-        assertEquals("GOAL MET", met.stateText.s())
-        assertEquals(1f, met.position)
+        assertEquals(true, met.met)
     }
 
     @Test
@@ -204,5 +205,93 @@ class TrainingMappingTest {
     @Test
     fun vo2MaxKeepsGarminsDecimal() {
         assertEquals("48.4", map(day.copy(vo2max = 48.4)).performance.vo2max.value.s())
+    }
+
+    @Test
+    fun loadRatioModelCarriesValueStateAndTrackPosition() {
+        val r = assertNotNull(map(day).loadRatio)
+        assertEquals("1.20", r.value.s())
+        assertEquals("Optimal", r.state?.text.s())
+        assertEquals(0.4667f, r.position, 0.001f)
+        assertEquals("300 acute · 250 chronic", r.caption.s())
+        assertEquals("optimal 0.8–1.5", r.zoneLabel.s())
+    }
+
+    @Test
+    fun noRatioWhenThereIsNoRange() {
+        assertNull(map(Summary(trainingLoad = 300.0)).loadRatio)
+        assertNull(map(Summary()).loadRatio)
+    }
+
+    @Test
+    fun zoneRowsCarryFormattedMinutes() {
+        val zones = assertNotNull(map(day).zones)
+        assertEquals(listOf("10m", "20m", "15m", "5m", "0m"), zones.items.map { it.minutesText.s() })
+    }
+
+    private val stepsWeek = week(3000.0, 4000.0, 5000.0, 6000.0, 7000.0, 8000.0, 9000.0)
+
+    @Test
+    fun stepsChartHasTheGoalAndWhatRemains() {
+        val chart = assertNotNull(map(day, p = ok(Metric.Steps to stepsWeek)).stepsChart)
+        assertEquals(7, chart.series.size)
+        assertEquals(10000.0, chart.goal)
+        assertEquals("5,000 TO GO", chart.status.s())
+        assertEquals("7 days", chart.period.s())
+    }
+
+    @Test
+    fun reachingTheStepGoalSaysGoalMet() {
+        assertEquals("GOAL MET", map(day.copy(steps = 12000.0), p = ok(Metric.Steps to stepsWeek)).stepsChart?.status.s())
+    }
+
+    @Test
+    fun noGoalMeansNoGoalLineAndNoStatus() {
+        val chart = assertNotNull(map(day.copy(stepsGoal = null), p = ok(Metric.Steps to stepsWeek)).stepsChart)
+        assertNull(chart.goal); assertNull(chart.status)
+    }
+
+    @Test
+    fun oneStepPointDrawsNoChart() {
+        assertNull(map(day, p = ok(Metric.Steps to week(5000.0))).stepsChart)
+    }
+
+    @Test
+    fun ringTilesShowAPercent() {
+        val steps = map(day).daily.first { it.label.s() == "Steps" }
+        assertEquals("50%", steps.ringText.s())
+        assertNull(map(day).daily.first { it.label.s() == "Distance" }.ringText)
+    }
+
+    private fun activity(vararg extras: Pair<String, Any?>): Activity {
+        val e = extras.toMap()
+        return Activity(
+            "9", "running", "Synthetic Run", LocalDateTime.of(2026, 11, 3, 7, 15), 1800.0, 5000.0, 150, 400,
+            elevationM = e["elevation"] as Double?, aerobicTe = e["aerobic"] as Double?, anaerobicTe = e["anaerobic"] as Double?,
+            recoveryHours = e["recovery"] as Double?, zoneSeconds = (e["zones"] as List<Double?>?) ?: List(5) { null },
+        )
+    }
+
+    @Test
+    fun aFullActivityExpandsToEffectsZonesAndFacts() {
+        val detail = assertNotNull(map(day, activities = listOf(activity("elevation" to 30.0, "aerobic" to 3.1, "anaerobic" to 0.4, "recovery" to 12.0, "zones" to listOf(60.0, 600.0, 900.0, 200.0, 40.0)))).activities.single().detail)
+        assertEquals(listOf("Aerobic", "Anaerobic"), detail.effects.map { it.label.s() })
+        assertEquals(listOf("Improving", "No benefit"), detail.effects.map { it.band.s() })
+        assertEquals(0.62f, detail.effects[0].fraction, 0.001f)
+        assertEquals(100, assertNotNull(detail.zones).sumOf { it.percent })
+        assertEquals(mapOf("Elevation" to "98 ft", "Recovery" to "12h"), detail.facts.associate { it.first.s()!! to it.second.s()!! })
+    }
+
+    @Test
+    fun activityDetailOmitsWhatIsMissing() {
+        val detail = assertNotNull(map(day, activities = listOf(activity("aerobic" to 2.5))).activities.single().detail)
+        assertEquals(1, detail.effects.size)
+        assertNull(detail.zones)
+        assertTrue(detail.facts.isEmpty())
+    }
+
+    @Test
+    fun detailIsAbsentWhenThereIsNothingToShow() {
+        assertNull(map(day, activities = listOf(activity())).activities.single().detail)
     }
 }

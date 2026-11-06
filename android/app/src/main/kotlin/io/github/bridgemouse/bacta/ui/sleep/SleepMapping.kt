@@ -62,6 +62,7 @@ fun toSleepContent(
         inBed = if (asleepSec != null && awakeSec != null) fmt.duration(asleepSec + awakeSec)?.let { UiText.of(R.string.in_bed, it) } else null,
         score = scoreGauge(summary.sleepScore, fmt),
         stages = stageItems(summary, fmt),
+        efficiencyLine = efficiencyLine(asleepMin, awakeMin, fmt),
         efficiency = efficiencyCard(asleepMin, awakeMin, fmt),
         debt = debtMeter(series(Metric.SleepSeconds).map { it.value.roundToInt() }, asleepMin, targets, fmt),
         hypnogram = hypnogram?.let { HypnogramModel(it.levels, Hypnogram.axisLabels(it.startLocalMs, it.endLocalMs, fmt)) },
@@ -106,6 +107,13 @@ private fun stageItems(s: Summary, fmt: Formatters): List<StageItem> {
         add(StageItem(SleepStage.Rem, UiText.of(R.string.stage_rem), text(minutes[2]), percents[2]))
         s.sleepAwakeSeconds?.let { add(StageItem(SleepStage.Awake, UiText.of(R.string.stage_awake), text(it.minutes()), 0)) }
     }
+}
+
+private fun efficiencyLine(asleepMin: Int?, awakeMin: Int?, fmt: Formatters): UiText? {
+    if (asleepMin == null || awakeMin == null) return null
+    val percent = SleepRules.efficiencyPercent(asleepMin, awakeMin) ?: return null
+    val awake = fmt.duration(awakeMin * 60.0) ?: UiText.of(R.string.duration_m, 0)
+    return UiText.of(R.string.efficiency_line, fmt.number(percent.toDouble(), 0), awake)
 }
 
 private fun efficiencyCard(asleepMin: Int?, awakeMin: Int?, fmt: Formatters): BarStatModel {

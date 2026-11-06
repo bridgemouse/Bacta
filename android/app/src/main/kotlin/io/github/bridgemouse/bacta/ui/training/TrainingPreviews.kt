@@ -20,6 +20,8 @@ import io.github.bridgemouse.bacta.ui.format.LocaleFormatters
 import io.github.bridgemouse.bacta.ui.format.LocalFormatters
 import io.github.bridgemouse.bacta.ui.format.MeasurementSystem
 import io.github.bridgemouse.bacta.ui.shell.Tab
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -51,7 +53,10 @@ private val slow: Map<Metric, Result<List<TrendPoint>>> = mapOf(
 private val volume = listOf(WeekValue("2026-39", 3.5), WeekValue("2026-40", 4.25), WeekValue("2026-41", 5.0), WeekValue("2026-42", 3.0), WeekValue("2026-43", 6.5), WeekValue("2026-44", 2.5))
 private val avgHr = listOf(WeekValue("2026-39", 152.0), WeekValue("2026-40", 149.0), WeekValue("2026-41", 151.0), WeekValue("2026-42", 147.0), WeekValue("2026-43", 146.0), WeekValue("2026-44", 148.0))
 private val activities = listOf(
-    Activity("1", "running", "Synthetic Run", LocalDateTime.of(2026, 11, 3, 7, 15), 1800.0, 5000.0, 152, 410),
+    Activity(
+        "1", "running", "Synthetic Run", LocalDateTime.of(2026, 11, 3, 7, 15), 1800.0, 5000.0, 152, 410,
+        elevationM = 30.0, aerobicTe = 3.1, anaerobicTe = 0.4, recoveryHours = 12.0, zoneSeconds = listOf(60.0, 600.0, 900.0, 200.0, 40.0),
+    ),
     Activity("2", "padel_sport", null, LocalDateTime.of(2026, 11, 2, 18, 0), 3600.0, null, 128, 520),
     Activity("3", "walking", null, LocalDateTime.of(2026, 11, 1, 12, 30), null, null, null, null),
 )
@@ -96,3 +101,13 @@ private fun TrainingError() = BactaTheme { TrainingScreen(TrainingUiState.Error,
 @Preview(widthDp = 412, heightDp = 2900, fontScale = 1.3f, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun TrainingOverviewLarge() = TrainingOverviewLoaded()
+
+@Preview(widthDp = 412, heightDp = 560, showBackground = true, backgroundColor = 0xFF0F1117)
+@Composable
+private fun TrainingActivityExpanded() = BactaTheme {
+    CompositionLocalProvider(LocalFormatters provides formatters) {
+        androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(13.dp)) {
+            io.github.bridgemouse.bacta.ui.designsystem.components.ActivityRow(full().activities.first(), io.github.bridgemouse.bacta.ui.designsystem.BactaPalette.accent(io.github.bridgemouse.bacta.domain.Section.Training), initiallyExpanded = true)
+        }
+    }
+}

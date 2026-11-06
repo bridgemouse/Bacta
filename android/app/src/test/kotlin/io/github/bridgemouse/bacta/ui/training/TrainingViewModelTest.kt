@@ -147,9 +147,9 @@ class TrainingViewModelTest {
     @Test
     fun changingTheWeeklyGoalAndWindowReloads() = runTest {
         val vm = vm()
-        assertEquals("goal 150 min", assertIs<TrainingUiState.Content>(vm.state.value).content.intensity?.zoneLabel.s())
+        assertEquals("goal 150 min", assertIs<TrainingUiState.Content>(vm.state.value).content.intensity?.goalLabel.s())
         targets.update { it.copy(weeklyIntensityMinutes = 200, trendDays = 30) }
-        assertEquals("goal 200 min", assertIs<TrainingUiState.Content>(vm.state.value).content.intensity?.zoneLabel.s())
+        assertEquals("goal 200 min", assertIs<TrainingUiState.Content>(vm.state.value).content.intensity?.goalLabel.s())
         assertEquals(30, metrics.calls.last { it.first == TrainingFastMetrics }.second)
     }
 }

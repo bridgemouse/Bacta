@@ -25,7 +25,7 @@ data class MetricCardModel(
     val sub: UiText? = null,
     val trend: List<Double>? = null,
     val ring: Float? = null,
-    val ringText: String? = null,
+    val ringText: UiText? = null,
     val index: String? = null,
     val icon: ImageVector? = null,
 )

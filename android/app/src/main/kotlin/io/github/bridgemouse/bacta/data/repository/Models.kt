@@ -89,6 +89,12 @@ data class Activity(
     val distanceMeters: Double?,
     val avgHr: Int?,
     val calories: Int?,
+    val elevationM: Double? = null,
+    val aerobicTe: Double? = null,
+    val anaerobicTe: Double? = null,
+    val recoveryHours: Double? = null,
+    /** Seconds in heart-rate zones 1 to 5; a slot is null when the server has none. */
+    val zoneSeconds: List<Double?> = List(5) { null },
 )
 
 data class WeekValue(val week: String, val value: Double)

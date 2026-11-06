@@ -74,4 +74,12 @@ class FormattersTest {
         assertEquals("14:00", de.timeOfDay(noon, ZoneId.of("UTC")))
         assertEquals("09:00", de.timeOfDay(noon, ZoneId.of("America/New_York")))
     }
+
+    @Test
+    fun elevationFollowsTheMeasurementSystem() {
+        val feet = us.elevation(30.0)
+        assertEquals("98", feet.value); assertEquals("ft", feet.unit.s())
+        val metres = de.elevation(30.0)
+        assertEquals("30", metres.value); assertEquals("m", metres.unit.s())
+    }
 }

@@ -12,6 +12,29 @@ object TrainingRules {
     const val OPTIMAL_LOW = 0.8
     const val OPTIMAL_HIGH = 1.5
 
+    /** The range the load-ratio track shows. Wide enough to hold Garmin's 0.8 to 1.5 zone with room on both sides; a drawing choice, not a Garmin value. */
+    const val RATIO_TRACK_MIN = 0.5
+    const val RATIO_TRACK_MAX = 2.0
+
+    /** Where a ratio sits along the track, 0 to 1, clamped so an extreme ratio stays on the card. */
+    fun ratioTrackPosition(ratio: Double): Float = ((ratio - RATIO_TRACK_MIN) / (RATIO_TRACK_MAX - RATIO_TRACK_MIN)).coerceIn(0.0, 1.0).toFloat()
+
+    private const val NEG = Double.NEGATIVE_INFINITY
+
+    /** Garmin's Training Effect scale, 0.0 to 5.0 (Garmin owner's manuals, "About Training Effect"); newer manuals say "impacts" where older ones say "improves". */
+    private val effectBands = BandTable(
+        listOf(
+            BandRow(5.0, Band("Overreaching", Tone.Flag)),
+            BandRow(4.0, Band("Highly improving", Tone.Positive)),
+            BandRow(3.0, Band("Improving", Tone.Positive)),
+            BandRow(2.0, Band("Maintaining", Tone.Caution)),
+            BandRow(1.0, Band("Minor", Tone.Caution)),
+            BandRow(NEG, Band("No benefit", Tone.Caution)),
+        ),
+    )
+
+    fun trainingEffectBand(te: Double?): Band? = effectBands.select(te)?.value
+
     private val low = Band("Low", Tone.Caution)
     private val optimal = Band("Optimal", Tone.Positive)
     private val high = Band("High", Tone.Flag)
@@ -46,6 +69,17 @@ object TrainingRules {
         val order = exact.indices.sortedByDescending { exact[it] - floors[it] }
         repeat(100 - floors.sum()) { floors[order[it]]++ }
         return floors
+    }
+
+    /**
+     * Shares of the weekly goal covered by moderate minutes and by (doubled) vigorous minutes, stacked in that order and together
+     * never past full. A goal of zero or less gives no shares rather than dividing by zero.
+     */
+    fun intensityShares(moderate: Double, vigorous: Double, goal: Int): Pair<Float, Float> {
+        if (goal <= 0) return 0f to 0f
+        val moderateShare = (moderate / goal).coerceIn(0.0, 1.0)
+        val vigorousShare = (2 * vigorous / goal).coerceIn(0.0, 1.0 - moderateShare)
+        return moderateShare.toFloat() to vigorousShare.toFloat()
     }
 
     /** Garmin counts vigorous minutes twice toward the weekly intensity goal. */

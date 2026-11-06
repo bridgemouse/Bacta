@@ -26,6 +26,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.RefreshableScroll
 import io.github.bridgemouse.bacta.ui.designsystem.components.SectionRail
 import io.github.bridgemouse.bacta.ui.designsystem.components.StateKind
+import io.github.bridgemouse.bacta.ui.designsystem.components.StepsChartCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.StateMessage
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.ZoneBars
@@ -81,6 +82,7 @@ private fun Overview(c: TrainingContent) {
         BactaCard(Accent) { ZoneBars(it.items) }
     }
     SectionRail(UiText.of(R.string.rail_daily_activity), Accent)
+    c.stepsChart?.let { StepsChartCard(it, Accent) }
     // Tiles with a ring are taller than plain numbers, so they pair with each other and the plain ones pair together.
     c.daily.sortedBy { it.ring == null }.chunked(2).forEach { row ->
         CardRow {

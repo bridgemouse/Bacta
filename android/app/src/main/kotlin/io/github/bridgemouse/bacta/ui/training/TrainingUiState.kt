@@ -49,6 +49,16 @@ data class IntensityModel(
     val met: Boolean,
 )
 
+/** The last days of steps as bars with the daily goal as a reference line; [status] is "n to go" or "goal met" and absent without a goal. */
+@Immutable
+data class StepsChartModel(
+    val series: List<Double>,
+    val labels: List<String>,
+    val goal: Double?,
+    val status: UiText?,
+    val period: UiText,
+)
+
 /** Everything the Training tabs show. Optional cards are null (or empty) when the data behind them does not exist. */
 data class TrainingContent(
     val status: StatusModel?,
@@ -56,6 +66,7 @@ data class TrainingContent(
     val loadRatio: LoadRatioModel?,
     val intensity: IntensityModel?,
     val zones: ZonesModel?,
+    val stepsChart: StepsChartModel?,
     val daily: List<MetricCardModel>,
     val activities: List<ActivityRowModel>,
     val trends: List<TrendSectionModel>,

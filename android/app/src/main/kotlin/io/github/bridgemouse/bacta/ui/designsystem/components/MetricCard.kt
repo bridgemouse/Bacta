@@ -86,7 +86,7 @@ fun MetricCard(
             }
             model.ring?.let { progress ->
                 Ring(progress, accent, Modifier.size(54.dp)) {
-                    model.ringText?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = BactaPalette.Text) }
+                    model.ringText?.let { Text(it.asString(), style = MaterialTheme.typography.labelLarge, color = BactaPalette.Text) }
                 }
             }
         }

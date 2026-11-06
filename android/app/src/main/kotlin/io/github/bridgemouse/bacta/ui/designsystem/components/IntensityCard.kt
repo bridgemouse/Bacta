@@ -32,7 +32,7 @@ import io.github.bridgemouse.bacta.ui.training.IntensityModel
 fun IntensityCard(model: IntensityModel, accent: Color, modifier: Modifier = Modifier) {
     val title = stringResource(R.string.label_intensity)
     val unit = stringResource(R.string.unit_min)
-    val spoken = listOf(title, "${model.value.asString()} $unit", model.goalLabel.asString(), model.legend.asString()).joinToString(", ")
+    val spoken = listOf(title, stringResource(R.string.value_with_unit, model.value.asString(), unit), model.goalLabel.asString(), model.legend.asString()).joinToString(", ")
     val vigorousColor = accent
     val moderateColor = accent.copy(alpha = 0.45f)
     BactaCard(accent, modifier.semantics(mergeDescendants = true) { contentDescription = spoken }) {

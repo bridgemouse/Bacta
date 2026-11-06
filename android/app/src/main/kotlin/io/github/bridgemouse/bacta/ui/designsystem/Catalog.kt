@@ -78,7 +78,7 @@ fun CatalogHome() = CatalogPage {
     }
     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         MetricCard(
-            MetricCardModel(t("Sleep"), t("7h 45m"), null, t("Score 84"), ring = 0.84f, ringText = "84", index = "03"),
+            MetricCardModel(t("Sleep"), t("7h 45m"), null, t("Score 84"), ring = 0.84f, ringText = t("84"), index = "03"),
             BactaPalette.accent(Section.Sleep), Modifier.weight(1f), onClick = {},
         )
         MetricCard(

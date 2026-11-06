@@ -23,6 +23,7 @@ import io.github.bridgemouse.bacta.ui.format.Formatters
 import io.github.bridgemouse.bacta.ui.metrics.MetricCatalog
 import io.github.bridgemouse.bacta.ui.metrics.TrendSpec
 import io.github.bridgemouse.bacta.ui.metrics.buildTrendSections
+import io.github.bridgemouse.bacta.ui.metrics.periodOf
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.math.roundToInt
@@ -83,6 +84,7 @@ fun toTrainingContent(
         loadRatio = loadRatio(summary, fmt),
         intensity = intensity?.let { intensityCard(it, targets, fmt) },
         zones = zones(summary, fmt),
+        stepsChart = stepsChart(summary, series(fast, Metric.Steps), targets.trendDays, fmt),
         daily = dailyTiles(summary, targets, fmt),
         activities = activities.sortedByDescending { it.start }.map { activityRow(it, fmt) },
         trends = buildList {
@@ -171,33 +173,51 @@ private fun zones(s: Summary, fmt: Formatters): ZonesModel? {
 }
 
 /** Rings need a goal to mean anything: the server supplies steps and floors, the user's targets supply the rest, and with none the tile is just a number. */
+private fun stepsChart(s: Summary, points: List<TrendPoint>, days: Int, fmt: Formatters): StepsChartModel? {
+    if (points.size < 2) return null
+    val goal = s.stepsGoal?.takeIf { it > 0 }
+    val remaining = goal?.let { it - (s.steps ?: 0.0) }
+    return StepsChartModel(
+        series = points.map { it.value },
+        labels = points.map { fmt.weekdayInitial(it.date) },
+        goal = goal,
+        status = when {
+            remaining == null || s.steps == null -> null
+            remaining <= 0 -> UiText.of(R.string.goal_met)
+            else -> UiText.of(R.string.steps_to_go, fmt.number(remaining, 0))
+        },
+        period = periodOf(days),
+    )
+}
+
 private fun dailyTiles(s: Summary, targets: Targets, fmt: Formatters): List<MetricCardModel> {
     fun ring(value: Double?, goal: Double?): Float? =
         if (value != null && goal != null && goal > 0) (value / goal).coerceIn(0.0, 1.0).toFloat() else null
     fun goalText(goal: Double?, text: (Double) -> UiText): UiText? = goal?.takeIf { it > 0 }?.let { UiText.of(R.string.goal_value, text(it)) }
     fun count(goal: Double) = UiText.Literal(fmt.number(goal, 0))
+    fun percent(r: Float?): UiText? = r?.let { UiText.of(R.string.value_percent, fmt.number(it * 100.0, 0)) }
     val distance = s.distanceMeters?.let(fmt::distance)
     val distanceGoal = targets.distanceMeters?.toDouble()
     return listOf(
         MetricCardModel(
             UiText.of(R.string.metric_steps), s.steps?.let { UiText.Literal(fmt.number(it, 0)) },
-            sub = goalText(s.stepsGoal, ::count), ring = ring(s.steps, s.stepsGoal),
+            sub = goalText(s.stepsGoal, ::count), ring = ring(s.steps, s.stepsGoal), ringText = percent(ring(s.steps, s.stepsGoal)),
         ),
         MetricCardModel(
             UiText.of(R.string.metric_distance), distance?.let { UiText.Literal(it.value) }, distance?.unit ?: UiText.of(R.string.unit_km),
-            sub = goalText(distanceGoal) { m -> fmt.distance(m).let { UiText.of(R.string.value_with_unit, it.value, it.unit) } }, ring = ring(s.distanceMeters, distanceGoal),
+            sub = goalText(distanceGoal) { m -> fmt.distance(m).let { UiText.of(R.string.value_with_unit, it.value, it.unit) } }, ring = ring(s.distanceMeters, distanceGoal), ringText = percent(ring(s.distanceMeters, distanceGoal)),
         ),
         MetricCardModel(
             UiText.of(R.string.metric_calories), s.caloriesTotal?.let { UiText.Literal(fmt.number(it, 0)) }, UiText.of(R.string.unit_kcal),
-            sub = goalText(targets.caloriesTotal?.toDouble(), ::count), ring = ring(s.caloriesTotal, targets.caloriesTotal?.toDouble()),
+            sub = goalText(targets.caloriesTotal?.toDouble(), ::count), ring = ring(s.caloriesTotal, targets.caloriesTotal?.toDouble()), ringText = percent(ring(s.caloriesTotal, targets.caloriesTotal?.toDouble())),
         ),
         MetricCardModel(
             UiText.of(R.string.metric_active_cal), s.caloriesActive?.let { UiText.Literal(fmt.number(it, 0)) }, UiText.of(R.string.unit_kcal),
-            sub = goalText(targets.caloriesActive?.toDouble(), ::count), ring = ring(s.caloriesActive, targets.caloriesActive?.toDouble()),
+            sub = goalText(targets.caloriesActive?.toDouble(), ::count), ring = ring(s.caloriesActive, targets.caloriesActive?.toDouble()), ringText = percent(ring(s.caloriesActive, targets.caloriesActive?.toDouble())),
         ),
         MetricCardModel(
             UiText.of(R.string.metric_floors), s.floorsUp?.let { UiText.Literal(fmt.number(it, 0)) },
-            sub = goalText(s.floorsGoal, ::count), ring = ring(s.floorsUp, s.floorsGoal),
+            sub = goalText(s.floorsGoal, ::count), ring = ring(s.floorsUp, s.floorsGoal), ringText = percent(ring(s.floorsUp, s.floorsGoal)),
         ),
     )
 }

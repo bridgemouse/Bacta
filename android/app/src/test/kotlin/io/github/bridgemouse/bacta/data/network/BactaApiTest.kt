@@ -155,4 +155,17 @@ class BactaApiTest {
         assertEquals("/api/settings/mx4_nightly_time", put.url.encodedPath)
         assertEquals("""{"value":"03:00"}""", put.body?.utf8())
     }
+
+    @Test
+    fun changePinKeepsTheSession() = runTest {
+        store.save("old")
+        server.enqueue(
+            MockResponse.Builder().code(200)
+                .addHeader("Set-Cookie", "bacta_session=fresh; Path=/; HttpOnly; SameSite=Lax")
+                .addHeader("Content-Type", "application/json")
+                .body("""{"ok":true}""").build(),
+        )
+        assertEquals(true, api.setPin(SetPinRequest(pin = "5678", currentPin = "1234")).body()?.ok)
+        assertEquals("fresh", store.cookie.first())
+    }
 }

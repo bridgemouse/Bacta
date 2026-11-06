@@ -24,6 +24,7 @@ import org.junit.Test
 private class FakeServer(var result: Compatibility = Compatibility.Ok) : ServerRepository {
     var calls = 0
     var seenVersion: String? = null
+    override suspend fun serverVersion() = Result.success("1.0.0")
     override suspend fun compatibility(appVersion: String): Compatibility {
         calls++
         seenVersion = appVersion

@@ -6,12 +6,17 @@ import javax.inject.Inject
 
 interface ServerRepository {
     suspend fun compatibility(appVersion: String): Compatibility
+
+    /** The version string the connected server reports, for the About screen. */
+    suspend fun serverVersion(): Result<String>
 }
 
 class DefaultServerRepository @Inject constructor(
     private val api: BactaApi,
     private val config: ServerConfig,
 ) : ServerRepository {
+    override suspend fun serverVersion(): Result<String> = resultOf { api.version().server }
+
     /** Tries the remembered server first, then the other candidates, and keeps whichever answers. */
     override suspend fun compatibility(appVersion: String): Compatibility {
         val original = config.current

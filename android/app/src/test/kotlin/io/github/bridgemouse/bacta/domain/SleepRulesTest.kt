@@ -87,10 +87,10 @@ class SleepRulesTest {
         val start = 1793746800000L
         val end = start + 8 * 3_600_000L
         val labels = Hypnogram.axisLabels(start, end, testFormatters)
-        assertEquals(5, labels.size)
+        assertEquals(4, labels.size)
         assertEquals(true, "11:00" in labels.first() && labels.first().contains("PM", ignoreCase = true), labels.first())
         assertEquals(true, "7:00" in labels.last() && labels.last().contains("AM", ignoreCase = true), labels.last())
-        assertEquals(true, "3:00" in labels[2], labels[2])
+        assertEquals(true, "4:20" in labels[2], labels[2])
     }
 
     @Test

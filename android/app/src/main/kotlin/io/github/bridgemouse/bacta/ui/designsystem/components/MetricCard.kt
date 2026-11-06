@@ -44,7 +44,7 @@ fun MetricCard(
     BactaCard(
         accent = accent,
         modifier = modifier.semantics(mergeDescendants = true) { contentDescription = spoken },
-        size = CardSize.Pair,
+        size = if (model.ring != null || model.trend != null) CardSize.Pair else null,
         onClick = onClick,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

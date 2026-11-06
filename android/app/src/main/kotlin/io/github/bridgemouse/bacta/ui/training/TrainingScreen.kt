@@ -17,6 +17,8 @@ import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import io.github.bridgemouse.bacta.ui.designsystem.components.ActivityRow
 import io.github.bridgemouse.bacta.ui.designsystem.components.BactaCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.CardRow
+import io.github.bridgemouse.bacta.ui.designsystem.components.rowCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCard
@@ -64,9 +66,9 @@ private fun Overview(c: TrainingContent) {
     c.status?.let { StatusBanner(it) }
     SectionRail(UiText.of(R.string.rail_performance), Accent, right = UiText.of(R.string.rail_current))
     HeadlineCard(c.performance.load, Accent)
-    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        MetricCard(c.performance.fitnessAge, Accent, Modifier.weight(1f))
-        MetricCard(c.performance.vo2max, Accent, Modifier.weight(1f))
+    CardRow {
+        MetricCard(c.performance.fitnessAge, Accent, rowCard())
+        MetricCard(c.performance.vo2max, Accent, rowCard())
     }
     c.intensity?.let {
         SectionRail(UiText.of(R.string.rail_intensity_week), Accent)
@@ -77,9 +79,10 @@ private fun Overview(c: TrainingContent) {
         BactaCard(Accent) { ZoneBars(it.items) }
     }
     SectionRail(UiText.of(R.string.rail_daily_activity), Accent)
-    c.daily.chunked(2).forEach { row ->
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            row.forEach { MetricCard(it, Accent, Modifier.weight(1f)) }
+    // Tiles with a ring are taller than plain numbers, so they pair with each other and the plain ones pair together.
+    c.daily.sortedBy { it.ring == null }.chunked(2).forEach { row ->
+        CardRow {
+            row.forEach { MetricCard(it, Accent, rowCard()) }
             if (row.size == 1) Spacer(Modifier.weight(1f))
         }
     }

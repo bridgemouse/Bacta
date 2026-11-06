@@ -23,7 +23,7 @@ object Hypnogram {
      * Garmin's local timestamps encode the wall-clock time as if it were UTC, so they are formatted in UTC: the device's own
      * zone would shift them a second time. Without both times there are no labels, never invented ones.
      */
-    fun axisLabels(startLocalMs: Long?, endLocalMs: Long?, fmt: Formatters, ticks: Int = 5): List<String> {
+    fun axisLabels(startLocalMs: Long?, endLocalMs: Long?, fmt: Formatters, ticks: Int = 4): List<String> {
         if (startLocalMs == null || endLocalMs == null || ticks < 2) return emptyList()
         return (0 until ticks).map { i ->
             val ms = startLocalMs + (endLocalMs - startLocalMs) * i / (ticks - 1)

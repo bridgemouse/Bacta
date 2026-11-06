@@ -30,6 +30,15 @@ object BactaPalette {
         }
     }
 
+    /** Heart-rate zones climb from muted through the Training accent to caution and flag, so the scale reads as effort without new hex values. */
+    fun zone(zone: Int): Color = when (zone) {
+        1 -> TextMuted
+        2 -> accent(Section.Training)
+        3 -> Caution
+        4 -> Flag.copy(alpha = 0.85f)
+        else -> Flag
+    }
+
     fun accent(section: Section): Color = when (section) {
         Section.Home -> Mx4
         Section.Recovery -> Color(0xFF64B5F6)

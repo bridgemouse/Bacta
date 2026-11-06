@@ -61,6 +61,8 @@ class DtoDecodingTest {
         assertEquals(51.0, dto.vo2max)
         assertEquals(31.0, dto.fitnessAgeAchievable)
         assertEquals(480.0, dto.trainingLoadMax)
+        assertEquals(30.0, dto.intensityModMin)
+        assertEquals(12.0, dto.intensityVigMin)
         assertEquals(listOf(12.0, 25.0, 18.0, 6.0, 1.0), listOf(dto.hrzone1Min, dto.hrzone2Min, dto.hrzone3Min, dto.hrzone4Min, dto.hrzone5Min))
     }
 

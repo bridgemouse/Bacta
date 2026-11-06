@@ -39,5 +39,7 @@
   "hrzone_2_min": 25,
   "hrzone_3_min": 18,
   "hrzone_4_min": 6,
-  "hrzone_5_min": 1
+  "hrzone_5_min": 1,
+  "intensity_mod_min": 30,
+  "intensity_vig_min": 12
 }

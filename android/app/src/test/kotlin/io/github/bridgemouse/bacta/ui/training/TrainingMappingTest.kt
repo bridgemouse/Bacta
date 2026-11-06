@@ -187,4 +187,17 @@ class TrainingMappingTest {
         assertEquals("14 days", c.trends.first { it.rail.s() == "TRAINING LOAD" }.card.period.s())
         assertEquals("30 days", c.trends.first { it.rail.s() == "FITNESS AGE" }.card.period.s())
     }
+
+    @Test
+    fun theLoadHeadlineCarriesTheDrawnSeriesAndStepsHaveNoCrowdingUnit() {
+        val c = map(day, p = ok(Metric.TrainingLoad to week(1.0, 2.0, 3.0)))
+        assertEquals(listOf(1.0, 2.0, 3.0), c.performance.load.series)
+        assertNull(c.daily.first { it.label.s() == "Steps" }.unit)
+    }
+
+    @Test
+    fun theIntensityTrendShowsTodaysVigorousMinutes() {
+        val c = map(day.copy(intensityVigMin = 12.0), p = ok(Metric.IntensityVig to week(0.0, 5.0, 12.0)))
+        assertEquals("12", c.trends.first { it.rail.s() == "INTENSITY" }.card.value)
+    }
 }

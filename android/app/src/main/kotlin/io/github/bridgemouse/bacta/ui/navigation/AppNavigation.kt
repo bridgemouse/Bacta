@@ -34,6 +34,7 @@ import io.github.bridgemouse.bacta.ui.login.LoginRoute
 import io.github.bridgemouse.bacta.ui.recovery.RecoveryRoute
 import io.github.bridgemouse.bacta.ui.shell.BactaScaffold
 import io.github.bridgemouse.bacta.ui.sleep.SleepRoute
+import io.github.bridgemouse.bacta.ui.training.TrainingRoute
 import io.github.bridgemouse.bacta.ui.shell.Tab
 import io.github.bridgemouse.bacta.ui.shell.rememberSectionTabState
 
@@ -80,6 +81,9 @@ private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
             }
             entry<Destination.Sleep> {
                 SectionFrame(Section.Sleep, tabs = true, backStack = backStack) { tab -> SleepRoute(tab) }
+            }
+            entry<Destination.Training> {
+                SectionFrame(Section.Training, tabs = true, backStack = backStack) { tab -> TrainingRoute(tab) }
             }
         },
     )

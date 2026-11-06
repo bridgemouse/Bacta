@@ -79,7 +79,7 @@ fun toTrainingContent(
     )
     return TrainingContent(
         status = status(summary, fmt),
-        performance = PerformanceModel(loadHeadline(summary, fmt), fitnessAgeCard(summary, fmt), vo2Card(summary, fmt)),
+        performance = PerformanceModel(loadHeadline(summary, series(fast, Metric.TrainingLoad).map { it.value }, fmt), fitnessAgeCard(summary, fmt), vo2Card(summary, fmt)),
         intensity = intensity?.let { intensityMeter(it, targets, fmt) },
         zones = zones(summary),
         daily = dailyTiles(summary, targets, fmt),
@@ -103,7 +103,7 @@ private fun status(s: Summary, fmt: Formatters): StatusModel? {
     return StatusModel(UiText.Literal(label), date?.let { UiText.of(R.string.as_of, fmt.shortDate(it)) })
 }
 
-private fun loadHeadline(s: Summary, fmt: Formatters): HeadlineModel {
+private fun loadHeadline(s: Summary, series: List<Double>, fmt: Formatters): HeadlineModel {
     val load = s.trainingLoad
     val low = s.trainingLoadMin
     val high = s.trainingLoadMax
@@ -114,6 +114,8 @@ private fun loadHeadline(s: Summary, fmt: Formatters): HeadlineModel {
         value = load?.let { fmt.number(it, 0) },
         sub = ratio?.let { UiText.of(R.string.load_ratio, fmt.number(it.value, 2)) },
         chips = listOfNotNull(state?.let { ChipModel(UiText.Literal(it.label), it.tone) }),
+        series = series,
+        average = series.takeIf { it.isNotEmpty() }?.average(),
         band = if (low != null && high != null) low..high else null,
         footnote = if (low != null && high != null) UiText.of(R.string.load_optimal_range, fmt.number(low, 0), fmt.number(high, 0)) else null,
     )
@@ -166,7 +168,7 @@ private fun dailyTiles(s: Summary, targets: Targets, fmt: Formatters): List<Metr
     val distanceGoal = targets.distanceMeters?.toDouble()
     return listOf(
         MetricCardModel(
-            UiText.of(R.string.metric_steps), s.steps?.let { UiText.Literal(fmt.number(it, 0)) }, UiText.of(R.string.unit_steps),
+            UiText.of(R.string.metric_steps), s.steps?.let { UiText.Literal(fmt.number(it, 0)) },
             sub = goalText(s.stepsGoal, ::count), ring = ring(s.steps, s.stepsGoal),
         ),
         MetricCardModel(

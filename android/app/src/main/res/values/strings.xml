@@ -245,4 +245,15 @@
     <string name="cap_intensity">vigorous minutes count double toward the weekly goal</string>
     <string name="cap_steps">daily step count</string>
     <string name="cap_calories">resting plus active calories · best for spotting trends</string>
+    <string name="training_status_title">TRAINING STATUS</string>
+    <string name="rail_performance">PERFORMANCE</string>
+    <string name="rail_intensity_week">INTENSITY THIS WEEK</string>
+    <string name="rail_hr_zones">HR ZONES</string>
+    <string name="rail_daily_activity">DAILY ACTIVITY</string>
+    <string name="rail_activity_log">ACTIVITY LOG</string>
+    <string name="zones_today">%1$d MIN TODAY</string>
+    <string name="activities_recent">%1$d RECENT</string>
+    <string name="activities_none">No activities in the last two weeks.</string>
+    <string name="cd_zone_row">%1$s, %2$d minutes, %3$d percent</string>
+    <string name="cd_activity_row">%1$s, %2$s, %3$s</string>
 </resources>

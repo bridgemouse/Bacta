@@ -42,7 +42,7 @@ object MetricCatalog {
         MetricSpec(Metric.SleepAwake, label(R.string.metric_sleep_awake), label(R.string.unit_min), 0, lowerIsBetter = true),
         MetricSpec(Metric.SleepResp, label(R.string.metric_respiration), label(R.string.unit_brpm), 1, lowerIsBetter = true),
         MetricSpec(Metric.SleepSpo2, label(R.string.metric_spo2), label(R.string.unit_percent), 0, lowerIsBetter = false),
-        MetricSpec(Metric.Vo2Max, label(R.string.metric_vo2max), label(R.string.unit_vo2), 0, lowerIsBetter = false),
+        MetricSpec(Metric.Vo2Max, label(R.string.metric_vo2max), label(R.string.unit_vo2), 1, lowerIsBetter = false),
         MetricSpec(Metric.FitnessAge, label(R.string.metric_fitness_age), label(R.string.unit_years), 0, lowerIsBetter = true),
         MetricSpec(Metric.Steps, label(R.string.metric_steps), label(R.string.unit_steps), 0, lowerIsBetter = null, chart = TrendKind.Bars),
         MetricSpec(Metric.CaloriesTotal, label(R.string.metric_calories), label(R.string.unit_kcal), 0, lowerIsBetter = null, chart = TrendKind.Bars),

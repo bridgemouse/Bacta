@@ -200,4 +200,9 @@ class TrainingMappingTest {
         val c = map(day.copy(intensityVigMin = 12.0), p = ok(Metric.IntensityVig to week(0.0, 5.0, 12.0)))
         assertEquals("12", c.trends.first { it.rail.s() == "INTENSITY" }.card.value)
     }
+
+    @Test
+    fun vo2MaxKeepsGarminsDecimal() {
+        assertEquals("48.4", map(day.copy(vo2max = 48.4)).performance.vo2max.value.s())
+    }
 }

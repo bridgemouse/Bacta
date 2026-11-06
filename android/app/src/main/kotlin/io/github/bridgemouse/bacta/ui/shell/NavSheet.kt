@@ -39,7 +39,8 @@ import io.github.bridgemouse.bacta.ui.navigation.SecondaryDestinations
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavSheet(current: Section, onSelect: (Section) -> Unit, onSelectSecondary: (Destination) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = BactaPalette.Surface) {
+    // Skipping the half-open stop keeps Logs and About on screen without a drag.
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = BactaPalette.Surface) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(
                 stringResource(R.string.nav_all_systems),

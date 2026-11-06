@@ -34,7 +34,9 @@ fun buildTrendSections(
     val value = summary.valueOf(spec.metric)
     val average = summary.referenceAverage(spec.metric) ?: points.average()
     val delta = if (catalog.lowerIsBetter != null && value != null) {
-        val d = value - average
+        val scale = Math.pow(10.0, catalog.deltaDecimals.toDouble())
+        // A change that rounds to nothing at the displayed precision is flat, not a red or green arrow beside a zero.
+        val d = Math.round((value - average) * scale) / scale
         fmt.delta(d, catalog.deltaDecimals)?.let { DeltaModel(it, deltaDirection(d, catalog.lowerIsBetter)) }
     } else null
     TrendSectionModel(

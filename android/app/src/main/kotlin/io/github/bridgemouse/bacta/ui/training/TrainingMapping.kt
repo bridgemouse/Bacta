@@ -21,6 +21,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.TrendCardModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendKind
 import io.github.bridgemouse.bacta.ui.designsystem.components.TrendSectionModel
 import io.github.bridgemouse.bacta.ui.format.Formatters
+import io.github.bridgemouse.bacta.ui.metrics.MetricCatalog
 import io.github.bridgemouse.bacta.ui.metrics.TrendSpec
 import io.github.bridgemouse.bacta.ui.metrics.buildTrendSections
 import java.time.LocalDate
@@ -131,7 +132,7 @@ private fun fitnessAgeCard(s: Summary, fmt: Formatters): MetricCardModel = Metri
 
 private fun vo2Card(s: Summary, fmt: Formatters): MetricCardModel = MetricCardModel(
     label = UiText.of(R.string.metric_vo2max),
-    value = s.vo2max?.let { UiText.Literal(fmt.number(it, 0)) },
+    value = s.vo2max?.let { UiText.Literal(fmt.number(it, MetricCatalog.spec(Metric.Vo2Max).decimals)) },
     unit = UiText.of(R.string.unit_vo2),
 )
 

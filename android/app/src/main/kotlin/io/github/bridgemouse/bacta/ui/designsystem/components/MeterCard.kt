@@ -45,13 +45,14 @@ fun MeterCard(model: MeterModel, accent: Color, modifier: Modifier = Modifier) {
         },
         size = CardSize.Tile,
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(model.label.asString().uppercase(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            Text(model.value?.asString() ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
+        Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(model.value?.asString() ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text, maxLines = 1)
             model.unit?.let {
                 Spacer(Modifier.width(4.dp))
-                Text(it.asString(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)
+                Text(it.asString(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary, maxLines = 1)
             }
+            Spacer(Modifier.weight(1f))
             model.stateText?.let {
                 Spacer(Modifier.width(8.dp))
                 Chip(it, toneColor)

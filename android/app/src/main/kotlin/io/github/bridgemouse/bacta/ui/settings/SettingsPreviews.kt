@@ -64,15 +64,15 @@ private fun AboutLoaded() = BactaTheme { AboutScreen("0.0.0-preview", AboutUiSta
 @Preview(widthDp = 412, heightDp = 700, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun LogsLoaded() = BactaTheme {
-    LogsScreen(
+    CompositionLocalProvider(LocalFormatters provides formatters) { LogsScreen(
         LogsUiState.Content(
             listOf("garmin", "mx4"), "garmin",
             listOf(
-                LogEntry("garmin", "info", "Synthetic sync completed", "2026-11-04 03:00:12"),
-                LogEntry("garmin", "error", "Synthetic failure example", "2026-11-03 03:00:09"),
-                LogEntry("mx4", "warn", "Synthetic warning example", "2026-11-03 02:00:01"),
+                LogEntry("garmin", "info", "Synthetic sync completed", java.time.Instant.parse("2026-11-04T03:00:12Z")),
+                LogEntry("garmin", "error", "Synthetic failure example", java.time.Instant.parse("2026-11-03T03:00:09Z")),
+                LogEntry("mx4", "warn", "Synthetic warning example", java.time.Instant.parse("2026-11-03T02:00:01Z")),
             ),
         ),
         onSelect = {}, onRefresh = {},
-    )
+    ) }
 }

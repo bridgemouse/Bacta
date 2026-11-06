@@ -127,6 +127,9 @@ fun BarsChart(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         labels[i],
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Visible,
                         style = MaterialTheme.typography.labelSmall,
                         color = if (last) accent else MaterialTheme.colorScheme.textSecondary,
                     )

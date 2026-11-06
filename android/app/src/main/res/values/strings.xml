@@ -199,4 +199,50 @@
     <string name="cd_stage_row">%1$s, %2$s, %3$d percent of the night</string>
     <string name="cd_stage_row_plain">%1$s, %2$s</string>
     <string name="cd_architecture_part">%1$s, %2$d percent of target</string>
+
+    <!-- Training -->
+    <string name="training_loading">Loading training data…</string>
+    <string name="training_error">Couldn\'t load training data. Check the connection and try again.</string>
+    <string name="as_of">as of %1$s</string>
+    <string name="load_acute">Acute load</string>
+    <string name="load_ratio">Load ratio %1$s</string>
+    <string name="load_optimal_range">optimal %1$s–%2$s</string>
+    <string name="fitness_achievable">achievable %1$s</string>
+    <string name="intensity_goal">goal %1$s min</string>
+    <string name="goal_met">GOAL MET</string>
+    <string name="goal_value">goal %1$s</string>
+    <string name="value_with_unit">%1$s %2$s</string>
+    <string name="zone_warm_up">Warm up</string>
+    <string name="zone_easy">Easy</string>
+    <string name="zone_aerobic">Aerobic</string>
+    <string name="zone_threshold">Threshold</string>
+    <string name="zone_maximum">Maximum</string>
+    <string name="metric_distance">Distance</string>
+    <string name="metric_active_cal">Active cal</string>
+    <string name="metric_floors">Floors</string>
+    <string name="metric_training_volume">Training volume</string>
+    <string name="metric_activity_hr">Avg activity HR</string>
+    <string name="activity_running">Running</string>
+    <string name="activity_trail_running">Trail running</string>
+    <string name="activity_walking">Walking</string>
+    <string name="activity_hiking">Hiking</string>
+    <string name="activity_cycling">Cycling</string>
+    <string name="activity_strength_training">Strength training</string>
+    <string name="activity_multi_sport">Multisport</string>
+    <string name="rail_training_load">TRAINING LOAD</string>
+    <string name="rail_weekly_volume">WEEKLY VOLUME</string>
+    <string name="rail_fitness_age">FITNESS AGE</string>
+    <string name="rail_activity_hr">ACTIVITY HEART RATE</string>
+    <string name="rail_vo2max">VO₂ MAX</string>
+    <string name="rail_intensity">INTENSITY</string>
+    <string name="rail_steps">STEPS</string>
+    <string name="rail_calories">CALORIES</string>
+    <string name="cap_training_load">weighted training stress · stay inside your optimal range to build fitness without overreaching</string>
+    <string name="cap_weekly_volume">training hours per calendar week · the latest week may be partial</string>
+    <string name="cap_fitness_age">lower = better · a falling line means aerobic capacity is improving</string>
+    <string name="cap_activity_hr">same effort at a lower heart rate = aerobic adaptation</string>
+    <string name="cap_vo2max">higher = better · improves with consistent zone 2–4 training</string>
+    <string name="cap_intensity">vigorous minutes count double toward the weekly goal</string>
+    <string name="cap_steps">daily step count</string>
+    <string name="cap_calories">resting plus active calories · best for spotting trends</string>
 </resources>

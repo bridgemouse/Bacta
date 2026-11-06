@@ -42,7 +42,6 @@ private fun RecoveryContentView(ui: RecoveryUiState.Content, tab: Tab, onRefresh
         BriefingCard(ui.briefing, onRefresh = onRefresh)
         when (tab) {
             Tab.Overview -> {
-                SectionRail(UiText.of(R.string.rail_readiness), Accent)
                 GaugeCard(c.readiness, Accent)
                 HeadlineCard(c.hrv, Accent)
                 c.battery?.let { GaugeCard(it, Accent, layout = GaugeLayout.Hero) }

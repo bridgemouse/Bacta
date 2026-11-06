@@ -75,6 +75,23 @@ Priority: **P1** = affects every screen or is cheap and obvious; **P2** = screen
 | H2 | Briefing types out (cursor) | Static | P3 | S | Cosmetic. |
 | H3 | Home/Recovery trends use the older day labels and the fixed 7-day window | Newer screens use `points()` and `Targets.trendDays` | P1 | S | Consistency; listed in the E2 backlog. |
 
+## Owner-reported findings (2026-11-06, from looking at the device)
+
+Each was traced to its cause in the code before planning.
+
+| # | Report | Cause | Fix | Pass |
+|---|---|---|---|---|
+| O1 | Cards have rounded corners but the inner four corner marks are sharp 90° angles | `cardFrame` draws straight L-shaped lines | Draw the brackets as arcs that follow the card radius | A |
+| O2 | MX-4 directive has dead space on the left | The label and text are separate `Row` children, so wrapped text leaves an empty label column | One inline text run: styled label, then the directive | A |
+| O3 | Trends on Home have no average lines | Home's trend rows pass no `average` (only HRV does) and the bar chart cannot draw one | Pass the series mean; add a dashed average line to `BarsChart` | A |
+| O4 | Recovery has dead space; "Readiness" is a section title | The score card has no label of its own, the gauge card has no description, and the gauge box is taller than the arc | Label inside the card, drop the rail, add the one-line summary (R1), size the gauge to its arc | A |
+| O5 | HRV tags are messed up | Two chips sit in a single header row beside the label and wrap at device font scale | Chips on their own flow row, never wrapping mid-label | A |
+| O6 | Body battery sits high in the card with dead space below | `ArcGauge` draws a 200° arc at the top of a 148 dp box, so the lower part is empty | Size the box to the arc's real extent and centre the number on the arc's centre | A |
+| O7 | Three overnight vitals have green dots and one does not | Dot = the band's tone. Sleep HR has no band because Garmin publishes no normal range for it | Always reserve the dot; show a neutral muted dot where there is no band, so tiles read the same | A |
+| O8 | Sleep efficiency has lots of dead space | A full-width card holding one number | Efficiency and debt become one compact pair with progress bars (S2) | B |
+| O9 | Architecture score does not match the web | Single gauge plus three plain bars | Concentric three-arc gauge with "actual / target" per stage (S5) | B |
+| O10 | Activities have no expandable data | Static rows | Expandable rows with per-leg detail (T9); the legs endpoint exists | C |
+
 ## Recommended order of work
 
 1. **Pass A, the finish (G1, G4, G9, S2, H3, R4, S6).** Mostly small and visible on every screen.

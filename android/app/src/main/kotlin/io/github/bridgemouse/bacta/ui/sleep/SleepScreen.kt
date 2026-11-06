@@ -23,6 +23,7 @@ import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.asString
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import io.github.bridgemouse.bacta.ui.designsystem.components.BactaCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.BarStatCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.HypnogramCard
@@ -80,8 +81,10 @@ private fun Overview(c: SleepContent) {
     if (c.stages.isNotEmpty()) {
         BactaCard(Accent) { StageBreakdown(c.stages) }
     }
-    MetricCard(c.efficiency, Accent)
-    c.debt?.let { MeterCard(it, Accent) }
+    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        BarStatCard(c.efficiency, Accent, Modifier.weight(1f))
+        c.debt?.let { BarStatCard(it, Accent, Modifier.weight(1f)) } ?: Spacer(Modifier.weight(1f))
+    }
     c.hypnogram?.let { HypnogramCard(it, Accent) }
     c.architecture?.let { arch ->
         SectionRail(UiText.of(R.string.rail_architecture_score), Accent)

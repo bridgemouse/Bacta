@@ -323,4 +323,6 @@
     <string name="recovery_desc_optimal">Systems restored. Cleared for a high-intensity session today.</string>
     <string name="recovery_desc_ready">Recovered enough for a normal training session today.</string>
     <string name="recovery_desc_low">Recovery incomplete. Prioritize rest or light activity today.</string>
+    <string name="value_percent">%1$s%%</string>
+    <string name="efficiency_awake">%1$s awake in bed</string>
 </resources>

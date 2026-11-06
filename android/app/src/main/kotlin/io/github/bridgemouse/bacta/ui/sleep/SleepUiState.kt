@@ -2,6 +2,7 @@ package io.github.bridgemouse.bacta.ui.sleep
 
 import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
+import io.github.bridgemouse.bacta.ui.designsystem.components.BarStatModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HypnogramModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
@@ -25,8 +26,8 @@ data class SleepContent(
     val inBed: UiText?,
     val score: GaugeModel,
     val stages: List<StageItem>,
-    val efficiency: MetricCardModel,
-    val debt: MeterModel?,
+    val efficiency: BarStatModel,
+    val debt: BarStatModel?,
     val hypnogram: HypnogramModel?,
     val architecture: ArchitectureModel?,
     val vitals: List<StatusTileModel>,

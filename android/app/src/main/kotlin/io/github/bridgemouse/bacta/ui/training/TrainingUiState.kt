@@ -17,7 +17,7 @@ data class PerformanceModel(val load: HeadlineModel, val fitnessAge: MetricCardM
 
 /** [zone] is 1 to 5, which the screen maps to a palette token; [percent] is a whole-number share of today's zone time. */
 @Immutable
-data class ZoneItem(val zone: Int, val label: UiText, val minutes: Int, val percent: Int)
+data class ZoneItem(val zone: Int, val label: UiText, val minutes: Int, val minutesText: UiText, val percent: Int)
 
 @Immutable
 data class ZonesModel(val items: List<ZoneItem>, val totalMinutes: Int)

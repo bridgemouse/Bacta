@@ -82,7 +82,7 @@ fun toTrainingContent(
         performance = PerformanceModel(loadHeadline(summary, series(fast, Metric.TrainingLoad).map { it.value }, fmt), fitnessAgeCard(summary, fmt), vo2Card(summary, fmt)),
         loadRatio = loadRatio(summary, fmt),
         intensity = intensity?.let { intensityCard(it, targets, fmt) },
-        zones = zones(summary),
+        zones = zones(summary, fmt),
         daily = dailyTiles(summary, targets, fmt),
         activities = activities.sortedByDescending { it.start }.map { activityRow(it, fmt) },
         trends = buildList {
@@ -161,10 +161,11 @@ private fun intensityCard(week: WeeklyIntensity, targets: Targets, fmt: Formatte
     )
 }
 
-private fun zones(s: Summary): ZonesModel? {
+private fun zones(s: Summary, fmt: Formatters): ZonesModel? {
     val percents = TrainingRules.zonePercents(s.hrZoneMinutes) ?: return null
     val items = s.hrZoneMinutes.mapIndexed { i, minutes ->
-        ZoneItem(i + 1, UiText.of(ZoneLabels[i]), (minutes ?: 0.0).roundToInt(), percents[i])
+        val whole = (minutes ?: 0.0).roundToInt()
+        ZoneItem(i + 1, UiText.of(ZoneLabels[i]), whole, fmt.duration(whole * 60.0) ?: UiText.of(R.string.duration_m, 0), percents[i])
     }
     return ZonesModel(items, items.sumOf { it.minutes })
 }

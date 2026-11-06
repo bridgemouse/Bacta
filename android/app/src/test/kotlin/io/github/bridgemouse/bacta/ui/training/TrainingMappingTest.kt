@@ -222,4 +222,44 @@ class TrainingMappingTest {
         assertNull(map(Summary(trainingLoad = 300.0)).loadRatio)
         assertNull(map(Summary()).loadRatio)
     }
+
+    @Test
+    fun zoneRowsCarryFormattedMinutes() {
+        val zones = assertNotNull(map(day).zones)
+        assertEquals(listOf("10m", "20m", "15m", "5m", "0m"), zones.items.map { it.minutesText.s() })
+    }
+
+    private val stepsWeek = week(3000.0, 4000.0, 5000.0, 6000.0, 7000.0, 8000.0, 9000.0)
+
+    @Test
+    fun stepsChartHasTheGoalAndWhatRemains() {
+        val chart = assertNotNull(map(day, p = ok(Metric.Steps to stepsWeek)).stepsChart)
+        assertEquals(7, chart.series.size)
+        assertEquals(10000.0, chart.goal)
+        assertEquals("5,000 TO GO", chart.status.s())
+        assertEquals("7 days", chart.period.s())
+    }
+
+    @Test
+    fun reachingTheStepGoalSaysGoalMet() {
+        assertEquals("GOAL MET", map(day.copy(steps = 12000.0), p = ok(Metric.Steps to stepsWeek)).stepsChart?.status.s())
+    }
+
+    @Test
+    fun noGoalMeansNoGoalLineAndNoStatus() {
+        val chart = assertNotNull(map(day.copy(stepsGoal = null), p = ok(Metric.Steps to stepsWeek)).stepsChart)
+        assertNull(chart.goal); assertNull(chart.status)
+    }
+
+    @Test
+    fun oneStepPointDrawsNoChart() {
+        assertNull(map(day, p = ok(Metric.Steps to week(5000.0))).stepsChart)
+    }
+
+    @Test
+    fun ringTilesShowAPercent() {
+        val steps = map(day).daily.first { it.label.s() == "Steps" }
+        assertEquals("50%", steps.ringText.s())
+        assertNull(map(day).daily.first { it.label.s() == "Distance" }.ringText)
+    }
 }

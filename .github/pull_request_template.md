@@ -2,6 +2,10 @@
 
 <!-- One paragraph describing the change and why -->
 
+## Android only: docs and web comparison
+
+<!-- Docs consulted (pages read) and anything that deliberately differs from the web app. Delete this section for non-Android changes. -->
+
 ## How to test
 
 <!-- Steps to verify the change works -->

@@ -12,6 +12,7 @@
 | `docs/DESIGN_SYSTEM.md` | You're building or changing any UI component |
 | `docs/DEVELOPMENT.md` | You're setting up, adding a section/component/metric, or hitting a gotcha |
 | `docs/MX4.md` | You're working on MX-4 — orchestrator, briefings, identity, or sigil moods |
+| `docs/ANDROID.md` | **You're touching anything under `android/`** — the five rules, docs-first procedure, no-hardcoding mechanisms, verification and device rules |
 | `docs/GARMIN.md` | You're touching the poller, ingest scripts, or any Garmin API call |
 | `docs/PLUGINS.md` | You need to use an MCP server, Claude Design, or a slash command |
 | `docs/ROADMAP.md` | You need to understand what's built, what's pending, and what's blocked |
@@ -44,6 +45,17 @@ Saved to iPhone home screen, runs on local WiFi only (`bacta.local`). Runs on **
 - `INSERT OR REPLACE` for idempotent `health_snapshots` writes — allows a same-day metric to be corrected on re-poll (e.g. if Garmin revises a computed value).
 - **Prefer editing existing files** over creating new ones.
 - Do not add comments unless the WHY is genuinely non-obvious.
+
+---
+
+## Android rules (non-negotiable — full detail in `docs/ANDROID.md`)
+
+- **Android's docs are the source of truth; the web app is only the picture of the finished product.** Read Google's Android docs first (`ssh wheat@bacta-android`, `android docs search|fetch`; Chromium if a page 404s; `ctx7` for libraries) at Step 0 of every task, and record the pages under "Docs consulted" in the PR. Never translate React code, structure or formulas.
+- **No hardcoding.** UI text in `strings.xml`/`UiText`, numbers/units/dates through `Formatters` (system locale and 12/24 h), per-metric facts in `MetricCatalog`, thresholds in `BandTable`s, goals in `Targets` (DataStore). A ratchet test fails the build on literal `Text(` strings.
+- **Verify formulas against a primary source** (Garmin docs or the live DB) before encoding them; the web's bands were wrong.
+- **Synthetic values only in the repo** (tests, fixtures, previews, commits, issues, PRs). Never commit a real number or a screenshot from the device or real data.
+- **Watch the test fail first (TDD)**, render every changed screen and read the PNG, then check on the device with real data. **Announce before taking over the Fold and wait for "go"**; never change the real PIN.
+- Worktrees (`worktrees/<name>`), never check out branches in `/opt/bacta`, no commits to `main`, owner pushes `android-v*` tags.
 
 ---
 

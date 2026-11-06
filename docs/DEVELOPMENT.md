@@ -103,6 +103,12 @@ Do not create new components if an existing one can be extended. Do not create n
 
 ---
 
+## Android
+
+The native app under `android/` has its own rules and workflow: **read `docs/ANDROID.md` first** (Android docs are the source of truth, no hardcoding, synthetic data only, docs-first at every task).
+
+---
+
 ## Adding a New Section
 
 When a new data source becomes available (e.g. Blood Work, Daily Log — Nutrition already shipped as a custom-built tracker, see `docs/NUTRITION_PLAN.md`):

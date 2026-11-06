@@ -49,7 +49,7 @@ private fun RecoveryContentView(ui: RecoveryUiState.Content, tab: Tab, onRefresh
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     c.pair.forEach { MetricCard(it, Accent, Modifier.weight(1f)) }
                 }
-                SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent)
+                SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent, right = UiText.of(R.string.rail_health_status))
                 c.vitals.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         row.forEach { StatusTile(it, Accent, Modifier.weight(1f)) }

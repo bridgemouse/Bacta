@@ -92,7 +92,7 @@ private fun Overview(c: SleepContent) {
         ArchitectureCard(arch, Accent)
     }
     if (c.vitals.isNotEmpty()) {
-        SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent)
+        SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent, right = UiText.of(R.string.rail_while_asleep))
         c.vitals.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 row.forEach { StatusTile(it, Accent, Modifier.weight(1f)) }

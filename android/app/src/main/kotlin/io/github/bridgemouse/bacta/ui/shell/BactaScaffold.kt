@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
+import io.github.bridgemouse.bacta.ui.designsystem.bactaTexture
 import io.github.bridgemouse.bacta.ui.designsystem.viz.MX4Sigil
 import io.github.bridgemouse.bacta.ui.designsystem.viz.SigilMood
 
@@ -67,7 +68,7 @@ fun BactaScaffold(
     content: @Composable () -> Unit,
 ) {
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().background(BactaPalette.Base)) {
+    Column(Modifier.fillMaxSize().background(BactaPalette.Base).bactaTexture(BactaPalette.accent(section))) {
         TopBar(section, onBack)
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Box(Modifier.widthIn(max = ContentMaxWidth).fillMaxSize()) { content() }
@@ -87,7 +88,7 @@ fun BactaScaffold(
 /** The frame for screens that are not one of the four sections: a back chevron and a title, no dock. */
 @Composable
 fun BactaSecondaryScaffold(title: io.github.bridgemouse.bacta.ui.UiText, onBack: () -> Unit, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxSize().background(BactaPalette.Base)) {
+    Column(Modifier.fillMaxSize().background(BactaPalette.Base).bactaTexture(BactaPalette.Mx4)) {
         Row(
             Modifier.fillMaxWidth().background(BactaPalette.Surface).statusBarsPadding().height(52.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,

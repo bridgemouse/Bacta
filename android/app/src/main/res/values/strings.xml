@@ -328,4 +328,7 @@
     <string name="arch_target">of %1$s</string>
     <string name="arch_target_max">max %1$s</string>
     <string name="cd_architecture_arcs">%1$s, %2$s</string>
+    <string name="rail_health_status">HEALTH STATUS</string>
+    <string name="rail_while_asleep">WHILE ASLEEP</string>
+    <string name="rail_current">CURRENT</string>
 </resources>

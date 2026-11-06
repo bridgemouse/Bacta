@@ -62,7 +62,7 @@ private fun TrainingContentView(ui: TrainingUiState.Content, tab: Tab, onRefresh
 @Composable
 private fun Overview(c: TrainingContent) {
     c.status?.let { StatusBanner(it) }
-    SectionRail(UiText.of(R.string.rail_performance), Accent)
+    SectionRail(UiText.of(R.string.rail_performance), Accent, right = UiText.of(R.string.rail_current))
     HeadlineCard(c.performance.load, Accent)
     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         MetricCard(c.performance.fitnessAge, Accent, Modifier.weight(1f))

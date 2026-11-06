@@ -91,3 +91,8 @@ private fun TrainingTrendsLoaded() = Frame(full(), Tab.Trends)
 @Preview(widthDp = 412, heightDp = 400, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun TrainingError() = BactaTheme { TrainingScreen(TrainingUiState.Error, Tab.Overview, onRefresh = {}) }
+
+// The same screen at 1.3x font scale: labels and chips must wrap whole, never mid-word.
+@Preview(widthDp = 412, heightDp = 2900, fontScale = 1.3f, showBackground = true, backgroundColor = 0xFF0F1117)
+@Composable
+private fun TrainingOverviewLarge() = TrainingOverviewLoaded()

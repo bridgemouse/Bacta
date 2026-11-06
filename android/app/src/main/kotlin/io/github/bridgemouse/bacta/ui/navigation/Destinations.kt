@@ -11,6 +11,9 @@ sealed interface Destination : NavKey {
     @Serializable data object Recovery : Destination
     @Serializable data object Sleep : Destination
     @Serializable data object Training : Destination
+    @Serializable data object Settings : Destination
+    @Serializable data object Logs : Destination
+    @Serializable data object About : Destination
 }
 
 /** Sections that have a screen; the nav sheet lists only these. */
@@ -22,6 +25,7 @@ fun Destination.section(): Section? = when (this) {
     Destination.Recovery -> Section.Recovery
     Destination.Sleep -> Section.Sleep
     Destination.Training -> Section.Training
+    Destination.Settings, Destination.Logs, Destination.About -> null
 }
 
 private fun Section.destination(): Destination? = when (this) {
@@ -30,6 +34,21 @@ private fun Section.destination(): Destination? = when (this) {
     Section.Sleep -> Destination.Sleep
     Section.Training -> Destination.Training
     else -> null
+}
+
+/** Screens outside the four sections, reached from the navigation sheet. */
+val SecondaryDestinations: List<Pair<Destination, Int>> = listOf(
+    Destination.Settings to io.github.bridgemouse.bacta.R.string.settings_title,
+    Destination.Logs to io.github.bridgemouse.bacta.R.string.logs_title,
+    Destination.About to io.github.bridgemouse.bacta.R.string.about_title,
+)
+
+/** Like [openSection]: Home stays underneath so back lands there. */
+fun MutableList<Destination>.openSecondary(target: Destination) {
+    if (lastOrNull() == target) return
+    clear()
+    add(Destination.Home)
+    add(target)
 }
 
 /** Home is always the bottom of the stack, so back from a section lands on Home and back from Home leaves the app. */

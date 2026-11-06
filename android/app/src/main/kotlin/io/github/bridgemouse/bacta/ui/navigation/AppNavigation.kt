@@ -35,6 +35,10 @@ import io.github.bridgemouse.bacta.ui.recovery.RecoveryRoute
 import io.github.bridgemouse.bacta.ui.shell.BactaScaffold
 import io.github.bridgemouse.bacta.ui.sleep.SleepRoute
 import io.github.bridgemouse.bacta.ui.training.TrainingRoute
+import io.github.bridgemouse.bacta.ui.settings.SettingsRoute
+import io.github.bridgemouse.bacta.ui.logs.LogsRoute
+import io.github.bridgemouse.bacta.ui.about.AboutRoute
+import io.github.bridgemouse.bacta.ui.shell.BactaSecondaryScaffold
 import io.github.bridgemouse.bacta.ui.shell.Tab
 import io.github.bridgemouse.bacta.ui.shell.rememberSectionTabState
 
@@ -85,6 +89,15 @@ private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
             entry<Destination.Training> {
                 SectionFrame(Section.Training, tabs = true, backStack = backStack) { tab -> TrainingRoute(tab) }
             }
+            entry<Destination.Settings> {
+                SecondaryFrame(R.string.settings_title, backStack) { SettingsRoute() }
+            }
+            entry<Destination.Logs> {
+                SecondaryFrame(R.string.logs_title, backStack) { LogsRoute() }
+            }
+            entry<Destination.About> {
+                SecondaryFrame(R.string.about_title, backStack) { AboutRoute() }
+            }
         },
     )
 }
@@ -103,9 +116,15 @@ private fun SectionFrame(
         tabState = tabState,
         onBack = { backStack.removeLastOrNull() },
         onOpenSection = backStack::openSection,
+        onOpenSecondary = backStack::openSecondary,
     ) {
         content(tabState.tab)
     }
+}
+
+@Composable
+private fun SecondaryFrame(title: Int, backStack: NavBackStack<Destination>, content: @Composable () -> Unit) {
+    BactaSecondaryScaffold(UiText.of(title), onBack = { backStack.removeLastOrNull() }, content = content)
 }
 
 // NavBackStack<T> keeps the destination type; see https://issuetracker.google.com/issues/463382671

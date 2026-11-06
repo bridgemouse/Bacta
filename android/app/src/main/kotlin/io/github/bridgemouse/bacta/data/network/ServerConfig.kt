@@ -18,6 +18,9 @@ class ServerConfig(val candidates: List<HttpUrl>, initial: HttpUrl? = null) {
     }
 
     companion object {
+        /** Hosts that may use cleartext HTTP. Must match `res/xml/network_security_config.xml`; a test compares the two. */
+        val CLEARTEXT_HOSTS: List<String> = listOf("bacta.home", "192.168.1.119")
+
         val DEFAULT_CANDIDATES: List<HttpUrl> = listOf(
             "http://bacta.home/".toHttpUrl(),
             "http://192.168.1.119:3001/".toHttpUrl(),

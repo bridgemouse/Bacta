@@ -15,4 +15,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun sleep(impl: DefaultSleepRepository): SleepRepository
     @Binds @Singleton abstract fun activity(impl: DefaultActivityRepository): ActivityRepository
     @Binds @Singleton abstract fun server(impl: DefaultServerRepository): ServerRepository
+    @Binds @Singleton abstract fun settings(impl: DefaultSettingsRepository): SettingsRepository
 }

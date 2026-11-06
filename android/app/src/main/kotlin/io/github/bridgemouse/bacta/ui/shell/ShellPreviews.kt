@@ -14,7 +14,7 @@ import io.github.bridgemouse.bacta.ui.gates.ServerUnreachableScreen
 @Preview(widthDp = 411, heightDp = 800, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun ScaffoldHome() = BactaTheme {
-    BactaScaffold(Section.Home, tabs = false, tabState = SectionTabState(), onBack = {}, onOpenSection = {}) {
+    BactaScaffold(Section.Home, tabs = false, tabState = SectionTabState(), onBack = {}, onOpenSection = {}, onOpenSecondary = {}) {
         StateMessage(StateKind.Empty, UiText.Literal("Home content"))
     }
 }
@@ -22,7 +22,7 @@ private fun ScaffoldHome() = BactaTheme {
 @Preview(widthDp = 411, heightDp = 800, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun ScaffoldRecovery() = BactaTheme {
-    BactaScaffold(Section.Recovery, tabs = true, tabState = SectionTabState(Tab.Trends), onBack = {}, onOpenSection = {}) {
+    BactaScaffold(Section.Recovery, tabs = true, tabState = SectionTabState(Tab.Trends), onBack = {}, onOpenSection = {}, onOpenSecondary = {}) {
         StateMessage(StateKind.Empty, UiText.Literal("Recovery content"))
     }
 }

@@ -76,4 +76,12 @@ class AuthAndServerRepositoryTest {
         api.versionHandler = { throw IOException("down") }
         assertEquals(Compatibility.Unreachable, server().compatibility("0.1.0"))
     }
+
+    @Test
+    fun serverVersionReportsTheServersVersionOrAFailure() = runTest {
+        api.versionHandler = { VersionDto("1.4.2", "0.1.0") }
+        assertEquals("1.4.2", server().serverVersion().getOrThrow())
+        api.versionHandler = { throw IOException("down") }
+        assertEquals(true, server().serverVersion().isFailure)
+    }
 }

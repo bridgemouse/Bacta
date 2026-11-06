@@ -32,11 +32,13 @@ import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import io.github.bridgemouse.bacta.ui.designsystem.textSecondary
 import io.github.bridgemouse.bacta.ui.navigation.BuiltSections
+import io.github.bridgemouse.bacta.ui.navigation.Destination
+import io.github.bridgemouse.bacta.ui.navigation.SecondaryDestinations
 
 /** Lists only the sections that have a screen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NavSheet(current: Section, onSelect: (Section) -> Unit, onDismiss: () -> Unit) {
+fun NavSheet(current: Section, onSelect: (Section) -> Unit, onSelectSecondary: (Destination) -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = BactaPalette.Surface) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(
@@ -61,6 +63,20 @@ fun NavSheet(current: Section, onSelect: (Section) -> Unit, onDismiss: () -> Uni
                         style = MaterialTheme.typography.titleMedium,
                         color = if (section == current) BactaPalette.accent(section) else BactaPalette.Text,
                     )
+                }
+            }
+            Text(
+                stringResource(R.string.nav_more),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.textSecondary,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() },
+            )
+            SecondaryDestinations.forEach { (destination, label) ->
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(selected = false, role = Role.Button, onClick = { onSelectSecondary(destination) }).padding(horizontal = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(label), style = MaterialTheme.typography.titleMedium, color = BactaPalette.Text)
                 }
             }
         }

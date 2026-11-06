@@ -20,6 +20,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.CardRow
 import io.github.bridgemouse.bacta.ui.designsystem.components.rowCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.LoadRatioCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.RefreshableScroll
@@ -66,6 +67,7 @@ private fun Overview(c: TrainingContent) {
     c.status?.let { StatusBanner(it) }
     SectionRail(UiText.of(R.string.rail_performance), Accent, right = UiText.of(R.string.rail_current))
     HeadlineCard(c.performance.load, Accent)
+    c.loadRatio?.let { LoadRatioCard(it, Accent) }
     CardRow {
         MetricCard(c.performance.fitnessAge, Accent, rowCard())
         MetricCard(c.performance.vo2max, Accent, rowCard())

@@ -104,7 +104,7 @@ class TrainingMappingTest {
         val load = map(day).performance.load
         assertEquals("300", load.value)
         assertEquals(listOf("Optimal"), load.chips.map { it.text.s() })
-        assertEquals("Load ratio 1.20", load.sub.s())
+        assertNull(load.sub)
         assertEquals("optimal 200–375", load.footnote.s())
         assertEquals(200.0..375.0, load.band)
     }
@@ -204,5 +204,21 @@ class TrainingMappingTest {
     @Test
     fun vo2MaxKeepsGarminsDecimal() {
         assertEquals("48.4", map(day.copy(vo2max = 48.4)).performance.vo2max.value.s())
+    }
+
+    @Test
+    fun loadRatioModelCarriesValueStateAndTrackPosition() {
+        val r = assertNotNull(map(day).loadRatio)
+        assertEquals("1.20", r.value.s())
+        assertEquals("Optimal", r.state?.text.s())
+        assertEquals(0.4667f, r.position, 0.001f)
+        assertEquals("300 acute · 250 chronic", r.caption.s())
+        assertEquals("optimal 0.8–1.5", r.zoneLabel.s())
+    }
+
+    @Test
+    fun noRatioWhenThereIsNoRange() {
+        assertNull(map(Summary(trainingLoad = 300.0)).loadRatio)
+        assertNull(map(Summary()).loadRatio)
     }
 }

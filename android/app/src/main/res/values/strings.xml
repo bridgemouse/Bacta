@@ -203,7 +203,6 @@
     <string name="training_error">Couldn\'t load training data. Check the connection and try again.</string>
     <string name="as_of">as of %1$s</string>
     <string name="load_acute">Acute load</string>
-    <string name="load_ratio">Load ratio %1$s</string>
     <string name="load_optimal_range">optimal %1$s–%2$s</string>
     <string name="fitness_achievable">achievable %1$s</string>
     <string name="intensity_goal">goal %1$s min</string>
@@ -331,4 +330,7 @@
     <string name="rail_health_status">HEALTH STATUS</string>
     <string name="rail_while_asleep">WHILE ASLEEP</string>
     <string name="rail_current">CURRENT</string>
+    <string name="load_ratio_title">Load ratio · acute : chronic</string>
+    <string name="load_ratio_caption">%1$s acute · %2$s chronic</string>
+    <string name="load_ratio_zone">optimal %1$s–%2$s</string>
 </resources>

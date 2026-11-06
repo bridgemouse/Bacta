@@ -81,6 +81,7 @@ fun toTrainingContent(
     return TrainingContent(
         status = status(summary, fmt),
         performance = PerformanceModel(loadHeadline(summary, series(fast, Metric.TrainingLoad).map { it.value }, fmt), fitnessAgeCard(summary, fmt), vo2Card(summary, fmt)),
+        loadRatio = loadRatio(summary, fmt),
         intensity = intensity?.let { intensityMeter(it, targets, fmt) },
         zones = zones(summary),
         daily = dailyTiles(summary, targets, fmt),
@@ -104,16 +105,27 @@ private fun status(s: Summary, fmt: Formatters): StatusModel? {
     return StatusModel(UiText.Literal(label), date?.let { UiText.of(R.string.as_of, fmt.shortDate(it)) })
 }
 
+private fun loadRatio(s: Summary, fmt: Formatters): LoadRatioModel? {
+    val ratio = TrainingRules.loadRatio(s.trainingLoad, s.trainingLoadMin, s.trainingLoadMax) ?: return null
+    return LoadRatioModel(
+        value = UiText.Literal(fmt.number(ratio.value, 2)),
+        state = ChipModel(UiText.Literal(ratio.state.label), ratio.state.tone),
+        position = TrainingRules.ratioTrackPosition(ratio.value),
+        optimalStart = TrainingRules.ratioTrackPosition(TrainingRules.OPTIMAL_LOW),
+        optimalEnd = TrainingRules.ratioTrackPosition(TrainingRules.OPTIMAL_HIGH),
+        caption = UiText.of(R.string.load_ratio_caption, fmt.number(s.trainingLoad ?: 0.0, 0), fmt.number(ratio.chronic, 0)),
+        zoneLabel = UiText.of(R.string.load_ratio_zone, fmt.number(TrainingRules.OPTIMAL_LOW, 1), fmt.number(TrainingRules.OPTIMAL_HIGH, 1)),
+    )
+}
+
 private fun loadHeadline(s: Summary, series: List<Double>, fmt: Formatters): HeadlineModel {
     val load = s.trainingLoad
     val low = s.trainingLoadMin
     val high = s.trainingLoadMax
     val state = TrainingRules.loadState(load, low, high)
-    val ratio = TrainingRules.loadRatio(load, low, high)
     return HeadlineModel(
         label = UiText.of(R.string.load_acute),
         value = load?.let { fmt.number(it, 0) },
-        sub = ratio?.let { UiText.of(R.string.load_ratio, fmt.number(it.value, 2)) },
         chips = listOfNotNull(state?.let { ChipModel(UiText.Literal(it.label), it.tone) }),
         series = series,
         average = series.takeIf { it.isNotEmpty() }?.average(),

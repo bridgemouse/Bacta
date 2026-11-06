@@ -12,6 +12,13 @@ object TrainingRules {
     const val OPTIMAL_LOW = 0.8
     const val OPTIMAL_HIGH = 1.5
 
+    /** The range the load-ratio track shows. Wide enough to hold Garmin's 0.8 to 1.5 zone with room on both sides; a drawing choice, not a Garmin value. */
+    const val RATIO_TRACK_MIN = 0.5
+    const val RATIO_TRACK_MAX = 2.0
+
+    /** Where a ratio sits along the track, 0 to 1, clamped so an extreme ratio stays on the card. */
+    fun ratioTrackPosition(ratio: Double): Float = ((ratio - RATIO_TRACK_MIN) / (RATIO_TRACK_MAX - RATIO_TRACK_MIN)).coerceIn(0.0, 1.0).toFloat()
+
     private val low = Band("Low", Tone.Caution)
     private val optimal = Band("Optimal", Tone.Positive)
     private val high = Band("High", Tone.Flag)

@@ -3,6 +3,7 @@ package io.github.bridgemouse.bacta.ui.training
 import androidx.compose.runtime.Immutable
 import io.github.bridgemouse.bacta.ui.UiText
 import io.github.bridgemouse.bacta.ui.designsystem.components.BriefingModel
+import io.github.bridgemouse.bacta.ui.designsystem.components.ChipModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
@@ -26,10 +27,23 @@ data class ZonesModel(val items: List<ZoneItem>, val totalMinutes: Int)
 @Immutable
 data class ActivityRowModel(val id: String, val title: UiText, val subtitle: UiText, val stats: List<UiText>)
 
+/** Acute:chronic load on a track; [position], [optimalStart] and [optimalEnd] are 0 to 1 along it. */
+@Immutable
+data class LoadRatioModel(
+    val value: UiText,
+    val state: ChipModel?,
+    val position: Float,
+    val optimalStart: Float,
+    val optimalEnd: Float,
+    val caption: UiText,
+    val zoneLabel: UiText,
+)
+
 /** Everything the Training tabs show. Optional cards are null (or empty) when the data behind them does not exist. */
 data class TrainingContent(
     val status: StatusModel?,
     val performance: PerformanceModel,
+    val loadRatio: LoadRatioModel?,
     val intensity: MeterModel?,
     val zones: ZonesModel?,
     val daily: List<MetricCardModel>,

@@ -61,4 +61,13 @@ class NavigationTest {
         assertEquals(true, Section.Sleep in BuiltSections)
         assertEquals(Section.Sleep, Destination.Sleep.section())
     }
+
+    @Test
+    fun openingTrainingKeepsHomeUnderneath() {
+        val stack = mutableListOf<Destination>(Destination.Home)
+        stack.openSection(Section.Training)
+        assertEquals(listOf<Destination>(Destination.Home, Destination.Training), stack)
+        assertEquals(true, Section.Training in BuiltSections)
+        assertEquals(Section.Training, Destination.Training.section())
+    }
 }

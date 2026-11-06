@@ -40,26 +40,26 @@ class SleepRulesTest {
 
     @Test
     fun efficiencyHandlesZeroAndNull() {
-        assertEquals(99, SleepRules.efficiencyPercent(asleepMin = 458, awakeMin = 6))
+        assertEquals(98, SleepRules.efficiencyPercent(asleepMin = 450, awakeMin = 8))
         assertEquals(100, SleepRules.efficiencyPercent(asleepMin = 400, awakeMin = 0))
         assertNull(SleepRules.efficiencyPercent(asleepMin = 0, awakeMin = 0))
     }
 
     @Test
     fun stagePercentsAlwaysSumToOneHundred() {
-        listOf(Triple(87, 276, 95), Triple(1, 1, 1), Triple(100, 100, 100), Triple(33, 33, 34), Triple(0, 10, 0), Triple(7, 7, 7)).forEach { (d, l, r) ->
+        listOf(Triple(80, 280, 90), Triple(1, 1, 1), Triple(100, 100, 100), Triple(33, 33, 34), Triple(0, 10, 0), Triple(7, 7, 7)).forEach { (d, l, r) ->
             assertEquals(100, SleepRules.stagePercents(d, l, r).sum(), "for $d/$l/$r")
         }
-        assertEquals(listOf(19, 60, 21), SleepRules.stagePercents(87, 276, 95))
+        assertEquals(listOf(18, 62, 20), SleepRules.stagePercents(80, 280, 90))
         assertEquals(listOf(0, 0, 0), SleepRules.stagePercents(0, 0, 0))
     }
 
     @Test
     fun architectureMatchesTheDocumentedFormula() {
-        val a = assertNotNull(SleepRules.architecture(deepMin = 87, remMin = 95, awakeMin = 6, totalMin = 458))
-        assertEquals(96, a.score)
-        assertEquals(true, a.deepScore in 0.94..0.96)
-        assertEquals(true, a.remScore in 0.94..0.95)
+        val a = assertNotNull(SleepRules.architecture(deepMin = 80, remMin = 90, awakeMin = 8, totalMin = 450))
+        assertEquals(92, a.score)
+        assertEquals(true, a.deepScore in 0.88..0.90)
+        assertEquals(true, a.remScore in 0.90..0.92)
         assertEquals(1.0, a.awakeScore)
         assertNull(SleepRules.architecture(deepMin = 0, remMin = 0, awakeMin = 0, totalMin = 0))
     }
@@ -76,8 +76,8 @@ class SleepRulesTest {
     @Test
     fun architectureTargetsAreParameters() {
         val strict = ArchitectureTargets(deepShare = 0.30, remShare = 0.30, awakeShare = 0.05)
-        val a = assertNotNull(SleepRules.architecture(deepMin = 87, remMin = 95, awakeMin = 6, totalMin = 458, targets = strict))
-        assertEquals(true, a.score < 96)
+        val a = assertNotNull(SleepRules.architecture(deepMin = 80, remMin = 90, awakeMin = 8, totalMin = 450, targets = strict))
+        assertEquals(true, a.score < 92)
     }
 
     @Test

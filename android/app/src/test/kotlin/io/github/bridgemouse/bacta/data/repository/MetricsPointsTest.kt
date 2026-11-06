@@ -25,9 +25,9 @@ class MetricsPointsTest {
 
     @Test
     fun pointsApplyTheMetricsDisplayDivisor() = runTest {
-        api.trendHandler = { _, _, _ -> TrendDto(listOf(TrendRowDto("2026-11-03", 27480.0))) }
+        api.trendHandler = { _, _, _ -> TrendDto(listOf(TrendRowDto("2026-11-03", 27000.0))) }
         val p = repo.points(setOf(Metric.SleepSeconds), 7, today).getValue(Metric.SleepSeconds).getOrThrow()
-        assertEquals(458.0, p.single().value)
+        assertEquals(450.0, p.single().value)
     }
 
     @Test

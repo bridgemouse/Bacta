@@ -71,6 +71,8 @@ data class Summary(
     val fitnessAgeAchievable: Double? = null,
     val trainingLoadMin: Double? = null,
     val trainingLoadMax: Double? = null,
+    val intensityModMin: Double? = null,
+    val intensityVigMin: Double? = null,
     /** Today's minutes in heart-rate zones 1 to 5; a slot is null when the server has no value for it. */
     val hrZoneMinutes: List<Double?> = List(5) { null },
 )
@@ -134,7 +136,8 @@ fun Summary.valueOf(metric: Metric): Double? = when (metric) {
     Metric.SleepScore -> sleepScore
     Metric.TrainingLoad -> trainingLoad
     Metric.BodyBatteryCurrent -> bodyBatteryCurrent
-    Metric.IntensityMod, Metric.IntensityVig -> null
+    Metric.IntensityMod -> intensityModMin
+    Metric.IntensityVig -> intensityVigMin
     Metric.SleepSeconds -> sleepSeconds?.div(metric.divisor)
     Metric.SleepDeep -> sleepDeepSeconds?.div(metric.divisor)
     Metric.SleepAwake -> sleepAwakeSeconds?.div(metric.divisor)

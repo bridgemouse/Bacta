@@ -27,14 +27,14 @@ private val formatters = LocaleFormatters(Locale.US, is24Hour = false) { Measure
 private val today = LocalDate.of(2026, 11, 4)
 
 private val synthetic = Summary(
-    sleepSeconds = 27480.0, sleepDeepSeconds = 5220.0, sleepLightSeconds = 16560.0, sleepRemSeconds = 5700.0, sleepAwakeSeconds = 360.0,
-    sleepScore = 87.0, sleepHr = 47.0, sleepResp = 13.5, sleepStress = 12.0, sleepSpo2 = 96.0,
+    sleepSeconds = 27000.0, sleepDeepSeconds = 4800.0, sleepLightSeconds = 16800.0, sleepRemSeconds = 5400.0, sleepAwakeSeconds = 480.0,
+    sleepScore = 87.0, sleepHr = 51.0, sleepResp = 13.5, sleepStress = 12.0, sleepSpo2 = 96.0,
 )
 
 private fun week(vararg v: Double) = v.mapIndexed { i, x -> TrendPoint(today.minusDays((v.size - 1 - i).toLong()), x) }
 
 private val points: Map<Metric, Result<List<TrendPoint>>> = mapOf(
-    Metric.SleepSeconds to Result.success(week(430.0, 455.0, 400.0, 470.0, 440.0, 420.0, 458.0)),
+    Metric.SleepSeconds to Result.success(week(430.0, 455.0, 400.0, 470.0, 440.0, 420.0, 446.0)),
     Metric.SleepScore to Result.success(week(78.0, 84.0, 72.0, 88.0, 81.0, 76.0, 87.0)),
     Metric.SleepHr to Result.success(week(49.0, 48.0, 50.0, 47.0, 48.0, 49.0, 47.0)),
     Metric.SleepResp to Result.success(week(13.0, 13.4, 13.2, 13.8, 13.1, 13.5, 13.5)),

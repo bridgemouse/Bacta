@@ -88,6 +88,8 @@ private fun SummaryDto.toDomain() = Summary(
     fitnessAgeAchievable = fitnessAgeAchievable,
     trainingLoadMin = trainingLoadMin,
     trainingLoadMax = trainingLoadMax,
+    intensityModMin = intensityModMin,
+    intensityVigMin = intensityVigMin,
     hrZoneMinutes = listOf(hrzone1Min, hrzone2Min, hrzone3Min, hrzone4Min, hrzone5Min),
 )
 

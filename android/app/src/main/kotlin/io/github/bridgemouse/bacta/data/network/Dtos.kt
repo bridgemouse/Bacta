@@ -61,6 +61,8 @@ data class SummaryDto(
     @SerialName("fitness_age_achievable") val fitnessAgeAchievable: Double? = null,
     @SerialName("training_load_min") val trainingLoadMin: Double? = null,
     @SerialName("training_load_max") val trainingLoadMax: Double? = null,
+    @SerialName("intensity_mod_min") val intensityModMin: Double? = null,
+    @SerialName("intensity_vig_min") val intensityVigMin: Double? = null,
     @SerialName("hrzone_1_min") val hrzone1Min: Double? = null,
     @SerialName("hrzone_2_min") val hrzone2Min: Double? = null,
     @SerialName("hrzone_3_min") val hrzone3Min: Double? = null,

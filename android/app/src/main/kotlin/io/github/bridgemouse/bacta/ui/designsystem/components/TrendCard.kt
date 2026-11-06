@@ -6,6 +6,7 @@ import io.github.bridgemouse.bacta.ui.asString
 import io.github.bridgemouse.bacta.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,7 @@ import io.github.bridgemouse.bacta.ui.designsystem.viz.DeltaText
 import io.github.bridgemouse.bacta.ui.designsystem.viz.Sparkline
 
 /** One metric over time: value and delta on the left, a line or bar chart on the right, optional caption below. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun TrendCard(model: TrendCardModel, accent: Color, modifier: Modifier = Modifier) {
     val description = describeSeries(LocalFormatters.current, model.label, model.series, model.period).asString()
@@ -36,11 +38,11 @@ fun TrendCard(model: TrendCardModel, accent: Color, modifier: Modifier = Modifie
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.width(104.dp)) {
                     Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-                    Row(verticalAlignment = Alignment.Bottom) {
+                    // FlowRow moves a long unit under the value as a whole instead of breaking it mid-word.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.Bottom) {
                         Text(model.value ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.displaySmall, color = BactaPalette.Text)
                         model.unit?.let {
-                            Spacer(Modifier.width(4.dp))
-                            Text(it.asString(), Modifier.padding(bottom = 3.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)
+                            Text(it.asString(), Modifier.padding(bottom = 3.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary, softWrap = false)
                         }
                     }
                     model.delta?.let { DeltaText(it) }

@@ -48,7 +48,7 @@ class FormattersTest {
 
     @Test
     fun durationFormatsHoursAndMinutes() {
-        assertEquals("7h 38m", us.duration(27480.0).s())
+        assertEquals("7h 35m", us.duration(27300.0).s())
         assertEquals("7h", us.duration(25200.0).s())
         assertEquals("45m", us.duration(2700.0).s())
         assertNull(us.duration(0.0))

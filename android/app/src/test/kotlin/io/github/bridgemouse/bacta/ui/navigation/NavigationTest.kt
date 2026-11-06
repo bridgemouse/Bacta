@@ -70,4 +70,13 @@ class NavigationTest {
         assertEquals(true, Section.Training in BuiltSections)
         assertEquals(Section.Training, Destination.Training.section())
     }
+
+    @Test
+    fun secondaryScreensKeepHomeUnderneathAndAreNotSections() {
+        val stack = mutableListOf<Destination>(Destination.Home, Destination.Sleep)
+        stack.openSecondary(Destination.Settings)
+        assertEquals(listOf<Destination>(Destination.Home, Destination.Settings), stack)
+        assertEquals(null, Destination.Settings.section())
+        assertEquals(setOf<Destination>(Destination.Settings, Destination.Logs, Destination.About), SecondaryDestinations.map { it.first }.toSet())
+    }
 }

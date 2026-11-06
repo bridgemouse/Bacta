@@ -63,6 +63,7 @@ fun BactaScaffold(
     tabState: SectionTabState,
     onBack: () -> Unit,
     onOpenSection: (Section) -> Unit,
+    onOpenSecondary: (io.github.bridgemouse.bacta.ui.navigation.Destination) -> Unit,
     content: @Composable () -> Unit,
 ) {
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -77,8 +78,31 @@ fun BactaScaffold(
         NavSheet(
             current = section,
             onSelect = { sheetOpen = false; onOpenSection(it) },
+            onSelectSecondary = { sheetOpen = false; onOpenSecondary(it) },
             onDismiss = { sheetOpen = false },
         )
+    }
+}
+
+/** The frame for screens that are not one of the four sections: a back chevron and a title, no dock. */
+@Composable
+fun BactaSecondaryScaffold(title: io.github.bridgemouse.bacta.ui.UiText, onBack: () -> Unit, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize().background(BactaPalette.Base)) {
+        Row(
+            Modifier.fillMaxWidth().background(BactaPalette.Surface).statusBarsPadding().height(52.dp).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BackChevron(onBack)
+            Text(
+                title.asString().uppercase(),
+                style = MaterialTheme.typography.titleMedium,
+                color = BactaPalette.Mx4,
+                modifier = Modifier.padding(start = 10.dp).semantics { heading() },
+            )
+        }
+        Box(Modifier.weight(1f).fillMaxWidth().navigationBarsPadding(), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.widthIn(max = ContentMaxWidth).fillMaxSize()) { content() }
+        }
     }
 }
 

@@ -27,6 +27,7 @@ data class SleepContent(
     val inBed: UiText?,
     val score: GaugeModel,
     val stages: List<StageItem>,
+    val efficiencyLine: UiText?,
     val efficiency: BarStatModel,
     val debt: BarStatModel?,
     val hypnogram: HypnogramModel?,

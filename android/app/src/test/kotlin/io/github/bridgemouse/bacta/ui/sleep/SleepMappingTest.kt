@@ -152,4 +152,10 @@ class SleepMappingTest {
     fun zeroSleepOmitsTheArchitecture() {
         assertNull(map(night.copy(sleepSeconds = 0.0), failed).architecture)
     }
+
+    @Test
+    fun heroCarriesAnEfficiencyAndAwakeSummary() {
+        assertEquals("98% efficient · 8m awake", map(night, failed).efficiencyLine.s())
+        assertNull(map(Summary(), failed).efficiencyLine)
+    }
 }

@@ -1,6 +1,9 @@
 package io.github.bridgemouse.bacta.ui.sleep
 
 import androidx.compose.foundation.layout.Arrangement
+import io.github.bridgemouse.bacta.ui.designsystem.viz.Chip
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -104,6 +107,7 @@ private fun Overview(c: SleepContent) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun LastNightCard(c: SleepContent) {
     BactaCard(Accent) {
@@ -117,12 +121,20 @@ private fun LastNightCard(c: SleepContent) {
                     maxLines = 1,
                 )
                 c.inBed?.let { Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.textSecondary) }
+                c.efficiencyLine?.let { Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = BactaPalette.Positive) }
             }
             Ring(c.score.value?.let { (it / c.score.max).toFloat() } ?: 0f, Accent, Modifier.size(92.dp), strokeWidth = 6.dp) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
                     Text(c.score.valueText ?: stringResource(R.string.value_missing), style = MaterialTheme.typography.headlineMedium, color = BactaPalette.Text)
                     c.score.stateText?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = Accent) }
                 }
+            }
+        }
+        val sleepStages = c.stages.filter { it.stage != io.github.bridgemouse.bacta.domain.SleepStage.Awake }
+        if (sleepStages.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                sleepStages.forEach { Chip(UiText.of(R.string.stage_chip, it.label, it.minutes), BactaPalette.stage(it.stage)) }
             }
         }
     }

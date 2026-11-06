@@ -335,4 +335,6 @@
     <string name="load_ratio_zone">optimal %1$s–%2$s</string>
     <string name="intensity_legend">Moderate %1$s · Vigorous %2$s (counts double)</string>
     <string name="steps_to_go">%1$s TO GO</string>
+    <string name="efficiency_line">%1$s%% efficient · %2$s awake</string>
+    <string name="stage_chip">%1$s %2$s</string>
 </resources>

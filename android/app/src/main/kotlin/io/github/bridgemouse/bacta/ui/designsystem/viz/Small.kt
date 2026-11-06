@@ -39,7 +39,7 @@ fun Chip(text: UiText, color: Color, modifier: Modifier = Modifier) {
     ) {
         StatusDot(color, Modifier.size(6.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text.asString(), style = MaterialTheme.typography.labelSmall, color = color)
+        Text(text.asString(), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
     }
 }
 

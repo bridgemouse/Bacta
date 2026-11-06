@@ -33,7 +33,7 @@ private val syntheticTrends: Map<Metric, Result<List<Double>>> = Metric.entries.
 private val briefing = BriefingModel(
     UiText.Literal("Recovery"),
     BriefingState.Live(
-        BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", null),
+        BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", "Synthetic directive long enough to wrap onto a second and third line so the layout under the label can be checked."),
         UiText.Literal("NOV 3 · 09:00"),
     ),
 )

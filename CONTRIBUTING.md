@@ -20,6 +20,8 @@ Open an issue first to discuss what you want to build. This avoids duplicate eff
 - `INSERT OR REPLACE` for idempotent `health_snapshots`/`health_activities` writes
 - Validate only at system boundaries (user input, external APIs)
 
+**Android conventions (anything under `android/`):** read `docs/ANDROID.md`. In short: Android's official docs are the source of truth and the web app is only the picture of the finished product; nothing user-visible is hardcoded (strings, formatters, catalogs, targets); tests, fixtures and previews use synthetic data only; formulas are verified against Garmin or the live database before they are encoded. Say which docs you read ("Docs consulted") and any deliberate difference from the web in the PR.
+
 ## Process
 
 1. Fork the repo and create a branch from `main`

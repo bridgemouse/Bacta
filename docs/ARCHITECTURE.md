@@ -1,5 +1,7 @@
 # Bacta — System Architecture
 
+> The native Android client (`android/`) is documented in `docs/ANDROID.md` (rules, layers, verification, device workflow); this file covers the server and the web client.
+
 ## System Diagram
 
 ```mermaid

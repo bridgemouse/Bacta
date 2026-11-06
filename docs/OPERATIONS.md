@@ -115,6 +115,8 @@ Tag releases (`git tag v1.0.0`) on merge to `main`.
 
 ## 9. Android release channel (Firebase App Distribution)
 
+> Development rules for the app itself (docs-first, no hardcoding, synthetic data only, device workflow) are in `docs/ANDROID.md`.
+
 Plan: `docs/superpowers/plans/2026-11-03-firebase-app-distribution.md`.
 
 **Flow.** The owner pushes a tag `android-vX.Y.Z`. `.github/workflows/android-release.yml` builds and signs the APK, publishes the GitHub Release (the permanent archive), then uploads the same APK to Firebase App Distribution with release notes generated from the git history of `android/`. The owner gets an invitation email on the first release and a "new build" email afterwards. If the Firebase secrets are absent the Firebase steps are skipped and the release still succeeds.

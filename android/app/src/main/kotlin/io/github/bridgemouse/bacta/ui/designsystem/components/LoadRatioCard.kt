@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.bridgemouse.bacta.R
 import io.github.bridgemouse.bacta.ui.asString
@@ -53,9 +55,9 @@ fun LoadRatioCard(model: LoadRatioModel, accent: Color, modifier: Modifier = Mod
             val r = 7.dp.toPx()
             drawCircle(stateColor, r, Offset(r + (size.width - 2 * r) * model.position, size.height / 2f))
         }
-        Row(Modifier.fillMaxWidth().height(24.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(model.caption.asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            Text(model.zoneLabel.asString(), style = MaterialTheme.typography.labelSmall, color = BactaPalette.Positive)
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(model.caption.asString(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
+            Text(model.zoneLabel.asString(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = BactaPalette.Positive, textAlign = TextAlign.End)
         }
     }
 }

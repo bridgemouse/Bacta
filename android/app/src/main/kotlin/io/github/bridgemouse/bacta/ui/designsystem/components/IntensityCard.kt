@@ -43,6 +43,7 @@ fun IntensityCard(model: IntensityModel, accent: Color, modifier: Modifier = Mod
                 Text(unit, Modifier.padding(start = 4.dp, bottom = 3.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary)
             }
             if (model.met) Chip(io.github.bridgemouse.bacta.ui.UiText.of(R.string.goal_met), BactaPalette.Positive)
+            else Text(model.goalLabel.asString(), Modifier.padding(bottom = 4.dp), style = MaterialTheme.typography.labelSmall, color = BactaPalette.Positive)
         }
         Spacer(Modifier.height(8.dp))
         Canvas(Modifier.fillMaxWidth().height(14.dp)) {
@@ -57,9 +58,6 @@ fun IntensityCard(model: IntensityModel, accent: Color, modifier: Modifier = Mod
             // The goal sits at the end of the bar.
             drawLine(BactaPalette.Text, Offset(size.width - 1.dp.toPx(), 0f), Offset(size.width - 1.dp.toPx(), size.height), 2.dp.toPx())
         }
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(model.legend.asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
-            Text(model.goalLabel.asString(), style = MaterialTheme.typography.labelSmall, color = BactaPalette.Positive)
-        }
+        Text(model.legend.asString(), Modifier.padding(top = 6.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
     }
 }

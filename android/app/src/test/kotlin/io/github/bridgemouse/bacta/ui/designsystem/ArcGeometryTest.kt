@@ -1,6 +1,7 @@
 package io.github.bridgemouse.bacta.ui.designsystem
 
 import io.github.bridgemouse.bacta.ui.designsystem.viz.arcAspectRatio
+import io.github.bridgemouse.bacta.ui.designsystem.viz.arcDiameter
 import io.github.bridgemouse.bacta.ui.designsystem.viz.arcExtentFraction
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -26,5 +27,14 @@ class ArcGeometryTest {
     fun theBoxIsAsWideAsItIsTallTimesTheInverseOfTheExtent() {
         assertTrue(arcAspectRatio(200f) > arcAspectRatio(240f))
         assertEquals(1f / 0.75f, arcAspectRatio(240f), 0.001f)
+    }
+
+    @Test
+    fun theDiameterFillsTheWidthWhenTheBoxIsTallEnoughAndNeverGoesNegative() {
+        assertEquals(90f, arcDiameter(100f, 100f, 10f, 200f), 0.001f)
+        // a box only 40 tall caps the circle by height: (40 - 10) / 0.5868
+        assertEquals(30f / 0.5868f, arcDiameter(100f, 40f, 10f, 200f), 0.01f)
+        assertEquals(0f, arcDiameter(5f, 5f, 10f, 200f), 0f)
+        assertEquals(0f, arcDiameter(0f, 0f, 10f, 240f), 0f)
     }
 }

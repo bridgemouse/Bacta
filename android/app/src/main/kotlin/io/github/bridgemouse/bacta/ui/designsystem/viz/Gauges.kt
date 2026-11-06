@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.min
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
 import kotlin.math.sin
 
@@ -55,6 +54,10 @@ fun arcExtentFraction(sweep: Float): Float {
     return (1f + below) / 2f
 }
 
+/** The circle's diameter (same unit as the inputs) for an arc box: fills the width, capped by the height, and never negative. */
+fun arcDiameter(width: Float, height: Float, stroke: Float, sweep: Float): Float =
+    maxOf(0f, minOf(width - stroke, (height - stroke) / arcExtentFraction(sweep)))
+
 /** Width divided by height for a box that fits exactly the arc of [sweep] degrees. */
 fun arcAspectRatio(sweep: Float): Float = 1f / arcExtentFraction(sweep)
 
@@ -72,8 +75,7 @@ fun ArcGauge(
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     BoxWithConstraints(modifier) {
-        val extent = arcExtentFraction(sweep)
-        val diameter = min(maxWidth - strokeWidth, (maxHeight - strokeWidth) / extent)
+        val diameter = arcDiameter(maxWidth.value, maxHeight.value, strokeWidth.value, sweep).dp
         Canvas(Modifier.matchParentSize()) {
             val stroke = strokeWidth.toPx()
             val side = diameter.toPx()
@@ -107,8 +109,7 @@ fun ConcentricArcs(
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     BoxWithConstraints(modifier) {
-        val extent = arcExtentFraction(sweep)
-        val outer = min(maxWidth - strokeWidth, (maxHeight - strokeWidth) / extent)
+        val outer = arcDiameter(maxWidth.value, maxHeight.value, strokeWidth.value, sweep).dp
         Canvas(Modifier.matchParentSize()) {
             val stroke = strokeWidth.toPx()
             val step = stroke + gap.toPx()

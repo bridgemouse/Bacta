@@ -244,7 +244,7 @@ private const val TRAINING_EFFECT_MAX = 5.0
 private fun activityDetail(a: Activity, fmt: Formatters): ActivityDetailModel? {
     fun effect(label: Int, te: Double?): EffectBar? {
         val band = TrainingRules.trainingEffectBand(te) ?: return null
-        return EffectBar(UiText.of(label), UiText.Literal(fmt.number(te!!, 1)), (te / TRAINING_EFFECT_MAX).coerceIn(0.0, 1.0).toFloat(), UiText.Literal(band.label), band.tone)
+        return EffectBar(UiText.of(label), UiText.Literal(fmt.number(te!!, 1)), (te / TRAINING_EFFECT_MAX).coerceIn(0.0, 1.0).toFloat(), UiText.Literal(band.label), band.tone.takeIf { te >= TrainingRules.EFFECT_MAINTAINING })
     }
     val effects = listOfNotNull(effect(R.string.effect_aerobic, a.aerobicTe), effect(R.string.effect_anaerobic, a.anaerobicTe))
     val percents = TrainingRules.zonePercents(a.zoneSeconds.map { it?.div(60.0) })

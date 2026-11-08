@@ -294,4 +294,12 @@ class TrainingMappingTest {
     fun detailIsAbsentWhenThereIsNothingToShow() {
         assertNull(map(day, activities = listOf(activity())).activities.single().detail)
     }
+
+    @Test
+    fun aLowTrainingEffectIsNotColouredAsACaution() {
+        val low = assertNotNull(map(day, activities = listOf(activity("aerobic" to 0.1))).activities.single().detail)
+        assertNull(low.effects.single().tone)
+        val maintaining = assertNotNull(map(day, activities = listOf(activity("aerobic" to 2.5))).activities.single().detail)
+        assertNotNull(maintaining.effects.single().tone)
+    }
 }

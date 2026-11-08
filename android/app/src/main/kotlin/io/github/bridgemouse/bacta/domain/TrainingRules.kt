@@ -21,13 +21,16 @@ object TrainingRules {
 
     private const val NEG = Double.NEGATIVE_INFINITY
 
+    /** Training Effect from which an activity counts as having an effect at all; below it (no benefit, minor) a score is plain, not a warning. */
+    const val EFFECT_MAINTAINING = 2.0
+
     /** Garmin's Training Effect scale, 0.0 to 5.0 (Garmin owner's manuals, "About Training Effect"); newer manuals say "impacts" where older ones say "improves". */
     private val effectBands = BandTable(
         listOf(
             BandRow(5.0, Band("Overreaching", Tone.Flag)),
             BandRow(4.0, Band("Highly improving", Tone.Positive)),
             BandRow(3.0, Band("Improving", Tone.Positive)),
-            BandRow(2.0, Band("Maintaining", Tone.Caution)),
+            BandRow(EFFECT_MAINTAINING, Band("Maintaining", Tone.Caution)),
             BandRow(1.0, Band("Minor", Tone.Caution)),
             BandRow(NEG, Band("No benefit", Tone.Caution)),
         ),

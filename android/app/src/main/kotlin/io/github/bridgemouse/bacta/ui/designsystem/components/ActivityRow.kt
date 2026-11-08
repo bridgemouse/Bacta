@@ -1,7 +1,11 @@
 package io.github.bridgemouse.bacta.ui.designsystem.components
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,13 +69,30 @@ fun ActivityRow(model: ActivityRowModel, accent: Color, modifier: Modifier = Mod
         },
         onClick = detail?.let { { expanded = !expanded } },
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = BactaPalette.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = BactaPalette.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // A chevron that points down when closed and up when open, so a row that has more to show says so.
+            if (detail != null) Chevron(expanded, MaterialTheme.colorScheme.textSecondary)
+        }
         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.textSecondary)
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             stats.forEach { Text(it, style = MaterialTheme.typography.labelMedium, color = BactaPalette.Text, maxLines = 1) }
         }
         if (detail != null && expanded) ActivityDetail(detail, accent)
+    }
+}
+
+@Composable
+private fun Chevron(up: Boolean, color: Color) {
+    Canvas(Modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val mid = h / 2f
+        val dy = if (up) -h * 0.12f else h * 0.12f
+        val stroke = 2.dp.toPx()
+        drawLine(color, Offset(w * 0.2f, mid - dy), Offset(w * 0.5f, mid + dy), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.5f, mid + dy), Offset(w * 0.8f, mid - dy), stroke, StrokeCap.Round)
     }
 }
 

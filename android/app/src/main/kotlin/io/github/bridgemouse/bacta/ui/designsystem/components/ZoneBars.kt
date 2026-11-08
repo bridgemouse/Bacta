@@ -46,7 +46,7 @@ fun ZoneBars(zones: List<ZoneItem>, modifier: Modifier = Modifier) {
                         Box(Modifier.fillMaxHeight().fillMaxWidth(item.percent / 100f).background(BactaPalette.zone(item.zone)))
                     }
                 }
-                Text(item.minutesText.asString(), Modifier.width(56.dp).padding(start = 8.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary, maxLines = 1)
+                Text(item.minutesText.asString(), Modifier.width(76.dp).padding(start = 8.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.textSecondary, maxLines = 1)
                 Text(
                     stringResource(R.string.stage_percent, item.percent),
                     Modifier.width(48.dp),

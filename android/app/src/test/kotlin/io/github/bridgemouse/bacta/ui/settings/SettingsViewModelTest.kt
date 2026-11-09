@@ -46,6 +46,8 @@ private class FakeSettings : SettingsRepository {
     var saveHandler: suspend (String, String) -> SaveResult = { k, v -> puts += k to v; SaveResult.Saved }
     var pinHandler: suspend (String, String) -> PinChangeResult = { _, _ -> PinChangeResult.Success }
     var connectionHandler: suspend () -> Result<ConnectionTest> = { Result.success(ConnectionTest(true, null)) }
+    var modelsHandler: suspend () -> Result<Map<String, List<String>>> = { Result.success(mapOf("google" to listOf("gemini-new", "gemini-alt"), "anthropic" to listOf("claude-new"))) }
+    override suspend fun models() = modelsHandler()
     override suspend fun load() = loadHandler()
     override suspend fun save(key: String, value: String) = saveHandler(key, value)
     override suspend fun testConnection() = connectionHandler()
@@ -236,5 +238,40 @@ class SettingsViewModelTest {
         gate.complete(SaveResult.Saved)
         assertTrue(vm.content().saving.isEmpty())
         assertEquals("true", vm.content().values.getValue("mx4_nightly_enabled"))
+    }
+
+    @Test
+    fun modelChoicesComeFromTheServerForTheCurrentProviderAndKeepAnUnlistedCurrentModel() = runTest {
+        val c = vm().content()
+        // the loaded briefing model is "model-a", which the server no longer lists
+        assertEquals(listOf("model-a", "gemini-new", "gemini-alt"), c.modelChoices("mx4_briefing_model"))
+    }
+
+    @Test
+    fun anUnreachableModelListLeavesOnlyTheCurrentModelToChooseFrom() = runTest {
+        settings.modelsHandler = { Result.failure(IOException("x")) }
+        assertEquals(listOf("model-a"), vm().content().modelChoices("mx4_briefing_model"))
+    }
+
+    @Test
+    fun changingTheProviderResetsBothModelsToTheFirstOfTheNewProvider() = runTest {
+        val vm = vm()
+        vm.startEdit("ai_provider")
+        vm.save("ai_provider", "anthropic")
+        assertEquals(
+            listOf("ai_provider" to "anthropic", "mx4_briefing_model" to "claude-new", "mx4_chat_model" to "claude-new"),
+            settings.puts,
+        )
+        assertEquals("claude-new", vm.content().values.getValue("mx4_chat_model"))
+    }
+
+    @Test
+    fun aCustomModelOpensTheTextEntryForThatKey() = runTest {
+        val vm = vm()
+        vm.startEdit("mx4_chat_model")
+        assertEquals(false, vm.content().edit?.custom)
+        vm.chooseCustomModel()
+        assertEquals(true, vm.content().edit?.custom)
+        assertEquals("model-b", vm.content().edit?.initial)
     }
 }

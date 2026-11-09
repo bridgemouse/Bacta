@@ -10,12 +10,6 @@ import { LOGO_OPTIONS, DEFAULT_LOGO, logoSrc, type LogoKey } from '../hooks/useA
 import { ProviderCard } from '../components/ProviderCard'
 import type { ProviderSyncStatus } from '../components/ProviderCard'
 
-const MODELS_BY_PROVIDER: Record<string, string[]> = {
-  google:    ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.5-flash'],
-  anthropic: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8'],
-  openai:    ['gpt-4o-mini', 'gpt-4o', 'o3'],
-}
-
 const PROVIDER_LABELS: Record<string, string> = {
   google: 'Gemini', anthropic: 'Claude', openai: 'OpenAI',
 }
@@ -209,6 +203,8 @@ const selectStyle: React.CSSProperties = {
 export function SettingsPage() {
   const navigate = useTransitionNavigate()
   const [settings, setSettings] = useState<Record<string, string>>({})
+  // The models each provider offers come from the server (GET /api/settings/models), the one list the web and Android pickers share.
+  const [modelsByProvider, setModelsByProvider] = useState<Record<string, string[]>>({})
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [clearedKey, setClearedKey] = useState<string | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState('')
@@ -245,6 +241,10 @@ export function SettingsPage() {
     const res = await fetch('/api/integrations/status')
     if (res.ok) setIntegrationStatus(await res.json())
   }
+
+  useEffect(() => {
+    fetch('/api/settings/models').then(r => (r.ok ? r.json() : {})).then(setModelsByProvider).catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(d => {
@@ -454,10 +454,15 @@ export function SettingsPage() {
     ) : null
 
   const currentProvider = settings['ai_provider'] ?? 'google'
-  const models = MODELS_BY_PROVIDER[currentProvider] ?? []
+  const models = modelsByProvider[currentProvider] ?? []
+  // A model saved earlier that is no longer offered (for example a deprecated one) stays selectable so the select never shows a value it cannot hold.
+  const withCurrent = (key: string) => {
+    const current = settings[key]
+    return current && !models.includes(current) ? [current, ...models] : models
+  }
 
   const handleProviderChange = (p: string) => {
-    const firstModel = (MODELS_BY_PROVIDER[p] ?? [])[0] ?? ''
+    const firstModel = (modelsByProvider[p] ?? [])[0] ?? ''
     save('ai_provider', p)
     save('mx4_briefing_model', firstModel)
     save('mx4_chat_model', firstModel)
@@ -671,7 +676,7 @@ export function SettingsPage() {
             onChange={e => save('mx4_briefing_model', e.target.value)}
             style={selectStyle}
           >
-            {models.map(m => (
+            {withCurrent('mx4_briefing_model').map(m => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
@@ -688,7 +693,7 @@ export function SettingsPage() {
             onChange={e => save('mx4_chat_model', e.target.value)}
             style={selectStyle}
           >
-            {models.map(m => (
+            {withCurrent('mx4_chat_model').map(m => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>

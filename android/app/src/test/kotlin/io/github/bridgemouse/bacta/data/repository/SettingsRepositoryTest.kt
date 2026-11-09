@@ -122,4 +122,12 @@ class SettingsRepositoryTest {
         assertEquals("synced", row.message)
         assertEquals(null, row.at)
     }
+
+    @Test
+    fun modelsPassThroughAndAFailureIsAFailure() = runTest {
+        api.modelsHandler = { mapOf("google" to listOf("gemini-a")) }
+        assertEquals(mapOf("google" to listOf("gemini-a")), repo.models().getOrThrow())
+        api.modelsHandler = { throw IOException("down") }
+        assertEquals(true, repo.models().isFailure)
+    }
 }

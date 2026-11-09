@@ -14,8 +14,8 @@ describe('Settings API', () => {
     const res = await request(app).get('/api/settings')
     expect(res.status).toBe(200)
     expect(res.body.ai_provider).toBe('google')
-    expect(res.body.mx4_briefing_model).toBe('gemini-2.5-flash')
-    expect(res.body.mx4_chat_model).toBe('gemini-2.5-flash')
+    expect(res.body.mx4_briefing_model).toBe('gemini-3.8-flash')
+    expect(res.body.mx4_chat_model).toBe('gemini-3.8-flash')
     expect(res.body.mx4_nightly_enabled).toBe('true')
     expect(res.body.mx4_nightly_time).toBe('04:00')
     expect(res.body.mx4_on_sync_enabled).toBe('true')
@@ -76,6 +76,16 @@ describe('Settings API', () => {
       .put('/api/settings/mx4_nightly_time')
       .send({})
     expect(res.status).toBe(400)
+  })
+
+  it('GET /api/settings/models returns the supported models per provider, and includes every default', async () => {
+    const { app } = await import('../../server/index')
+    const { SETTING_DEFAULTS } = await import('../../server/lib/settings')
+    const res = await request(app).get('/api/settings/models')
+    expect(res.status).toBe(200)
+    expect(Object.keys(res.body).sort()).toEqual(['anthropic', 'google', 'openai'])
+    expect(res.body.google).toContain(SETTING_DEFAULTS.mx4_briefing_model)
+    expect(res.body.google).toContain(SETTING_DEFAULTS.mx4_chat_model)
   })
 
   it('GET /api/settings/custom-skills returns seeded SYNC WIKI skill', async () => {

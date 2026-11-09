@@ -34,6 +34,7 @@ private fun content(edit: EditState? = null, saving: Set<String> = emptySet(), c
         ServerRowModel("http://example.org/", inUse = false, check = ServerUrlCheck.CleartextBlocked("example.org")),
     ),
     edit = edit, saving = saving, connection = connection,
+    models = mapOf("google" to listOf("synthetic-model-new", "synthetic-model-alt"), "anthropic" to listOf("synthetic-claude")),
 )
 
 @Composable
@@ -76,3 +77,7 @@ private fun LogsLoaded() = BactaTheme {
         onSelect = {}, onRefresh = {},
     ) }
 }
+
+@Preview(widthDp = 412, heightDp = 900, showBackground = true, backgroundColor = 0xFF0F1117)
+@Composable
+private fun SettingsModelPicker() = Frame(SettingsUiState.Content(content(edit = EditState("mx4_chat_model", "synthetic-model-b"))))

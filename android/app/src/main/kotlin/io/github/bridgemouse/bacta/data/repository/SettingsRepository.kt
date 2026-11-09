@@ -36,6 +36,9 @@ data class ConnectionTest(val ok: Boolean, val error: String?)
 interface SettingsRepository {
     /** The in-use settings as the server holds them; secrets arrive masked. */
     suspend fun load(): Result<Map<String, String>>
+
+    /** Models offered per provider; the pickers fall back to the current value alone if this fails. */
+    suspend fun models(): Result<Map<String, List<String>>>
     suspend fun save(key: String, value: String): SaveResult
     suspend fun testConnection(): Result<ConnectionTest>
     suspend fun changePin(current: String, new: String): PinChangeResult
@@ -46,6 +49,8 @@ interface SettingsRepository {
 class DefaultSettingsRepository @Inject constructor(private val api: BactaApi) : SettingsRepository {
     private val secrets = SettingKey.All.filter { it.secret }.map { it.key }.toSet()
     private val known = SettingKey.All.map { it.key }.toSet()
+
+    override suspend fun models(): Result<Map<String, List<String>>> = resultOf { api.models() }
 
     override suspend fun load(): Result<Map<String, String>> = resultOf { api.settings().filterKeys { it in known } }
 

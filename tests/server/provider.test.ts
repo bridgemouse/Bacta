@@ -34,14 +34,14 @@ describe('AI Provider', () => {
     const { getModel } = await import('../../server/lib/ai/provider')
     const model = getModel('briefing') as any
     expect(model._provider).toBe('google')
-    expect(model.modelId).toBe('gemini-2.5-flash')
+    expect(model.modelId).toBe('gemini-3.8-flash')
   })
 
   it('getModel returns chat model for purpose="chat"', async () => {
     const { getModel } = await import('../../server/lib/ai/provider')
     const model = getModel('chat') as any
     expect(model._provider).toBe('google')
-    expect(model.modelId).toBe('gemini-2.5-flash')
+    expect(model.modelId).toBe('gemini-3.8-flash')
   })
 
   it('getModel switches to anthropic when ai_provider=anthropic', async () => {
@@ -91,5 +91,13 @@ describe('AI Provider', () => {
     expect(SUPPORTED_MODELS.google.length).toBeGreaterThan(0)
     expect(SUPPORTED_MODELS.anthropic.length).toBeGreaterThan(0)
     expect(SUPPORTED_MODELS.openai.length).toBeGreaterThan(0)
+  })
+
+  it('SUPPORTED_MODELS offers no model Google has deprecated', async () => {
+    const { SUPPORTED_MODELS } = await import('../../server/lib/ai/provider')
+    // Deprecated per https://aistudio.google.com/docs/deprecations (shutdown 2026-12-01 at the earliest).
+    expect(SUPPORTED_MODELS.google).not.toContain('gemini-2.5-flash')
+    expect(SUPPORTED_MODELS.google).not.toContain('gemini-2.5-pro')
+    expect(SUPPORTED_MODELS.google).toContain('gemini-3.8-flash')
   })
 })

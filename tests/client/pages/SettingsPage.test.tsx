@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -142,5 +142,29 @@ describe('SettingsPage — iOS zoom-on-focus (#178)', () => {
     expect(screen.getByPlaceholderText('http://bacta.home')).toHaveStyle({ fontSize: '16px' })
     await user.click(await screen.findByText('GARMIN'))
     expect(screen.getByDisplayValue('Every hour')).toHaveStyle({ fontSize: '16px' })
+  })
+})
+
+describe('SettingsPage — model choice', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/api/settings') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ai_provider: 'google', mx4_briefing_model: 'gemini-2.5-flash' }) })
+      }
+      if (url === '/api/settings/models') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ google: ['gemini-3.8-flash', 'gemini-3.6-flash'], anthropic: ['claude-sonnet-5-5'], openai: ['gpt-4o'] }) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+    }))
+  })
+
+  test('the model select offers the server list and keeps a current model that is no longer listed', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+    await user.click(await screen.findByText('MX-4 INTELLIGENCE'))
+    const select = screen.getAllByRole('combobox')[0]
+    const options = within(select).getAllByRole('option').map(o => o.textContent)
+    expect(options).toEqual(expect.arrayContaining(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash']))
+    expect(select).toHaveValue('gemini-2.5-flash')
   })
 })

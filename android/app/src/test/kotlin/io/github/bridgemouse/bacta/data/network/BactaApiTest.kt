@@ -168,4 +168,11 @@ class BactaApiTest {
         assertEquals(true, api.setPin(SetPinRequest(pin = "5678", currentPin = "1234")).body()?.ok)
         assertEquals("fresh", store.cookie.first())
     }
+
+    @Test
+    fun modelsAreAMapOfProviderToModelIds() = runTest {
+        server.enqueue(json(body = """{"google":["gemini-a","gemini-b"],"anthropic":["claude-a"]}"""))
+        assertEquals(mapOf("google" to listOf("gemini-a", "gemini-b"), "anthropic" to listOf("claude-a")), api.models())
+        assertEquals("/api/settings/models", server.takeRequest().url.encodedPath)
+    }
 }

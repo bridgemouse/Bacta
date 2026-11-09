@@ -41,8 +41,9 @@ class SettingsViewModel @Inject constructor(
         _state.value = SettingsUiState.Loading
         viewModelScope.launch {
             val values = settings.load().getOrNull()
+            val models = settings.models().getOrNull().orEmpty()
             _state.value = if (values == null) SettingsUiState.Error else SettingsUiState.Content(
-                SettingsContent(values = values, targets = targets.targets.first(), servers = serverRows()),
+                SettingsContent(values = values, targets = targets.targets.first(), servers = serverRows(), models = models),
             )
         }
     }
@@ -65,6 +66,10 @@ class SettingsViewModel @Inject constructor(
         c.copy(edit = EditState(key, initial))
     }
 
+    fun chooseCustomModel() = edit { c ->
+        c.copy(edit = c.edit?.copy(custom = true, initial = c.values[c.edit.key].orEmpty()))
+    }
+
     fun cancelEdit() = edit { it.copy(edit = null) }
 
     fun dismissMessage() = edit { it.copy(message = null) }
@@ -77,6 +82,7 @@ class SettingsViewModel @Inject constructor(
         edit { it.copy(saving = it.saving + key, edit = it.edit?.takeIf { e -> e.key == key }?.copy(error = null, saving = true) ?: it.edit) }
         viewModelScope.launch {
             val result = settings.save(key, value)
+            if (result == SaveResult.Saved && key == SettingKey.AiProvider.key) resetModelsFor(value)
             edit { c ->
                 val done = c.copy(saving = c.saving - key)
                 when (result) {
@@ -88,6 +94,13 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** A model id from one provider is meaningless to another, so choosing a provider also selects that provider's first listed model. */
+    private fun resetModelsFor(provider: String) {
+        val first = current()?.models?.get(provider)?.firstOrNull() ?: return
+        save(SettingKey.BriefingModel.key, first)
+        save(SettingKey.ChatModel.key, first)
     }
 
     /** A secret is shown the way the server returns it, masked, never as typed. */

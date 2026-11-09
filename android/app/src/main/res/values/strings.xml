@@ -346,4 +346,5 @@
     <string name="state_expanded">Expanded</string>
     <string name="state_collapsed">Collapsed</string>
     <string name="cd_activity_row_expandable">%1$s, %2$s, %3$s. Double tap for details</string>
+    <string name="model_custom">Custom…</string>
 </resources>

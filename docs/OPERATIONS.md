@@ -64,7 +64,7 @@ Expect `ok` and a sane row count before starting the service.
 - Orchestrator: 3 retries/section with 30s backoff, hard abort on quota/rate/429, every generation bounded by `stepCountIs(8)`.
 - In-flight lock on `POST /api/mx4/run` + `/run/:section` (returns 409) so rapid Home-refresh taps can't stack full runs.
 - Chat history compresses past `mx4_chat_compression_threshold` (default 20).
-- Models pinned to `gemini-2.5-flash` (briefing + chat).
+- Models are chosen in Settings (web and Android) from the list the server offers (`GET /api/settings/models`, `SUPPORTED_MODELS` in `server/lib/ai/provider.ts`); the default is `gemini-3.8-flash`. `gemini-2.5-flash` is deprecated by Google (shutdown 2026-12-01 at the earliest), so an install still pinned to it should switch.
 
 ## 5. Scheduling note (timezone)
 

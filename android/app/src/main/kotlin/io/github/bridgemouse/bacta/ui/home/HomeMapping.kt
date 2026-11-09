@@ -6,6 +6,7 @@ import io.github.bridgemouse.bacta.data.repository.Summary
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.domain.TrainingStatus
 import io.github.bridgemouse.bacta.ui.UiText
+import io.github.bridgemouse.bacta.ui.designsystem.SectionIcons
 import io.github.bridgemouse.bacta.ui.designsystem.components.DeltaDirection
 import io.github.bridgemouse.bacta.ui.designsystem.components.DeltaModel
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCardModel
@@ -34,6 +35,7 @@ private fun Trends.series(metric: Metric): List<Double>? = this[metric]?.getOrNu
 fun toTiles(summary: Summary, trends: Trends, fmt: Formatters): List<MetricCardModel> = listOf(
     MetricCardModel(
         label = UiText.of(R.string.label_recovery),
+        icon = SectionIcons.of(Section.Recovery),
         value = summary.bodyBatteryCurrent?.let { UiText.Literal(fmt.number(it, 0)) },
         unit = UiText.of(R.string.unit_battery),
         sub = hrvSub(summary.hrv, summary.hrvWeekAvg, fmt),
@@ -42,6 +44,7 @@ fun toTiles(summary: Summary, trends: Trends, fmt: Formatters): List<MetricCardM
     ),
     MetricCardModel(
         label = UiText.of(R.string.label_training),
+        icon = SectionIcons.of(Section.Training),
         value = summary.trainingLoad?.let { UiText.Literal(fmt.number(it, 0)) },
         unit = UiText.of(R.string.unit_load),
         sub = TrainingStatus.label(summary.trainingStatusN)?.let { UiText.Literal(it) },
@@ -50,6 +53,7 @@ fun toTiles(summary: Summary, trends: Trends, fmt: Formatters): List<MetricCardM
     ),
     MetricCardModel(
         label = UiText.of(R.string.label_sleep),
+        icon = SectionIcons.of(Section.Sleep),
         value = summary.sleepSeconds?.let(fmt::duration),
         sub = summary.sleepScore?.let { UiText.of(R.string.sleep_score_sub, fmt.number(it, 0)) },
         ring = summary.sleepScore?.let { (it / 100).toFloat() },

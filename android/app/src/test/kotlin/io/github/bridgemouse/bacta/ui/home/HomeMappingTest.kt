@@ -30,6 +30,12 @@ class HomeMappingTest {
     }
 
     @Test
+    fun everyTileCarriesItsSectionIcon() {
+        val tiles = toTiles(Summary(), failed)
+        assertEquals(listOf(io.github.bridgemouse.bacta.domain.Section.Recovery, io.github.bridgemouse.bacta.domain.Section.Training, io.github.bridgemouse.bacta.domain.Section.Sleep).map { io.github.bridgemouse.bacta.ui.designsystem.SectionIcons.of(it) }, tiles.map { it.icon })
+    }
+
+    @Test
     fun tilesAreRecoveryTrainingSleepOnly() {
         assertEquals(listOf("Recovery", "Training", "Sleep"), toTiles(Summary(), failed).map { it.label.s() })
     }

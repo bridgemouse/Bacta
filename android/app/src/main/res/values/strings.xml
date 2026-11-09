@@ -350,4 +350,12 @@
     <string name="briefing_full_analysis">FULL ANALYSIS ›</string>
     <string name="briefing_hide_analysis">HIDE ANALYSIS ‹</string>
     <string name="bullet">•</string>
+    <string name="sync_label">SYNC</string>
+    <string name="sync_running">%1$ds</string>
+    <string name="sync_done">SYNCED</string>
+    <string name="sync_failed">ERROR</string>
+    <string name="cd_sync">Sync Garmin data, %1$s</string>
+    <string name="mx4_online">MX-4 ONLINE</string>
+    <string name="mx4_stale">MX-4 STALE</string>
+    <string name="mx4_not_run">MX-4 NOT RUN</string>
 </resources>

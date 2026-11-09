@@ -21,6 +21,12 @@ interface BactaApi {
     @POST("api/auth/logout")
     suspend fun logout(): OkDto
 
+    @POST("api/garmin/sync")
+    suspend fun startSync(): SyncStateDto
+
+    @GET("api/garmin/sync/status")
+    suspend fun syncStatus(): SyncStateDto
+
     @GET("api/garmin/summary")
     suspend fun summary(): SummaryDto
 

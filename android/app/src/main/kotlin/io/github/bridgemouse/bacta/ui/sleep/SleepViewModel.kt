@@ -39,6 +39,7 @@ class SleepViewModel @Inject constructor(
     private val targets: TargetsRepository,
     private val clock: Clock,
     private val fmt: Formatters,
+    private val syncEvents: io.github.bridgemouse.bacta.data.repository.SyncEvents,
 ) : ViewModel() {
     private val _state = MutableStateFlow<SleepUiState>(SleepUiState.Loading)
     val state: StateFlow<SleepUiState> = _state.asStateFlow()
@@ -48,6 +49,8 @@ class SleepViewModel @Inject constructor(
 
     init {
         refresh()
+        // A finished Garmin sync means new data: reload what this screen shows.
+        viewModelScope.launch { syncEvents.completed.collect { refresh() } }
         // A changed target or chart window reloads the screen; the first emission is the one refresh() already read.
         viewModelScope.launch { targets.targets.drop(1).collect { refresh() } }
     }

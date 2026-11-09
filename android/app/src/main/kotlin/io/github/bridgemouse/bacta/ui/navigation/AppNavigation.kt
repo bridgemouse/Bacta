@@ -39,6 +39,8 @@ import io.github.bridgemouse.bacta.ui.settings.SettingsRoute
 import io.github.bridgemouse.bacta.ui.logs.LogsRoute
 import io.github.bridgemouse.bacta.ui.about.AboutRoute
 import io.github.bridgemouse.bacta.ui.shell.BactaSecondaryScaffold
+import io.github.bridgemouse.bacta.ui.shell.StatusBarState
+import io.github.bridgemouse.bacta.ui.shell.StatusBarViewModel
 import io.github.bridgemouse.bacta.ui.shell.Tab
 import io.github.bridgemouse.bacta.ui.shell.rememberSectionTabState
 
@@ -63,6 +65,9 @@ fun AppRoot(viewModel: StartViewModel = hiltViewModel()) {
 
 @Composable
 private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
+    // One status bar view model for the whole app, so a sync started on one screen keeps its state on the next.
+    val statusVm: StatusBarViewModel = hiltViewModel(androidx.activity.compose.LocalActivity.current as androidx.activity.ComponentActivity)
+    val status by statusVm.state.collectAsStateWithLifecycle()
     val backStack = rememberNavBackStack<Destination>(if (loginRequired) Destination.Login else Destination.Home)
     LaunchedEffect(loginRequired) { backStack.reconcileLogin(loginRequired) }
 
@@ -76,18 +81,18 @@ private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
         entryProvider = entryProvider {
             entry<Destination.Login> { LoginRoute(onLoggedIn) }
             entry<Destination.Home> {
-                SectionFrame(Section.Home, tabs = true, backStack = backStack) { tab ->
+                SectionFrame(Section.Home, tabs = true, backStack = backStack, status = status, onSync = statusVm::startSync) { tab ->
                     HomeRoute(tab, onOpenSection = backStack::openSection)
                 }
             }
             entry<Destination.Recovery> {
-                SectionFrame(Section.Recovery, tabs = true, backStack = backStack) { tab -> RecoveryRoute(tab) }
+                SectionFrame(Section.Recovery, tabs = true, backStack = backStack, status = status, onSync = statusVm::startSync) { tab -> RecoveryRoute(tab) }
             }
             entry<Destination.Sleep> {
-                SectionFrame(Section.Sleep, tabs = true, backStack = backStack) { tab -> SleepRoute(tab) }
+                SectionFrame(Section.Sleep, tabs = true, backStack = backStack, status = status, onSync = statusVm::startSync) { tab -> SleepRoute(tab) }
             }
             entry<Destination.Training> {
-                SectionFrame(Section.Training, tabs = true, backStack = backStack) { tab -> TrainingRoute(tab) }
+                SectionFrame(Section.Training, tabs = true, backStack = backStack, status = status, onSync = statusVm::startSync) { tab -> TrainingRoute(tab) }
             }
             entry<Destination.Settings> {
                 SecondaryFrame(R.string.settings_title, backStack) { SettingsRoute() }
@@ -107,6 +112,8 @@ private fun SectionFrame(
     section: Section,
     tabs: Boolean,
     backStack: NavBackStack<Destination>,
+    status: StatusBarState,
+    onSync: () -> Unit,
     content: @Composable (Tab) -> Unit,
 ) {
     val tabState = rememberSectionTabState(section)
@@ -117,6 +124,8 @@ private fun SectionFrame(
         onBack = { backStack.removeLastOrNull() },
         onOpenSection = backStack::openSection,
         onOpenSecondary = backStack::openSecondary,
+        status = status,
+        onSync = onSync,
     ) {
         content(tabState.tab)
     }

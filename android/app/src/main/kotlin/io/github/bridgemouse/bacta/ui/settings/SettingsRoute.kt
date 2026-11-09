@@ -25,8 +25,9 @@ class SettingsActions(
     val changePin: (String, String) -> Unit = { _, _ -> },
     val dismissMessage: () -> Unit = {},
     val chooseCustomModel: () -> Unit = {},
+    val setInfoHints: (Boolean) -> Unit = {},
 ) {
     constructor(vm: SettingsViewModel) : this(
-        vm::refresh, vm::startEdit, vm::cancelEdit, vm::save, vm::setTarget, vm::setTrendDays, vm::testConnection, vm::openPin, vm::closePin, vm::changePin, vm::dismissMessage, vm::chooseCustomModel,
+        vm::refresh, vm::startEdit, vm::cancelEdit, vm::save, vm::setTarget, vm::setTrendDays, vm::testConnection, vm::openPin, vm::closePin, vm::changePin, vm::dismissMessage, vm::chooseCustomModel, vm::setInfoHints,
     )
 }

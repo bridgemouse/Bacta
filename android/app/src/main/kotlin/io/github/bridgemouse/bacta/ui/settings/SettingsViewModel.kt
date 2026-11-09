@@ -27,6 +27,7 @@ class SettingsViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val targets: TargetsRepository,
     private val servers: ServerConfig,
+    private val uiPrefs: io.github.bridgemouse.bacta.data.prefs.UiPreferencesRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow<SettingsUiState>(SettingsUiState.Loading)
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
@@ -35,6 +36,7 @@ class SettingsViewModel @Inject constructor(
         refresh()
         // Targets are shared with the Sleep and Training screens, so the settings view follows the one stored copy.
         viewModelScope.launch { targets.targets.collect { t -> edit { it.copy(targets = t) } } }
+        viewModelScope.launch { uiPrefs.showInfoHints.collect { on -> edit { it.copy(infoHints = on) } } }
     }
 
     fun refresh() {
@@ -136,6 +138,10 @@ class SettingsViewModel @Inject constructor(
             val result = settings.testConnection().getOrNull()
             edit { it.copy(connection = if (result == null) ConnectionState.Failed(null) else if (result.ok) ConnectionState.Ok else ConnectionState.Failed(result.error)) }
         }
+    }
+
+    fun setInfoHints(show: Boolean) {
+        viewModelScope.launch { uiPrefs.setShowInfoHints(show) }
     }
 
     fun openPin() = edit { it.copy(pin = PinState()) }

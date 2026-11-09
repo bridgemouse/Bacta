@@ -400,4 +400,6 @@
     <string name="info_steps_body">Your steps for the last days against Garmin\'s daily step goal, which adapts to how active you are. The dashed line is the goal.</string>
     <string name="cd_show_details">Show details</string>
     <string name="info_close">Close</string>
+    <string name="group_display">DISPLAY</string>
+    <string name="setting_info_hints">Show a hint on cards that explain themselves</string>
 </resources>

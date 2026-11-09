@@ -72,6 +72,9 @@ private fun SettingsContentView(c: SettingsContent, a: SettingsActions, modifier
             SettingRow(UiText.of(R.string.target_calories_active), t.caloriesActive?.let { UiText.of(R.string.value_with_unit, fmt.number(it.toDouble(), 0), UiText.of(R.string.unit_kcal)) } ?: notSet, onClick = { a.startEdit(TargetField.CaloriesActive.name) })
             SettingRow(UiText.of(R.string.target_trend_window), io.github.bridgemouse.bacta.ui.metrics.periodOf(t.trendDays), onClick = { a.startEdit(TREND_KEY) })
         }
+        SettingsGroup(UiText.of(R.string.group_display), Accent) {
+            SettingSwitchRow(UiText.of(R.string.setting_info_hints), c.infoHints, a.setInfoHints, Accent)
+        }
         SettingsGroup(UiText.of(R.string.group_servers), Accent) {
             c.servers.forEach { s ->
                 val status = when (val check = s.check) {

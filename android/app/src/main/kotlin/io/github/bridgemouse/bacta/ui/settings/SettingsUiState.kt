@@ -54,6 +54,8 @@ data class SettingsContent(
     val pin: PinState? = null,
     /** Models each provider offers, from the server; empty when it could not be reached. */
     val models: Map<String, List<String>> = emptyMap(),
+    /** Whether cards that open an explanation show a small cue; the user chooses in Settings. */
+    val infoHints: Boolean = true,
 )
 
 /** Marks the "Custom…" row in the model picker; it does not match the server's model-id pattern, so it can never be a real model. */

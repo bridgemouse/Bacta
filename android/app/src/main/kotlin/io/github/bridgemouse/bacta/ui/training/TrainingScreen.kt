@@ -60,8 +60,11 @@ private fun TrainingContentView(ui: TrainingUiState.Content, tab: Tab, onRefresh
             Tab.Trends -> {
                 if (c.trends.isEmpty()) StateMessage(StateKind.Empty, UiText.of(R.string.trend_none_yet))
                 c.trends.forEach { section ->
-                    SectionRail(section.rail, Accent, right = section.card.period)
-                    TrendCard(section.card, Accent)
+                    // A rail and its chart are one unit, so on a wide window they flow into the columns together.
+                    androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(9.dp)) {
+                        SectionRail(section.rail, Accent, right = section.card.period)
+                        TrendCard(section.card, Accent)
+                    }
                 }
             }
         }

@@ -79,3 +79,8 @@ private fun SleepTrendsLoaded() = Frame(toSleepContent(synthetic, points, hypnog
 @Preview(widthDp = 412, heightDp = 2900, fontScale = 1.3f, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun SleepOverviewLarge() = SleepOverviewLoaded()
+
+// An unfolded inner screen: expanded width, so the cards flow into two columns.
+@Preview(widthDp = 1000, heightDp = 2000, showBackground = true, backgroundColor = 0xFF0F1117)
+@Composable
+private fun SleepOverviewWide() = SleepOverviewLoaded()

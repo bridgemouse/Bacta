@@ -61,7 +61,7 @@ fun BriefingCard(
     val state0 = model.state
     val shown = (state0 as? BriefingState.Live)?.content ?: (state0 as? BriefingState.Stale)?.content ?: (state0 as? BriefingState.Offline)?.last
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+    Column(modifier.fullWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
     BactaCard(accent = accent, size = CardSize.Bar) {
         val state = model.state
         val live = state as? BriefingState.Live

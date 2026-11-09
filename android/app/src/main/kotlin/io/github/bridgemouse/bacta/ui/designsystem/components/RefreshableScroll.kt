@@ -20,13 +20,10 @@ fun RefreshableScroll(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable () -> Unit,
 ) {
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(13.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
-            content = content,
-        )
+        // One column on a phone; two masonry columns once the window is expanded width (an unfolded Fold).
+        AdaptiveColumns(Modifier.verticalScroll(rememberScrollState()).padding(13.dp), content = content)
     }
 }

@@ -50,11 +50,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
+import io.github.bridgemouse.bacta.ui.designsystem.components.columnCountFor
 import io.github.bridgemouse.bacta.ui.designsystem.bactaTexture
 import io.github.bridgemouse.bacta.ui.designsystem.viz.MX4Sigil
 import io.github.bridgemouse.bacta.ui.designsystem.viz.SigilMood
 
 private val ContentMaxWidth = 640.dp
+private val ExpandedContentMaxWidth = 1100.dp
 
 /**
  * The frame every section sits in: status bar, content, dock. Insets are applied to the bars, not the content,
@@ -75,8 +77,10 @@ fun BactaScaffold(
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(BactaPalette.Base).bactaTexture(BactaPalette.accent(section))) {
         TopBar(section, onBack, status, onSync)
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = ContentMaxWidth).fillMaxSize()) { content() }
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            // Two columns on an expanded-width window get more room than a single phone-width column would.
+            val cap = if (columnCountFor(maxWidth.value) == 2) ExpandedContentMaxWidth else ContentMaxWidth
+            Box(Modifier.widthIn(max = cap).fillMaxSize()) { content() }
         }
         Dock(tabs = tabs, tabState = tabState, onNav = { sheetOpen = true })
     }

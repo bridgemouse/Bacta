@@ -35,6 +35,10 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.GaugeCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.HypnogramCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MeterCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.InfoCatalog
+import io.github.bridgemouse.bacta.ui.designsystem.components.InfoSheet
+import io.github.bridgemouse.bacta.ui.designsystem.components.explains
+import io.github.bridgemouse.bacta.ui.designsystem.components.rememberInfoState
 import io.github.bridgemouse.bacta.ui.designsystem.components.RefreshableScroll
 import io.github.bridgemouse.bacta.ui.designsystem.components.SectionRail
 import io.github.bridgemouse.bacta.ui.designsystem.components.StageBreakdown
@@ -61,10 +65,12 @@ fun SleepScreen(ui: SleepUiState, tab: Tab, onRefresh: () -> Unit, modifier: Mod
 @Composable
 private fun SleepContentView(ui: SleepUiState.Content, tab: Tab, onRefresh: () -> Unit, modifier: Modifier) {
     val c = ui.content
+    val info = rememberInfoState()
+    InfoSheet(info)
     RefreshableScroll(ui.refreshing, onRefresh, modifier) {
         BriefingCard(ui.briefing, onRefresh = onRefresh)
         when (tab) {
-            Tab.Overview -> Overview(c)
+            Tab.Overview -> Overview(c, info)
             Tab.Trends -> {
                 if (c.trends.isEmpty()) StateMessage(StateKind.Empty, UiText.of(R.string.trend_none_yet))
                 c.trends.forEach { section ->
@@ -77,30 +83,30 @@ private fun SleepContentView(ui: SleepUiState.Content, tab: Tab, onRefresh: () -
 }
 
 @Composable
-private fun Overview(c: SleepContent) {
+private fun Overview(c: SleepContent, info: io.github.bridgemouse.bacta.ui.designsystem.components.InfoState) {
     val fmt = LocalFormatters.current
     val night = c.night?.let {
         UiText.of(if (it.stale) R.string.night_stale else R.string.night_of, fmt.shortDate(it.date))
     }
     SectionRail(UiText.of(R.string.rail_last_night), Accent, right = night)
-    LastNightCard(c)
+    LastNightCard(c, Modifier.explains(InfoCatalog.SleepScore, info))
     if (c.stages.isNotEmpty()) {
         BactaCard(Accent) { StageBreakdown(c.stages) }
     }
     CardRow {
-        BarStatCard(c.efficiency, Accent, rowCard())
-        c.debt?.let { BarStatCard(it, Accent, rowCard()) } ?: Spacer(Modifier.weight(1f))
+        BarStatCard(c.efficiency, Accent, rowCard().explains(InfoCatalog.SleepEfficiency, info))
+        c.debt?.let { BarStatCard(it, Accent, rowCard().explains(InfoCatalog.SleepDebt, info)) } ?: Spacer(Modifier.weight(1f))
     }
     c.hypnogram?.let { HypnogramCard(it, Accent) }
     c.architecture?.let { arch ->
         SectionRail(UiText.of(R.string.rail_architecture_score), Accent)
-        ArchitectureCard(arch, Accent)
+        ArchitectureCard(arch, Accent, Modifier.explains(InfoCatalog.Architecture, info))
     }
     if (c.vitals.isNotEmpty()) {
         SectionRail(UiText.of(R.string.rail_overnight_vitals), Accent, right = UiText.of(R.string.rail_while_asleep))
         c.vitals.chunked(2).forEach { row ->
             CardRow {
-                row.forEach { StatusTile(it, Accent, rowCard()) }
+                row.forEach { tile -> StatusTile(tile, Accent, sleepVitalInfo(tile.label)?.let { rowCard().explains(it, info) } ?: rowCard()) }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
@@ -109,8 +115,8 @@ private fun Overview(c: SleepContent) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun LastNightCard(c: SleepContent) {
-    BactaCard(Accent) {
+private fun LastNightCard(c: SleepContent, modifier: Modifier = Modifier) {
+    BactaCard(Accent, modifier) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.time_asleep), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
@@ -138,4 +144,12 @@ private fun LastNightCard(c: SleepContent) {
             }
         }
     }
+}
+
+private fun sleepVitalInfo(label: UiText): io.github.bridgemouse.bacta.ui.designsystem.components.InfoText? = when ((label as? UiText.Res)?.id) {
+    R.string.metric_heart_rate -> InfoCatalog.SleepHr
+    R.string.metric_respiration -> InfoCatalog.Respiration
+    R.string.metric_sleep_stress -> InfoCatalog.SleepStress
+    R.string.metric_spo2 -> InfoCatalog.Spo2
+    else -> null
 }

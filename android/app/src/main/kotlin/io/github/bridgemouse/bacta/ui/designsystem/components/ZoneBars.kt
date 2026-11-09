@@ -33,7 +33,7 @@ import io.github.bridgemouse.bacta.ui.training.ZoneItem
 fun ZoneBars(zones: List<ZoneItem>, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // One bar for the whole day, split by each zone's share, above the per-zone rows.
-        Row(Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(7.dp)).clearAndSetSemantics { }) {
+        Row(Modifier.fillMaxWidth().padding(top = infoCueTopInset()).height(14.dp).clip(RoundedCornerShape(7.dp)).clearAndSetSemantics { }) {
             zones.filter { it.percent > 0 }.forEach { Box(Modifier.weight(it.percent.toFloat()).fillMaxHeight().background(BactaPalette.zone(it.zone))) }
         }
         zones.forEach { item ->

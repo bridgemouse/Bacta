@@ -2,6 +2,7 @@ package io.github.bridgemouse.bacta.ui.designsystem.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,7 +27,7 @@ fun StepsChartCard(model: StepsChartModel, accent: Color, modifier: Modifier = M
     val title = stringResource(R.string.metric_steps)
     val description = describeSeries(LocalFormatters.current, io.github.bridgemouse.bacta.ui.UiText.Literal(title), model.series, model.period).asString()
     BactaCard(accent, modifier) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(end = infoCueEndInset()), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(stringResource(R.string.join_dot, title.uppercase(), model.period.asString().uppercase()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
             model.status?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = BactaPalette.Positive) }
         }

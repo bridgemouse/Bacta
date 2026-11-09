@@ -42,7 +42,7 @@ fun StatusTile(model: StatusTileModel, accent: Color, modifier: Modifier = Modif
         contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
     ) {
         // With the card hint on, the dot steps left of the hint mark in the corner instead of sitting under it.
-        Row(Modifier.fillMaxWidth().padding(end = if (LocalInfoHints.current) 16.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(end = infoCueEndInset()), verticalAlignment = Alignment.CenterVertically) {
             Text(model.label.asString().uppercase(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
             // The dot is always there so tiles line up; it is coloured by the band's tone, and muted where no band exists (for example sleep heart rate, which has no published normal range).
             StatusDot(model.tone?.let(BactaPalette::tone) ?: BactaPalette.TextMuted)

@@ -63,6 +63,13 @@ object InfoCatalog {
 /** Whether cards that have an explanation draw a small cue; the Settings toggle feeds this. */
 val LocalInfoHints = androidx.compose.runtime.compositionLocalOf { true }
 
+/** Room a card keeps for the hint mark in its top-right corner: right-aligned header text steps left of it, and a bar that starts at the very top steps below it. Zero when hints are off. */
+@Composable
+fun infoCueEndInset(): androidx.compose.ui.unit.Dp = if (LocalInfoHints.current) 16.dp else 0.dp
+
+@Composable
+fun infoCueTopInset(): androidx.compose.ui.unit.Dp = if (LocalInfoHints.current) 8.dp else 0.dp
+
 /** Which explanation is open, if any; one per screen. */
 @Stable
 class InfoState {

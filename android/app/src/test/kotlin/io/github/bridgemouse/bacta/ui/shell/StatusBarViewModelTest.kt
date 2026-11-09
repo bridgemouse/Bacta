@@ -119,4 +119,14 @@ class StatusBarViewModelTest {
         sync.statusResult = Result.success(SyncState(SyncPhase.Running, 7))
         assertEquals(SyncUi.Running(7), vm().state.value.sync)
     }
+
+    @Test
+    fun askingAgainAfterLoginPicksUpTheBriefing() = runTest {
+        briefings.result = Result.failure(IOException("401 before login"))
+        val vm = vm()
+        assertEquals(Mx4Status.Unknown, vm.state.value.mx4)
+        briefings.result = Result.success(briefing(Duration.ofHours(1)))
+        vm.refreshMx4()
+        assertEquals(Mx4Status.Online, vm.state.value.mx4)
+    }
 }

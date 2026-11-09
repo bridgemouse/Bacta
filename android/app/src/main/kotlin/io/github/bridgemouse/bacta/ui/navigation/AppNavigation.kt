@@ -70,6 +70,8 @@ private fun AppNavigation(loginRequired: Boolean, onLoggedIn: () -> Unit) {
     val status by statusVm.state.collectAsStateWithLifecycle()
     val backStack = rememberNavBackStack<Destination>(if (loginRequired) Destination.Login else Destination.Home)
     LaunchedEffect(loginRequired) { backStack.reconcileLogin(loginRequired) }
+    // The status bar view model starts while the login screen may still be up, where its requests fail; ask again once the user is in.
+    LaunchedEffect(loginRequired) { if (!loginRequired) statusVm.refreshMx4() }
 
     NavDisplay(
         backStack = backStack,

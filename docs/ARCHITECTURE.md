@@ -29,7 +29,7 @@ graph TD
     VAULTSRV -->|SSE, port 8765\n192.168.1.202| LXC109
     ORC -->|reads 30d metrics via queryDb tool| DB
     ORC -->|MCP client\nserver/lib/ai/vaultClient.ts| VAULTSRV
-    ORC -->|Vercel AI SDK, google/anthropic/openai| PROVIDER[AI Provider API\ndefault gemini-3.8-flash]
+    ORC -->|Vercel AI SDK, google/anthropic/openai| PROVIDER[AI Provider API\ndefault gemini-3.5-flash-lite]
     ORC -->|writes| MX4B[(mx4_briefings table)]
     CRON -->|triggers nightly| ORC
     API -->|reads/writes| DB
@@ -291,7 +291,7 @@ server/lib/ai/orchestrator.ts
     ↓ system prompt: mx4/system-prompt.md + mx4/mx4_personal_identity_record.md
     ↓                + docs/MX4_REFERENCE.md + docs/MX4_DROID_VOICE.md (all injected every run)
     ↓ sections: server/lib/ai/sections.ts
-AI Provider API (Vercel AI SDK — google/anthropic/openai, default gemini-3.8-flash)
+AI Provider API (Vercel AI SDK — google/anthropic/openai, default gemini-3.5-flash-lite)
     ↓
 SQLite mx4_briefings table   ← {tone, headline, summary, body, recommendation, flags} per section
     ↓

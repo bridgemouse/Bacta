@@ -34,14 +34,14 @@ describe('AI Provider', () => {
     const { getModel } = await import('../../server/lib/ai/provider')
     const model = getModel('briefing') as any
     expect(model._provider).toBe('google')
-    expect(model.modelId).toBe('gemini-3.8-flash')
+    expect(model.modelId).toBe('gemini-3.5-flash-lite')
   })
 
   it('getModel returns chat model for purpose="chat"', async () => {
     const { getModel } = await import('../../server/lib/ai/provider')
     const model = getModel('chat') as any
     expect(model._provider).toBe('google')
-    expect(model.modelId).toBe('gemini-3.8-flash')
+    expect(model.modelId).toBe('gemini-3.5-flash-lite')
   })
 
   it('getModel switches to anthropic when ai_provider=anthropic', async () => {
@@ -99,5 +99,21 @@ describe('AI Provider', () => {
     expect(SUPPORTED_MODELS.google).not.toContain('gemini-2.5-flash')
     expect(SUPPORTED_MODELS.google).not.toContain('gemini-2.5-pro')
     expect(SUPPORTED_MODELS.google).toContain('gemini-3.8-flash')
+  })
+
+  it('the default Google model is the first one listed, which is the cheapest current-generation model', async () => {
+    const { SUPPORTED_MODELS, DEFAULT_MODEL } = await import('../../server/lib/ai/provider')
+    expect(DEFAULT_MODEL).toBe(SUPPORTED_MODELS.google[0])
+    expect(DEFAULT_MODEL).toBe('gemini-3.5-flash-lite')
+  })
+
+  it('a saved deprecated Gemini model falls back to the default instead of failing', async () => {
+    const { setSetting } = await import('../../server/lib/settings')
+    const { getModel } = await import('../../server/lib/ai/provider')
+    setSetting('ai_provider', 'google')
+    setSetting('mx4_briefing_model', 'gemini-2.5-flash')
+    expect(getModel('briefing').modelId).toBe('gemini-3.5-flash-lite')
+    setSetting('mx4_briefing_model', 'gemini-3.8-flash')
+    expect(getModel('briefing').modelId).toBe('gemini-3.8-flash')
   })
 })

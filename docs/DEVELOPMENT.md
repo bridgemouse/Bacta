@@ -214,7 +214,7 @@ The earlier Python `mx4/orchestrator.py` / `mx4/sections.py` / `mx4/check_signal
 has been **fully removed** — those files no longer exist in `mx4/`.
 
 **Prerequisites:**
-- `ai_api_key` set in Settings (Google; the default model is `gemini-3.8-flash`, chosen in Settings from `GET /api/settings/models`).
+- `ai_api_key` set in Settings (Google; the default model is the cheapest current Flash, `gemini-3.5-flash-lite`, chosen in Settings from `GET /api/settings/models`).
 - Optional: `vault_enabled=true` + `vault_url` for external-vault context; `research_provider`/`research_api_key` for the web research backend (the scholarly OpenAlex backend needs no key).
 
 **Trigger a full run** (writes briefings to the `mx4_briefings` table):

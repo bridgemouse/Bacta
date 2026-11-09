@@ -36,6 +36,8 @@ private fun Briefing.toContent() = BriefingContent(
     headline = headline,
     summary = (summary ?: body).takeUnless { it.isBlank() },
     directive = recommendation.takeUnless { it.isBlank() },
+    body = body.takeIf { summary != null && it.isNotBlank() },
+    flags = flags,
 )
 
 private fun age(at: Instant, now: Instant): UiText {

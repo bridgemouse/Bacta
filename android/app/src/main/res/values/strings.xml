@@ -347,4 +347,7 @@
     <string name="state_collapsed">Collapsed</string>
     <string name="cd_activity_row_expandable">%1$s, %2$s, %3$s. Double tap for details</string>
     <string name="model_custom">Custom…</string>
+    <string name="briefing_full_analysis">FULL ANALYSIS ›</string>
+    <string name="briefing_hide_analysis">HIDE ANALYSIS ‹</string>
+    <string name="bullet">•</string>
 </resources>

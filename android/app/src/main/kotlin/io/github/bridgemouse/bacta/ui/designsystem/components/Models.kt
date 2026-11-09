@@ -116,6 +116,9 @@ data class BriefingContent(
     val headline: String,
     val summary: String?,
     val directive: String?,
+    /** The longer write-up behind the summary; null when the summary already is the whole text. */
+    val body: String? = null,
+    val flags: List<String> = emptyList(),
 )
 
 sealed interface BriefingState {

@@ -131,7 +131,7 @@ fun BriefingCard(
     shown?.flags?.takeIf { it.isNotEmpty() }?.let { flags ->
         val tone = BactaPalette.tone(shown.tone)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            flags.forEach { Chip(UiText.Literal(it.uppercase()), tone) }
+            flags.forEach { Chip(UiText.Literal(it.uppercase()), tone, wrap = true) }
         }
     }
     }

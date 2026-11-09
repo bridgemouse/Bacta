@@ -29,7 +29,7 @@ fun StatusDot(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun Chip(text: UiText, color: Color, modifier: Modifier = Modifier) {
+fun Chip(text: UiText, color: Color, modifier: Modifier = Modifier, wrap: Boolean = false) {
     Row(
         modifier
             .background(color.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
@@ -39,7 +39,7 @@ fun Chip(text: UiText, color: Color, modifier: Modifier = Modifier) {
     ) {
         StatusDot(color, Modifier.size(6.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text.asString(), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
+        Text(text.asString(), style = MaterialTheme.typography.labelSmall, color = color, maxLines = if (wrap) Int.MAX_VALUE else 1, softWrap = wrap)
     }
 }
 

@@ -37,7 +37,7 @@ private val briefing = BriefingModel(
     BriefingState.Live(
         BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", "Synthetic directive long enough to wrap onto a second and third line so the layout under the label can be checked.",
             body = "## Synthetic section\nA synthetic paragraph with **bold** text.\n- first synthetic point\n- second synthetic point\n### Detail\nAnother synthetic line.",
-            flags = listOf("first synthetic flag", "second synthetic flag")),
+            flags = listOf("first synthetic flag", "second synthetic flag", "a third synthetic flag that is long enough to need more than one line on a phone")),
         UiText.Literal("NOV 3 · 09:00"),
     ),
 )

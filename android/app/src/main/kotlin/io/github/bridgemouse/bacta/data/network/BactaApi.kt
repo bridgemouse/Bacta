@@ -49,6 +49,10 @@ interface BactaApi {
     @GET("api/insights/{section}")
     suspend fun briefing(@Path("section") section: String): BriefingDto
 
+    /** The models each provider offers: the one list the web and Android pickers share. */
+    @GET("api/settings/models")
+    suspend fun models(): Map<String, List<String>>
+
     @GET("api/settings")
     suspend fun settings(): Map<String, String>
 

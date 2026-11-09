@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { spawn } from 'child_process'
 import db from '../db/client'
 import { setSetting, getSetting, SETTING_DEFAULTS, SECRET_SETTING_KEYS, PROVIDERS } from '../lib/settings'
+import { SUPPORTED_MODELS } from '../lib/ai/provider'
 import { scheduleNightly } from '../lib/ai/scheduler'
 import { scheduleGarminBackgroundSync } from '../lib/garminSync'
 import { testVaultConnection, resetVaultClient } from '../lib/ai/vaultClient'
@@ -106,6 +107,11 @@ settingsRouter.post('/restart', (_req, res) => {
     if (code !== 0) console.error(`[settings] restart command exited with code ${code}`)
   })
   child.unref()
+})
+
+// The models each provider offers, for the Settings pickers. Defined before PUT /:key; GET has no wildcard so order is not a risk here.
+settingsRouter.get('/models', (_req, res) => {
+  res.json(SUPPORTED_MODELS)
 })
 
 settingsRouter.get('/custom-skills', (_req, res) => {

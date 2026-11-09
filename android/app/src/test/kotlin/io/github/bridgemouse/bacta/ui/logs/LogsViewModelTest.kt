@@ -22,6 +22,7 @@ private class FakeLogs : SettingsRepository {
     var sources: Result<List<String>> = Result.success(listOf("garmin", "mx4"))
     var asked = mutableListOf<Pair<String?, Int>>()
     var logsHandler: (String?) -> Result<List<LogEntry>> = { s -> Result.success(listOf(LogEntry(s ?: "garmin", "info", "synthetic", java.time.Instant.parse("2026-11-04T03:00:00Z")))) }
+    override suspend fun models(): Result<Map<String, List<String>>> = Result.success(emptyMap())
     override suspend fun load() = Result.success(emptyMap<String, String>())
     override suspend fun save(key: String, value: String) = SaveResult.Saved
     override suspend fun testConnection() = Result.success(ConnectionTest(true, null))

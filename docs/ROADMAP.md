@@ -53,7 +53,7 @@
 **MX-4 system — Phase 1 complete (Jun 14, 2026):**
 - `app_settings`, `mx4_briefings`, `mx4_chat_messages` DB tables — schema + auto-migration via `initSettings()`
 - `server/lib/settings.ts` — pure DB helpers (`getSetting`/`setSetting`/`initSettings`) with 7 defaults (google, gemini-2.5-flash, 04:00, etc.)
-- `server/api/settings.ts` — `GET /api/settings` (API key masked), `PUT /api/settings/:key`, `POST /api/settings/test-connection`
+- `server/api/settings.ts` — `GET /api/settings` (API key masked), `GET /api/settings/models` (the models each provider offers, shared by the web and Android pickers; 2026-11-08), `PUT /api/settings/:key`, `POST /api/settings/test-connection`
 - `server/lib/ai/provider.ts` — Vercel AI SDK wrapper, reads settings at call time, supports google/anthropic/openai
 - `server/lib/ai/tools.ts` — 5 MX-4 tools: `queryDb`, `readAllWikiPages`, `writeWikiPage`, `listWikiPages`, `archiveWikiPage` (`readVault` removed Jun 16)
 - `SettingsPage.tsx` — settings UI; accessible from NavSheet under SYSTEM divider

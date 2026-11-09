@@ -104,6 +104,11 @@ private fun EditDialogFor(edit: EditState, c: SettingsContent, a: SettingsAction
             SettingsValidation.AiProviders.map { it to UiText.Literal(it) },
             c.values[key], edit.error, onChoose = { a.save(key, it) }, onDismiss = a.cancelEdit,
         )
+        (key == SettingKey.BriefingModel.key || key == SettingKey.ChatModel.key) && !edit.custom -> ChoiceDialog(
+            UiText.of(if (key == SettingKey.BriefingModel.key) R.string.setting_briefing_model else R.string.setting_chat_model),
+            c.modelChoices(key).map { it to UiText.Literal(it) } + (CUSTOM_MODEL to UiText.of(R.string.model_custom)),
+            c.values[key], edit.error, onChoose = { if (it == CUSTOM_MODEL) a.chooseCustomModel() else a.save(key, it) }, onDismiss = a.cancelEdit,
+        )
         key == SettingKey.GarminSyncMinutes.key -> ChoiceDialog(
             UiText.of(R.string.setting_garmin_sync),
             SyncChoices.map { it.toString() to syncLabel(it) },

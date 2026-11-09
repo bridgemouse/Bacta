@@ -34,6 +34,7 @@ open class FakeBactaApi : BactaApi {
     var weeklyAvgHrHandler: suspend (Int) -> WeeksDto = { error("weekly avg hr not stubbed") }
     var weeklyIntensityHandler: suspend () -> IntensityDto = { error("weekly intensity not stubbed") }
 
+    var modelsHandler: suspend () -> Map<String, List<String>> = { error("models not stubbed") }
     var settingsHandler: suspend () -> Map<String, String> = { error("settings not stubbed") }
     var putSettingHandler: suspend (String, String) -> Response<OkDto> = { _, _ -> error("put setting not stubbed") }
     var testConnectionHandler: suspend () -> TestConnectionDto = { error("test connection not stubbed") }
@@ -41,6 +42,7 @@ open class FakeBactaApi : BactaApi {
     var logsHandler: suspend (String?, Int) -> LogsDto = { _, _ -> error("logs not stubbed") }
     var logSourcesHandler: suspend () -> LogSourcesDto = { error("log sources not stubbed") }
 
+    override suspend fun models() = modelsHandler()
     override suspend fun settings() = settingsHandler()
     override suspend fun putSetting(key: String, body: SettingValueRequest) = putSettingHandler(key, body.value)
     override suspend fun testConnection() = testConnectionHandler()

@@ -29,7 +29,7 @@ graph TD
     VAULTSRV -->|SSE, port 8765\n192.168.1.202| LXC109
     ORC -->|reads 30d metrics via queryDb tool| DB
     ORC -->|MCP client\nserver/lib/ai/vaultClient.ts| VAULTSRV
-    ORC -->|Vercel AI SDK, google/anthropic/openai| PROVIDER[AI Provider API\ngemini-2.5-flash pinned]
+    ORC -->|Vercel AI SDK, google/anthropic/openai| PROVIDER[AI Provider API\ndefault gemini-3.8-flash]
     ORC -->|writes| MX4B[(mx4_briefings table)]
     CRON -->|triggers nightly| ORC
     API -->|reads/writes| DB
@@ -239,6 +239,7 @@ All routes are defined in `server/api/` and mounted in `server/index.ts`, behind
 | `GET` | `/api/settings` | Current settings (API keys masked) |
 | `PUT` | `/api/settings/:key` | Update one setting (encrypts secrets at write) |
 | `POST` | `/api/settings/test-connection`, `/test-vault-connection`, `/restart` | AI-provider test, vault test, service restart |
+| `GET` | `/api/settings/models` | Models each provider offers (`SUPPORTED_MODELS`); the Settings pickers' only source |
 | `GET` | `/api/settings/custom-skills` | User-defined AskSheet quick-prompt skills |
 | `POST`/`GET` | `/api/logs`, `/api/logs/sources` | App-level diagnostic log write (ErrorBoundary, client failures) + viewer feed |
 | `POST` | `/api/mx4/run`, `/run/:section` | Trigger full or per-section MX-4 orchestrator run (409 if already running) |
@@ -290,7 +291,7 @@ server/lib/ai/orchestrator.ts
     ↓ system prompt: mx4/system-prompt.md + mx4/mx4_personal_identity_record.md
     ↓                + docs/MX4_REFERENCE.md + docs/MX4_DROID_VOICE.md (all injected every run)
     ↓ sections: server/lib/ai/sections.ts
-AI Provider API (Vercel AI SDK — google/anthropic/openai, gemini-2.5-flash pinned)
+AI Provider API (Vercel AI SDK — google/anthropic/openai, default gemini-3.8-flash)
     ↓
 SQLite mx4_briefings table   ← {tone, headline, summary, body, recommendation, flags} per section
     ↓

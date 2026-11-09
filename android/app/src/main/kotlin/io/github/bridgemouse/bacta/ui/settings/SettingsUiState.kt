@@ -28,7 +28,7 @@ enum class TargetField(val optional: Boolean) {
 }
 
 /** An open edit dialog: [key] is a setting key or a [TargetField] name; [initial] is empty for secrets, which are never shown back. */
-data class EditState(val key: String, val initial: String, val error: UiText? = null, val saving: Boolean = false)
+data class EditState(val key: String, val initial: String, val error: UiText? = null, val saving: Boolean = false, val custom: Boolean = false)
 
 data class PinState(val saving: Boolean = false, val error: PinChangeResult? = null)
 
@@ -52,7 +52,19 @@ data class SettingsContent(
     val message: UiText? = null,
     val connection: ConnectionState = ConnectionState.Idle,
     val pin: PinState? = null,
+    /** Models each provider offers, from the server; empty when it could not be reached. */
+    val models: Map<String, List<String>> = emptyMap(),
 )
+
+/** Marks the "Custom…" row in the model picker; it does not match the server's model-id pattern, so it can never be a real model. */
+const val CUSTOM_MODEL = "@custom"
+
+/** The models to choose from for [key]: the current provider's list, with a saved model that is no longer listed kept at the front. */
+fun SettingsContent.modelChoices(key: String): List<String> {
+    val listed = models[values["ai_provider"]].orEmpty()
+    val current = values[key]?.takeIf { it.isNotBlank() }
+    return if (current != null && current !in listed) listOf(current) + listed else listed
+}
 
 sealed interface SettingsUiState {
     data object Loading : SettingsUiState

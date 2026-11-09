@@ -7,8 +7,8 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   // AI / MX-4
   ai_provider:                    'google',
   ai_api_key:                     '',
-  mx4_briefing_model:             'gemini-3.8-flash',
-  mx4_chat_model:                 'gemini-3.8-flash',
+  mx4_briefing_model:             'gemini-3.5-flash-lite',
+  mx4_chat_model:                 'gemini-3.5-flash-lite',
   mx4_nightly_enabled:            'true',
   mx4_nightly_time:               '04:00',
   mx4_on_sync_enabled:            'true',

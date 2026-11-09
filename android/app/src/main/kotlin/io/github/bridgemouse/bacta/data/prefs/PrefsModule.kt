@@ -19,10 +19,19 @@ private val Context.targetsDataStore: DataStore<Preferences> by preferencesDataS
     corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
 )
 
+private val Context.uiDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "ui_prefs",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
+
 @Module
 @InstallIn(SingletonComponent::class)
 object PrefsModule {
     @Provides @Singleton
     fun targetsRepository(@ApplicationContext context: Context): TargetsRepository =
         DataStoreTargetsRepository(context.targetsDataStore)
+
+    @Provides @Singleton
+    fun uiPreferencesRepository(@ApplicationContext context: Context): UiPreferencesRepository =
+        DataStoreUiPreferencesRepository(context.uiDataStore)
 }

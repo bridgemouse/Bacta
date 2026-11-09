@@ -57,8 +57,13 @@ fun AppRoot(viewModel: StartViewModel = hiltViewModel()) {
             StartDestination.NeedsLocalNetwork -> LocalNetworkRequiredScreen(permission.request)
             is StartDestination.AppTooOld -> AppTooOldScreen(start.minApp)
             StartDestination.ServerUnreachable -> ServerUnreachableScreen { viewModel.resolve(permission.state, BuildConfig.VERSION_NAME) }
-            StartDestination.Login, StartDestination.Home ->
-                AppNavigation(loginRequired = state.loginRequired, onLoggedIn = viewModel::onLoggedIn)
+            StartDestination.Login, StartDestination.Home -> {
+                val prefs: UiPrefsViewModel = hiltViewModel()
+                val hints by prefs.showInfoHints.collectAsStateWithLifecycle()
+                androidx.compose.runtime.CompositionLocalProvider(io.github.bridgemouse.bacta.ui.designsystem.components.LocalInfoHints provides hints) {
+                    AppNavigation(loginRequired = state.loginRequired, onLoggedIn = viewModel::onLoggedIn)
+                }
+            }
         }
     }
 }

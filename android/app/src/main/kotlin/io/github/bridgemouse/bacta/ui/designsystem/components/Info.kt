@@ -2,6 +2,7 @@ package io.github.bridgemouse.bacta.ui.designsystem.components
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -59,6 +60,9 @@ object InfoCatalog {
     )
 }
 
+/** Whether cards that have an explanation draw a small cue; the Settings toggle feeds this. */
+val LocalInfoHints = androidx.compose.runtime.compositionLocalOf { true }
+
 /** Which explanation is open, if any; one per screen. */
 @Stable
 class InfoState {
@@ -79,8 +83,22 @@ fun rememberInfoState(): InfoState = remember { InfoState() }
 
 /** Makes a whole card open its explanation when tapped, announced to TalkBack as a button that shows details. */
 @Composable
-fun Modifier.explains(info: InfoText, state: InfoState): Modifier =
-    clickable(onClickLabel = stringResource(R.string.cd_show_details), role = Role.Button) { state.show(info) }
+fun Modifier.explains(info: InfoText, state: InfoState): Modifier {
+    val hints = LocalInfoHints.current
+    val cue = BactaPalette.TextSecondary
+    return clickable(onClickLabel = stringResource(R.string.cd_show_details), role = Role.Button) { state.show(info) }
+        .then(if (hints) Modifier.drawWithContent { drawContent(); drawInfoCue(cue) } else Modifier)
+}
+
+/** A 10 dp "i" in a ring, tucked into the card's top-right, just inside the corner mark. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawInfoCue(color: androidx.compose.ui.graphics.Color) {
+    val r = 5.dp.toPx()
+    val c = androidx.compose.ui.geometry.Offset(size.width - 22.dp.toPx(), 12.dp.toPx())
+    val tint = color.copy(alpha = 0.7f)
+    drawCircle(tint, r, c, style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+    drawCircle(tint, 0.8.dp.toPx(), androidx.compose.ui.geometry.Offset(c.x, c.y - 2.2.dp.toPx()))
+    drawLine(tint, androidx.compose.ui.geometry.Offset(c.x, c.y - 0.6.dp.toPx()), androidx.compose.ui.geometry.Offset(c.x, c.y + 2.4.dp.toPx()), 1.2.dp.toPx())
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

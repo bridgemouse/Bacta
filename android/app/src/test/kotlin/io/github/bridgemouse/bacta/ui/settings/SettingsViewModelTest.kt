@@ -56,6 +56,12 @@ private class FakeSettings : SettingsRepository {
     override suspend fun logSources(): Result<List<String>> = Result.success(emptyList())
 }
 
+private class FakeUiPrefs : io.github.bridgemouse.bacta.data.prefs.UiPreferencesRepository {
+    val flow = MutableStateFlow(true)
+    override val showInfoHints: Flow<Boolean> = flow
+    override suspend fun setShowInfoHints(show: Boolean) { flow.value = show }
+}
+
 private class FakeTargets : TargetsRepository {
     val flow = MutableStateFlow(Targets.Default)
     override val targets: Flow<Targets> = flow
@@ -66,12 +72,13 @@ private class FakeTargets : TargetsRepository {
 class SettingsViewModelTest {
     private val settings = FakeSettings()
     private val targets = FakeTargets()
+    private val uiPrefs = FakeUiPrefs()
     private val config = ServerConfig(listOf("http://bacta.home/".toHttpUrl(), "http://example.org/".toHttpUrl()))
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = SettingsViewModel(settings, targets, config)
+    private fun vm() = SettingsViewModel(settings, targets, config, uiPrefs)
     private fun SettingsViewModel.content() = assertIs<SettingsUiState.Content>(state.value).content
 
     @Test
@@ -273,5 +280,14 @@ class SettingsViewModelTest {
         vm.chooseCustomModel()
         assertEquals(true, vm.content().edit?.custom)
         assertEquals("model-b", vm.content().edit?.initial)
+    }
+
+    @Test
+    fun theCardHintSettingStartsOnAndTheToggleIsPersisted() = runTest {
+        val vm = vm()
+        assertEquals(true, vm.content().infoHints)
+        vm.setInfoHints(false)
+        assertEquals(false, uiPrefs.flow.value)
+        assertEquals(false, vm.content().infoHints)
     }
 }

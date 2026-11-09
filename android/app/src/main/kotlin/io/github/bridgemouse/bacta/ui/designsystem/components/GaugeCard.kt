@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,7 +73,7 @@ fun GaugeCard(
             }
         }
         GaugeLayout.Hero -> BactaCard(accent, semanticsModifier) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth().padding(end = infoCueEndInset()), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
                 model.rightLabel?.let { Text(it.asString(), style = MaterialTheme.typography.labelSmall, color = toneColor) }
             }

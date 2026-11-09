@@ -77,7 +77,8 @@ class SleepViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = SleepViewModel(metrics, briefings, sleep, targets, clock, testFormatters)
+    private val events = io.github.bridgemouse.bacta.data.repository.SyncEvents()
+    private fun vm() = SleepViewModel(metrics, briefings, sleep, targets, clock, testFormatters, events)
 
     @Test
     fun loadsTheSleepBriefingAndOnePointsBatch() = runTest {
@@ -162,5 +163,16 @@ class SleepViewModelTest {
         assertEquals("1h 20m", assertIs<SleepUiState.Content>(vm.state.value).content.debt?.value.s())
         targets.update { it.copy(sleepMinutes = 420) }
         assertEquals("20m", assertIs<SleepUiState.Content>(vm.state.value).content.debt?.value.s())
+    }
+
+    @Test
+    fun aCompletedSyncReloadsTheScreen() = runTest {
+        var loads = 0
+        val original = metrics.summaryHandler
+        metrics.summaryHandler = { loads++; original() }
+        vm()
+        assertEquals(1, loads)
+        events.emitCompleted()
+        assertEquals(2, loads)
     }
 }

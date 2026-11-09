@@ -28,6 +28,7 @@ class RecoveryViewModel @Inject constructor(
     private val briefings: BriefingRepository,
     private val clock: Clock,
     private val fmt: Formatters,
+    private val syncEvents: io.github.bridgemouse.bacta.data.repository.SyncEvents,
 ) : ViewModel() {
     private val _state = MutableStateFlow<RecoveryUiState>(RecoveryUiState.Loading)
     val state: StateFlow<RecoveryUiState> = _state.asStateFlow()
@@ -37,6 +38,8 @@ class RecoveryViewModel @Inject constructor(
 
     init {
         refresh()
+        // A finished Garmin sync means new data: reload what this screen shows.
+        viewModelScope.launch { syncEvents.completed.collect { refresh() } }
     }
 
     fun refresh() {

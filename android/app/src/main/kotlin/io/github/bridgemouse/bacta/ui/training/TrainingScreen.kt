@@ -23,6 +23,10 @@ import io.github.bridgemouse.bacta.ui.designsystem.components.HeadlineCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.LoadRatioCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.IntensityCard
 import io.github.bridgemouse.bacta.ui.designsystem.components.MetricCard
+import io.github.bridgemouse.bacta.ui.designsystem.components.InfoCatalog
+import io.github.bridgemouse.bacta.ui.designsystem.components.InfoSheet
+import io.github.bridgemouse.bacta.ui.designsystem.components.explains
+import io.github.bridgemouse.bacta.ui.designsystem.components.rememberInfoState
 import io.github.bridgemouse.bacta.ui.designsystem.components.RefreshableScroll
 import io.github.bridgemouse.bacta.ui.designsystem.components.SectionRail
 import io.github.bridgemouse.bacta.ui.designsystem.components.StateKind
@@ -47,15 +51,20 @@ fun TrainingScreen(ui: TrainingUiState, tab: Tab, onRefresh: () -> Unit, modifie
 @Composable
 private fun TrainingContentView(ui: TrainingUiState.Content, tab: Tab, onRefresh: () -> Unit, modifier: Modifier) {
     val c = ui.content
+    val info = rememberInfoState()
+    InfoSheet(info)
     RefreshableScroll(ui.refreshing, onRefresh, modifier) {
         BriefingCard(ui.briefing, onRefresh = onRefresh)
         when (tab) {
-            Tab.Overview -> Overview(c)
+            Tab.Overview -> Overview(c, info)
             Tab.Trends -> {
                 if (c.trends.isEmpty()) StateMessage(StateKind.Empty, UiText.of(R.string.trend_none_yet))
                 c.trends.forEach { section ->
-                    SectionRail(section.rail, Accent, right = section.card.period)
-                    TrendCard(section.card, Accent)
+                    // A rail and its chart are one unit, so on a wide window they flow into the columns together.
+                    androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(9.dp)) {
+                        SectionRail(section.rail, Accent, right = section.card.period)
+                        TrendCard(section.card, Accent)
+                    }
                 }
             }
         }
@@ -64,25 +73,25 @@ private fun TrainingContentView(ui: TrainingUiState.Content, tab: Tab, onRefresh
 
 // The log is capped at a handful of rows by the view model, so it sits in the screen's one scroll column; a LazyColumn nested in a vertical scroll would need an unbounded height.
 @Composable
-private fun Overview(c: TrainingContent) {
-    c.status?.let { StatusBanner(it) }
+private fun Overview(c: TrainingContent, info: io.github.bridgemouse.bacta.ui.designsystem.components.InfoState) {
+    c.status?.let { StatusBanner(it, Modifier.explains(InfoCatalog.TrainingStatus, info)) }
     SectionRail(UiText.of(R.string.rail_performance), Accent, right = UiText.of(R.string.rail_current))
-    HeadlineCard(c.performance.load, Accent)
-    c.loadRatio?.let { LoadRatioCard(it, Accent) }
+    HeadlineCard(c.performance.load, Accent, Modifier.explains(InfoCatalog.AcuteLoad, info))
+    c.loadRatio?.let { LoadRatioCard(it, Accent, Modifier.explains(InfoCatalog.LoadRatio, info)) }
     CardRow {
         MetricCard(c.performance.fitnessAge, Accent, rowCard())
         MetricCard(c.performance.vo2max, Accent, rowCard())
     }
     c.intensity?.let {
         SectionRail(UiText.of(R.string.rail_intensity_week), Accent)
-        IntensityCard(it, Accent)
+        IntensityCard(it, Accent, Modifier.explains(InfoCatalog.Intensity, info))
     }
     c.zones?.let {
         SectionRail(UiText.of(R.string.rail_hr_zones), Accent, right = UiText.of(R.string.zones_today, it.totalMinutes))
-        BactaCard(Accent) { ZoneBars(it.items) }
+        BactaCard(Accent, Modifier.explains(InfoCatalog.Zones, info)) { ZoneBars(it.items) }
     }
     SectionRail(UiText.of(R.string.rail_daily_activity), Accent)
-    c.stepsChart?.let { StepsChartCard(it, Accent) }
+    c.stepsChart?.let { StepsChartCard(it, Accent, Modifier.explains(InfoCatalog.Steps, info)) }
     // Tiles with a ring are taller than plain numbers, so they pair with each other and the plain ones pair together.
     c.daily.sortedBy { it.ring == null }.chunked(2).forEach { row ->
         CardRow {
@@ -96,8 +105,8 @@ private fun Overview(c: TrainingContent) {
 }
 
 @Composable
-private fun StatusBanner(status: StatusModel) {
-    BactaCard(Accent) {
+private fun StatusBanner(status: StatusModel, modifier: Modifier = Modifier) {
+    BactaCard(Accent, modifier) {
         Text(UiText.of(R.string.training_status_title).asString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.textSecondary)
         Text(status.value.asString(), style = MaterialTheme.typography.headlineMedium, color = BactaPalette.Text)
         status.sub?.let { Text(it.asString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.textSecondary) }

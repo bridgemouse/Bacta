@@ -35,3 +35,21 @@ private fun closingMarker(text: String, open: Int, marker: String): Int {
     }
     return -1
 }
+
+sealed interface MarkdownBlock {
+    data class Heading(val text: String, val level: Int) : MarkdownBlock
+    data class Bullet(val text: String) : MarkdownBlock
+    data class Paragraph(val text: String) : MarkdownBlock
+}
+
+/** The block structure MX-4's longer write-ups use: `##`/`###` headings, `-`/`*` bullets and plain paragraphs. A marker with no text is dropped. */
+fun markdownBlocks(text: String): List<MarkdownBlock> = text.lines().mapNotNull { raw ->
+    val line = raw.trim()
+    when {
+        line.isEmpty() -> null
+        line.startsWith("###") -> line.removePrefix("###").trim().takeIf { it.isNotEmpty() }?.let { MarkdownBlock.Heading(it, 3) }
+        line.startsWith("##") -> line.removePrefix("##").trim().takeIf { it.isNotEmpty() }?.let { MarkdownBlock.Heading(it, 2) }
+        line.startsWith("- ") || line.startsWith("* ") || line == "-" || line == "*" -> line.drop(1).trim().takeIf { it.isNotEmpty() }?.let { MarkdownBlock.Bullet(it) }
+        else -> MarkdownBlock.Paragraph(line)
+    }
+}

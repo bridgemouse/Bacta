@@ -15,6 +15,7 @@ import io.github.bridgemouse.bacta.data.network.SettingValueRequest
 import io.github.bridgemouse.bacta.data.network.TestConnectionDto
 import io.github.bridgemouse.bacta.data.network.OkDto
 import io.github.bridgemouse.bacta.data.network.SummaryDto
+import io.github.bridgemouse.bacta.data.network.SyncStateDto
 import io.github.bridgemouse.bacta.data.network.TrendDto
 import io.github.bridgemouse.bacta.data.network.VersionDto
 import retrofit2.Response
@@ -34,6 +35,8 @@ open class FakeBactaApi : BactaApi {
     var weeklyAvgHrHandler: suspend (Int) -> WeeksDto = { error("weekly avg hr not stubbed") }
     var weeklyIntensityHandler: suspend () -> IntensityDto = { error("weekly intensity not stubbed") }
 
+    var startSyncHandler: suspend () -> SyncStateDto = { error("start sync not stubbed") }
+    var syncStatusHandler: suspend () -> SyncStateDto = { error("sync status not stubbed") }
     var modelsHandler: suspend () -> Map<String, List<String>> = { error("models not stubbed") }
     var settingsHandler: suspend () -> Map<String, String> = { error("settings not stubbed") }
     var putSettingHandler: suspend (String, String) -> Response<OkDto> = { _, _ -> error("put setting not stubbed") }
@@ -42,6 +45,8 @@ open class FakeBactaApi : BactaApi {
     var logsHandler: suspend (String?, Int) -> LogsDto = { _, _ -> error("logs not stubbed") }
     var logSourcesHandler: suspend () -> LogSourcesDto = { error("log sources not stubbed") }
 
+    override suspend fun startSync() = startSyncHandler()
+    override suspend fun syncStatus() = syncStatusHandler()
     override suspend fun models() = modelsHandler()
     override suspend fun settings() = settingsHandler()
     override suspend fun putSetting(key: String, body: SettingValueRequest) = putSettingHandler(key, body.value)

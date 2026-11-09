@@ -4,7 +4,9 @@ import io.github.bridgemouse.bacta.ui.format.LocaleFormatters
 import io.github.bridgemouse.bacta.ui.format.MeasurementSystem
 import io.github.bridgemouse.bacta.ui.UiText
 import java.util.Locale
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.bridgemouse.bacta.data.repository.Metric
 import io.github.bridgemouse.bacta.data.repository.Summary
@@ -33,7 +35,9 @@ private val syntheticTrends: Map<Metric, Result<List<Double>>> = Metric.entries.
 private val briefing = BriefingModel(
     UiText.Literal("Recovery"),
     BriefingState.Live(
-        BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", "Synthetic directive long enough to wrap onto a second and third line so the layout under the label can be checked."),
+        BriefingContent(Tone.Positive, "Synthetic headline for the preview.", "Synthetic summary sentence for layout only.", "Synthetic directive long enough to wrap onto a second and third line so the layout under the label can be checked.",
+            body = "## Synthetic section\nA synthetic paragraph with **bold** text.\n- first synthetic point\n- second synthetic point\n### Detail\nAnother synthetic line.",
+            flags = listOf("first synthetic flag", "second synthetic flag")),
         UiText.Literal("NOV 3 · 09:00"),
     ),
 )
@@ -64,3 +68,18 @@ private fun RecoveryTrendsLoaded() = Frame(synthetic, syntheticTrends, Tab.Trend
 @Preview(widthDp = 412, heightDp = 2900, fontScale = 1.3f, showBackground = true, backgroundColor = 0xFF0F1117)
 @Composable
 private fun RecoveryOverviewLarge() = RecoveryOverviewLoaded()
+
+@Preview(widthDp = 412, heightDp = 1100, showBackground = true, backgroundColor = 0xFF0F1117)
+@Composable
+private fun RecoveryBriefingExpanded() = BactaTheme {
+    androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(13.dp)) {
+        io.github.bridgemouse.bacta.ui.designsystem.components.BriefingCard(
+            briefing, onRefresh = {}, initiallyExpanded = true,
+        )
+    }
+}
+
+// An unfolded inner screen: expanded width, so the cards flow into two columns.
+@Preview(widthDp = 1000, heightDp = 2000, showBackground = true, backgroundColor = 0xFF0F1117)
+@Composable
+private fun RecoveryOverviewWide() = RecoveryOverviewLoaded()

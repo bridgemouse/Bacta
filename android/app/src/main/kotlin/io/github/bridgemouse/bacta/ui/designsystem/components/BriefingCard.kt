@@ -8,6 +8,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.semantics.heading
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,15 +48,21 @@ private fun Tone.chipText(): UiText = when (this) {
 }
 
 /** MX-4's briefing. Every state is explicit: a server stub or a failed run is never shown as MX-4 speaking. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun BriefingCard(
     model: BriefingModel,
     modifier: Modifier = Modifier,
     onRefresh: (() -> Unit)? = null,
+    initiallyExpanded: Boolean = false,
 ) {
     val accent = BactaPalette.Mx4
     val secondary = MaterialTheme.colorScheme.textSecondary
-    BactaCard(accent = accent, modifier = modifier, size = CardSize.Bar) {
+    val state0 = model.state
+    val shown = (state0 as? BriefingState.Live)?.content ?: (state0 as? BriefingState.Stale)?.content ?: (state0 as? BriefingState.Offline)?.last
+    var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+    Column(modifier.fullWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+    BactaCard(accent = accent, size = CardSize.Bar) {
         val state = model.state
         val live = state as? BriefingState.Live
         val stale = state as? BriefingState.Stale
@@ -91,20 +103,42 @@ fun BriefingCard(
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                content?.let { BriefingBody(it) }
+                content?.let { BriefingBody(it, expanded) }
             }
         }
-        if (onRefresh != null) {
+        val hasBody = shown?.body != null
+        if (onRefresh != null || hasBody) {
             Spacer(Modifier.height(4.dp))
-            TextButton(onClick = onRefresh, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.action_refresh), style = MaterialTheme.typography.labelMedium, color = accent)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onRefresh != null) {
+                    TextButton(onClick = onRefresh, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text(stringResource(R.string.action_refresh), style = MaterialTheme.typography.labelMedium, color = accent)
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                if (hasBody) {
+                    val open = stringResource(if (expanded) R.string.briefing_hide_analysis else R.string.briefing_full_analysis)
+                    TextButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Text(open, style = MaterialTheme.typography.labelMedium, color = accent)
+                    }
+                }
             }
         }
+    }
+    shown?.flags?.takeIf { it.isNotEmpty() }?.let { flags ->
+        val tone = BactaPalette.tone(shown.tone)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            flags.forEach { Chip(UiText.Literal(it.uppercase()), tone) }
+        }
+    }
     }
 }
 
 @Composable
-private fun BriefingBody(content: BriefingContent) {
+private fun BriefingBody(content: BriefingContent, expanded: Boolean) {
     val accent = BactaPalette.Mx4
     Text(inlineMarkdown(content.headline), style = MaterialTheme.typography.labelMedium, color = accent)
     content.summary?.let {
@@ -126,5 +160,27 @@ private fun BriefingBody(content: BriefingContent) {
             style = MaterialTheme.typography.bodyMedium,
             color = BactaPalette.Text,
         )
+    }
+    if (expanded && content.body != null) {
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.HorizontalDivider(color = BactaPalette.Line)
+        Spacer(Modifier.height(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            markdownBlocks(content.body).forEach { block ->
+                when (block) {
+                    is MarkdownBlock.Heading -> Text(
+                        block.text.uppercase(),
+                        Modifier.padding(top = 4.dp).semantics { heading() },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (block.level == 2) accent else MaterialTheme.colorScheme.textSecondary,
+                    )
+                    is MarkdownBlock.Bullet -> Row {
+                        Text(stringResource(R.string.bullet), Modifier.padding(end = 8.dp), style = MaterialTheme.typography.bodyMedium, color = accent)
+                        Text(inlineMarkdown(block.text), style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Text)
+                    }
+                    is MarkdownBlock.Paragraph -> Text(inlineMarkdown(block.text), style = MaterialTheme.typography.bodyMedium, color = BactaPalette.Text)
+                }
+            }
+        }
     }
 }

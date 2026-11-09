@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
+import io.github.bridgemouse.bacta.ui.designsystem.SectionIcons
 import io.github.bridgemouse.bacta.ui.designsystem.textSecondary
 import io.github.bridgemouse.bacta.ui.navigation.BuiltSections
 import io.github.bridgemouse.bacta.ui.navigation.Destination
@@ -57,7 +58,7 @@ fun NavSheet(current: Section, onSelect: (Section) -> Unit, onSelectSecondary: (
                         .padding(horizontal = 24.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(Modifier.size(10.dp).background(BactaPalette.accent(section), CircleShape))
+                    androidx.compose.material3.Icon(SectionIcons.of(section), contentDescription = null, Modifier.size(22.dp), tint = BactaPalette.accent(section))
                     Spacer(Modifier.width(16.dp))
                     Text(
                         section.title().asString(),

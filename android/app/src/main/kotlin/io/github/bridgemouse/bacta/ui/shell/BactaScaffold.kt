@@ -8,6 +8,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import io.github.bridgemouse.bacta.ui.designsystem.viz.StatusDot
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,11 +50,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.bridgemouse.bacta.domain.Section
 import io.github.bridgemouse.bacta.ui.designsystem.BactaPalette
+import io.github.bridgemouse.bacta.ui.designsystem.components.columnCountFor
 import io.github.bridgemouse.bacta.ui.designsystem.bactaTexture
 import io.github.bridgemouse.bacta.ui.designsystem.viz.MX4Sigil
 import io.github.bridgemouse.bacta.ui.designsystem.viz.SigilMood
 
 private val ContentMaxWidth = 640.dp
+private val ExpandedContentMaxWidth = 1100.dp
 
 /**
  * The frame every section sits in: status bar, content, dock. Insets are applied to the bars, not the content,
@@ -65,13 +70,17 @@ fun BactaScaffold(
     onBack: () -> Unit,
     onOpenSection: (Section) -> Unit,
     onOpenSecondary: (io.github.bridgemouse.bacta.ui.navigation.Destination) -> Unit,
+    status: StatusBarState = StatusBarState(),
+    onSync: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(BactaPalette.Base).bactaTexture(BactaPalette.accent(section))) {
-        TopBar(section, onBack)
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = ContentMaxWidth).fillMaxSize()) { content() }
+        TopBar(section, onBack, status, onSync)
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            // Two columns on an expanded-width window get more room than a single phone-width column would.
+            val cap = if (columnCountFor(maxWidth.value) == 2) ExpandedContentMaxWidth else ContentMaxWidth
+            Box(Modifier.widthIn(max = cap).fillMaxSize()) { content() }
         }
         Dock(tabs = tabs, tabState = tabState, onNav = { sheetOpen = true })
     }
@@ -108,7 +117,7 @@ fun BactaSecondaryScaffold(title: io.github.bridgemouse.bacta.ui.UiText, onBack:
 }
 
 @Composable
-private fun TopBar(section: Section, onBack: () -> Unit) {
+private fun TopBar(section: Section, onBack: () -> Unit, status: StatusBarState, onSync: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(BactaPalette.Surface).statusBarsPadding().height(52.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -120,8 +129,6 @@ private fun TopBar(section: Section, onBack: () -> Unit) {
                 color = BactaPalette.Mx4,
                 modifier = Modifier.padding(start = 8.dp).semantics { heading() },
             )
-            Spacer(Modifier.weight(1f))
-            MX4Sigil(SigilMood.Idle, 22.dp, Modifier.padding(end = 8.dp))
         } else {
             BackChevron(onBack)
             MX4Sigil(if (section == Section.Recovery) SigilMood.Pleased else SigilMood.Transmit, 22.dp)
@@ -132,6 +139,63 @@ private fun TopBar(section: Section, onBack: () -> Unit) {
                 modifier = Modifier.padding(start = 10.dp).semantics { heading() },
             )
         }
+        Spacer(Modifier.weight(1f))
+        SyncButton(status.sync, onSync)
+        Mx4StatusLabel(status.mx4)
+        if (section == Section.Home) MX4Sigil(SigilMood.Idle, 22.dp, Modifier.padding(start = 6.dp, end = 8.dp))
+    }
+}
+
+/** The Garmin sync control: idle shows SYNC, running shows the seconds, and the result stays for a moment. Only the server's real state is shown. */
+@Composable
+private fun SyncButton(sync: SyncUi, onSync: () -> Unit) {
+    val label = when (sync) {
+        SyncUi.Idle -> stringResource(R.string.sync_label)
+        is SyncUi.Running -> stringResource(R.string.sync_running, sync.elapsedSeconds)
+        SyncUi.Done -> stringResource(R.string.sync_done)
+        SyncUi.Failed -> stringResource(R.string.sync_failed)
+    }
+    val color = when (sync) {
+        SyncUi.Done -> BactaPalette.Positive
+        SyncUi.Failed -> BactaPalette.Flag
+        else -> BactaPalette.Mx4
+    }
+    val running = sync is SyncUi.Running
+    val description = stringResource(R.string.cd_sync, label)
+    Box(
+        Modifier
+            .heightIn(min = 48.dp)
+            .clip(CircleShape)
+            .clickable(enabled = !running, role = Role.Button, onClick = onSync)
+            .semantics { contentDescription = description }
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            Modifier
+                .border(1.dp, color.copy(alpha = if (running || sync != SyncUi.Idle) 0.6f else 0.35f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 9.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            maxLines = 1,
+            softWrap = false,
+        )
+    }
+}
+
+/** MX-4's state from his last briefing; hidden when the server did not answer, since nothing is known. */
+@Composable
+private fun Mx4StatusLabel(status: Mx4Status) {
+    val (label, color) = when (status) {
+        Mx4Status.Unknown -> return
+        Mx4Status.Online -> R.string.mx4_online to BactaPalette.Positive
+        Mx4Status.Stale -> R.string.mx4_stale to BactaPalette.Caution
+        Mx4Status.NoBriefing -> R.string.mx4_not_run to BactaPalette.TextMuted
+    }
+    Row(Modifier.padding(start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        StatusDot(color, Modifier)
+        Text(stringResource(label), Modifier.padding(start = 5.dp), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
     }
 }
 

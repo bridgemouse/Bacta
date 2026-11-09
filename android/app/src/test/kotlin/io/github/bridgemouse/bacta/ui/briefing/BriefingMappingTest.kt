@@ -33,7 +33,7 @@ class BriefingMappingTest {
         val live = assertIs<BriefingState.Live>(state)
         val stamp = live.timestamp.s()!!
         assertEquals(true, "9:00" in stamp && stamp.contains("AM", ignoreCase = true), stamp)
-        assertEquals(BriefingContent(Tone.Positive, "H", "S", "R"), live.content)
+        assertEquals(BriefingContent(Tone.Positive, "H", "S", "R", body = "B"), live.content)
     }
 
     @Test
@@ -69,5 +69,22 @@ class BriefingMappingTest {
     @Test
     fun otherFailuresAreErrorsNotOffline() {
         assertEquals(BriefingState.Error, briefingState(Result.failure(IllegalStateException("500")), null, clock))
+    }
+
+    @Test
+    fun theFullAnalysisIsOnlyKeptWhenThereIsASeparateSummary() {
+        fun content(summary: String?, body: String) =
+            assertIs<BriefingState.Live>(briefingState(Result.success(briefing(Duration.ofHours(1), summary = summary, body = body)), null, clock)).content
+        assertEquals("B", content("S", "B").body)
+        assertEquals(null, content(null, "B").body)
+        assertEquals("B", content(null, "B").summary)
+        assertEquals(null, content("S", "  ").body)
+    }
+
+    @Test
+    fun flagsAreCarriedToTheContent() {
+        val b = briefing(Duration.ofHours(1)).copy(flags = listOf("first flag", "second flag"))
+        val live = assertIs<BriefingState.Live>(briefingState(Result.success(b), null, clock))
+        assertEquals(listOf("first flag", "second flag"), live.content.flags)
     }
 }

@@ -30,7 +30,7 @@ enum class StateKind { Loading, Empty, Error }
 @Composable
 fun StateMessage(kind: StateKind, message: UiText, modifier: Modifier = Modifier, onRetry: (() -> Unit)? = null) {
     Column(
-        modifier.fillMaxWidth().padding(24.dp).semantics { liveRegion = LiveRegionMode.Polite },
+        modifier.fullWidth().fillMaxWidth().padding(24.dp).semantics { liveRegion = LiveRegionMode.Polite },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

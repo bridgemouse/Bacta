@@ -86,7 +86,7 @@ fun BactaCard(
 /** A section header: label, a hairline, and optional right-hand text. */
 @Composable
 fun SectionRail(label: UiText, accent: Color, modifier: Modifier = Modifier, right: UiText? = null) {
-    Row(modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fullWidth().fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
             label.asString(),
             Modifier.semantics { heading() },

@@ -60,7 +60,8 @@ class HomeViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = HomeViewModel(metrics, briefings, clock, testFormatters)
+    private val events = io.github.bridgemouse.bacta.data.repository.SyncEvents()
+    private fun vm() = HomeViewModel(metrics, briefings, clock, testFormatters, events)
     private fun briefing(age: Duration) = Briefing(Tone.Positive, "H", "S", "B", "R", emptyList(), now.minus(age), null)
 
     @Test
@@ -134,5 +135,16 @@ class HomeViewModelTest {
         metrics.summaryHandler = { Result.success(Summary(bodyBatteryCurrent = 64.0)) }
         vm.refresh()
         assertIs<HomeUiState.Content>(vm.state.value)
+    }
+
+    @Test
+    fun aCompletedSyncReloadsTheScreen() = runTest {
+        var loads = 0
+        val original = metrics.summaryHandler
+        metrics.summaryHandler = { loads++; original() }
+        vm()
+        assertEquals(1, loads)
+        events.emitCompleted()
+        assertEquals(2, loads)
     }
 }

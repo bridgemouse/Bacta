@@ -159,3 +159,7 @@ data class LogsDto(val logs: List<LogDto> = emptyList())
 
 @Serializable
 data class LogSourcesDto(val sources: List<String> = emptyList())
+
+/** The server's sync state: `status` is idle, running, done or error. A start request answers with the same shape (plus `ok`). */
+@Serializable
+data class SyncStateDto(val status: String = "idle", val elapsed: Int? = null)

@@ -84,7 +84,8 @@ class TrainingViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = TrainingViewModel(metrics, activities, briefings, targets, clock, testFormatters)
+    private val events = io.github.bridgemouse.bacta.data.repository.SyncEvents()
+    private fun vm() = TrainingViewModel(metrics, activities, briefings, targets, clock, testFormatters, events)
 
     @Test
     fun loadsTheTrainingBriefingAndTwoPointBatches() = runTest {
@@ -151,5 +152,16 @@ class TrainingViewModelTest {
         targets.update { it.copy(weeklyIntensityMinutes = 200, trendDays = 30) }
         assertEquals("goal 200 min", assertIs<TrainingUiState.Content>(vm.state.value).content.intensity?.goalLabel.s())
         assertEquals(30, metrics.calls.last { it.first == TrainingFastMetrics }.second)
+    }
+
+    @Test
+    fun aCompletedSyncReloadsTheScreen() = runTest {
+        var loads = 0
+        val original = metrics.summaryHandler
+        metrics.summaryHandler = { loads++; original() }
+        vm()
+        assertEquals(1, loads)
+        events.emitCompleted()
+        assertEquals(2, loads)
     }
 }

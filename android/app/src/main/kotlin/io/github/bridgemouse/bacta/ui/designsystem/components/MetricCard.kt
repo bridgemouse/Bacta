@@ -49,7 +49,7 @@ fun MetricCard(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             model.icon?.let {
-                Image(it, contentDescription = null, Modifier.size(16.dp))
+                androidx.compose.material3.Icon(it, contentDescription = null, Modifier.size(16.dp), tint = accent)
                 Spacer(Modifier.width(6.dp))
             }
             Text(model.label.asString().uppercase(), style = MaterialTheme.typography.labelSmall, color = accent)

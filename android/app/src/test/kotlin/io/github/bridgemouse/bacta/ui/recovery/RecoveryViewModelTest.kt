@@ -58,7 +58,8 @@ class RecoveryViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = RecoveryViewModel(metrics, briefings, clock, testFormatters)
+    private val events = io.github.bridgemouse.bacta.data.repository.SyncEvents()
+    private fun vm() = RecoveryViewModel(metrics, briefings, clock, testFormatters, events)
 
     @Test
     fun loadsRecoveryBriefingAndOneTrendBatchForEveryMetricTheScreenUses() = runTest {
@@ -116,5 +117,16 @@ class RecoveryViewModelTest {
         val gate = CompletableDeferred<Result<Summary>>()
         metrics.summaryHandler = { gate.await() }
         assertEquals(RecoveryUiState.Loading, vm().state.value)
+    }
+
+    @Test
+    fun aCompletedSyncReloadsTheScreen() = runTest {
+        var loads = 0
+        val original = metrics.summaryHandler
+        metrics.summaryHandler = { loads++; original() }
+        vm()
+        assertEquals(1, loads)
+        events.emitCompleted()
+        assertEquals(2, loads)
     }
 }
